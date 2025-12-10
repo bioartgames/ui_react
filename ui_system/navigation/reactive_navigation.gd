@@ -108,6 +108,11 @@ func switch_group(group_name: String) -> bool:
 	_update_focus_manager()
 	return true
 
+## Gets all registered navigation group names.
+## Used by editor plugins to populate dropdowns.
+func get_group_names() -> Array[String]:
+	return _navigation_groups.keys()
+
 ## Updates the focus manager with the current group's focus order.
 func _update_focus_manager() -> void:
 	if _focus_manager == null:

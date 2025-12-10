@@ -16,6 +16,10 @@ enum BindingMode {
 ## Binding direction mode.
 @export var mode: BindingMode = BindingMode.ONE_WAY
 
+## Path to the owner Control node (used for resolving control_path and getting properties/signals).
+## Set automatically when binding is created.
+@export var owner_path: NodePath = NodePath("")
+
 ## Path to the Control node (optional for ONE_WAY, defaults to "self"; required for TWO_WAY).
 @export var control_path: NodePath = NodePath(".")
 

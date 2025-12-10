@@ -14,3 +14,7 @@ config/name="UI System"
 run/main_scene="res://ui_system/tests/test_unified_integration.tscn"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/ui_system/plugin.cfg")

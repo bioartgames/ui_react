@@ -39,6 +39,9 @@ func _ready() -> void:
 	# Setup navigation
 	_setup_navigation()
 
+	# Setup accessibility
+	_setup_accessibility()
+
 ## Sets up navigation system.
 func _setup_navigation() -> void:
 	# Make control focusable
@@ -144,4 +147,12 @@ func set_local_focus_order(order: Array[NodePath], wrap_around: bool = true) -> 
 	local_focus_order = order.duplicate()
 	if _focus_manager:
 		_focus_manager.set_focus_order(local_focus_order, wrap_around)
+
+## Sets up accessibility features.
+## Uses native Control properties (accessibility_description and accessibility_label exist in Godot 4.5).
+func _setup_accessibility() -> void:
+	# Native Control properties are already available in Godot 4.5
+	# They can be set directly in the editor or via code
+	# No additional setup needed - Control class handles them automatically
+	pass
 

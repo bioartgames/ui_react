@@ -23,10 +23,15 @@ func setup(owner: Control, bindings: Array[ReactiveBinding]) -> void:
 	_owner = owner
 	_bindings = bindings
 	
-	# Validate and connect all bindings
+	# Set owner_path for all bindings (for editor dropdown support)
+	var owner_path = owner.get_path()
 	for binding in _bindings:
 		if binding == null:
 			continue
+		
+		# Set owner_path if not already set (allows manual override)
+		if binding.owner_path == null or binding.owner_path.is_empty():
+			binding.owner_path = owner_path
 		
 		# Validate binding
 		binding.status = BindingValidator.validate_binding(_owner, binding)

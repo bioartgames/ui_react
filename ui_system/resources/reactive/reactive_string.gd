@@ -5,6 +5,8 @@ extends ReactiveValue
 
 ## Override to ensure type safety.
 func _get_value() -> Variant:
+	if _current_value == null:
+		return ""
 	return _current_value as String
 
 ## Override to ensure type safety.

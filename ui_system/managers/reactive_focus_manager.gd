@@ -23,9 +23,9 @@ func setup(owner: Control) -> void:
 	_owner = owner
 
 ## Sets the focus order for this manager.
-func set_focus_order(order: Array[NodePath], wrap: bool = true) -> void:
+func set_focus_order(order: Array[NodePath], wrap_around: bool = true) -> void:
 	_focus_order = order.duplicate()
-	_wrap_around = wrap
+	_wrap_around = wrap_around
 
 ## Moves focus in the specified direction.
 ## Direction can be: "up", "down", "left", "right", "next", "previous"
@@ -177,4 +177,3 @@ func cleanup() -> void:
 	_owner = null
 	_current_focus = null
 	_focus_order.clear()
-
