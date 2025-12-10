@@ -63,7 +63,7 @@ func get_item(index: int) -> Variant:
 	return arr[index]
 
 ## Sets an item at the specified index.
-func set_item(index: int, value: Variant) -> void:
+func set_item(index: int, new_value: Variant) -> void:
 	var arr = _get_value()
 	if index < 0 or index >= arr.size():
 		return

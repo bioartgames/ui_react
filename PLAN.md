@@ -522,7 +522,7 @@ This section clarifies implementation details and resolves ambiguities that may 
 
 - `ReactiveGrid` extends `GridContainer` (or custom Control)
 - Binds to `ReactiveArray` via `source: ReactiveArray` property
-- Configurable `columns: int` property
+- Uses inherited `columns` property from GridContainer (configurable in editor or code, defaults to 3)
 - Auto-generates grid cells from array
 - Updates reactively when array changes
 - Uses `ReactiveCell` instances for each cell
@@ -715,6 +715,7 @@ This section clarifies implementation details and resolves ambiguities that may 
 - `ReactiveAction` base class with `execute(target: ReactiveValue, params: ActionParams) -> bool` method
 - Returns `bool` to indicate success/failure
 - `validate_before_execute(target: ReactiveValue, params: ActionParams) -> bool` method for pre-execution validation
+- Base abstract methods use `_` prefix for unused parameters (e.g., `execute(_target, _params)`) to indicate they're intentionally unused in base implementation
 - Each action type handles its specific operation with type-safe parameters
 - `ReactiveActionBinding` resource contains:
   - `target: ReactiveValue` (reference) - optional for ActionGroup (groups don't need single target)
@@ -752,6 +753,8 @@ This section clarifies implementation details and resolves ambiguities that may 
 
 **Condition System:**
 - `ReactiveCondition` base abstract class with `evaluate(target: ReactiveValue) -> bool` method
+- Base abstract method uses `_` prefix for unused parameter (e.g., `evaluate(_target)`) to indicate it's intentionally unused in base implementation
+- Base abstract method uses `_` prefix for unused parameter (e.g., `evaluate(_target)`) to indicate it's intentionally unused in base implementation
 - `ValueComparisonCondition` supports: >, <, ==, !=, <=, >=, contains (for strings)
 - Conditions are Resources, can be shared and reused
 - Conditions can compare target value to constant or another ReactiveValue
@@ -884,7 +887,7 @@ This section clarifies implementation details and resolves ambiguities that may 
 - **Open/Closed:** Closed for modification, open for extension (new collection actions)
 - **Liskov Substitution:** All actions can be used interchangeably
 - **Dependency Inversion:** Actions depend on ReactiveArray abstraction
-- **DRY:** Common validation and error handling in base action class, uses ReactiveValidationUtils for shared validation patterns
+- **DRY:** Common validation and error handling in base action class (inline validation, ReactiveValidationUtils available for future use)
 
 **Test Criteria:**
 - Create button with ActionAddItem, click, verify item added to ReactiveArray
@@ -932,10 +935,11 @@ This section clarifies implementation details and resolves ambiguities that may 
   - `fallback_text: String` - Fallback text if translation missing
   - Uses `tr()` function to get translated text
   - Supports pluralization and context if needed
-  - Auto-updates when language changes (connects to TranslationServer)
+  - **Auto-update:** Uses `NOTIFICATION_TRANSLATION_CHANGED` notification (TranslationServer doesn't have `language_changed` signal in Godot 4.5)
+  - ReactiveTextLabel handles `NOTIFICATION_TRANSLATION_CHANGED` and rebuilds text when language changes
 - `TextBuilder` contains `Array[TextSegment]` in order
 - `TextBuilder.build()` processes segments sequentially
-- Auto-updates when any source ReactiveValue changes or when translation language changes
+- Auto-updates when any source ReactiveValue changes or when translation language changes (via notification)
 - `ReactiveTextLabel` uses TextBuilder for its text content (can use Label or RichTextLabel)
 
 **Text Formatter System (Unified with Converters):**
@@ -953,6 +957,7 @@ This section clarifies implementation details and resolves ambiguities that may 
 - **TextBuilder Signal Management:** TextBuilder connects to all source ReactiveValues' `value_changed` signals
 - **Cleanup Pattern:** TextBuilder stores signal connections using `Array[SignalConnection]`, uses `ReactiveLifecycleManager.cleanup_signal_connections()` in cleanup
 - **ReactiveTextLabel Cleanup:** Inherits cleanup from ReactiveControl base class (which uses ReactiveBindingManager)
+- **Translation Cleanup:** ReactiveTextLabel handles `NOTIFICATION_TRANSLATION_CHANGED` notification (no signal connection needed)
 - **Segment Cleanup:** Segments that reference ReactiveValues must track connections if they need direct updates
 - **Implementation:** TextBuilder maintains `_source_connections: Array[SignalConnection]` and calls `ReactiveLifecycleManager.cleanup_signal_connections(_source_connections)` when segments are modified or on cleanup
 
@@ -995,12 +1000,12 @@ This section clarifies implementation details and resolves ambiguities that may 
 - Modify source value, verify text updates reactively
 - **Test rich text formatting:** Use RichTextFormatter with bold/color, verify formatting appears in RichTextLabel
 - Test complex sequences: text, source (formatted), conditional, text, source
-- **Test i18n support:** Add SegmentTranslation with translation key, verify translated text appears, change language, verify updates
-- **Test cleanup:** Remove ReactiveTextLabel, verify TextBuilder disconnects from all sources (including TranslationServer)
+- **Test i18n support:** Add SegmentTranslation with translation key, verify translated text appears, change language, verify updates automatically via NOTIFICATION_TRANSLATION_CHANGED
+- **Test cleanup:** Remove ReactiveTextLabel, verify TextBuilder disconnects from all sources
 - **Test shared sources:** Multiple labels use same ReactiveValue in text builder, all update
 - **Update unified test scene:** Add character stats section using ReactiveTextLabel with formatted values, conditional text, and translation segments
 
-**Deliverable:** Dynamic text labels that combine static text, reactive values, conditional logic with full operator support, number formatting, rich text formatting, i18n translation support, and proper cleanup. TextFormatter extends ValueConverter (unified system) - formatters can be used in both bindings and text segments, eliminating redundancy. Unified test scene updated with text builder examples including translations.
+**Deliverable:** Dynamic text labels that combine static text, reactive values, conditional logic with full operator support, number formatting, rich text formatting, i18n translation support with auto-update via NOTIFICATION_TRANSLATION_CHANGED, and proper cleanup. TextFormatter extends ValueConverter (unified system) - formatters can be used in both bindings and text segments, eliminating redundancy. Unified test scene updated with text builder examples including translations.
 
 ---
 
@@ -1342,7 +1347,7 @@ Each phase includes:
   - All reactive components (Label, Button, LineEdit, TextLabel, List, Grid, Cell)
   - Binding system (one-way and two-way with various converters)
   - Action system (all action types including collection actions)
-  - Text builder with all segment types (literal, source, conditional, translation) and formatters (number, rich text)
+  - Text builder with all segment types (literal, source, conditional, translation with auto-update) and formatters (number, rich text)
   - Animation system (forward/backward, loops, chaining, events)
   - Navigation system (keyboard and controller with multiple groups)
   - Real-world scenarios:
@@ -1388,7 +1393,7 @@ Phase 7 (Editor Plugins) ←─────────┘
 - **Phase 2.6:** ReactiveReference enables selection sharing, StringToTextureConverter enables image binding, and visual feedback (selection/hover) enhances collection components
 - **Phase 3:** Conditionally-executed actions with typed parameters, clear validation separation, error recovery, scene changes, and action groups (with parallel/sequential execution modes and full composability/nesting) can be configured entirely in editor, with proper cleanup via ReactiveLifecycleManager
 - **Phase 3.5:** Collection manipulation actions (add, remove, move, swap, clear) work with ReactiveArray without scripting
-- **Phase 4:** Complex dynamic text with formatters (number, rich text), full conditional operators, i18n translation support, and typed context Resources can be built visually, with reactive updates and cleanup via ReactiveLifecycleManager
+- **Phase 4:** Complex dynamic text with formatters (number, rich text), full conditional operators, i18n translation support with auto-update via NOTIFICATION_TRANSLATION_CHANGED, and typed context Resources can be built visually, with reactive updates and cleanup via ReactiveLifecycleManager
 - **Phase 5:** Animations with relative/absolute values, delays, loops, events with typed contexts, and chaining play forward/backward without duplication. ReactiveControl uses ReactiveAnimationManager (RefCounted composition) for animation orchestration, with proper Tween cleanup via ReactiveLifecycleManager
 - **Phase 6:** Full keyboard/controller navigation with groups, clear tab order management, and dynamic management works. ReactiveNavigation uses ReactiveInputHandler and ReactiveFocusManager (RefCounted composition) for separation of concerns, with proper focus management and cleanup
 - **Phase 7:** Designers can build complete UI through visual configuration only (no scripting required) with cached auto-detection, visual feedback, Logger-based error reporting (Godot 4.5), debug overlay, FoldableContainer support, and accessibility features. All systems use ReactiveLifecycleManager and ReactiveValidationUtils for DRY compliance

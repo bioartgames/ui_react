@@ -35,7 +35,7 @@ func get_property(name: String) -> Variant:
 	return dict[name]
 
 ## Sets a property value by name.
-func set_property(name: String, value: Variant) -> void:
+func set_property(name: String, new_value: Variant) -> void:
 	var dict = _get_value()
 	var old_value = null
 	if dict.has(name):

@@ -13,4 +13,3 @@ func _set_value(new_value: Variant) -> void:
 	if new_value != null:
 		string_value = str(new_value)
 	super._set_value(string_value)
-

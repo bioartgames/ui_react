@@ -4,12 +4,10 @@ extends ReactiveControl
 class_name ReactiveLineEdit
 
 ## The LineEdit node for input.
-@onready var line_edit: LineEdit = null
+var line_edit: LineEdit = null
 
 func _ready() -> void:
-	super._ready()
-	
-	# Find or create LineEdit child
+	# Create LineEdit BEFORE calling super._ready() so it exists when bindings sync
 	line_edit = _find_or_create_line_edit()
 	
 	# If no line edit found, create one
@@ -17,6 +15,9 @@ func _ready() -> void:
 		line_edit = LineEdit.new()
 		line_edit.name = "LineEdit"
 		add_child(line_edit)
+	
+	# Now call super to set up bindings (LineEdit will exist for sync)
+	super._ready()
 
 ## Finds existing LineEdit child or returns null.
 func _find_or_create_line_edit() -> LineEdit:
