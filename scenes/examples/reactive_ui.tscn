@@ -1,0 +1,110 @@
+[gd_scene load_steps=15 format=3 uid="uid://1ctyp6anyhbh"]
+
+[ext_resource type="Script" uid="uid://st55qiias3cb" path="res://scripts/reactive/state.gd" id="1_w0svl"]
+[ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://scripts/reactive/reactive_line_edit.gd" id="1_xdli5"]
+[ext_resource type="Script" uid="uid://bw7gojuop1hic" path="res://scripts/reactive/reactive_label.gd" id="2_o0is5"]
+[ext_resource type="Resource" uid="uid://cxl14gsie0wgq" path="res://scenes/examples/bool.tres" id="3_a2h71"]
+[ext_resource type="Script" uid="uid://3m8buhv674ja" path="res://scripts/reactive/reactive_check_box.gd" id="3_iwetj"]
+[ext_resource type="Script" uid="uid://lv5ixpw5hlvp" path="res://scripts/reactive/reactive_button.gd" id="4_a2h71"]
+[ext_resource type="Resource" uid="uid://cvu2qm22ysl0y" path="res://scenes/examples/text.tres" id="5_iwetj"]
+[ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://scripts/reactive/reactive_slider.gd" id="5_m40cl"]
+[ext_resource type="Script" uid="uid://s6xiov8r6bil" path="res://scripts/reactive/reactive_progress_bar.gd" id="6_krjhy"]
+[ext_resource type="Resource" uid="uid://dp3cawtta2kbd" path="res://scenes/examples/items.tres" id="10_krjhy"]
+[ext_resource type="Script" uid="uid://b75p2so2hr0wd" path="res://scripts/reactive/reactive_option_button.gd" id="10_m40cl"]
+
+[sub_resource type="Resource" id="Resource_iwetj"]
+script = ExtResource("1_w0svl")
+value = ["Player: ", ExtResource("5_iwetj")]
+metadata/_custom_type_script = "uid://st55qiias3cb"
+
+[sub_resource type="Resource" id="3"]
+script = ExtResource("1_w0svl")
+value = 25.0
+
+[sub_resource type="Resource" id="Resource_preset_label"]
+script = ExtResource("1_w0svl")
+value = ["Preset: ", ExtResource("10_krjhy")]
+
+[node name="ReactiveUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+
+[node name="DisableActions" type="CheckBox" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Disable actions"
+script = ExtResource("3_iwetj")
+checked_state = ExtResource("3_a2h71")
+metadata/_custom_type_script = "uid://3m8buhv674ja"
+
+[node name="ReactiveButton" type="Button" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+text = "Press this thing."
+script = ExtResource("4_a2h71")
+disabled_state = ExtResource("3_a2h71")
+metadata/_custom_type_script = "uid://lv5ixpw5hlvp"
+
+[node name="Label" type="Label" parent="VBox"]
+layout_mode = 2
+text = "Player: "
+script = ExtResource("2_o0is5")
+text_state = SubResource("Resource_iwetj")
+metadata/_custom_type_script = "uid://bw7gojuop1hic"
+
+[node name="LineEdit" type="LineEdit" parent="VBox"]
+layout_mode = 2
+placeholder_text = "Type here to update the label"
+script = ExtResource("1_xdli5")
+text_state = ExtResource("5_iwetj")
+metadata/_custom_type_script = "uid://cgoqls6mehlqv"
+
+[node name="Slider" type="HSlider" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("5_m40cl")
+value_state = SubResource("3")
+metadata/_custom_type_script = "uid://toxmw3una1r3"
+
+[node name="Progress" type="ProgressBar" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("6_krjhy")
+value_state = SubResource("3")
+metadata/_custom_type_script = "uid://s6xiov8r6bil"
+
+[node name="PresetLabel" type="Label" parent="VBox"]
+layout_mode = 2
+script = ExtResource("2_o0is5")
+text_state = SubResource("Resource_preset_label")
+metadata/_custom_type_script = "uid://bw7gojuop1hic"
+
+[node name="ReactiveOptionButton" type="OptionButton" parent="VBox"]
+layout_mode = 2
+item_count = 2
+popup/item_0/text = "Sword"
+popup/item_0/id = 0
+popup/item_1/text = "Shield"
+popup/item_1/id = 1
+script = ExtResource("10_m40cl")
+selected_state = ExtResource("10_krjhy")
+disabled_state = ExtResource("3_a2h71")
+metadata/_custom_type_script = "uid://b75p2so2hr0wd"
