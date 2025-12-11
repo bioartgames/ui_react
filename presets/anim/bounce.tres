@@ -1,0 +1,32 @@
+[gd_resource type="Resource" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/anim/ui_anim_clip.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/anim/ui_anim_group.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/anim/ui_anim_action.gd" id="3"]
+
+[sub_resource type="Resource" id="1" script="res://scripts/anim/ui_anim_group.gd"]
+mode = "sequence"
+children = [ SubResource("2"), SubResource("3") ]
+
+[sub_resource type="Resource" id="2" script="res://scripts/anim/ui_anim_action.gd"]
+property_path = "position"
+from_value = Vector2(0, 0)
+to_value = Vector2(0, -6)
+is_relative = true
+duration = 0.12
+easing = "cubic_out"
+
+[sub_resource type="Resource" id="3" script="res://scripts/anim/ui_anim_action.gd"]
+property_path = "position"
+from_value = Vector2(0, -6)
+to_value = Vector2(0, 0)
+is_relative = true
+duration = 0.16
+easing = "cubic_in"
+
+[resource]
+script = ExtResource("1")
+root = SubResource("1")
+loop_mode = "none"
+loop_count = 1
+

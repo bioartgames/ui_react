@@ -46,7 +46,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 12
 
-[node name="DisableActions" type="CheckBox" parent="VBox"]
+[node name="DisableActionsToggle" type="CheckBox" parent="VBox"]
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Disable actions"
@@ -91,7 +91,7 @@ script = ExtResource("6_krjhy")
 value_state = SubResource("3")
 metadata/_custom_type_script = "uid://s6xiov8r6bil"
 
-[node name="PresetLabel" type="Label" parent="VBox"]
+[node name="OptionSelectionLabel" type="Label" parent="VBox"]
 layout_mode = 2
 script = ExtResource("2_o0is5")
 text_state = SubResource("Resource_preset_label")
