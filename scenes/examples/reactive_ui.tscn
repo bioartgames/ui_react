@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://1ctyp6anyhbh"]
+[gd_scene load_steps=17 format=3 uid="uid://1ctyp6anyhbh"]
 
 [ext_resource type="Script" uid="uid://st55qiias3cb" path="res://scripts/reactive/state.gd" id="1_w0svl"]
 [ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://scripts/reactive/reactive_line_edit.gd" id="1_xdli5"]
@@ -6,15 +6,18 @@
 [ext_resource type="Resource" uid="uid://cxl14gsie0wgq" path="res://scenes/examples/bool.tres" id="3_a2h71"]
 [ext_resource type="Script" uid="uid://3m8buhv674ja" path="res://scripts/reactive/reactive_check_box.gd" id="3_iwetj"]
 [ext_resource type="Script" uid="uid://lv5ixpw5hlvp" path="res://scripts/reactive/reactive_button.gd" id="4_a2h71"]
+[ext_resource type="Script" uid="uid://diigywt0dm170" path="res://scripts/utilities/animation_target.gd" id="4_pf7w8"]
 [ext_resource type="Resource" uid="uid://cvu2qm22ysl0y" path="res://scenes/examples/text.tres" id="5_iwetj"]
 [ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://scripts/reactive/reactive_slider.gd" id="5_m40cl"]
 [ext_resource type="Script" uid="uid://s6xiov8r6bil" path="res://scripts/reactive/reactive_progress_bar.gd" id="6_krjhy"]
 [ext_resource type="Resource" uid="uid://dp3cawtta2kbd" path="res://scenes/examples/items.tres" id="10_krjhy"]
 [ext_resource type="Script" uid="uid://b75p2so2hr0wd" path="res://scripts/reactive/reactive_option_button.gd" id="10_m40cl"]
-[ext_resource type="Resource" uid="uid://1j263583kb6v" path="res://presets/anim/bounce.tres" id="anim_bounce"]
-[ext_resource type="Resource" uid="uid://bl1uxb378ki1" path="res://presets/anim/expand.tres" id="anim_expand"]
-[ext_resource type="Script" uid="uid://ykk6o311os61" path="res://scripts/anim/ui_anim_player.gd" id="anim_player"]
-[ext_resource type="Resource" uid="uid://ct862vx3ejjwi" path="res://presets/anim/pulse.tres" id="anim_pulse"]
+
+[sub_resource type="Resource" id="Resource_p7nh0"]
+script = ExtResource("4_pf7w8")
+target = NodePath(".")
+duration = 1.0
+metadata/_custom_type_script = "uid://diigywt0dm170"
 
 [sub_resource type="Resource" id="Resource_iwetj"]
 script = ExtResource("1_w0svl")
@@ -65,6 +68,7 @@ size_flags_vertical = 4
 text = "Press this thing."
 script = ExtResource("4_a2h71")
 disabled_state = ExtResource("3_a2h71")
+animation_targets = Array[ExtResource("4_pf7w8")]([SubResource("Resource_p7nh0")])
 metadata/_custom_type_script = "uid://lv5ixpw5hlvp"
 
 [node name="Label" type="Label" parent="VBox"]
@@ -112,33 +116,3 @@ script = ExtResource("10_m40cl")
 selected_state = ExtResource("10_krjhy")
 disabled_state = ExtResource("3_a2h71")
 metadata/_custom_type_script = "uid://b75p2so2hr0wd"
-
-[node name="AnimHeader" type="Label" parent="VBox"]
-layout_mode = 2
-text = "Animation demos (expand/pulse/bounce)"
-
-[node name="AnimExpandButton" type="Button" parent="VBox"]
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-text = "Hover me (expand)"
-script = ExtResource("anim_player")
-clip = ExtResource("anim_expand")
-play_on_hover = true
-
-[node name="AnimPulseButton" type="Button" parent="VBox"]
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-text = "Click me (pulse)"
-script = ExtResource("anim_player")
-clip = ExtResource("anim_pulse")
-play_on_click = true
-
-[node name="AnimBounceLabel" type="Label" parent="VBox"]
-layout_mode = 2
-text = "Autoplay ping-pong (bounce)"
-script = ExtResource("anim_player")
-clip = ExtResource("anim_bounce")
-autoplay = true
-play_on_ready = true

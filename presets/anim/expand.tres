@@ -1,9 +1,0 @@
-[gd_resource type="Resource" script_class="UIAnimClip" load_steps=3 format=3 uid="uid://bl1uxb378ki1"]
-
-[ext_resource type="Script" uid="uid://cd2itttb53y2d" path="res://scripts/anim/ui_anim_clip.gd" id="1"]
-
-[sub_resource type="Resource" id="2"]
-
-[resource]
-script = ExtResource("1")
-root = SubResource("2")

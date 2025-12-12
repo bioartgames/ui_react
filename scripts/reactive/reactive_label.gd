@@ -2,6 +2,11 @@ extends Label
 class_name ReactiveLabel
 
 @export var text_state: State
+@export_group("Animation")
+## Whether to enable fade animation when text changes (default: false).
+@export var text_change_animation: bool = false
+## Duration for text change animation in seconds.
+@export var text_change_duration: float = 0.3
 var _updating: bool = false
 var _nested_states: Array[State] = []
 
@@ -18,7 +23,16 @@ func _on_text_state_changed(new_value: Variant, _old_value: Variant) -> void:
 	if text == new_text:
 		return
 	_updating = true
-	text = new_text
+
+	if text_change_animation:
+		# Fade out current text, change text, then fade in
+		var fade_out_signal = UIAnimationUtils.animate_fade_out(self, self, text_change_duration * 0.3)
+		await fade_out_signal
+		text = new_text
+		UIAnimationUtils.animate_fade_in(self, self, text_change_duration * 0.7)
+	else:
+		text = new_text
+
 	_updating = false
 
 func _rebind_nested_states(value: Variant) -> void:

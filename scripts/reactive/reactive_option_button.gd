@@ -3,6 +3,11 @@ class_name ReactiveOptionButton
 
 @export var selected_state: State
 @export var disabled_state: State
+@export_group("Animation")
+## Whether to enable selection change animation (default: true).
+@export var selection_animation: bool = true
+## Duration for selection change animation in seconds.
+@export var selection_duration: float = 0.15
 var _updating: bool = false
 
 func _ready() -> void:
@@ -36,6 +41,15 @@ func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void
 		return
 	if get_selected_id() == index or selected == index:
 		return
+
+	if selection_animation:
+		# Quick scale animation for selection feedback
+		pivot_offset = UIAnimationUtils.get_center_pivot_offset(self)
+		var t = UIAnimationUtils.create_safe_tween(self)
+		if t:
+			t.tween_property(self, "scale", Vector2(1.05, 1.05), selection_duration * 0.5)
+			t.tween_property(self, "scale", UIAnimationUtils.SCALE_MAX, selection_duration * 0.5)
+
 	_updating = true
 	select(index)
 	_updating = false

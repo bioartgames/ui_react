@@ -3,6 +3,11 @@ class_name ReactiveCheckBox
 
 @export var checked_state: State
 @export var disabled_state: State
+@export_group("Animation")
+## Whether to enable toggle animation (default: true).
+@export var toggle_animation: bool = true
+## Duration for toggle animation in seconds.
+@export var toggle_duration: float = 0.15
 var _updating: bool = false
 
 func _ready() -> void:
@@ -15,6 +20,14 @@ func _ready() -> void:
 		_on_disabled_state_changed(disabled_state.value, disabled_state.value)
 
 func _on_toggled(active: bool) -> void:
+	if toggle_animation:
+		# Quick scale animation for toggle feedback
+		pivot_offset = UIAnimationUtils.get_center_pivot_offset(self)
+		var t = UIAnimationUtils.create_safe_tween(self)
+		if t:
+			t.tween_property(self, "scale", Vector2(1.1, 1.1), toggle_duration * 0.5)
+			t.tween_property(self, "scale", UIAnimationUtils.SCALE_MAX, toggle_duration * 0.5)
+
 	if not checked_state or _updating:
 		return
 	if checked_state.value == active:
