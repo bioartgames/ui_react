@@ -195,7 +195,7 @@ func apply_to_control(owner: Node, target: Control) -> Signal:
 			if reverse:
 				return UIAnimationUtils.animate_rotate_out(owner, target, duration, 360.0, true, true, true)
 			else:
-				return UIAnimationUtils.animate_rotate_in(owner, target, duration, rotate_start_angle, true, repeat_count)
+				return UIAnimationUtils.animate_rotate_in(owner, target, duration, rotate_start_angle, Vector2(-1, -1), true, repeat_count)
 		AnimationAction.POP:
 			return UIAnimationUtils.animate_pop(owner, target, duration, pop_overshoot, Vector2(-1, -1), true, repeat_count)
 		AnimationAction.PULSE:

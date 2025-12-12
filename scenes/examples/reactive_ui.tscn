@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3 uid="uid://1ctyp6anyhbh"]
+[gd_scene load_steps=22 format=3 uid="uid://1ctyp6anyhbh"]
 
 [ext_resource type="Script" uid="uid://st55qiias3cb" path="res://scripts/reactive/state.gd" id="1_w0svl"]
 [ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://scripts/reactive/reactive_line_edit.gd" id="1_xdli5"]
@@ -23,15 +23,29 @@ script = ExtResource("1_w0svl")
 value = ["Player: ", ExtResource("5_iwetj")]
 metadata/_custom_type_script = "uid://st55qiias3cb"
 
+[sub_resource type="Resource" id="Resource_52s1b"]
+script = ExtResource("4_pf7w8")
+target = NodePath(".")
+trigger = 5
+animation = 17
+preserve_position = true
+metadata/_custom_type_script = "uid://diigywt0dm170"
+
 [sub_resource type="Resource" id="3"]
 script = ExtResource("1_w0svl")
 value = 25.0
+
+[sub_resource type="Resource" id="Resource_mbr4o"]
+script = ExtResource("4_pf7w8")
+target = NodePath(".")
+trigger = 7
+preserve_position = true
+metadata/_custom_type_script = "uid://diigywt0dm170"
 
 [sub_resource type="Resource" id="Resource_dcre7"]
 script = ExtResource("4_pf7w8")
 target = NodePath(".")
 trigger = 7
-action = 19
 metadata/_custom_type_script = "uid://diigywt0dm170"
 
 [sub_resource type="Resource" id="Resource_preset_label"]
@@ -42,14 +56,15 @@ value = ["Preset: ", ExtResource("10_krjhy")]
 script = ExtResource("4_pf7w8")
 target = NodePath(".")
 trigger = 5
-action = 22
+animation = 22
+flash_color = Color(0.8705595, 1.00111965e-05, 0.5636636, 1)
 metadata/_custom_type_script = "uid://diigywt0dm170"
 
 [sub_resource type="Resource" id="Resource_pf7w8"]
 script = ExtResource("4_pf7w8")
 target = NodePath(".")
 trigger = 6
-action = 17
+animation = 16
 metadata/_custom_type_script = "uid://diigywt0dm170"
 
 [node name="ReactiveUI" type="Control"]
@@ -103,6 +118,7 @@ layout_mode = 2
 placeholder_text = "Type here to update the label"
 script = ExtResource("1_xdli5")
 text_state = ExtResource("5_iwetj")
+animation_targets = Array[ExtResource("4_pf7w8")]([SubResource("Resource_52s1b")])
 metadata/_custom_type_script = "uid://cgoqls6mehlqv"
 
 [node name="Slider" type="HSlider" parent="VBox"]
@@ -110,6 +126,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("5_m40cl")
 value_state = SubResource("3")
+animation_targets = Array[ExtResource("4_pf7w8")]([SubResource("Resource_mbr4o")])
 metadata/_custom_type_script = "uid://toxmw3una1r3"
 
 [node name="Progress" type="ProgressBar" parent="VBox"]

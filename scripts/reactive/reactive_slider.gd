@@ -141,4 +141,3 @@ func _on_value_state_changed(new_value: Variant, _old_value: Variant) -> void:
 	_updating = true
 	value = target
 	_updating = false
-

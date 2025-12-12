@@ -49,6 +49,10 @@ enum Easing {
 	EASE_OUT_IN,    # Fast start and end, slow middle
 }
 
+## ============================================
+## CORE SETTINGS
+## ============================================
+
 ## The target control to animate.
 ## Drag and drop a node from the scene tree to this field.
 @export var target: NodePath = NodePath()
@@ -56,53 +60,79 @@ enum Easing {
 ## When to trigger this animation (dropdown selection in Inspector).
 @export var trigger: Trigger = Trigger.PRESSED
 
-## Animation action to perform (dropdown selection in Inspector).
-@export var action: AnimationAction = AnimationAction.EXPAND
+## Animation type to perform (dropdown selection in Inspector).
+@export var animation: AnimationAction = AnimationAction.EXPAND
 
-## Easing type for the animation (dropdown selection in Inspector).
-@export var easing: Easing = Easing.EASE_OUT
+## ============================================
+## TIMING & EASING
+## ============================================
 
 ## Animation duration in seconds.
 @export_range(0.001, 60.0) var duration: float = 0.3
 
-## If true, reverses/inverts the animation (e.g., EXPAND becomes SHRINK).
-@export var reverse: bool = false
-
-## If true, this animation will not trigger when the button is disabled.
-## Set to false if you want animations to play even when disabled (e.g., for visual feedback).
-@export var respect_disabled: bool = true
+## Easing type for the animation (dropdown selection in Inspector).
+@export var easing: Easing = Easing.EASE_OUT
 
 ## Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop).
 @export_range(-1, 999) var repeat_count: int = 0
 
-@export_group("Color Flash (for COLOR_FLASH action)")
-## Flash color for COLOR_FLASH action.
-@export var flash_color: Color = Color.YELLOW
+## ============================================
+## ANIMATION BEHAVIOR
+## ============================================
 
-## Flash intensity multiplier for COLOR_FLASH action.
-@export var flash_intensity: float = 1.5
+## If true, reverses/inverts the animation (e.g., EXPAND becomes SHRINK).
+@export var reverse: bool = false
 
-@export_group("Pop (for POP action)")
+## If true, this animation will not trigger when the control is disabled.
+## Set to false if you want animations to play even when disabled (e.g., for visual feedback).
+@export var respect_disabled: bool = true
+
+## ============================================
+## ADVANCED SETTINGS
+## ============================================
+
+## Custom pivot offset for scaling/rotation animations.
+## Use Vector2(-1, -1) for center (default), or specify custom offset in pixels.
+## Only affects animations that use pivot (EXPAND, SHRINK, POP, PULSE, ROTATE, etc.).
+@export var pivot_offset: Vector2 = Vector2(-1, -1)
+
+## If true, preserves the control's position after position-modifying animations (SHAKE, FLOAT).
+## Prevents unwanted layout shifts when animating controls like sliders or buttons.
+## When false, animations can move the control permanently.
+@export var preserve_position: bool = false
+
+## ============================================
+## ANIMATION-SPECIFIC SETTINGS
+## ============================================
+
+@export_group("Rotate (for ROTATE_IN animation)")
+## Starting angle in degrees for ROTATE_IN animation (default: -360.0).
+@export var rotate_start_angle: float = -360.0
+
+@export_group("Pop (for POP animation)")
 ## Overshoot amount for POP animation (default: 1.2, meaning 20% overshoot).
 @export var pop_overshoot: float = 1.2
 
-@export_group("Pulse (for PULSE action)")
+@export_group("Pulse (for PULSE animation)")
 ## Pulse scale amount for PULSE animation (default: 1.1, meaning 10% scale increase).
 @export var pulse_amount: float = 1.1
 
 ## Number of pulses for PULSE animation (default: 2).
 @export var pulse_count: int = 2
 
-@export_group("Shake (for SHAKE action)")
+@export_group("Shake (for SHAKE animation)")
 ## Shake intensity in pixels for SHAKE animation (default: 10.0).
 @export var shake_intensity: float = 10.0
 
 ## Number of shakes for SHAKE animation (default: 5).
 @export var shake_count: int = 5
 
-@export_group("Rotate (for ROTATE_IN action)")
-## Starting angle in degrees for ROTATE_IN animation (default: -360.0).
-@export var rotate_start_angle: float = -360.0
+@export_group("Color Flash (for COLOR_FLASH animation)")
+## Flash color for COLOR_FLASH animation.
+@export var flash_color: Color = Color.YELLOW
+
+## Flash intensity multiplier for COLOR_FLASH animation.
+@export var flash_intensity: float = 1.5
 
 ## Applies this animation to the target control.
 ## [param owner]: The node that owns the animation (for creating tweens).
@@ -129,22 +159,22 @@ func apply(owner: Node) -> Signal:
 		Easing.EASE_OUT_IN:
 			tween_easing = Tween.EASE_OUT_IN
 	
-	match action:
+	match animation:
 		AnimationAction.EXPAND:
 			if reverse:
-				return UIAnimationUtils.animate_shrink(owner, control_target, duration, Vector2(-1, -1), true, true, true, repeat_count, tween_easing)
+				return UIAnimationUtils.animate_shrink(owner, control_target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
 			else:
-				return UIAnimationUtils.animate_expand(owner, control_target, duration, Vector2(-1, -1), true, false, false, repeat_count, tween_easing)
+				return UIAnimationUtils.animate_expand(owner, control_target, duration, pivot_offset, true, false, false, repeat_count, tween_easing)
 		AnimationAction.EXPAND_X:
 			if reverse:
-				return UIAnimationUtils.animate_shrink_x(owner, control_target, duration, Vector2(-1, -1), true, true, true, repeat_count, tween_easing)
+				return UIAnimationUtils.animate_shrink_x(owner, control_target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
 			else:
-				return UIAnimationUtils.animate_expand_x(owner, control_target, duration, Vector2(-1, -1), true, repeat_count, tween_easing)
+				return UIAnimationUtils.animate_expand_x(owner, control_target, duration, pivot_offset, true, repeat_count, tween_easing)
 		AnimationAction.EXPAND_Y:
 			if reverse:
-				return UIAnimationUtils.animate_shrink_y(owner, control_target, duration, Vector2(-1, -1), true, true, true, repeat_count, tween_easing)
+				return UIAnimationUtils.animate_shrink_y(owner, control_target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
 			else:
-				return UIAnimationUtils.animate_expand_y(owner, control_target, duration, Vector2(-1, -1), true, repeat_count, tween_easing)
+				return UIAnimationUtils.animate_expand_y(owner, control_target, duration, pivot_offset, true, repeat_count, tween_easing)
 		AnimationAction.FADE_IN:
 			if reverse:
 				return UIAnimationUtils.animate_fade_out(owner, control_target, duration, true, true, repeat_count, tween_easing)
@@ -192,31 +222,31 @@ func apply(owner: Node) -> Signal:
 				return UIAnimationUtils.animate_from_bottom_to_center(owner, control_target, duration, true, tween_easing)
 		AnimationAction.BOUNCE_IN:
 			if reverse:
-				return UIAnimationUtils.animate_bounce_out(owner, control_target, duration, Vector2(-1, -1), true, true, true, repeat_count, tween_easing)
+				return UIAnimationUtils.animate_bounce_out(owner, control_target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
 			else:
-				return UIAnimationUtils.animate_bounce_in(owner, control_target, duration, Vector2(-1, -1), true, tween_easing)
+				return UIAnimationUtils.animate_bounce_in(owner, control_target, duration, pivot_offset, true, tween_easing)
 		AnimationAction.ELASTIC_IN:
 			if reverse:
-				return UIAnimationUtils.animate_elastic_out(owner, control_target, duration, Vector2(-1, -1), true, true, true, repeat_count, tween_easing)
+				return UIAnimationUtils.animate_elastic_out(owner, control_target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
 			else:
-				return UIAnimationUtils.animate_elastic_in(owner, control_target, duration, Vector2(-1, -1), true, tween_easing)
+				return UIAnimationUtils.animate_elastic_in(owner, control_target, duration, pivot_offset, true, tween_easing)
 		AnimationAction.ROTATE_IN:
 			if reverse:
 				return UIAnimationUtils.animate_rotate_out(owner, control_target, duration, 360.0, true, true, true, tween_easing)
 			else:
-				return UIAnimationUtils.animate_rotate_in(owner, control_target, duration, rotate_start_angle, true, repeat_count, tween_easing)
+				return UIAnimationUtils.animate_rotate_in(owner, control_target, duration, rotate_start_angle, pivot_offset, true, repeat_count, tween_easing)
 		AnimationAction.POP:
-			return UIAnimationUtils.animate_pop(owner, control_target, duration, pop_overshoot, Vector2(-1, -1), true, repeat_count, tween_easing)
+			return UIAnimationUtils.animate_pop(owner, control_target, duration, pop_overshoot, pivot_offset, true, repeat_count, tween_easing)
 		AnimationAction.PULSE:
-			return UIAnimationUtils.animate_pulse(owner, control_target, duration, pulse_amount, pulse_count, Vector2(-1, -1), true, repeat_count, tween_easing)
+			return UIAnimationUtils.animate_pulse(owner, control_target, duration, pulse_amount, pulse_count, pivot_offset, true, repeat_count, tween_easing)
 		AnimationAction.SHAKE:
-			return UIAnimationUtils.animate_shake(owner, control_target, duration, shake_intensity, shake_count, true, repeat_count, tween_easing)
+			return UIAnimationUtils.animate_shake(owner, control_target, duration, shake_intensity, shake_count, true, repeat_count, tween_easing, preserve_position)
 		AnimationAction.BREATHING:
-			return UIAnimationUtils.animate_breathing(owner, control_target, duration, repeat_count, tween_easing)
+			return UIAnimationUtils.animate_breathing(owner, control_target, duration, repeat_count, tween_easing, pivot_offset)
 		AnimationAction.WOBBLE:
-			return UIAnimationUtils.animate_wobble(owner, control_target, duration, repeat_count, tween_easing)
+			return UIAnimationUtils.animate_wobble(owner, control_target, duration, repeat_count, tween_easing, pivot_offset)
 		AnimationAction.FLOAT:
-			return UIAnimationUtils.animate_float(owner, control_target, duration, repeat_count, tween_easing)
+			return UIAnimationUtils.animate_float(owner, control_target, duration, repeat_count, tween_easing, 10.0, false, preserve_position)
 		AnimationAction.GLOW_PULSE:
 			return UIAnimationUtils.animate_glow_pulse(owner, control_target, duration, repeat_count, tween_easing)
 		AnimationAction.COLOR_FLASH:
@@ -225,6 +255,6 @@ func apply(owner: Node) -> Signal:
 			UIAnimationUtils.reset_control_to_normal(control_target)
 			return Signal()
 		_:
-			push_warning("AnimationTarget: Unsupported animation action %d" % action)
+			push_warning("AnimationTarget: Unsupported animation type %d" % animation)
 			return Signal()
 

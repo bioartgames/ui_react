@@ -45,6 +45,10 @@ const SCALE_MAX := Vector2.ONE
 ## Multiplier for calculating center pivot offset (0.5 = center).
 const PIVOT_CENTER_MULTIPLIER := 0.5
 
+## Tracks saved positions per target control for preserve_position feature.
+## Key: Control node (object ID), Value: Vector2 saved position
+static var _saved_positions: Dictionary = {}
+
 ## Calculates the center X position of a node relative to the viewport.
 ## [param source_node]: The node to get viewport from.
 ## [param target]: The control to calculate center for.
@@ -1225,7 +1229,7 @@ static func animate_elastic_out(source_node: Node, target: Control, speed := DEF
 ## [param auto_visible]: If true, automatically sets visible=true before animation (default: false).
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
-static func animate_rotate_in(source_node: Node, target: Control, speed := DEFAULT_SPEED, start_angle: float = -360.0, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_rotate_in(source_node: Node, target: Control, speed := DEFAULT_SPEED, start_angle: float = -360.0, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
 		push_warning("UIAnimationUtils: Invalid source_node or target for animate_rotate_in")
 		return Signal()
@@ -1233,6 +1237,12 @@ static func animate_rotate_in(source_node: Node, target: Control, speed := DEFAU
 	var animation_callable = func() -> Signal:
 		if auto_visible:
 			target.visible = true
+		
+		# Set pivot offset for rotation center
+		if pivot_offset == Vector2(-1, -1):
+			target.pivot_offset = get_center_pivot_offset(target)
+		else:
+			target.pivot_offset = pivot_offset
 		
 		target.rotation_degrees = start_angle
 		
@@ -1384,17 +1394,33 @@ static func animate_pulse(source_node: Node, target: Control, speed := 0.5, puls
 ## [param shake_count]: Number of shake movements (default: 5).
 ## [param auto_visible]: If true, automatically sets visible=true before animation (default: false).
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
+## [param preserve_position]: If true, restores original position after animation completes (default: false).
 ## [return]: Signal that emits when animation finishes.
-static func animate_shake(source_node: Node, target: Control, speed := 0.5, intensity: float = 10.0, shake_count: int = 5, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_shake(source_node: Node, target: Control, speed := 0.5, intensity: float = 10.0, shake_count: int = 5, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT, preserve_position: bool = false) -> Signal:
 	if not source_node or not target:
 		push_warning("UIAnimationUtils: Invalid source_node or target for animate_shake")
 		return Signal()
+	
+	# Handle position preservation: interrupt existing tweens and save position once per target
+	var saved_position: Vector2 = Vector2.ZERO
+	if preserve_position:
+		# Interrupt any existing position tweens (using existing pattern)
+		var interrupt_tween = source_node.create_tween()
+		if interrupt_tween:
+			interrupt_tween.tween_property(target, "position", target.position, 0.0)
+			interrupt_tween.kill()
+		
+		# Save position once per target (don't overwrite if already saved for this target)
+		if not _saved_positions.has(target):
+			_saved_positions[target] = target.position
+		saved_position = _saved_positions[target]
 	
 	var animation_callable = func() -> Signal:
 		if auto_visible:
 			target.visible = true
 		
-		var original_position = target.position
+		# Use saved position if preserving, otherwise use current position
+		var original_position = saved_position if preserve_position else target.position
 		var t = source_node.create_tween()
 		if not t:
 			push_warning("UIAnimationUtils: Failed to create tween")
@@ -1412,10 +1438,21 @@ static func animate_shake(source_node: Node, target: Control, speed := 0.5, inte
 		
 		return t.finished
 	
+	var result_signal: Signal
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		result_signal = _loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
-		return animation_callable.call()
+		result_signal = animation_callable.call()
+	
+	# Connect to final completion to restore position and clean up
+	if preserve_position:
+		result_signal.connect(func(): 
+			if _saved_positions.has(target):
+				target.position = _saved_positions[target]
+				_saved_positions.erase(target)
+		, CONNECT_ONE_SHOT)
+	
+	return result_signal
 
 ## Animates a control with a continuous breathing effect (subtle scale pulse).
 ## [param source_node]: The node to create the tween from (usually self).
@@ -1509,10 +1546,12 @@ static func animate_wobble(source_node: Node, target: Control, duration: float =
 ## [param target]: The control node to animate.
 ## [param duration]: Duration per cycle in seconds (default: 2.0).
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: -1).
+## [param easing]: Easing type for the animation (default: EASE_OUT).
 ## [param float_distance]: Distance to float in pixels (default: 10.0).
 ## [param auto_visible]: If true, automatically sets visible=true before animation (default: false).
+## [param preserve_position]: If true, restores original position after animation completes (default: false).
 ## [return]: Signal that emits when animation finishes (or can be used to track infinite loops).
-static func animate_float(source_node: Node, target: Control, duration: float = 2.0, repeat_count: int = -1, easing: int = Tween.EASE_OUT, float_distance: float = 10.0, auto_visible: bool = false) -> Signal:
+static func animate_float(source_node: Node, target: Control, duration: float = 2.0, repeat_count: int = -1, easing: int = Tween.EASE_OUT, float_distance: float = 10.0, auto_visible: bool = false, preserve_position: bool = false) -> Signal:
 	if not source_node or not target:
 		push_warning("UIAnimationUtils: Invalid source_node or target for animate_float")
 		return Signal()
@@ -1520,13 +1559,28 @@ static func animate_float(source_node: Node, target: Control, duration: float = 
 	if auto_visible:
 		target.visible = true
 	
-	var original_position = target.position
+	# Handle position preservation: interrupt existing tweens and save position once per target
+	var saved_position: Vector2 = Vector2.ZERO
+	if preserve_position:
+		# Interrupt any existing position tweens (using existing pattern)
+		var interrupt_tween = source_node.create_tween()
+		if interrupt_tween:
+			interrupt_tween.tween_property(target, "position", target.position, 0.0)
+			interrupt_tween.kill()
+		
+		# Save position once per target (don't overwrite if already saved for this target)
+		if not _saved_positions.has(target):
+			_saved_positions[target] = target.position
+		saved_position = _saved_positions[target]
 	
 	var animation_callable = func() -> Signal:
 		var t = source_node.create_tween()
 		if not t:
 			push_warning("UIAnimationUtils: Failed to create tween")
 			return Signal()
+		
+		# Use saved position if preserving, otherwise use current position
+		var original_position = saved_position if preserve_position else target.position
 		
 		# Move up
 		t.tween_property(target, 'position:y', original_position.y - float_distance, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
@@ -1535,7 +1589,17 @@ static func animate_float(source_node: Node, target: Control, duration: float = 
 		
 		return t.finished
 	
-	return _loop_animation(source_node, target, animation_callable, repeat_count)
+	var result_signal = _loop_animation(source_node, target, animation_callable, repeat_count)
+	
+	# Connect to final completion to restore position and clean up
+	if preserve_position:
+		result_signal.connect(func(): 
+			if _saved_positions.has(target):
+				target.position = _saved_positions[target]
+				_saved_positions.erase(target)
+		, CONNECT_ONE_SHOT)
+	
+	return result_signal
 
 ## Animates a control with a continuous glow pulse effect (modulate alpha pulse).
 ## [param source_node]: The node to create the tween from (usually self).

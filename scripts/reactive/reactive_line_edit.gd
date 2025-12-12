@@ -25,10 +25,7 @@ func _ready() -> void:
 ## Called automatically in [method _ready].
 func _validate_animation_targets() -> void:
 	var valid_targets: Array[AnimationTarget] = []
-	var has_text_changed_targets = false
 	var has_text_entered_targets = false
-	var has_focus_entered_targets = false
-	var has_focus_exited_targets = false
 	var has_hover_enter_targets = false
 	var has_hover_exit_targets = false
 	
@@ -55,14 +52,8 @@ func _validate_animation_targets() -> void:
 		
 		# Track which triggers we need to connect
 		match anim_target.trigger:
-			AnimationTarget.Trigger.TEXT_CHANGED:
-				has_text_changed_targets = true
 			AnimationTarget.Trigger.TEXT_ENTERED:
 				has_text_entered_targets = true
-			AnimationTarget.Trigger.FOCUS_ENTERED:
-				has_focus_entered_targets = true
-			AnimationTarget.Trigger.FOCUS_EXITED:
-				has_focus_exited_targets = true
 			AnimationTarget.Trigger.HOVER_ENTER:
 				has_hover_enter_targets = true
 			AnimationTarget.Trigger.HOVER_EXIT:

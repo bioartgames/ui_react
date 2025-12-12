@@ -176,7 +176,7 @@ func _create_animation_callable(owner: Node, control: Control, anim_config: Anim
 			if reverse:
 				return UIAnimationUtils.animate_rotate_out(owner, control, duration, 360.0, true, true, true, repeat_count)
 			else:
-				return UIAnimationUtils.animate_rotate_in(owner, control, duration, rotate_start_angle, true, repeat_count)
+				return UIAnimationUtils.animate_rotate_in(owner, control, duration, rotate_start_angle, Vector2(-1, -1), true, repeat_count)
 		AnimationActionConfig.AnimationAction.POP:
 			var pop_overshoot = anim_config.pop_overshoot if anim_config is AnimationActionConfig else 1.2
 			return UIAnimationUtils.animate_pop(owner, control, duration, pop_overshoot, Vector2(-1, -1), true, repeat_count)
