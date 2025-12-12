@@ -2,11 +2,14 @@ extends Label
 class_name ReactiveLabel
 
 @export var text_state: State
-@export_group("Animation")
-## Whether to enable fade animation when text changes (default: false).
-@export var text_change_animation: bool = false
-## Duration for text change animation in seconds.
-@export var text_change_duration: float = 0.3
+
+## Targets to animate based on label events.
+##
+## Drag nodes here and configure each target's animation properties directly in the Inspector.
+## Each target can specify its own trigger (text changed, hover enter/exit), animation type,
+## duration, and settings - no resource files needed! Leave empty to use manual signal connections.
+@export var animation_targets: Array[AnimationTarget] = []
+
 var _updating: bool = false
 var _nested_states: Array[State] = []
 
@@ -14,8 +17,82 @@ func _ready() -> void:
 	if text_state:
 		text_state.value_changed.connect(_on_text_state_changed)
 		_on_text_state_changed(text_state.value, text_state.value)
+	_validate_animation_targets()
 
-func _on_text_state_changed(new_value: Variant, _old_value: Variant) -> void:
+## Validates animation targets and filters out invalid ones.
+## Called automatically in [method _ready].
+func _validate_animation_targets() -> void:
+	var valid_targets: Array[AnimationTarget] = []
+	var has_hover_enter_targets = false
+	var has_hover_exit_targets = false
+	
+	for anim_target in animation_targets:
+		if anim_target == null:
+			continue
+		
+		# Check if target is set
+		if anim_target.target.is_empty():
+			push_warning("ReactiveLabel '%s': AnimationTarget has no target. Set target (NodePath) in the Inspector. Tip: Drag a node to target." % name)
+			continue
+		
+		# Verify the target resolves to a valid Control
+		var target_node = get_node_or_null(anim_target.target)
+		if target_node == null:
+			push_warning("ReactiveLabel '%s': AnimationTarget target '%s' not found. Check the NodePath." % [name, anim_target.target])
+			continue
+		
+		if not (target_node is Control):
+			push_warning("ReactiveLabel '%s': AnimationTarget target '%s' is not a Control node." % [name, anim_target.target])
+			continue
+		
+		valid_targets.append(anim_target)
+		
+		# Track which triggers we need to connect (only hover needs signal connections)
+		match anim_target.trigger:
+			AnimationTarget.Trigger.HOVER_ENTER:
+				has_hover_enter_targets = true
+			AnimationTarget.Trigger.HOVER_EXIT:
+				has_hover_exit_targets = true
+	
+	animation_targets = valid_targets
+	
+	# Connect signals based on which triggers are used
+	if has_hover_enter_targets:
+		if not mouse_entered.is_connected(_on_trigger_hover_enter):
+			mouse_entered.connect(_on_trigger_hover_enter)
+	if has_hover_exit_targets:
+		if not mouse_exited.is_connected(_on_trigger_hover_exit):
+			mouse_exited.connect(_on_trigger_hover_exit)
+
+## Handles TEXT_CHANGED trigger animations.
+func _on_trigger_text_changed(_new_value: Variant, _old_value: Variant) -> void:
+	_trigger_animations(AnimationTarget.Trigger.TEXT_CHANGED)
+
+## Handles HOVER_ENTER trigger animations.
+func _on_trigger_hover_enter() -> void:
+	_trigger_animations(AnimationTarget.Trigger.HOVER_ENTER)
+
+## Handles HOVER_EXIT trigger animations.
+func _on_trigger_hover_exit() -> void:
+	_trigger_animations(AnimationTarget.Trigger.HOVER_EXIT)
+
+## Triggers animations for targets matching the specified trigger type.
+## [param trigger_type]: The trigger type to match.
+func _trigger_animations(trigger_type: AnimationTarget.Trigger) -> void:
+	if animation_targets.size() == 0:
+		return
+	
+	# Apply animations for targets matching this trigger
+	for anim_target in animation_targets:
+		if anim_target == null:
+			continue
+		
+		if anim_target.trigger != trigger_type:
+			continue
+		
+		anim_target.apply(self)
+
+func _on_text_state_changed(new_value: Variant, old_value: Variant) -> void:
 	if _updating:
 		return
 	_rebind_nested_states(new_value)
@@ -24,14 +101,11 @@ func _on_text_state_changed(new_value: Variant, _old_value: Variant) -> void:
 		return
 	_updating = true
 
-	if text_change_animation:
-		# Fade out current text, change text, then fade in
-		var fade_out_signal = UIAnimationUtils.animate_fade_out(self, self, text_change_duration * 0.3)
-		await fade_out_signal
-		text = new_text
-		UIAnimationUtils.animate_fade_in(self, self, text_change_duration * 0.7)
-	else:
-		text = new_text
+	text = new_text
+	
+	# Trigger animations if configured
+	if animation_targets.size() > 0:
+		_on_trigger_text_changed(new_value, old_value)
 
 	_updating = false
 

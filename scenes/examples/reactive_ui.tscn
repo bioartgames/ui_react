@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://1ctyp6anyhbh"]
+[gd_scene load_steps=20 format=3 uid="uid://1ctyp6anyhbh"]
 
 [ext_resource type="Script" uid="uid://st55qiias3cb" path="res://scripts/reactive/state.gd" id="1_w0svl"]
 [ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://scripts/reactive/reactive_line_edit.gd" id="1_xdli5"]
@@ -27,9 +27,30 @@ metadata/_custom_type_script = "uid://st55qiias3cb"
 script = ExtResource("1_w0svl")
 value = 25.0
 
+[sub_resource type="Resource" id="Resource_dcre7"]
+script = ExtResource("4_pf7w8")
+target = NodePath(".")
+trigger = 7
+action = 19
+metadata/_custom_type_script = "uid://diigywt0dm170"
+
 [sub_resource type="Resource" id="Resource_preset_label"]
 script = ExtResource("1_w0svl")
 value = ["Preset: ", ExtResource("10_krjhy")]
+
+[sub_resource type="Resource" id="Resource_mbe61"]
+script = ExtResource("4_pf7w8")
+target = NodePath(".")
+trigger = 5
+action = 22
+metadata/_custom_type_script = "uid://diigywt0dm170"
+
+[sub_resource type="Resource" id="Resource_pf7w8"]
+script = ExtResource("4_pf7w8")
+target = NodePath(".")
+trigger = 6
+action = 17
+metadata/_custom_type_script = "uid://diigywt0dm170"
 
 [node name="ReactiveUI" type="Control"]
 layout_mode = 3
@@ -96,16 +117,20 @@ layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("6_krjhy")
 value_state = SubResource("3")
+animation_targets = Array[ExtResource("4_pf7w8")]([SubResource("Resource_dcre7")])
 metadata/_custom_type_script = "uid://s6xiov8r6bil"
 
 [node name="OptionSelectionLabel" type="Label" parent="VBox"]
 layout_mode = 2
 script = ExtResource("2_o0is5")
 text_state = SubResource("Resource_preset_label")
+animation_targets = Array[ExtResource("4_pf7w8")]([SubResource("Resource_mbe61")])
 metadata/_custom_type_script = "uid://bw7gojuop1hic"
 
 [node name="ReactiveOptionButton" type="OptionButton" parent="VBox"]
 layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
 item_count = 2
 popup/item_0/text = "Sword"
 popup/item_0/id = 0
@@ -114,4 +139,5 @@ popup/item_1/id = 1
 script = ExtResource("10_m40cl")
 selected_state = ExtResource("10_krjhy")
 disabled_state = ExtResource("3_a2h71")
+animation_targets = Array[ExtResource("4_pf7w8")]([SubResource("Resource_pf7w8")])
 metadata/_custom_type_script = "uid://b75p2so2hr0wd"

@@ -6,10 +6,21 @@ extends Resource
 ## When to trigger this animation.
 enum Trigger {
 	PRESSED,           # When button is pressed (default)
-	HOVER_ENTER,       # When mouse enters button
-	HOVER_EXIT,        # When mouse exits button
+	HOVER_ENTER,       # When mouse enters control
+	HOVER_EXIT,        # When mouse exits control
 	TOGGLED_ON,        # When toggle is turned on
 	TOGGLED_OFF,       # When toggle is turned off
+	TEXT_CHANGED,      # When text value changes
+	SELECTION_CHANGED, # When selection changes
+	VALUE_CHANGED,     # When value changes
+	VALUE_INCREASED,   # When value increases
+	VALUE_DECREASED,   # When value decreases
+	DRAG_STARTED,      # When user starts dragging
+	DRAG_ENDED,        # When user stops dragging
+	COMPLETED,         # When progress reaches completion
+	TEXT_ENTERED,      # When user presses Enter in text input
+	FOCUS_ENTERED,     # When input gains focus
+	FOCUS_EXITED,      # When input loses focus
 }
 
 ## Animation action types.
