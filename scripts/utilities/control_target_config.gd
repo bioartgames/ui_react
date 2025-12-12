@@ -57,7 +57,7 @@ func get_target(owner: Node) -> Control:
 ## [param owner]: The node that owns this config (used to resolve the target path).
 ## [param is_on]: Optional boolean state (used by toggles to indicate ON/OFF state).
 ## Returns true if the action was applied successfully, false otherwise.
-func apply(owner: Node, is_on: bool = true) -> bool:
+func apply(owner: Node, _is_on: bool = true) -> bool:
 	var target_node = get_target(owner)
 	if target_node == null:
 		var owner_name: String = "null"
@@ -67,7 +67,7 @@ func apply(owner: Node, is_on: bool = true) -> bool:
 		return false
 	
 	# Apply animation using the inline config
-	var animation_signal = animation.apply_to_control(owner, target_node)
+	var _animation_signal = animation.apply_to_control(owner, target_node)
 	# Note: We can't await in a Resource method, so the animation will run asynchronously
 	return true
 

@@ -25,7 +25,7 @@ enum AnimationAction {
 @export var action: AnimationAction = AnimationAction.EXPAND
 
 ## Animation duration in seconds.
-@export var duration: float = 0.3
+@export_range(0.001, 60.0) var duration: float = 0.3
 
 ## Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop).
 ## For continuous animations like breathing/wobble, set to -1 for infinite.

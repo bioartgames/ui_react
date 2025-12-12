@@ -16,7 +16,6 @@
 [sub_resource type="Resource" id="Resource_p7nh0"]
 script = ExtResource("4_pf7w8")
 target = NodePath(".")
-duration = 1.0
 metadata/_custom_type_script = "uid://diigywt0dm170"
 
 [sub_resource type="Resource" id="Resource_iwetj"]

@@ -30,6 +30,14 @@ enum AnimationAction {
 	RESET
 }
 
+## Easing types for animations.
+enum Easing {
+	EASE_IN,        # Slow start, fast end
+	EASE_OUT,       # Fast start, slow end (default)
+	EASE_IN_OUT,    # Slow start and end, fast middle
+	EASE_OUT_IN,    # Fast start and end, slow middle
+}
+
 ## The target control to animate.
 ## Drag and drop a node from the scene tree to this field.
 @export var target: NodePath = NodePath()
@@ -40,8 +48,11 @@ enum AnimationAction {
 ## Animation action to perform (dropdown selection in Inspector).
 @export var action: AnimationAction = AnimationAction.EXPAND
 
+## Easing type for the animation (dropdown selection in Inspector).
+@export var easing: Easing = Easing.EASE_OUT
+
 ## Animation duration in seconds.
-@export var duration: float = 0.3
+@export_range(0.001, 60.0) var duration: float = 0.3
 
 ## If true, reverses/inverts the animation (e.g., EXPAND becomes SHRINK).
 @export var reverse: bool = false
@@ -95,98 +106,110 @@ func apply(owner: Node) -> Signal:
 	
 	var control_target = target_node as Control
 	
+	# Convert Easing enum to Tween.EASE_* constant
+	var tween_easing: int
+	match easing:
+		Easing.EASE_IN:
+			tween_easing = Tween.EASE_IN
+		Easing.EASE_OUT:
+			tween_easing = Tween.EASE_OUT
+		Easing.EASE_IN_OUT:
+			tween_easing = Tween.EASE_IN_OUT
+		Easing.EASE_OUT_IN:
+			tween_easing = Tween.EASE_OUT_IN
+	
 	match action:
 		AnimationAction.EXPAND:
 			if reverse:
-				return UIAnimationUtils.animate_shrink(owner, control_target, duration, Vector2(-1, -1), true, true, true, repeat_count)
+				return UIAnimationUtils.animate_shrink(owner, control_target, duration, Vector2(-1, -1), true, true, true, repeat_count, tween_easing)
 			else:
-				return UIAnimationUtils.animate_expand(owner, control_target, duration, Vector2(-1, -1), true, false, false, repeat_count)
+				return UIAnimationUtils.animate_expand(owner, control_target, duration, Vector2(-1, -1), true, false, false, repeat_count, tween_easing)
 		AnimationAction.EXPAND_X:
 			if reverse:
-				return UIAnimationUtils.animate_shrink_x(owner, control_target, duration, Vector2(-1, -1), true, true, true, repeat_count)
+				return UIAnimationUtils.animate_shrink_x(owner, control_target, duration, Vector2(-1, -1), true, true, true, repeat_count, tween_easing)
 			else:
-				return UIAnimationUtils.animate_expand_x(owner, control_target, duration, Vector2(-1, -1), true, repeat_count)
+				return UIAnimationUtils.animate_expand_x(owner, control_target, duration, Vector2(-1, -1), true, repeat_count, tween_easing)
 		AnimationAction.EXPAND_Y:
 			if reverse:
-				return UIAnimationUtils.animate_shrink_y(owner, control_target, duration, Vector2(-1, -1), true, true, true, repeat_count)
+				return UIAnimationUtils.animate_shrink_y(owner, control_target, duration, Vector2(-1, -1), true, true, true, repeat_count, tween_easing)
 			else:
-				return UIAnimationUtils.animate_expand_y(owner, control_target, duration, Vector2(-1, -1), true, repeat_count)
+				return UIAnimationUtils.animate_expand_y(owner, control_target, duration, Vector2(-1, -1), true, repeat_count, tween_easing)
 		AnimationAction.FADE_IN:
 			if reverse:
-				return UIAnimationUtils.animate_fade_out(owner, control_target, duration, true, true, repeat_count)
+				return UIAnimationUtils.animate_fade_out(owner, control_target, duration, true, true, repeat_count, tween_easing)
 			else:
-				return UIAnimationUtils.animate_fade_in(owner, control_target, duration, true, repeat_count)
+				return UIAnimationUtils.animate_fade_in(owner, control_target, duration, true, repeat_count, tween_easing)
 		AnimationAction.SLIDE_FROM_LEFT:
 			if reverse:
-				return UIAnimationUtils.animate_slide_to_left(owner, control_target, 8.0, duration, true)
+				return UIAnimationUtils.animate_slide_to_left(owner, control_target, 8.0, duration, true, tween_easing)
 			else:
-				return UIAnimationUtils.animate_slide_from_left(owner, control_target, 8.0, duration, true)
+				return UIAnimationUtils.animate_slide_from_left(owner, control_target, 8.0, duration, true, tween_easing)
 		AnimationAction.SLIDE_FROM_RIGHT:
 			if reverse:
-				return UIAnimationUtils.animate_slide_to_right(owner, control_target, 8.0, duration, true)
+				return UIAnimationUtils.animate_slide_to_right(owner, control_target, 8.0, duration, true, tween_easing)
 			else:
-				return UIAnimationUtils.animate_slide_from_right(owner, control_target, 8.0, duration, true)
+				return UIAnimationUtils.animate_slide_from_right(owner, control_target, 8.0, duration, true, tween_easing)
 		AnimationAction.SLIDE_FROM_TOP:
 			if reverse:
-				return UIAnimationUtils.animate_slide_to_top(owner, control_target, duration, true)
+				return UIAnimationUtils.animate_slide_to_top(owner, control_target, duration, true, tween_easing)
 			else:
-				return UIAnimationUtils.animate_slide_from_top(owner, control_target, 8.0, duration, true)
+				return UIAnimationUtils.animate_slide_from_top(owner, control_target, 8.0, duration, true, tween_easing)
 		AnimationAction.SLIDE_FROM_BOTTOM:
 			if reverse:
-				return UIAnimationUtils.animate_slide_to_bottom(owner, control_target, duration, true)
+				return UIAnimationUtils.animate_slide_to_bottom(owner, control_target, duration, true, tween_easing)
 			else:
-				return UIAnimationUtils.animate_slide_from_bottom(owner, control_target, 8.0, duration, true)
+				return UIAnimationUtils.animate_slide_from_bottom(owner, control_target, 8.0, duration, true, tween_easing)
 		AnimationAction.FROM_LEFT_TO_CENTER:
 			if reverse:
-				return UIAnimationUtils.animate_from_center_to_left(owner, control_target, duration, true)
+				return UIAnimationUtils.animate_from_center_to_left(owner, control_target, duration, true, tween_easing)
 			else:
-				return UIAnimationUtils.animate_from_left_to_center(owner, control_target, duration, true)
+				return UIAnimationUtils.animate_from_left_to_center(owner, control_target, duration, true, tween_easing)
 		AnimationAction.FROM_RIGHT_TO_CENTER:
 			if reverse:
-				return UIAnimationUtils.animate_from_center_to_right(owner, control_target, duration, true)
+				return UIAnimationUtils.animate_from_center_to_right(owner, control_target, duration, true, tween_easing)
 			else:
-				return UIAnimationUtils.animate_from_right_to_center(owner, control_target, duration, true)
+				return UIAnimationUtils.animate_from_right_to_center(owner, control_target, duration, true, tween_easing)
 		AnimationAction.FROM_TOP_TO_CENTER:
 			if reverse:
-				return UIAnimationUtils.animate_from_center_to_top(owner, control_target, duration, true)
+				return UIAnimationUtils.animate_from_center_to_top(owner, control_target, duration, true, tween_easing)
 			else:
-				return UIAnimationUtils.animate_from_top_to_center(owner, control_target, duration, true)
+				return UIAnimationUtils.animate_from_top_to_center(owner, control_target, duration, true, tween_easing)
 		AnimationAction.FROM_BOTTOM_TO_CENTER:
 			if reverse:
-				return UIAnimationUtils.animate_from_center_to_bottom(owner, control_target, duration, true)
+				return UIAnimationUtils.animate_from_center_to_bottom(owner, control_target, duration, true, tween_easing)
 			else:
-				return UIAnimationUtils.animate_from_bottom_to_center(owner, control_target, duration, true)
+				return UIAnimationUtils.animate_from_bottom_to_center(owner, control_target, duration, true, tween_easing)
 		AnimationAction.BOUNCE_IN:
 			if reverse:
-				return UIAnimationUtils.animate_bounce_out(owner, control_target, duration, Vector2(-1, -1), true, true, true, repeat_count)
+				return UIAnimationUtils.animate_bounce_out(owner, control_target, duration, Vector2(-1, -1), true, true, true, repeat_count, tween_easing)
 			else:
-				return UIAnimationUtils.animate_bounce_in(owner, control_target, duration, Vector2(-1, -1), true)
+				return UIAnimationUtils.animate_bounce_in(owner, control_target, duration, Vector2(-1, -1), true, tween_easing)
 		AnimationAction.ELASTIC_IN:
 			if reverse:
-				return UIAnimationUtils.animate_elastic_out(owner, control_target, duration, Vector2(-1, -1), true, true, true, repeat_count)
+				return UIAnimationUtils.animate_elastic_out(owner, control_target, duration, Vector2(-1, -1), true, true, true, repeat_count, tween_easing)
 			else:
-				return UIAnimationUtils.animate_elastic_in(owner, control_target, duration, Vector2(-1, -1), true)
+				return UIAnimationUtils.animate_elastic_in(owner, control_target, duration, Vector2(-1, -1), true, tween_easing)
 		AnimationAction.ROTATE_IN:
 			if reverse:
-				return UIAnimationUtils.animate_rotate_out(owner, control_target, duration, 360.0, true, true, true)
+				return UIAnimationUtils.animate_rotate_out(owner, control_target, duration, 360.0, true, true, true, tween_easing)
 			else:
-				return UIAnimationUtils.animate_rotate_in(owner, control_target, duration, rotate_start_angle, true, repeat_count)
+				return UIAnimationUtils.animate_rotate_in(owner, control_target, duration, rotate_start_angle, true, repeat_count, tween_easing)
 		AnimationAction.POP:
-			return UIAnimationUtils.animate_pop(owner, control_target, duration, pop_overshoot, Vector2(-1, -1), true, repeat_count)
+			return UIAnimationUtils.animate_pop(owner, control_target, duration, pop_overshoot, Vector2(-1, -1), true, repeat_count, tween_easing)
 		AnimationAction.PULSE:
-			return UIAnimationUtils.animate_pulse(owner, control_target, duration, pulse_amount, pulse_count, Vector2(-1, -1), true, repeat_count)
+			return UIAnimationUtils.animate_pulse(owner, control_target, duration, pulse_amount, pulse_count, Vector2(-1, -1), true, repeat_count, tween_easing)
 		AnimationAction.SHAKE:
-			return UIAnimationUtils.animate_shake(owner, control_target, duration, shake_intensity, shake_count, true, repeat_count)
+			return UIAnimationUtils.animate_shake(owner, control_target, duration, shake_intensity, shake_count, true, repeat_count, tween_easing)
 		AnimationAction.BREATHING:
-			return UIAnimationUtils.animate_breathing(owner, control_target, duration, repeat_count)
+			return UIAnimationUtils.animate_breathing(owner, control_target, duration, repeat_count, tween_easing)
 		AnimationAction.WOBBLE:
-			return UIAnimationUtils.animate_wobble(owner, control_target, duration, repeat_count)
+			return UIAnimationUtils.animate_wobble(owner, control_target, duration, repeat_count, tween_easing)
 		AnimationAction.FLOAT:
-			return UIAnimationUtils.animate_float(owner, control_target, duration, repeat_count)
+			return UIAnimationUtils.animate_float(owner, control_target, duration, repeat_count, tween_easing)
 		AnimationAction.GLOW_PULSE:
-			return UIAnimationUtils.animate_glow_pulse(owner, control_target, duration, repeat_count)
+			return UIAnimationUtils.animate_glow_pulse(owner, control_target, duration, repeat_count, tween_easing)
 		AnimationAction.COLOR_FLASH:
-			return UIAnimationUtils.animate_color_flash(owner, control_target, flash_color, duration, flash_intensity, true)
+			return UIAnimationUtils.animate_color_flash(owner, control_target, flash_color, duration, flash_intensity, true, tween_easing)
 		AnimationAction.RESET:
 			UIAnimationUtils.reset_control_to_normal(control_target)
 			return Signal()
