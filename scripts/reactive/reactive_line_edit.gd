@@ -11,6 +11,7 @@ class_name ReactiveLineEdit
 @export var animation_targets: Array[AnimationTarget] = []
 
 var _updating: bool = false
+var _is_initializing: bool = true
 
 func _ready() -> void:
 	text_changed.connect(_on_text_changed)
@@ -20,6 +21,8 @@ func _ready() -> void:
 	focus_entered.connect(_on_focus_entered)
 	focus_exited.connect(_on_focus_exited)
 	_validate_animation_targets()
+	# Finish initialization after all signals are processed
+	call_deferred("_finish_initialization")
 
 ## Validates animation targets and filters out invalid ones.
 ## Called automatically in [method _ready].
@@ -72,8 +75,16 @@ func _validate_animation_targets() -> void:
 		if not mouse_exited.is_connected(_on_trigger_hover_exit):
 			mouse_exited.connect(_on_trigger_hover_exit)
 
+## Finishes initialization, allowing animations to trigger on text changes.
+func _finish_initialization() -> void:
+	_is_initializing = false
+
 ## Handles TEXT_CHANGED trigger animations.
 func _on_trigger_text_changed(_new_text: String) -> void:
+	# Skip animations during initialization
+	if _is_initializing:
+		return
+	
 	_trigger_animations(AnimationTarget.Trigger.TEXT_CHANGED)
 
 ## Handles TEXT_ENTERED trigger animations.

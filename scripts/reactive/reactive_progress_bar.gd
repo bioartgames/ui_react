@@ -13,6 +13,7 @@ class_name ReactiveProgressBar
 var _updating: bool = false
 var _last_value: float = 0.0
 var _was_completed: bool = false
+var _is_initializing: bool = true
 
 func _ready() -> void:
 	if value_state:
@@ -23,6 +24,8 @@ func _ready() -> void:
 		_last_value = value
 	_was_completed = _is_completed()
 	_validate_animation_targets()
+	# Finish initialization after all signals are processed
+	call_deferred("_finish_initialization")
 
 ## Checks if progress bar is at completion (100%).
 func _is_completed() -> bool:
@@ -73,8 +76,19 @@ func _validate_animation_targets() -> void:
 		if not mouse_exited.is_connected(_on_trigger_hover_exit):
 			mouse_exited.connect(_on_trigger_hover_exit)
 
+## Finishes initialization, allowing animations to trigger on value changes.
+func _finish_initialization() -> void:
+	_is_initializing = false
+
 ## Handles VALUE_CHANGED, VALUE_INCREASED, VALUE_DECREASED, and COMPLETED trigger animations.
 func _on_trigger_value_changed(new_value: float) -> void:
+	# Skip animations during initialization
+	if _is_initializing:
+		_last_value = new_value
+		# Update completion state but don't trigger animation
+		_was_completed = _is_completed()
+		return
+	
 	_trigger_animations(AnimationTarget.Trigger.VALUE_CHANGED)
 	
 	if new_value > _last_value:

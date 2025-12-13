@@ -12,6 +12,7 @@ class_name ReactiveButton
 @export var animation_targets: Array[AnimationTarget] = []
 
 var _updating: bool = false
+var _is_initializing: bool = true
 
 func _ready() -> void:
 	pressed.connect(_on_pressed)
@@ -23,6 +24,8 @@ func _ready() -> void:
 		disabled_state.value_changed.connect(_on_disabled_state_changed)
 		_on_disabled_state_changed(disabled_state.value, disabled_state.value)
 	_validate_animation_targets()
+	# Finish initialization after all signals are processed
+	call_deferred("_finish_initialization")
 
 ## Validates animation targets and filters out invalid ones.
 ## Called automatically in [method _ready].
@@ -96,8 +99,16 @@ func _on_trigger_hover_enter() -> void:
 func _on_trigger_hover_exit() -> void:
 	_trigger_animations(AnimationTarget.Trigger.HOVER_EXIT)
 
+## Finishes initialization, allowing animations to trigger on toggle changes.
+func _finish_initialization() -> void:
+	_is_initializing = false
+
 ## Handles TOGGLED_ON and TOGGLED_OFF trigger animations.
 func _on_trigger_toggled(active: bool) -> void:
+	# Skip animations during initialization
+	if _is_initializing:
+		return
+	
 	if active:
 		_trigger_animations(AnimationTarget.Trigger.TOGGLED_ON)
 	else:

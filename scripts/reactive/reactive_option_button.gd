@@ -12,6 +12,7 @@ class_name ReactiveOptionButton
 @export var animation_targets: Array[AnimationTarget] = []
 
 var _updating: bool = false
+var _is_initializing: bool = true
 
 func _ready() -> void:
 	item_selected.connect(_on_item_selected)
@@ -22,6 +23,8 @@ func _ready() -> void:
 		disabled_state.value_changed.connect(_on_disabled_state_changed)
 		_on_disabled_state_changed(disabled_state.value, disabled_state.value)
 	_validate_animation_targets()
+	# Finish initialization after all signals are processed
+	call_deferred("_finish_initialization")
 
 ## Validates animation targets and filters out invalid ones.
 ## Called automatically in [method _ready].
@@ -74,8 +77,16 @@ func _validate_animation_targets() -> void:
 		if not mouse_exited.is_connected(_on_trigger_hover_exit):
 			mouse_exited.connect(_on_trigger_hover_exit)
 
+## Finishes initialization, allowing animations to trigger on selection changes.
+func _finish_initialization() -> void:
+	_is_initializing = false
+
 ## Handles SELECTION_CHANGED trigger animations.
 func _on_trigger_selection_changed(_index: int) -> void:
+	# Skip animations during initialization
+	if _is_initializing:
+		return
+	
 	_trigger_animations(AnimationTarget.Trigger.SELECTION_CHANGED)
 
 ## Handles HOVER_ENTER trigger animations.

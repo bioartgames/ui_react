@@ -13,6 +13,7 @@ class_name ReactiveSpinBox
 
 var _updating: bool = false
 var _last_value: float = 0.0
+var _is_initializing: bool = true
 
 func _ready() -> void:
 	value_changed.connect(_on_value_changed)
@@ -25,6 +26,8 @@ func _ready() -> void:
 	else:
 		_last_value = value
 	_validate_animation_targets()
+	# Finish initialization after all signals are processed
+	call_deferred("_finish_initialization")
 
 ## Validates animation targets and filters out invalid ones.
 ## Called automatically in [method _ready].
@@ -72,8 +75,17 @@ func _validate_animation_targets() -> void:
 		if not mouse_exited.is_connected(_on_trigger_hover_exit):
 			mouse_exited.connect(_on_trigger_hover_exit)
 
+## Finishes initialization, allowing animations to trigger on value changes.
+func _finish_initialization() -> void:
+	_is_initializing = false
+
 ## Handles VALUE_CHANGED, VALUE_INCREASED, and VALUE_DECREASED trigger animations.
 func _on_trigger_value_changed(new_value: float) -> void:
+	# Skip animations during initialization
+	if _is_initializing:
+		_last_value = new_value
+		return
+	
 	_trigger_animations(AnimationTarget.Trigger.VALUE_CHANGED)
 	
 	if new_value > _last_value:

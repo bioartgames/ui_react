@@ -45,9 +45,108 @@ const SCALE_MAX := Vector2.ONE
 ## Multiplier for calculating center pivot offset (0.5 = center).
 const PIVOT_CENTER_MULTIPLIER := 0.5
 
-## Tracks saved positions per target control for preserve_position feature.
-## Key: Control node (object ID), Value: Vector2 saved position
-static var _saved_positions: Dictionary = {}
+## Tracks unified original state snapshots per target control.
+## This snapshot is locked when the first animation starts and only unlocked
+## when all animations complete. Contains position, scale, modulate, rotation, pivot_offset, and visible.
+## Key: Control node (object ID), Value: ControlStateSnapshot
+static var _unified_original_snapshots: Dictionary = {}
+
+## Tracks active animation count per target control.
+## When count reaches 0, the unified snapshot is restored and unlocked.
+## Key: Control node (object ID), Value: int (active animation count)
+static var _active_animation_count: Dictionary = {}
+
+## Acquires the unified baseline snapshot for a target control.
+## If no baseline snapshot exists, captures the current state as baseline and locks it.
+## All animations on this control will share this same baseline snapshot.
+## Increments the active animation counter.
+## Interrupts all active tweens on animatable properties before snapshotting.
+## [param source_node]: The node to create interrupt tweens from.
+## [param target]: The control to acquire baseline snapshot for.
+## [return]: The baseline snapshot (ControlStateSnapshot).
+static func _acquire_unified_snapshot(source_node: Node, target: Control) -> ControlStateSnapshot:
+	if not target:
+		return null
+
+	# If baseline snapshot doesn't exist, save current state as baseline and initialize counter
+	if not _unified_original_snapshots.has(target):
+		# Interrupt all active tweens on animatable properties to get accurate baseline state
+		var interrupt_tween = source_node.create_tween()
+		if interrupt_tween:
+			# Interrupt position tweens
+			interrupt_tween.tween_property(target, "position", target.position, 0.0)
+			# Interrupt scale tweens
+			interrupt_tween.tween_property(target, "scale", target.scale, 0.0)
+			# Interrupt modulate/color tweens
+			interrupt_tween.tween_property(target, "modulate", target.modulate, 0.0)
+			# Interrupt rotation tweens
+			interrupt_tween.tween_property(target, "rotation_degrees", target.rotation_degrees, 0.0)
+			interrupt_tween.kill()
+
+		# Create baseline snapshot of current state
+		var baseline_snapshot = snapshot_control_state(target)
+		if not baseline_snapshot:
+			push_warning("UIAnimationUtils._acquire_unified_snapshot(): Failed to create baseline snapshot for target '%s'" % target.name)
+			return null
+		_unified_original_snapshots[target] = baseline_snapshot
+		_active_animation_count[target] = 0
+
+	# Increment active animation counter (shared across all animations on this control)
+	_active_animation_count[target] = _active_animation_count[target] + 1
+
+	return _unified_original_snapshots[target]
+
+## Releases the unified original snapshot for a target control.
+## Decrements the active animation counter.
+## If counter reaches 0, restores all properties from snapshot and unlocks it.
+## [param target]: The control to release unified snapshot for.
+## [param restore_immediately]: If true, immediately restores state when counter reaches 0 (default: true).
+## [return]: true if state was restored, false otherwise.
+static func _release_unified_snapshot(target: Control, restore_immediately: bool = true) -> bool:
+	if not target:
+		return false
+
+	if not _active_animation_count.has(target):
+		return false
+
+	# Decrement counter
+	_active_animation_count[target] = _active_animation_count[target] - 1
+
+	# If counter reached 0, restore state and unlock
+	if _active_animation_count[target] <= 0:
+		if _unified_original_snapshots.has(target):
+			var snapshot = _unified_original_snapshots[target]
+			if snapshot and restore_immediately:
+				restore_control_state(target, snapshot)
+			# Clean up tracking dictionaries
+			_unified_original_snapshots.erase(target)
+			_active_animation_count.erase(target)
+			return true
+
+	return false
+
+## Gets the unified original snapshot for a target without acquiring it.
+## Returns null if no unified snapshot exists.
+## [param target]: The control to get unified snapshot for.
+## [return]: The unified original snapshot, or null if not set.
+static func _get_unified_snapshot(target: Control) -> ControlStateSnapshot:
+	if not target:
+		return null
+
+	if _unified_original_snapshots.has(target):
+		return _unified_original_snapshots[target]
+
+	return null
+
+## Manually clears the unified snapshot system for a target.
+## Useful for edge cases or manual cleanup.
+## [param target]: The control to clear unified snapshot for.
+static func _clear_unified_snapshot(target: Control) -> void:
+	if not target:
+		return
+
+	_unified_original_snapshots.erase(target)
+	_active_animation_count.erase(target)
 
 ## Calculates the center X position of a node relative to the viewport.
 ## [param source_node]: The node to get viewport from.
@@ -387,7 +486,10 @@ static func animate_expand(source_node: Node, target: Control, speed := DEFAULT_
 	if not source_node or not target:
 		push_warning("UIAnimationUtils: Invalid source_node or target for animate_expand")
 		return Signal()
-	
+
+	# Acquire baseline snapshot for universal reset support
+	_acquire_unified_snapshot(source_node, target)
+
 	var animation_callable = func() -> Signal:
 		if auto_visible:
 			target.visible = true
@@ -414,10 +516,18 @@ static func animate_expand(source_node: Node, target: Control, speed := DEFAULT_
 		
 		return t.finished
 	
+	var result_signal: Signal
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		result_signal = _loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
-		return animation_callable.call()
+		result_signal = animation_callable.call()
+
+	# Connect to completion to release unified snapshot
+	result_signal.connect(func():
+		_release_unified_snapshot(target, true)
+	, CONNECT_ONE_SHOT)
+
+	return result_signal
 
 ## Animates a control expanding horizontally (scale.x from 0.0 to 1.0).
 ## [param source_node]: The node to create the tween from (usually self).
@@ -431,7 +541,10 @@ static func animate_expand_x(source_node: Node, target: Control, speed := SHRINK
 	if not source_node or not target:
 		push_warning("UIAnimationUtils: Invalid source_node or target for animate_expand_x")
 		return Signal()
-	
+
+	# Acquire baseline snapshot for universal reset support
+	_acquire_unified_snapshot(source_node, target)
+
 	var animation_callable = func() -> Signal:
 		if auto_visible:
 			target.visible = true
@@ -453,10 +566,18 @@ static func animate_expand_x(source_node: Node, target: Control, speed := SHRINK
 		
 		return t.finished
 	
+	var result_signal: Signal
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		result_signal = _loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
-		return animation_callable.call()
+		result_signal = animation_callable.call()
+
+	# Connect to completion to release unified snapshot
+	result_signal.connect(func():
+		_release_unified_snapshot(target, true)
+	, CONNECT_ONE_SHOT)
+
+	return result_signal
 
 ## Animates a control expanding vertically (scale.y from 0.0 to 1.0).
 ## [param source_node]: The node to create the tween from (usually self).
@@ -470,7 +591,10 @@ static func animate_expand_y(source_node: Node, target: Control, speed := SHRINK
 	if not source_node or not target:
 		push_warning("UIAnimationUtils: Invalid source_node or target for animate_expand_y")
 		return Signal()
-	
+
+	# Acquire baseline snapshot for universal reset support
+	_acquire_unified_snapshot(source_node, target)
+
 	var animation_callable = func() -> Signal:
 		if auto_visible:
 			target.visible = true
@@ -492,10 +616,18 @@ static func animate_expand_y(source_node: Node, target: Control, speed := SHRINK
 		
 		return t.finished
 	
+	var result_signal: Signal
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		result_signal = _loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
-		return animation_callable.call()
+		result_signal = animation_callable.call()
+
+	# Connect to completion to release unified snapshot
+	result_signal.connect(func():
+		_release_unified_snapshot(target, true)
+	, CONNECT_ONE_SHOT)
+
+	return result_signal
 
 ## Animates a control shrinking out with a scale animation from full size to zero.
 ## [param source_node]: The node to create the tween from (usually self).
@@ -1394,33 +1526,28 @@ static func animate_pulse(source_node: Node, target: Control, speed := 0.5, puls
 ## [param shake_count]: Number of shake movements (default: 5).
 ## [param auto_visible]: If true, automatically sets visible=true before animation (default: false).
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
-## [param preserve_position]: If true, restores original position after animation completes (default: false).
+## Note: Position is automatically preserved using the unified baseline snapshot system.
 ## [return]: Signal that emits when animation finishes.
-static func animate_shake(source_node: Node, target: Control, speed := 0.5, intensity: float = 10.0, shake_count: int = 5, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT, preserve_position: bool = false) -> Signal:
+static func animate_shake(source_node: Node, target: Control, speed := 0.5, intensity: float = 10.0, shake_count: int = 5, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
 		push_warning("UIAnimationUtils: Invalid source_node or target for animate_shake")
 		return Signal()
-	
-	# Handle position preservation: interrupt existing tweens and save position once per target
-	var saved_position: Vector2 = Vector2.ZERO
-	if preserve_position:
-		# Interrupt any existing position tweens (using existing pattern)
-		var interrupt_tween = source_node.create_tween()
-		if interrupt_tween:
-			interrupt_tween.tween_property(target, "position", target.position, 0.0)
-			interrupt_tween.kill()
-		
-		# Save position once per target (don't overwrite if already saved for this target)
-		if not _saved_positions.has(target):
-			_saved_positions[target] = target.position
-		saved_position = _saved_positions[target]
+
+	# Acquire baseline snapshot (automatic state preservation)
+	var snapshot = _acquire_unified_snapshot(source_node, target)
+	var saved_position: Vector2
+	if snapshot:
+		saved_position = snapshot.position
+	else:
+		push_warning("UIAnimationUtils.animate_shake(): Failed to acquire baseline snapshot, using current position")
+		saved_position = target.position
 	
 	var animation_callable = func() -> Signal:
 		if auto_visible:
 			target.visible = true
 		
-		# Use saved position if preserving, otherwise use current position
-		var original_position = saved_position if preserve_position else target.position
+		# Use saved position from baseline snapshot
+		var original_position = saved_position
 		var t = source_node.create_tween()
 		if not t:
 			push_warning("UIAnimationUtils: Failed to create tween")
@@ -1443,16 +1570,104 @@ static func animate_shake(source_node: Node, target: Control, speed := 0.5, inte
 		result_signal = _loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		result_signal = animation_callable.call()
-	
-	# Connect to final completion to restore position and clean up
-	if preserve_position:
-		result_signal.connect(func(): 
-			if _saved_positions.has(target):
-				target.position = _saved_positions[target]
-				_saved_positions.erase(target)
-		, CONNECT_ONE_SHOT)
-	
+
+	# Connect to final completion to release unified snapshot
+	result_signal.connect(func():
+		_release_unified_snapshot(target, true)
+	, CONNECT_ONE_SHOT)
+
 	return result_signal
+
+## Animates a control back to its unified original state (all properties).
+## If no unified snapshot exists, uses current state (no animation).
+## This function is used by the RESET animation action (with duration=0 for instant reset).
+## Can also be called directly for animated reset in animation chains.
+## Restores: position, scale, modulate (color + alpha), rotation, pivot_offset, and visible.
+## [param source_node]: The node to create the tween from (usually self).
+## [param target]: The control node to animate.
+## [param duration]: Duration of the reset animation in seconds (default: 0.3). Use 0.0 for instant reset.
+## [param easing]: Easing type for the animation (default: EASE_OUT). Ignored if duration=0.
+## [param clear_unified_after]: If true, clears unified snapshot after reset (default: true).
+## [return]: Signal that emits when animation finishes (or immediately if duration=0).
+static func animate_reset_all(source_node: Node, target: Control, duration: float = 0.3, easing: int = Tween.EASE_OUT, clear_unified_after: bool = true) -> Signal:
+	if not source_node or not target:
+		push_warning("UIAnimationUtils: Invalid source_node or target for animate_reset_all")
+		return Signal()
+
+	# Get the unified original snapshot (or current state if not set)
+	var snapshot: ControlStateSnapshot
+	if _unified_original_snapshots.has(target):
+		snapshot = _unified_original_snapshots[target]
+	else:
+		# No unified snapshot, use current state (no animation needed)
+		return Signal()
+
+	# Validate snapshot exists and is valid
+	if not snapshot:
+		push_warning("UIAnimationUtils.animate_reset_all(): Unified snapshot exists but is null for target '%s'" % target.name)
+		return Signal()
+
+	# If duration is 0, perform instant reset
+	if duration <= 0.0:
+		restore_control_state(target, snapshot)
+		if clear_unified_after:
+			_clear_unified_snapshot(target)
+		# Return an empty signal (caller can't await it, but it's consistent with API)
+		# For instant reset, the work is done synchronously
+		return Signal()
+
+	# Create independent tweens for each property to animate them in parallel
+	# This is the Godot 4 approach since set_parallel() is no longer supported
+	var tween_position = source_node.create_tween()
+	var tween_scale = source_node.create_tween()
+	var tween_modulate = source_node.create_tween()
+	var tween_rotation = source_node.create_tween()
+
+	# Validate all tweens were created successfully
+	if not tween_position or not tween_scale or not tween_modulate or not tween_rotation:
+		push_warning("UIAnimationUtils.animate_reset_all(): Failed to create one or more tweens for target '%s'" % target.name)
+		# Clean up any successfully created tweens
+		if tween_position:
+			tween_position.kill()
+		if tween_scale:
+			tween_scale.kill()
+		if tween_modulate:
+			tween_modulate.kill()
+		if tween_rotation:
+			tween_rotation.kill()
+		return Signal()
+
+	# Animate all properties in parallel using independent tweens
+	tween_position.tween_property(target, 'position', snapshot.position, duration).set_trans(Tween.TRANS_SINE).set_ease(easing)
+	tween_scale.tween_property(target, 'scale', snapshot.scale, duration).set_trans(Tween.TRANS_SINE).set_ease(easing)
+	tween_modulate.tween_property(target, 'modulate', snapshot.modulate, duration).set_trans(Tween.TRANS_SINE).set_ease(easing)
+	tween_rotation.tween_property(target, 'rotation_degrees', snapshot.rotation_degrees, duration).set_trans(Tween.TRANS_SINE).set_ease(easing)
+
+	# Use position tween's finished signal as the primary completion signal
+	# All tweens will complete at the same time since they have the same duration
+	var t = tween_position
+
+	# Set non-animated properties immediately (pivot_offset and visible don't animate smoothly)
+	target.pivot_offset = snapshot.pivot_offset
+	target.visible = snapshot.visible
+
+	# Connect to completion to optionally clear unified snapshot
+	if clear_unified_after:
+		t.finished.connect(func():
+			_clear_unified_snapshot(target)
+		, CONNECT_ONE_SHOT)
+
+	return t.finished
+
+## Manually clears the unified snapshot system for a target control.
+## Useful for edge cases where animations are stopped manually or nodes are freed.
+## This should be called if a control is removed from the scene while animations are active.
+## [param target]: The control to clear unified snapshot for.
+static func clear_unified_snapshot_for_target(target: Control) -> void:
+	if not target:
+		return
+
+	_clear_unified_snapshot(target)
 
 ## Animates a control with a continuous breathing effect (subtle scale pulse).
 ## [param source_node]: The node to create the tween from (usually self).
@@ -1549,29 +1764,24 @@ static func animate_wobble(source_node: Node, target: Control, duration: float =
 ## [param easing]: Easing type for the animation (default: EASE_OUT).
 ## [param float_distance]: Distance to float in pixels (default: 10.0).
 ## [param auto_visible]: If true, automatically sets visible=true before animation (default: false).
-## [param preserve_position]: If true, restores original position after animation completes (default: false).
+## Note: Position is automatically preserved using the unified baseline snapshot system.
 ## [return]: Signal that emits when animation finishes (or can be used to track infinite loops).
-static func animate_float(source_node: Node, target: Control, duration: float = 2.0, repeat_count: int = -1, easing: int = Tween.EASE_OUT, float_distance: float = 10.0, auto_visible: bool = false, preserve_position: bool = false) -> Signal:
+static func animate_float(source_node: Node, target: Control, duration: float = 2.0, repeat_count: int = -1, easing: int = Tween.EASE_OUT, float_distance: float = 10.0, auto_visible: bool = false) -> Signal:
 	if not source_node or not target:
 		push_warning("UIAnimationUtils: Invalid source_node or target for animate_float")
 		return Signal()
-	
+
 	if auto_visible:
 		target.visible = true
-	
-	# Handle position preservation: interrupt existing tweens and save position once per target
-	var saved_position: Vector2 = Vector2.ZERO
-	if preserve_position:
-		# Interrupt any existing position tweens (using existing pattern)
-		var interrupt_tween = source_node.create_tween()
-		if interrupt_tween:
-			interrupt_tween.tween_property(target, "position", target.position, 0.0)
-			interrupt_tween.kill()
-		
-		# Save position once per target (don't overwrite if already saved for this target)
-		if not _saved_positions.has(target):
-			_saved_positions[target] = target.position
-		saved_position = _saved_positions[target]
+
+	# Acquire baseline snapshot (automatic state preservation)
+	var snapshot = _acquire_unified_snapshot(source_node, target)
+	var saved_position: Vector2
+	if snapshot:
+		saved_position = snapshot.position
+	else:
+		push_warning("UIAnimationUtils.animate_float(): Failed to acquire baseline snapshot, using current position")
+		saved_position = target.position
 	
 	var animation_callable = func() -> Signal:
 		var t = source_node.create_tween()
@@ -1579,8 +1789,8 @@ static func animate_float(source_node: Node, target: Control, duration: float = 
 			push_warning("UIAnimationUtils: Failed to create tween")
 			return Signal()
 		
-		# Use saved position if preserving, otherwise use current position
-		var original_position = saved_position if preserve_position else target.position
+		# Use saved position from baseline snapshot
+		var original_position = saved_position
 		
 		# Move up
 		t.tween_property(target, 'position:y', original_position.y - float_distance, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
@@ -1588,17 +1798,14 @@ static func animate_float(source_node: Node, target: Control, duration: float = 
 		t.tween_property(target, 'position:y', original_position.y, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
 		
 		return t.finished
-	
+
 	var result_signal = _loop_animation(source_node, target, animation_callable, repeat_count)
-	
-	# Connect to final completion to restore position and clean up
-	if preserve_position:
-		result_signal.connect(func(): 
-			if _saved_positions.has(target):
-				target.position = _saved_positions[target]
-				_saved_positions.erase(target)
-		, CONNECT_ONE_SHOT)
-	
+
+	# Connect to final completion to release unified snapshot
+	result_signal.connect(func():
+		_release_unified_snapshot(target, true)
+	, CONNECT_ONE_SHOT)
+
 	return result_signal
 
 ## Animates a control with a continuous glow pulse effect (modulate alpha pulse).
@@ -1656,15 +1863,16 @@ static func animate_color_flash(source_node: Node, target: Control, flash_color:
 	
 	if auto_visible:
 		target.visible = true
-	
-	# Store the true original modulate in metadata if not already stored
-	# This ensures we always restore to the original color, not an intermediate flash color
-	# when button mashing causes multiple flashes to overlap
-	if not target.has_meta("_original_modulate"):
-		target.set_meta("_original_modulate", target.modulate)
-	
-	# Get the true original modulate from metadata (always use the stored original)
-	var original_modulate: Color = target.get_meta("_original_modulate") as Color
+
+	# Use unified snapshot system for consistency
+	var snapshot = _acquire_unified_snapshot(source_node, target)
+	var original_modulate: Color
+	if snapshot:
+		original_modulate = snapshot.modulate
+	else:
+		# Fallback to current modulate if snapshot failed (null snapshot or acquisition failed)
+		push_warning("UIAnimationUtils.animate_color_flash(): Failed to acquire unified snapshot for target '%s', using current modulate" % target.name)
+		original_modulate = target.modulate
 	
 	# Kill any existing tweens on modulate by creating a zero-duration tween
 	# This interrupts any active flash animations before starting a new one
@@ -1687,9 +1895,14 @@ static func animate_color_flash(source_node: Node, target: Control, flash_color:
 	
 	# Flash to color
 	t.tween_property(target, 'modulate', flash_modulate, duration * 0.5).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
-	# Flash back to original (using the stored original from metadata)
+	# Flash back to original (using the stored original from snapshot)
 	t.tween_property(target, 'modulate', original_modulate, duration * 0.5).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
-	
+
+	# Connect to completion to release unified snapshot
+	t.finished.connect(func():
+		_release_unified_snapshot(target, true)
+	, CONNECT_ONE_SHOT)
+
 	return t.finished
 
 ## Stops all active stagger animations (reveal and hide) for the given targets.

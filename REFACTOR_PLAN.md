@@ -1,715 +1,751 @@
-# Detailed Phased Plan: Unified Original State System for All Animations
+# AnimationTarget Consolidation Refactor Plan
 
 ## Overview
-Refactor the animation system to use a unified original state snapshot that is locked when the first animation starts and only unlocked/restored when all animations complete. This prevents drift in position, scale, color, rotation, and all other animatable properties when multiple animations overlap. The reset animation will restore ALL properties to their original state.
+Consolidate `AnimationActionConfig`, `AnimationParallelActionConfig`, `AnimationSequenceActionConfig`, and stagger functionality into a single unified `AnimationTarget` resource. This eliminates complexity, reduces verbosity, and provides a single resource type for all animation configurations.
+
+## Core Principle
+**Single Responsibility**: `AnimationTarget` becomes the one-stop resource for all animation configurations (single, multiple, stagger, parallel, sequential, and nested combinations).
 
 ## Files to Modify
-1. `scripts/anim/animation_utilities.gd` - Core animation functions and infrastructure
-2. `scripts/utilities/animation_target.gd` - AnimationTarget RESET case
-3. `scripts/anim/animation_action_config.gd` - RESET case
-4. `scripts/utilities/animation_config.gd` - RESET case
+1. `scripts/utilities/animation_target.gd` - Extend with new capabilities
+2. `scripts/anim/animation_utilities.gd` - Update stagger functions to work with AnimationTarget
+3. `scripts/anim/animation_action_config.gd` - **DELETE** (functionality moved to AnimationTarget)
+4. `scripts/anim/animation_parallel_action_config.gd` - **DELETE** (functionality moved to AnimationTarget)
+5. `scripts/anim/animation_sequence_action_config.gd` - **DELETE** (functionality moved to AnimationTarget)
 
-## Files That Call Animation Functions (No Changes Needed - API Compatible)
-- `scripts/anim/animation_parallel_action_config.gd`
-- `scripts/anim/animation_sequence_action_config.gd`
+## Files to Check (May Need Updates)
+- Any files that reference `ControlTargetConfig` or use the old config classes
+- Documentation files mentioning the old config system
 
----
+## Implementation Phases
 
-## PHASE 1: Replace Position System with Unified Snapshot System
+### Phase 1: Extend AnimationTarget with New Properties
+**Goal**: Add properties for multiple targets, stagger, parallel, and sequence support
 
-### File: `scripts/anim/animation_utilities.gd`
-
-### Step 1.1: Remove Old Position Tracking
-**Location:** Remove the `_saved_positions` static variable declaration that appears after the `PIVOT_CENTER_MULTIPLIER` constant and before the `get_node_center` function
-
-**Code to Remove:**
+#### Step 1.1: Add Execution Mode Enum
+**Location**: After `enum Easing` (around line 50)
 ```gdscript
-## Tracks saved positions per target control for preserve_position feature.
-## Key: Control node (object ID), Value: Vector2 saved position
-static var _saved_positions: Dictionary = {}
+## Execution mode for this animation target.
+enum ExecutionMode {
+	SINGLE,      # Single animation on single target (default, current behavior)
+	MULTI,       # Same animation on multiple targets (with optional stagger)
+	PARALLEL,    # Multiple different animations on same target simultaneously
+	SEQUENCE     # Multiple animations on same target sequentially
+}
 ```
 
-### Step 1.2: Add Unified Snapshot Tracking Infrastructure
-**Location:** After the `PIVOT_CENTER_MULTIPLIER` constant, before the `get_node_center` function
-
-**New Code:**
+#### Step 1.2: Add Multi-Target Support Properties
+**Location**: After `@export var target: NodePath = NodePath()` (around line 58)
 ```gdscript
-## Tracks unified original state snapshots per target control.
-## This snapshot is locked when the first animation starts and only unlocked
-## when all animations complete. Contains position, scale, modulate, rotation, pivot_offset, and visible.
-## Key: Control node (object ID), Value: ControlStateSnapshot
-static var _unified_original_snapshots: Dictionary = {}
+## ============================================
+## MULTI-TARGET & STAGGER SUPPORT
+## ============================================
 
-## Tracks active animation count per target control.
-## When count reaches 0, the unified snapshot is restored and unlocked.
-## Key: Control node (object ID), Value: int (active animation count)
-static var _active_animation_count: Dictionary = {}
+## Execution mode for this animation target.
+## SINGLE: One animation on one target (uses 'target' field)
+## MULTI: Same animation on multiple targets (uses 'targets' array, supports stagger)
+## PARALLEL: Multiple animations on same target simultaneously (uses 'parallel' array)
+## SEQUENCE: Multiple animations on same target sequentially (uses 'sequence' array)
+@export var execution_mode: ExecutionMode = ExecutionMode.SINGLE
+
+## Multiple targets for MULTI mode (stagger support).
+## If execution_mode is MULTI and this array has items, animates all targets with stagger timing.
+## If empty and execution_mode is MULTI, falls back to single 'target' field.
+## Drag and drop nodes here in the Inspector (NodePath supports drag-and-drop).
+@export var targets: Array[NodePath] = []
+
+## Delay between targets for stagger effect (only used when execution_mode is MULTI and targets.size() > 1).
+## Set to > 0 to enable stagger timing between targets (default: 0.0 = no stagger).
+@export_range(0.0, 10.0) var stagger_delay: float = 0.0
 ```
 
-### Step 1.3: Add Helper Functions for Unified Snapshot Management
-**Location:** After the `restore_control_state` function, before the `reset_control_to_normal` function
-
-**New Functions to Add:**
+#### Step 1.3: Add Parallel Support Properties
+**Location**: After stagger properties (around line 80)
 ```gdscript
-## Acquires the unified original snapshot for a target control.
-## If no unified snapshot exists, saves the current state and locks it.
-## Increments the active animation counter.
-## Interrupts all active tweens on animatable properties before snapshotting.
-## [param source_node]: The node to create interrupt tweens from.
-## [param target]: The control to acquire unified snapshot for.
-## [return]: The unified original snapshot (ControlStateSnapshot).
-static func _acquire_unified_snapshot(source_node: Node, target: Control) -> ControlStateSnapshot:
-	if not target:
-		return null
+## ============================================
+## PARALLEL ANIMATION SUPPORT
+## ============================================
+
+## Child animations to execute in parallel (only used when execution_mode is PARALLEL).
+## All animations in this array run simultaneously on the same target.
+## Each child AnimationTarget can have its own animation type, duration, and settings.
+## Supports nested structures (parallel groups can contain sequences, etc.).
+@export var parallel: Array[AnimationTarget] = []
+```
+
+#### Step 1.4: Add Sequence Support Properties
+**Location**: After parallel properties (around line 90)
+```gdscript
+## ============================================
+## SEQUENTIAL ANIMATION SUPPORT
+## ============================================
+
+## Child animations to execute sequentially (only used when execution_mode is SEQUENCE).
+## Animations in this array run one after another on the same target.
+## Each child AnimationTarget can have its own animation type, duration, and settings.
+## Supports nested structures (sequences can contain parallel groups, etc.).
+@export var sequence: Array[AnimationTarget] = []
+
+## Delays in seconds between sequence steps (parallel to sequence array).
+## If delays array is shorter than sequence, missing delays default to 0.0.
+## First delay is before the first animation, subsequent delays are between animations.
+## Example: [0.0, 0.3, 0.2] means: wait 0.0s, play anim1, wait 0.3s, play anim2, wait 0.2s, play anim3
+@export var sequence_delays: Array[float] = []
+```
+
+#### Step 1.5: Add Initial Setup Property
+**Location**: After sequence properties (around line 100)
+```gdscript
+## ============================================
+## INITIAL STATE SETUP
+## ============================================
+
+## Property values to set before animation starts (Dictionary of property: value pairs).
+## Common properties: "scale", "modulate", "visible", "position", etc.
+## Only used for PARALLEL and SEQUENCE modes to set up initial state.
+## Example: {"scale": Vector2.ZERO, "modulate": Color(1, 1, 1, 0), "visible": true}
+@export var initial_setup: Dictionary = {}
+```
+
+### Phase 2: Refactor apply() Method to Support All Modes
+**Goal**: Update `apply()` method to handle SINGLE, MULTI, PARALLEL, and SEQUENCE modes
+
+#### Step 2.1: Add Mode Detection Logic
+**Location**: Start of `apply()` method (after line 138)
+```gdscript
+func apply(owner: Node) -> Signal:
+	# Handle different execution modes
+	match execution_mode:
+		ExecutionMode.SINGLE:
+			return _apply_single(owner)
+		ExecutionMode.MULTI:
+			return _apply_multi(owner)
+		ExecutionMode.PARALLEL:
+			return _apply_parallel(owner)
+		ExecutionMode.SEQUENCE:
+			return _apply_sequence(owner)
+		_:
+			push_warning("AnimationTarget: Invalid execution mode %d" % execution_mode)
+			return Signal()
+```
+
+#### Step 2.2: Extract Single Animation Logic
+**Location**: After `apply()` method
+```gdscript
+## Applies single animation to single target (original behavior).
+## [param owner]: The node that owns the animation.
+## [return]: Signal that emits when animation completes.
+func _apply_single(owner: Node) -> Signal:
+	if target.is_empty():
+		return Signal()
 	
-	# If unified snapshot doesn't exist, save current state and initialize counter
-	if not _unified_original_snapshots.has(target):
-		# Interrupt all active tweens on animatable properties to get accurate current state
-		var interrupt_tween = source_node.create_tween()
-		if interrupt_tween:
-			# Interrupt position tweens
-			interrupt_tween.tween_property(target, "position", target.position, 0.0)
-			# Interrupt scale tweens
-			interrupt_tween.tween_property(target, "scale", target.scale, 0.0)
-			# Interrupt modulate/color tweens
-			interrupt_tween.tween_property(target, "modulate", target.modulate, 0.0)
-			# Interrupt rotation tweens
-			interrupt_tween.tween_property(target, "rotation_degrees", target.rotation_degrees, 0.0)
-			interrupt_tween.kill()
+	var target_node = owner.get_node_or_null(target)
+	if not target_node or not (target_node is Control):
+		return Signal()
+	
+	var control_target = target_node as Control
+	
+	# Convert Easing enum to Tween.EASE_* constant
+	var tween_easing: int = _get_tween_easing()
+	
+	# Apply animation (existing match statement logic)
+	return _execute_animation(owner, control_target, tween_easing)
+```
+
+#### Step 2.3: Add Multi-Target with Stagger Logic
+**Location**: After `_apply_single()` method
+```gdscript
+## Applies same animation to multiple targets with optional stagger.
+## [param owner]: The node that owns the animation.
+## [return]: Signal that emits when all animations complete.
+func _apply_multi(owner: Node) -> Signal:
+	# Resolve targets
+	var resolved_targets: Array[Control] = []
+	
+	# Use targets array if available, otherwise fall back to single target
+	if targets.size() > 0:
+		for path in targets:
+			var node = owner.get_node_or_null(path)
+			if node is Control:
+				resolved_targets.append(node as Control)
+	else:
+		# Fall back to single target
+		var target_node = owner.get_node_or_null(target)
+		if target_node is Control:
+			resolved_targets.append(target_node as Control)
+	
+	if resolved_targets.size() == 0:
+		push_warning("AnimationTarget: No valid targets found for MULTI mode")
+		return Signal()
+	
+	# Single target: just apply normally
+	if resolved_targets.size() == 1:
+		return _apply_single(owner)
+	
+	# Multiple targets with stagger
+	if stagger_delay > 0.0:
+		# Use stagger animation utility
+		return _apply_stagger(owner, resolved_targets)
+	else:
+		# Multiple targets without stagger: apply to all simultaneously
+		return _apply_parallel_targets(owner, resolved_targets)
+```
+
+#### Step 2.4: Add Stagger Helper Method
+**Location**: After `_apply_multi()` method
+```gdscript
+## Applies animation to multiple targets with stagger timing.
+## [param owner]: The node that owns the animation.
+## [param targets]: Array of controls to animate.
+## [return]: Signal that emits when all stagger animations complete.
+func _apply_stagger(owner: Node, targets: Array[Control]) -> Signal:
+	# Create AnimationActionConfig-like structure for stagger utility
+	# Convert this AnimationTarget to parameters that animate_stagger expects
+	var tween_easing: int = _get_tween_easing()
+	
+	# Create a temporary config structure for stagger
+	# Since we're removing AnimationActionConfig, we need to adapt the stagger function
+	# Option A: Update animate_stagger to accept AnimationTarget directly
+	# Option B: Create a helper that converts AnimationTarget to stagger parameters
+	
+	# For now, we'll update animate_stagger to work with AnimationTarget
+	return UIAnimationUtils.animate_stagger_from_target(owner, targets, stagger_delay, self)
+```
+
+#### Step 2.5: Add Parallel Execution Logic
+**Location**: After `_apply_stagger()` method
+```gdscript
+## Applies multiple animations in parallel on the same target.
+## [param owner]: The node that owns the animations.
+## [return]: Signal that emits when all parallel animations complete.
+func _apply_parallel(owner: Node) -> Signal:
+	if parallel.size() == 0:
+		push_warning("AnimationTarget: PARALLEL mode requires at least one animation in parallel array")
+		return Signal()
+	
+	# Resolve target
+	var target_node = owner.get_node_or_null(target)
+	if not target_node or not (target_node is Control):
+		push_warning("AnimationTarget: Invalid target for PARALLEL mode")
+		return Signal()
+	
+	var control_target = target_node as Control
+	
+	# Apply initial setup if provided
+	_apply_initial_setup(control_target)
+	
+	# Start all parallel animations
+	var signals: Array[Signal] = []
+	for child_target in parallel:
+		if child_target != null:
+			var signal_result = child_target.apply(owner)
+			if signal_result is Signal:
+				signals.append(signal_result)
+	
+	# Wait for all to complete
+	if signals.size() > 0:
+		return _wait_for_all_signals(owner, signals)
+	else:
+		return Signal()
+```
+
+#### Step 2.6: Add Sequence Execution Logic
+**Location**: After `_apply_parallel()` method
+```gdscript
+## Applies multiple animations sequentially on the same target.
+## [param owner]: The node that owns the animations.
+## [return]: Signal that emits when sequence completes.
+func _apply_sequence(owner: Node) -> Signal:
+	if sequence.size() == 0:
+		push_warning("AnimationTarget: SEQUENCE mode requires at least one animation in sequence array")
+		return Signal()
+	
+	# Resolve target
+	var target_node = owner.get_node_or_null(target)
+	if not target_node or not (target_node is Control):
+		push_warning("AnimationTarget: Invalid target for SEQUENCE mode")
+		return Signal()
+	
+	var control_target = target_node as Control
+	
+	# Apply initial setup if provided
+	_apply_initial_setup(control_target)
+	
+	# Create sequence using AnimationSequence utility
+	var anim_sequence = AnimationSequence.create()
+	
+	# Add each animation step with optional delays
+	for i in range(sequence.size()):
+		var child_target = sequence[i]
+		if child_target != null:
+			# Add the animation step
+			anim_sequence.add(func(): return child_target.apply(owner))
 		
-		# Create snapshot of current state
-		var new_snapshot = snapshot_control_state(target)
-		if not new_snapshot:
-			# If snapshot creation failed, push warning and return null
-			push_warning("UIAnimationUtils._acquire_unified_snapshot(): Failed to create snapshot for target '%s'" % target.name)
-			return null
-		_unified_original_snapshots[target] = new_snapshot
-		_active_animation_count[target] = 0
+		# Add delay after this animation (if specified)
+		var delay = 0.0
+		if i < sequence_delays.size():
+			delay = sequence_delays[i]
+		
+		if delay > 0.0:
+			anim_sequence.add(func(): return UIAnimationUtils.delay(owner, delay))
 	
-	# Increment active animation counter
-	_active_animation_count[target] = _active_animation_count[target] + 1
-	
-	return _unified_original_snapshots[target]
+	# Execute sequence asynchronously
+	var helper = _SequenceHelper.new()
+	owner.add_child(helper)
+	helper.execute_sequence(anim_sequence)
+	return helper.sequence_finished
+```
 
-## Releases the unified original snapshot for a target control.
-## Decrements the active animation counter.
-## If counter reaches 0, restores all properties from snapshot and unlocks it.
-## [param target]: The control to release unified snapshot for.
-## [param restore_immediately]: If true, immediately restores state when counter reaches 0 (default: true).
-## [return]: true if state was restored, false otherwise.
-static func _release_unified_snapshot(target: Control, restore_immediately: bool = true) -> bool:
-	if not target:
-		return false
-	
-	if not _active_animation_count.has(target):
-		return false
-	
-	# Decrement counter
-	_active_animation_count[target] = _active_animation_count[target] - 1
-	
-	# If counter reached 0, restore state and unlock
-	if _active_animation_count[target] <= 0:
-		if _unified_original_snapshots.has(target):
-			var snapshot = _unified_original_snapshots[target]
-			if snapshot and restore_immediately:
-				restore_control_state(target, snapshot)
-			# Clean up tracking dictionaries
-			_unified_original_snapshots.erase(target)
-			_active_animation_count.erase(target)
-			return true
-	
-	return false
+#### Step 2.7: Extract Animation Execution Logic
+**Location**: After sequence logic
+```gdscript
+## Executes a single animation on a control (extracted from original apply() method).
+## [param owner]: The node that owns the animation.
+## [param control_target]: The control to animate.
+## [param tween_easing]: The easing type (Tween.EASE_* constant).
+## [return]: Signal that emits when animation completes.
+func _execute_animation(owner: Node, control_target: Control, tween_easing: int) -> Signal:
+	match animation:
+		AnimationAction.EXPAND:
+			if reverse:
+				return UIAnimationUtils.animate_shrink(owner, control_target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
+			else:
+				return UIAnimationUtils.animate_expand(owner, control_target, duration, pivot_offset, true, false, false, repeat_count, tween_easing)
+		# ... (rest of existing match statement)
+		_:
+			push_warning("AnimationTarget: Unsupported animation type %d" % animation)
+			return Signal()
+```
 
-## Gets the unified original snapshot for a target without acquiring it.
-## Returns null if no unified snapshot exists.
-## [param target]: The control to get unified snapshot for.
-## [return]: The unified original snapshot, or null if not set.
-static func _get_unified_snapshot(target: Control) -> ControlStateSnapshot:
-	if not target:
-		return null
-	
-	if _unified_original_snapshots.has(target):
-		return _unified_original_snapshots[target]
-	
-	return null
+#### Step 2.8: Add Helper Methods
+**Location**: After `_execute_animation()` method
+```gdscript
+## Converts Easing enum to Tween.EASE_* constant.
+## [return]: Tween easing constant.
+func _get_tween_easing() -> int:
+	match easing:
+		Easing.EASE_IN:
+			return Tween.EASE_IN
+		Easing.EASE_OUT:
+			return Tween.EASE_OUT
+		Easing.EASE_IN_OUT:
+			return Tween.EASE_IN_OUT
+		Easing.EASE_OUT_IN:
+			return Tween.EASE_OUT_IN
+		_:
+			return Tween.EASE_OUT
 
-## Manually clears the unified snapshot system for a target.
-## Useful for edge cases or manual cleanup.
-## [param target]: The control to clear unified snapshot for.
-static func _clear_unified_snapshot(target: Control) -> void:
-	if not target:
+## Applies initial setup properties to a control.
+## [param control]: The control to set up.
+func _apply_initial_setup(control: Control) -> void:
+	for property in initial_setup:
+		if control.has(property):
+			control.set(property, initial_setup[property])
+		else:
+			push_warning("AnimationTarget: Control '%s' does not have property '%s'" % [control.name, property])
+
+## Waits for all signals to complete (for parallel execution).
+## [param owner]: The node to attach helper to.
+## [param signals]: Array of signals to wait for.
+## [return]: Signal that emits when all signals complete.
+func _wait_for_all_signals(owner: Node, signals: Array[Signal]) -> Signal:
+	var helper = _ParallelWaitHelper.new()
+	owner.add_child(helper)
+	helper.wait_for_all(signals)
+	return helper.all_finished
+
+## Applies animation to multiple targets simultaneously (no stagger).
+## [param owner]: The node that owns the animation.
+## [param targets]: Array of controls to animate.
+## [return]: Signal that emits when all animations complete.
+func _apply_parallel_targets(owner: Node, targets: Array[Control]) -> Signal:
+	var signals: Array[Signal] = []
+	var tween_easing: int = _get_tween_easing()
+	
+	for control_target in targets:
+		var signal_result = _execute_animation(owner, control_target, tween_easing)
+		if signal_result is Signal:
+			signals.append(signal_result)
+	
+	if signals.size() > 0:
+		return _wait_for_all_signals(owner, signals)
+	else:
+		return Signal()
+```
+
+#### Step 2.9: Add Helper Classes
+**Location**: End of AnimationTarget class (after all methods)
+```gdscript
+## Helper node for executing animation sequences asynchronously.
+class _SequenceHelper extends Node:
+	var sequence_finished = Signal()
+	
+	func execute_sequence(sequence: AnimationSequence) -> void:
+		await sequence.play()
+		sequence_finished.emit()
+		queue_free()
+
+## Helper node for waiting for multiple parallel animations to complete.
+class _ParallelWaitHelper extends Node:
+	var all_finished = Signal()
+	
+	func wait_for_all(signals: Array[Signal]) -> void:
+		for signal_item in signals:
+			await signal_item
+		all_finished.emit()
+		queue_free()
+```
+
+### Phase 3: Update Animation Utilities for Stagger
+**Goal**: Update stagger functions to work with AnimationTarget instead of AnimationActionConfig
+
+#### Step 3.1: Add New Stagger Function
+**Location**: `scripts/anim/animation_utilities.gd` - After `animate_stagger_multi()` function
+```gdscript
+## Animates multiple controls with a stagger effect using AnimationTarget configuration.
+## This is the unified stagger function that works with AnimationTarget resources.
+## [param source_node]: The node to create tweens from (usually self).
+## [param targets]: Array of controls to animate.
+## [param delay_between]: Delay between each target animation in seconds.
+## [param animation_target]: AnimationTarget resource that defines the animation to apply.
+## [return]: Signal that emits when all stagger animations complete.
+static func animate_stagger_from_target(source_node: Node, targets: Array[Control], delay_between: float, animation_target: AnimationTarget) -> Signal:
+	if not source_node or targets.size() == 0:
+		push_warning("UIAnimationUtils: Invalid source_node or empty targets for animate_stagger_from_target")
+		return Signal()
+	
+	if not animation_target:
+		push_warning("UIAnimationUtils: animate_stagger_from_target requires animation_target")
+		return Signal()
+	
+	# Stop any existing stagger animations first
+	stop_stagger_animations(source_node, targets)
+	
+	# Create helper node for stagger execution
+	var helper = _StaggerHelper.new()
+	source_node.add_child(helper)
+	helper.set_meta("_is_stagger_helper", true)
+	helper.set_meta("_stagger_type", "stagger")
+	
+	# Execute stagger using AnimationTarget's single animation logic
+	helper.execute_stagger_from_target(source_node, targets, delay_between, animation_target)
+	
+	return helper.stagger_finished
+```
+
+#### Step 3.2: Update _StaggerHelper Class
+**Location**: `scripts/anim/animation_utilities.gd` - Inside `_StaggerHelper` class
+
+**DRY Approach**: Instead of duplicating animation execution logic, use AnimationTarget's `_execute_animation()` method directly. However, since `_execute_animation()` is a private method, we need to either:
+- Make it public/static, OR
+- Create a public wrapper method in AnimationTarget
+
+**Recommended Solution**: Add a public static method to AnimationTarget for executing animations (following DRY).
+
+**Add to AnimationTarget** (after `_execute_animation()` method):
+```gdscript
+## Public static method to execute animation (for use by stagger and other utilities).
+## This allows external code to execute animations without duplicating logic.
+## [param owner]: The node that owns the animation.
+## [param control_target]: The control to animate.
+## [param animation]: The animation action to perform.
+## [param duration]: Animation duration.
+## [param repeat_count]: Number of repeats.
+## [param tween_easing]: Tween easing constant.
+## [param reverse]: Whether to reverse the animation.
+## [param pivot_offset]: Pivot offset for scaling/rotation.
+## [param animation_target]: AnimationTarget resource for animation-specific parameters.
+## [return]: Signal that emits when animation completes.
+static func execute_animation_static(owner: Node, control_target: Control, animation: AnimationAction, duration: float, repeat_count: int, tween_easing: int, reverse: bool, pivot_offset: Vector2, animation_target: AnimationTarget) -> Signal:
+	# Use the animation_target's parameters for animation-specific settings
+	var rotate_start_angle = animation_target.rotate_start_angle
+	var pop_overshoot = animation_target.pop_overshoot
+	var pulse_amount = animation_target.pulse_amount
+	var pulse_count = animation_target.pulse_count
+	var shake_intensity = animation_target.shake_intensity
+	var shake_count = animation_target.shake_count
+	var flash_color = animation_target.flash_color
+	var flash_intensity = animation_target.flash_intensity
+	
+	match animation:
+		AnimationAction.EXPAND:
+			if reverse:
+				return UIAnimationUtils.animate_shrink(owner, control_target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
+			else:
+				return UIAnimationUtils.animate_expand(owner, control_target, duration, pivot_offset, true, false, false, repeat_count, tween_easing)
+		# ... (rest of match statement, same as _execute_animation)
+		_:
+			push_warning("AnimationTarget: Unsupported animation type %d" % animation)
+			return Signal()
+```
+
+**Update _StaggerHelper**:
+```gdscript
+## Executes stagger animation using AnimationTarget.
+## [param source_node]: The node to create tweens from.
+## [param targets]: Array of controls to animate.
+## [param delay_between]: Delay between each target.
+## [param animation_target]: AnimationTarget resource defining the animation.
+func execute_stagger_from_target(source_node: Node, targets: Array[Control], delay_between: float, animation_target: AnimationTarget) -> void:
+	if targets.size() == 0 or not animation_target:
+		stagger_finished.emit()
+		queue_free()
 		return
 	
-	_unified_original_snapshots.erase(target)
-	_active_animation_count.erase(target)
-```
-
----
-
-## PHASE 2: Create Comprehensive Reset Animation Function
-
-### File: `scripts/anim/animation_utilities.gd`
-
-### Step 2.1: Add animate_reset_all Function
-**Location:** After the `animate_float` function, before the `animate_glow_pulse` function
-
-**New Function:**
-```gdscript
-## Animates a control back to its unified original state (all properties).
-## If no unified snapshot exists, uses current state (no animation).
-## This function can be added to animation chains to explicitly restore all properties.
-## Restores: position, scale, modulate (color + alpha), rotation, pivot_offset, and visible.
-## [param source_node]: The node to create the tween from (usually self).
-## [param target]: The control node to animate.
-## [param duration]: Duration of the reset animation in seconds (default: 0.3).
-## [param easing]: Easing type for the animation (default: EASE_OUT).
-## [param clear_unified_after]: If true, clears unified snapshot after reset (default: true).
-## [return]: Signal that emits when animation finishes.
-static func animate_reset_all(source_node: Node, target: Control, duration: float = 0.3, easing: int = Tween.EASE_OUT, clear_unified_after: bool = true) -> Signal:
-	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_reset_all")
-		return Signal()
+	# Get animation parameters from AnimationTarget
+	var tween_easing: int = _get_tween_easing_from_target(animation_target)
+	var duration = animation_target.duration
+	var repeat_count = animation_target.repeat_count
+	var animation = animation_target.animation
+	var reverse = animation_target.reverse
+	var pivot_offset = animation_target.pivot_offset
 	
-	# Get the unified original snapshot (or current state if not set)
-	var snapshot: ControlStateSnapshot
-	if _unified_original_snapshots.has(target):
-		snapshot = _unified_original_snapshots[target]
-	else:
-		# No unified snapshot, use current state (no animation needed)
-		return Signal()
+	# Calculate total delay
+	var total_delay = delay_between * (targets.size() - 1)
+	var signals: Array[Signal] = []
 	
-	# Validate snapshot exists and is valid
-	if not snapshot:
-		push_warning("UIAnimationUtils.animate_reset_all(): Unified snapshot exists but is null for target '%s'" % target.name)
-		return Signal()
-	
-	# If duration is 0, perform instant reset
-	if duration <= 0.0:
-		restore_control_state(target, snapshot)
-		if clear_unified_after:
-			_clear_unified_snapshot(target)
-		# Return an empty signal (caller can't await it, but it's consistent with API)
-		# For instant reset, the work is done synchronously
-		return Signal()
-	
-	# Create independent tweens for each property to animate them in parallel
-	# This is the Godot 4 approach since set_parallel() is no longer supported
-	var tween_position = source_node.create_tween()
-	var tween_scale = source_node.create_tween()
-	var tween_modulate = source_node.create_tween()
-	var tween_rotation = source_node.create_tween()
-	
-	# Validate all tweens were created successfully
-	if not tween_position or not tween_scale or not tween_modulate or not tween_rotation:
-		push_warning("UIAnimationUtils.animate_reset_all(): Failed to create one or more tweens for target '%s'" % target.name)
-		# Clean up any successfully created tweens
-		if tween_position:
-			tween_position.kill()
-		if tween_scale:
-			tween_scale.kill()
-		if tween_modulate:
-			tween_modulate.kill()
-		if tween_rotation:
-			tween_rotation.kill()
-		return Signal()
-	
-	# Animate all properties in parallel using independent tweens
-	tween_position.tween_property(target, 'position', snapshot.position, duration).set_trans(Tween.TRANS_SINE).set_ease(easing)
-	tween_scale.tween_property(target, 'scale', snapshot.scale, duration).set_trans(Tween.TRANS_SINE).set_ease(easing)
-	tween_modulate.tween_property(target, 'modulate', snapshot.modulate, duration).set_trans(Tween.TRANS_SINE).set_ease(easing)
-	tween_rotation.tween_property(target, 'rotation_degrees', snapshot.rotation_degrees, duration).set_trans(Tween.TRANS_SINE).set_ease(easing)
-	
-	# Use position tween's finished signal as the primary completion signal
-	# All tweens will complete at the same time since they have the same duration
-	var t = tween_position
-	
-	# Set non-animated properties immediately (pivot_offset and visible don't animate smoothly)
-	target.pivot_offset = snapshot.pivot_offset
-	target.visible = snapshot.visible
-	
-	# Connect to completion to optionally clear unified snapshot
-	if clear_unified_after:
-		t.finished.connect(func():
-			_clear_unified_snapshot(target)
-		, CONNECT_ONE_SHOT)
-	
-	return t.finished
-```
-
----
-
-## PHASE 3: Refactor animate_shake Function
-
-### File: `scripts/anim/animation_utilities.gd`
-
-### Step 3.1: Replace animate_shake Function
-**Location:** Replace the entire `animate_shake` function (find it by searching for the function signature: `static func animate_shake`)
-
-**New Function:**
-```gdscript
-static func animate_shake(source_node: Node, target: Control, speed := 0.5, intensity: float = 10.0, shake_count: int = 5, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT, preserve_position: bool = false) -> Signal:
-	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_shake")
-		return Signal()
-	
-	# Handle position preservation: use unified snapshot system
-	var saved_position: Vector2 = Vector2.ZERO
-	var using_unified_snapshot: bool = false
-	
-	if preserve_position:
-		# Acquire unified snapshot (saves if first, increments counter)
-		var snapshot = _acquire_unified_snapshot(source_node, target)
-		if snapshot:
-			saved_position = snapshot.position
-			using_unified_snapshot = true
-		else:
-			# Fallback to current position if snapshot failed (null snapshot or acquisition failed)
-			push_warning("UIAnimationUtils.animate_shake(): Failed to acquire unified snapshot for target '%s', using current position" % target.name)
-			saved_position = target.position
-	else:
-		# Not preserving position, use current position
-		saved_position = target.position
-	
-	var animation_callable = func() -> Signal:
-		if auto_visible:
-			target.visible = true
+	# Start animations with stagger
+	for i in range(targets.size()):
+		var target = targets[i]
+		if not is_instance_valid(target):
+			continue
 		
-		# Use saved position (unified if preserving, otherwise current)
-		var original_position = saved_position
-		var t = source_node.create_tween()
-		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
-			return Signal()
+		var delay_time = delay_between * i
 		
-		var shake_duration = speed / shake_count
+		# Create delayed animation
+		if delay_time > 0.0:
+			# Use a helper to delay and then execute
+			await get_tree().create_timer(delay_time).timeout
 		
-		# Create shake movements
-		for i in range(shake_count):
-			var offset_x = intensity * (1.0 if i % 2 == 0 else -1.0)
-			var y_index = int(i * 0.5)
-			var offset_y = intensity * 0.5 * (1.0 if y_index % 2 == 0 else -1.0)
-			t.tween_property(target, 'position', original_position + Vector2(offset_x, offset_y), shake_duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
-			t.tween_property(target, 'position', original_position, shake_duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
-		
-		return t.finished
+		if is_instance_valid(target):
+			var signal_result = AnimationTarget.execute_animation_static(source_node, target, animation, duration, repeat_count, tween_easing, reverse, pivot_offset, animation_target)
+			if signal_result is Signal:
+				signals.append(signal_result)
 	
-	var result_signal: Signal
-	if repeat_count != 0:
-		result_signal = _loop_animation(source_node, target, animation_callable, repeat_count)
-	else:
-		result_signal = animation_callable.call()
+	# Wait for all animations to complete
+	# Calculate max time: last animation starts at total_delay and runs for duration
+	var max_time = total_delay + duration
+	await get_tree().create_timer(max_time).timeout
 	
-	# Connect to final completion to release unified snapshot
-	if preserve_position and using_unified_snapshot:
-		result_signal.connect(func(): 
-			_release_unified_snapshot(target, true)
-		, CONNECT_ONE_SHOT)
+	# Also wait for all signals to ensure completion
+	for sig in signals:
+		await sig
 	
-	return result_signal
+	stagger_finished.emit()
+	queue_free()
+
+## Helper to get tween easing from AnimationTarget.
+func _get_tween_easing_from_target(animation_target: AnimationTarget) -> int:
+	match animation_target.easing:
+		AnimationTarget.Easing.EASE_IN:
+			return Tween.EASE_IN
+		AnimationTarget.Easing.EASE_OUT:
+			return Tween.EASE_OUT
+		AnimationTarget.Easing.EASE_IN_OUT:
+			return Tween.EASE_IN_OUT
+		AnimationTarget.Easing.EASE_OUT_IN:
+			return Tween.EASE_OUT_IN
+		_:
+			return Tween.EASE_OUT
 ```
 
-**Key Changes:**
-- Removed old `_saved_positions` dictionary usage
-- Uses `_acquire_unified_snapshot()` instead
-- Uses `_release_unified_snapshot()` for cleanup
-- Removed manual dictionary manipulation
+**Note**: This approach follows DRY by reusing AnimationTarget's animation execution logic instead of duplicating it.
 
----
+### Phase 4: Remove Old Config Classes
+**Goal**: Delete obsolete config classes and update all references
 
-## PHASE 4: Refactor animate_float Function
+#### Step 4.1: Delete AnimationActionConfig File
+**Location**: `scripts/anim/animation_action_config.gd`
+**Action**: Delete entire file
 
-### File: `scripts/anim/animation_utilities.gd`
+#### Step 4.2: Delete AnimationParallelActionConfig File
+**Location**: `scripts/anim/animation_parallel_action_config.gd`
+**Action**: Delete entire file
 
-### Step 4.1: Replace animate_float Function
-**Location:** Replace the entire `animate_float` function (find it by searching for the function signature: `static func animate_float`)
+#### Step 4.3: Delete AnimationSequenceActionConfig File
+**Location**: `scripts/anim/animation_sequence_action_config.gd`
+**Action**: Delete entire file
 
-**New Function:**
+#### Step 4.4: Remove Old Stagger Functions
+**Location**: `scripts/anim/animation_utilities.gd`
+**Action**: Delete `animate_stagger()` and `animate_stagger_multi()` functions entirely
+
+**Rationale**: These functions depend on `AnimationActionConfig` which is being removed. The new `animate_stagger_from_target()` function replaces this functionality using `AnimationTarget`.
+
+**Files to delete**:
+- `animate_stagger()` function (around line 1954)
+- `animate_stagger_multi()` function (around line 1997)
+- Update `_StaggerHelper.execute_stagger()` and `execute_stagger_multi()` methods to use AnimationTarget instead
+
+**Note**: The `_StaggerHelper` class will be updated in Phase 3 to work with AnimationTarget, so the old methods can be removed.
+
+### Phase 4: Remove Old Config Classes and Functions
+**Goal**: Delete obsolete config classes and update all references
+
+#### Step 4.1: Delete AnimationActionConfig File
+**Location**: `scripts/anim/animation_action_config.gd`
+**Action**: Delete entire file
+
+#### Step 4.2: Delete AnimationParallelActionConfig File
+**Location**: `scripts/anim/animation_parallel_action_config.gd`
+**Action**: Delete entire file
+
+#### Step 4.3: Delete AnimationSequenceActionConfig File
+**Location**: `scripts/anim/animation_sequence_action_config.gd`
+**Action**: Delete entire file
+
+#### Step 4.4: Remove Old Stagger Functions
+**Location**: `scripts/anim/animation_utilities.gd`
+**Action**: Delete `animate_stagger()` and `animate_stagger_multi()` functions entirely
+
+**Rationale**: These functions depend on `AnimationActionConfig` which is being removed. The new `animate_stagger_from_target()` function replaces this functionality using `AnimationTarget`.
+
+**Files to delete**:
+- `animate_stagger()` function (around line 1954)
+- `animate_stagger_multi()` function (around line 1997)
+- Update `_StaggerHelper.execute_stagger()` and `execute_stagger_multi()` methods - these can be removed or updated to use AnimationTarget
+
+**Note**: The `_StaggerHelper` class will be updated in Phase 3 to work with AnimationTarget, so the old methods can be removed.
+
+### Phase 5: Update Documentation and Cleanup
+**Goal**: Update class documentation and remove references to old configs
+
+#### Step 5.1: Update AnimationTarget Class Documentation
+**Location**: Top of `scripts/utilities/animation_target.gd`
 ```gdscript
-static func animate_float(source_node: Node, target: Control, duration: float = 2.0, repeat_count: int = -1, easing: int = Tween.EASE_OUT, float_distance: float = 10.0, auto_visible: bool = false, preserve_position: bool = false) -> Signal:
-	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_float")
-		return Signal()
-	
-	if auto_visible:
-		target.visible = true
-	
-	# Handle position preservation: use unified snapshot system
-	var saved_position: Vector2 = Vector2.ZERO
-	var using_unified_snapshot: bool = false
-	
-	if preserve_position:
-		# Acquire unified snapshot (saves if first, increments counter)
-		var snapshot = _acquire_unified_snapshot(source_node, target)
-		if snapshot:
-			saved_position = snapshot.position
-			using_unified_snapshot = true
-		else:
-			# Fallback to current position if snapshot failed (null snapshot or acquisition failed)
-			push_warning("UIAnimationUtils.animate_float(): Failed to acquire unified snapshot for target '%s', using current position" % target.name)
-			saved_position = target.position
-	else:
-		# Not preserving position, use current position
-		saved_position = target.position
-	
-	var animation_callable = func() -> Signal:
-		var t = source_node.create_tween()
-		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
-			return Signal()
-		
-		# Use saved position (unified if preserving, otherwise current)
-		var original_position = saved_position
-		
-		# Move up
-		t.tween_property(target, 'position:y', original_position.y - float_distance, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
-		# Move down
-		t.tween_property(target, 'position:y', original_position.y, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
-		
-		return t.finished
-	
-	var result_signal = _loop_animation(source_node, target, animation_callable, repeat_count)
-	
-	# Connect to final completion to release unified snapshot
-	if preserve_position and using_unified_snapshot:
-		result_signal.connect(func(): 
-			_release_unified_snapshot(target, true)
-		, CONNECT_ONE_SHOT)
-	
-	return result_signal
+## Unified animation target configuration (no resource file needed).
+## All properties are configured directly in the Inspector with dropdown menus.
+##
+## Supports four execution modes:
+## - SINGLE: One animation on one target (default, original behavior)
+## - MULTI: Same animation on multiple targets with optional stagger timing
+## - PARALLEL: Multiple different animations on same target simultaneously
+## - SEQUENCE: Multiple animations on same target sequentially
+##
+## Supports nested structures: parallel groups can contain sequences, sequences can contain parallel groups, etc.
+##
+## Example (Stagger):
+##   execution_mode = MULTI
+##   targets = [NodePath("../Label1"), NodePath("../Label2"), NodePath("../Label3")]
+##   stagger_delay = 0.1
+##   animation = FADE_IN
+##
+## Example (Parallel):
+##   execution_mode = PARALLEL
+##   target = NodePath("../Panel")
+##   parallel = [expand_anim, fade_anim, slide_anim]
+##
+## Example (Sequence):
+##   execution_mode = SEQUENCE
+##   target = NodePath("../Panel")
+##   sequence = [expand_anim, fade_anim, color_flash_anim]
+##   sequence_delays = [0.0, 0.3, 0.2]
+##
+## Example (Nested):
+##   execution_mode = SEQUENCE
+##   target = NodePath("../Panel")
+##   sequence = [expand_anim, parallel_group, fade_anim]
+##   # where parallel_group has execution_mode = PARALLEL with its own parallel array
 ```
 
-**Key Changes:**
-- Removed old `_saved_positions` dictionary usage
-- Uses `_acquire_unified_snapshot()` instead
-- Uses `_release_unified_snapshot()` for cleanup
-- Removed manual dictionary manipulation
+#### Step 5.2: Remove References to Old Configs
+**Location**: Any documentation files, comments, or examples
+**Action**: Search and replace references to old config classes with AnimationTarget examples
 
----
+### Phase 6: Testing and Validation
+**Goal**: Verify all execution modes work correctly
 
-## PHASE 5: Update RESET Animation to Use Comprehensive Reset
+#### Step 6.1: Test Single Mode
+- Verify existing single-target animations still work
+- Test all animation types
 
-### File: `scripts/utilities/animation_target.gd`
+#### Step 6.2: Test Multi Mode
+- Test multiple targets without stagger
+- Test multiple targets with stagger
+- Test with different animation types
 
-### Step 5.1: Update RESET Case to Use Comprehensive Reset
-**Location:** In the `apply()` function's match statement (find it by searching for `match animation:`), replace the `RESET` case
+#### Step 6.3: Test Parallel Mode
+- Test parallel animations on same target
+- Test nested parallel (parallel within parallel)
+- Test parallel with different animation types
 
-**Current Code:**
-```gdscript
-		AnimationAction.RESET:
-			UIAnimationUtils.reset_control_to_normal(control_target)
-			return Signal()
-```
+#### Step 6.4: Test Sequence Mode
+- Test sequential animations
+- Test sequence with delays
+- Test nested sequence (sequence within sequence)
 
-**New Code:**
-```gdscript
-		AnimationAction.RESET:
-			# Use comprehensive reset with duration=0 for instant reset
-			# This resets all properties (position, scale, modulate, rotation, pivot_offset, visible)
-			# using the unified snapshot system
-			return UIAnimationUtils.animate_reset_all(owner, control_target, 0.0, tween_easing, true)
-```
+#### Step 6.5: Test Mixed Nested Structures
+- Test sequence containing parallel group
+- Test parallel group containing sequence
+- Test complex nested combinations
 
-### Step 5.2: Update Other Animation Config Files
+## SOLID/DRY Principles
 
-**File: `scripts/anim/animation_action_config.gd`**
-- **Location:** In the execute function's match statement (find it by searching for the match statement that handles `AnimationAction.RESET`)
-- **Action:** Replace RESET case:
-```gdscript
-		AnimationAction.RESET:
-			# Use comprehensive reset with duration=0 for instant reset
-			# This resets all properties using the unified snapshot system
-			return UIAnimationUtils.animate_reset_all(owner, target, 0.0, 0, true)
-```
+### Single Responsibility
+- **AnimationTarget**: Handles all animation configuration (single responsibility)
+- **Helper classes**: Each helper has one job (_SequenceHelper, _ParallelWaitHelper, _StaggerHelper)
 
-**File: `scripts/utilities/animation_config.gd`**
-- **Location:** In the execute/apply function's match statement (find it by searching for the match statement that handles `AnimationAction.RESET`)
-- **Action:** Replace RESET case if it exists:
-```gdscript
-		AnimationAction.RESET:
-			# Use comprehensive reset with duration=0 for instant reset
-			# This resets all properties using the unified snapshot system
-			return UIAnimationUtils.animate_reset_all(owner, target, 0.0, 0, true)
-```
+### Open/Closed
+- **Extensible**: New execution modes can be added via enum without modifying existing code
+- **Closed**: Existing single-mode behavior remains unchanged
 
----
+### Liskov Substitution
+- **Consistent API**: All execution modes use the same `apply()` method signature
+- **Polymorphic**: Can be used anywhere AnimationTarget is expected
 
-## PHASE 6: Extend Unified System to Other Property-Modifying Animations
+### Interface Segregation
+- **Clean separation**: Execution mode logic separated into dedicated methods
+- **No forced dependencies**: Users only configure what they need
 
-### File: `scripts/anim/animation_utilities.gd`
+### Dependency Inversion
+- **Abstraction**: Depends on AnimationSequence utility, not concrete implementations
+- **Flexible**: Can work with any Control target
 
-### Step 6.1: Update animate_color_flash to Use Unified System
-**Location:** Replace the entire `animate_color_flash` function (find it by searching for the function signature: `static func animate_color_flash`)
+### DRY (Don't Repeat Yourself)
+- **Shared logic**: Animation execution extracted to `_execute_animation()`
+- **Reusable helpers**: Helper classes used across execution modes
+- **Single source**: One resource type instead of four
 
-**Current Issue:** `animate_color_flash` uses metadata (`_original_modulate`) instead of unified system.
+## Risk Mitigation
 
-**Action:** Update to use unified snapshot system for consistency. This ensures color flash works with the comprehensive reset.
+### Minimal Risk Approach
+1. **Incremental changes**: Each phase builds on previous phase
+2. **Preserve existing behavior**: SINGLE mode maintains exact current behavior
+3. **Clear separation**: New modes isolated in separate methods
+4. **Comprehensive testing**: Each mode tested independently before moving to next
 
-**New Implementation:**
-```gdscript
-static func animate_color_flash(source_node: Node, target: Control, flash_color: Color = Color.YELLOW, duration: float = 0.2, flash_intensity: float = 1.5, auto_visible: bool = false, easing: int = Tween.EASE_OUT) -> Signal:
-	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_color_flash")
-		return Signal()
-	
-	if auto_visible:
-		target.visible = true
-	
-	# Use unified snapshot system for consistency
-	var snapshot = _acquire_unified_snapshot(source_node, target)
-	var original_modulate: Color
-	if snapshot:
-		original_modulate = snapshot.modulate
-	else:
-		# Fallback to current modulate if snapshot failed (null snapshot or acquisition failed)
-		push_warning("UIAnimationUtils.animate_color_flash(): Failed to acquire unified snapshot for target '%s', using current modulate" % target.name)
-		original_modulate = target.modulate
-	
-	# Kill any existing tweens on modulate by creating a zero-duration tween
-	# This interrupts any active flash animations before starting a new one
-	var interrupt_tween = source_node.create_tween()
-	if interrupt_tween:
-		interrupt_tween.tween_property(target, "modulate", target.modulate, 0.0)
-		interrupt_tween.kill()
-	
-	var flash_modulate = Color(
-		flash_color.r * flash_intensity,
-		flash_color.g * flash_intensity,
-		flash_color.b * flash_intensity,
-		original_modulate.a
-	)
-	
-	var t = source_node.create_tween()
-	if not t:
-		push_warning("UIAnimationUtils: Failed to create tween")
-		return Signal()
-	
-	# Flash to color
-	t.tween_property(target, 'modulate', flash_modulate, duration * 0.5).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
-	# Flash back to original (using the stored original from snapshot)
-	t.tween_property(target, 'modulate', original_modulate, duration * 0.5).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
-	
-	# Connect to completion to release unified snapshot
-	t.finished.connect(func(): 
-		_release_unified_snapshot(target, true)
-	, CONNECT_ONE_SHOT)
-	
-	return t.finished
-```
+### Validation Points
+- After Phase 1: Verify Inspector shows new properties correctly
+- After Phase 2: Verify SINGLE mode still works (regression test)
+- After Phase 3: Verify MULTI mode works with stagger
+- After Phase 4: Verify no compilation errors after deletions
+- After Phase 5: Verify documentation is accurate
+- After Phase 6: Verify all modes work in isolation and combination
 
-**Key Changes:**
-- Removed metadata-based `_original_modulate` storage
-- Uses `_acquire_unified_snapshot()` for consistency
-- Releases snapshot on completion
-- Works seamlessly with comprehensive reset
+## Implementation Order
 
-### Step 6.2: Add Public Cleanup Function
-**Location:** After `animate_reset_all` function
+1. **Phase 1**: Extend AnimationTarget with new properties (no behavior changes)
+2. **Phase 2**: Refactor apply() method (preserve SINGLE mode, add new modes)
+3. **Phase 3**: Update animation utilities for stagger (add new function)
+4. **Phase 4**: Remove old config classes (clean deletion)
+5. **Phase 5**: Update documentation (clarify new unified system)
+6. **Phase 6**: Testing and validation (ensure all modes work)
 
-**New Function:**
-```gdscript
-## Manually clears the unified snapshot system for a target control.
-## Useful for edge cases where animations are stopped manually or nodes are freed.
-## This should be called if a control is removed from the scene while animations are active.
-## [param target]: The control to clear unified snapshot for.
-static func clear_unified_snapshot_for_target(target: Control) -> void:
-	if not target:
-		return
-	
-	_clear_unified_snapshot(target)
-```
+## Benefits
 
----
+### User Experience
+- **Single resource type**: One AnimationTarget instead of four different configs
+- **Simpler workflow**: All animation configuration in one place
+- **Nested support**: Complex animations without external scripting
+- **Inspector-friendly**: All configuration through Inspector dropdowns
 
-## PHASE 7: Handle Edge Cases
+### Code Quality
+- **Reduced complexity**: Fewer classes to maintain
+- **DRY compliance**: No duplicate animation execution logic
+- **SOLID adherence**: Clear separation of concerns
+- **Maintainability**: Single source of truth for animation configuration
 
-### File: `scripts/anim/animation_utilities.gd`
-
-### Step 7.1: Update _loop_animation for Infinite Loops
-**Location:** Check the `_loop_animation` function (find it by searching for `static func _loop_animation`)
-**Action:** No changes needed - the unified snapshot system works with infinite loops because `_release_unified_snapshot` is only called when the animation signal completes, which for infinite loops happens when manually stopped.
-
-### Step 7.2: Add Node Cleanup on Tree Exiting (Optional Enhancement)
-**Location:** This would require adding a signal connection system, which may be complex. For now, manual cleanup via `clear_unified_snapshot_for_target()` is sufficient.
-
-**Note:** If nodes are freed while animations are active, the dictionaries will contain stale references. This is acceptable as they will be garbage collected. For production, consider adding automatic cleanup via `tree_exiting` signal, but this is optional.
-
----
-
-## PHASE 8: Testing and Verification
-
-### Test Cases to Verify
-
-#### Test 1: Single Animation with preserve_position=true
-**Steps:**
-1. Create a Control at position (100, 100), scale (1, 1), modulate white
-2. Call `animate_shake` with `preserve_position=true`
-3. Wait for animation to complete
-4. **Expected:** Control returns to (100, 100), all other properties unchanged
-
-#### Test 2: Overlapping Float Animations
-**Steps:**
-1. Create a Control at position (100, 100)
-2. Call `animate_float` with `preserve_position=true`, `repeat_count=-1` (infinite)
-3. Immediately call `animate_float` again with `preserve_position=true`
-4. Stop both animations
-5. **Expected:** Control returns to (100, 100), no drift
-
-#### Test 3: Overlapping Shake and Float
-**Steps:**
-1. Create a Control at position (100, 100)
-2. Call `animate_shake` with `preserve_position=true`
-3. While shake is running, call `animate_float` with `preserve_position=true`
-4. Wait for both to complete
-5. **Expected:** Control returns to (100, 100), no drift
-
-#### Test 4: Comprehensive Reset with Multiple Properties
-**Steps:**
-1. Create a Control at position (100, 100), scale (1, 1), modulate white, rotation 0
-2. Call `animate_expand` (modifies scale)
-3. Call `animate_rotate_in` (modifies rotation)
-4. Call `animate_color_flash` (modifies modulate)
-5. Call RESET animation (using AnimationTarget with RESET action)
-6. **Expected:** All properties instantly restore to original values
-
-#### Test 5: Animation Chain with RESET
-**Steps:**
-1. Create a Control at position (100, 100), scale (1, 1), modulate white
-2. Call `animate_float` with `preserve_position=true`
-3. Chain RESET animation after float (using AnimationTarget with RESET action)
-4. **Expected:** Control instantly resets to original position, scale, color, rotation
-
-#### Test 6: preserve_position=false (No Unified Snapshot)
-**Steps:**
-1. Create a Control at position (100, 100)
-2. Call `animate_float` with `preserve_position=false`
-3. **Expected:** Control can drift (old behavior maintained)
-
-#### Test 7: Multiple Rapid Clicks (Stress Test)
-**Steps:**
-1. Create a Control at position (100, 100)
-2. Rapidly click 10 times, each triggering `animate_shake` with `preserve_position=true`
-3. Wait for all animations to complete
-4. **Expected:** Control returns to (100, 100), counter properly managed
-
-#### Test 8: Infinite Loop Animation
-**Steps:**
-1. Create a Control at position (100, 100)
-2. Call `animate_float` with `preserve_position=true`, `repeat_count=-1`
-3. Let it run for 5 seconds
-4. Manually stop the animation (if possible) or let it continue
-5. **Expected:** Unified snapshot remains locked until animation stops
-
-#### Test 9: Color Flash with Reset
-**Steps:**
-1. Create a Control with modulate Color.WHITE
-2. Call `animate_color_flash` (flashes to yellow, then back)
-3. Call RESET animation immediately after (using AnimationTarget with RESET action)
-4. **Expected:** Modulate instantly returns to original white color
-
-#### Test 10: Multiple Property Modifications
-**Steps:**
-1. Create a Control at position (100, 100), scale (1, 1), modulate white, rotation 0
-2. Call `animate_expand` (changes scale)
-3. While expanding, call `animate_rotate_in` (changes rotation)
-4. While rotating, call `animate_color_flash` (changes modulate)
-5. Call RESET animation (using AnimationTarget with RESET action)
-6. **Expected:** All properties instantly restore to original values
-
----
-
-## PHASE 9: Documentation Updates
-
-### File: `scripts/anim/animation_utilities.gd`
-
-### Step 9.1: Update Function Documentation
-**Location:** Update docstrings for `animate_shake` and `animate_float`
-
-**For animate_shake:**
-Find the function documentation block (the comment block immediately before `static func animate_shake`) and add to it:
-```
-## Note: When preserve_position=true, this function uses a unified snapshot system.
-## Multiple overlapping animations will share the same original state reference,
-## ensuring the control returns to its starting state when all animations complete.
-```
-
-**For animate_float:**
-Find the function documentation block (the comment block immediately before `static func animate_float`) and add to it:
-```
-## Note: When preserve_position=true, this function uses a unified snapshot system.
-## Multiple overlapping animations will share the same original state reference,
-## ensuring the control returns to its starting state when all animations complete.
-```
-
-### Step 9.2: Document animate_reset_all
-**Location:** The function already has documentation, ensure it's complete (see Phase 2)
-
-### Step 9.3: Update reset_control_to_normal Documentation
-**Location:** Find the function documentation block (the comment block immediately before `static func reset_control_to_normal`)
-
-**Current:**
-```gdscript
-## Resets a control to "normal" state (scale=1, modulate.a=1, rotation=0).
-## Does not reset position as that is usually intentional.
-```
-
-**New:**
-```gdscript
-## Resets a control to "normal" state (scale=1, modulate.a=1, rotation=0).
-## Does not reset position as that is usually intentional.
-## NOTE: This function is no longer used by the RESET animation action.
-## The RESET animation action now uses animate_reset_all() with duration=0
-## for comprehensive reset of all properties including position.
-## This function may still be used elsewhere in the codebase.
-```
-
----
-
-## Implementation Order Summary
-
-1. **Phase 1:** Replace position system with unified snapshot infrastructure
-2. **Phase 2:** Create `animate_reset_all` function
-3. **Phase 3:** Refactor `animate_shake` to use unified system
-4. **Phase 4:** Refactor `animate_float` to use unified system
-5. **Phase 5:** Update RESET to use comprehensive reset (duration=0)
-6. **Phase 6:** Extend unified system to color flash (optional but recommended)
-7. **Phase 7:** Handle edge cases
-8. **Phase 8:** Test thoroughly
-9. **Phase 9:** Update documentation
-
----
-
-## Estimated Implementation Time
-
-- Phase 1: 45 minutes (infrastructure replacement)
-- Phase 2: 30 minutes (comprehensive reset function)
-- Phase 3: 20 minutes (refactor shake)
-- Phase 4: 20 minutes (refactor float)
-- Phase 5: 15 minutes (RESET case updates)
-- Phase 6: 30 minutes (color flash update)
-- Phase 7: 15 minutes (edge cases)
-- Phase 8: 90 minutes (comprehensive testing)
-- Phase 9: 20 minutes (documentation)
-
-**Total: ~4.5 hours**
-
----
-
-## Key Benefits of This Refactor
-
-1. **No Positional Drift:** Unified snapshot ensures all animations reference the same original state
-2. **Comprehensive Reset:** RESET animation now restores all properties (position, scale, modulate, rotation, pivot_offset, visible)
-3. **Consistent System:** All property-modifying animations can use the same unified system
-4. **Clean Codebase:** No legacy code, no backward compatibility cruft
-5. **Future-Proof:** Easy to extend to other property-modifying animations
-6. **User Control:** Users can choose to use reset animation or let properties drift
-
----
-
-## Migration Notes
-
-- All existing code calling `animate_shake` and `animate_float` will continue to work
-- The `preserve_position` parameter behavior is enhanced but API-compatible
-- **RESET animation behavior changed:** Now performs comprehensive reset of all properties (position, scale, modulate, rotation, pivot_offset, visible) instead of just scale, modulate.a, and rotation. Uses unified snapshot system.
-- `_saved_positions` dictionary is completely removed
-- `reset_control_to_normal()` function exists but RESET animation no longer uses it (uses `animate_reset_all()` instead)
-- No migration needed for existing code - API remains compatible, but RESET behavior is enhanced
+### System Architecture
+- **Unified API**: Consistent interface across all animation types
+- **Extensible**: Easy to add new execution modes in future
+- **Clean codebase**: No legacy config classes cluttering the system

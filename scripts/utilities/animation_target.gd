@@ -96,10 +96,8 @@ enum Easing {
 ## Only affects animations that use pivot (EXPAND, SHRINK, POP, PULSE, ROTATE, etc.).
 @export var pivot_offset: Vector2 = Vector2(-1, -1)
 
-## If true, preserves the control's position after position-modifying animations (SHAKE, FLOAT).
-## Prevents unwanted layout shifts when animating controls like sliders or buttons.
-## When false, animations can move the control permanently.
-@export var preserve_position: bool = false
+## Note: All animations now automatically preserve their initial state for consistent RESET behavior.
+## The preserve_position parameter has been removed as all animations use unified baseline snapshots.
 
 ## ============================================
 ## ANIMATION-SPECIFIC SETTINGS
@@ -240,20 +238,22 @@ func apply(owner: Node) -> Signal:
 		AnimationAction.PULSE:
 			return UIAnimationUtils.animate_pulse(owner, control_target, duration, pulse_amount, pulse_count, pivot_offset, true, repeat_count, tween_easing)
 		AnimationAction.SHAKE:
-			return UIAnimationUtils.animate_shake(owner, control_target, duration, shake_intensity, shake_count, true, repeat_count, tween_easing, preserve_position)
+			return UIAnimationUtils.animate_shake(owner, control_target, duration, shake_intensity, shake_count, true, repeat_count, tween_easing)
 		AnimationAction.BREATHING:
 			return UIAnimationUtils.animate_breathing(owner, control_target, duration, repeat_count, tween_easing, pivot_offset)
 		AnimationAction.WOBBLE:
 			return UIAnimationUtils.animate_wobble(owner, control_target, duration, repeat_count, tween_easing, pivot_offset)
 		AnimationAction.FLOAT:
-			return UIAnimationUtils.animate_float(owner, control_target, duration, repeat_count, tween_easing, 10.0, false, preserve_position)
+			return UIAnimationUtils.animate_float(owner, control_target, duration, repeat_count, tween_easing, 10.0, false)
 		AnimationAction.GLOW_PULSE:
 			return UIAnimationUtils.animate_glow_pulse(owner, control_target, duration, repeat_count, tween_easing)
 		AnimationAction.COLOR_FLASH:
 			return UIAnimationUtils.animate_color_flash(owner, control_target, flash_color, duration, flash_intensity, true, tween_easing)
 		AnimationAction.RESET:
-			UIAnimationUtils.reset_control_to_normal(control_target)
-			return Signal()
+			# Use comprehensive reset with duration=0 for instant reset
+			# This resets all properties (position, scale, modulate, rotation, pivot_offset, visible)
+			# using the unified snapshot system
+			return UIAnimationUtils.animate_reset_all(owner, control_target, 0.0, tween_easing, true)
 		_:
 			push_warning("AnimationTarget: Unsupported animation type %d" % animation)
 			return Signal()

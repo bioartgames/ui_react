@@ -165,9 +165,9 @@ func apply_to_control(owner: Node, target: Control) -> Signal:
 		AnimationAction.COLOR_FLASH:
 			return UIAnimationUtils.animate_color_flash(owner, target, flash_color, duration, flash_intensity, true)
 		AnimationAction.RESET:
-			# Reset requires storing initial state - for now, just reset to normal
-			UIAnimationUtils.reset_control_to_normal(target)
-			return Signal()
+			# Use comprehensive reset with duration=0 for instant reset
+			# This resets all properties using the unified snapshot system
+			return UIAnimationUtils.animate_reset_all(owner, target, 0.0, 0, true)
 		_:
 			push_warning("AnimationConfig: Unsupported animation action %d" % action)
 			return Signal()
