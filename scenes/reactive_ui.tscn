@@ -1,16 +1,16 @@
-[gd_scene load_steps=25 format=3 uid="uid://1ctyp6anyhbh"]
+[gd_scene load_steps=26 format=3 uid="uid://1ctyp6anyhbh"]
 
 [ext_resource type="Script" uid="uid://st55qiias3cb" path="res://scripts/reactive/state.gd" id="1_w0svl"]
 [ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://scripts/reactive/reactive_line_edit.gd" id="1_xdli5"]
 [ext_resource type="Script" uid="uid://bw7gojuop1hic" path="res://scripts/reactive/reactive_label.gd" id="2_o0is5"]
-[ext_resource type="Resource" uid="uid://cxl14gsie0wgq" path="res://scenes/examples/bool.tres" id="3_a2h71"]
+[ext_resource type="Resource" uid="uid://cxl14gsie0wgq" path="res://ui_resources/bool.tres" id="3_a2h71"]
 [ext_resource type="Script" uid="uid://3m8buhv674ja" path="res://scripts/reactive/reactive_check_box.gd" id="3_iwetj"]
 [ext_resource type="Script" uid="uid://lv5ixpw5hlvp" path="res://scripts/reactive/reactive_button.gd" id="4_a2h71"]
 [ext_resource type="Script" uid="uid://diigywt0dm170" path="res://scripts/utilities/animation_target.gd" id="4_pf7w8"]
-[ext_resource type="Resource" uid="uid://cvu2qm22ysl0y" path="res://scenes/examples/text.tres" id="5_iwetj"]
+[ext_resource type="Resource" uid="uid://cvu2qm22ysl0y" path="res://ui_resources/text.tres" id="5_iwetj"]
 [ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://scripts/reactive/reactive_slider.gd" id="5_m40cl"]
 [ext_resource type="Script" uid="uid://s6xiov8r6bil" path="res://scripts/reactive/reactive_progress_bar.gd" id="6_krjhy"]
-[ext_resource type="Resource" uid="uid://dp3cawtta2kbd" path="res://scenes/examples/items.tres" id="10_krjhy"]
+[ext_resource type="Resource" uid="uid://dp3cawtta2kbd" path="res://ui_resources/items.tres" id="10_krjhy"]
 [ext_resource type="Script" uid="uid://b75p2so2hr0wd" path="res://scripts/reactive/reactive_option_button.gd" id="10_m40cl"]
 [ext_resource type="Script" uid="uid://dohh71knb8vid" path="res://scripts/reactive/reactive_tab_container.gd" id="13_p7nh0"]
 [ext_resource type="Script" uid="uid://duphbaan8pk5f" path="res://scripts/reactive/reactive_item_list.gd" id="14_mbe61"]
@@ -19,19 +19,6 @@
 [sub_resource type="Resource" id="Resource_p7nh0"]
 script = ExtResource("4_pf7w8")
 target = NodePath(".")
-metadata/_custom_type_script = "uid://diigywt0dm170"
-
-[sub_resource type="Resource" id="Resource_iwetj"]
-script = ExtResource("1_w0svl")
-value = ["Player: ", ExtResource("5_iwetj")]
-metadata/_custom_type_script = "uid://st55qiias3cb"
-
-[sub_resource type="Resource" id="Resource_52s1b"]
-script = ExtResource("4_pf7w8")
-target = NodePath(".")
-trigger = 5
-animation = 17
-preserve_position = true
 metadata/_custom_type_script = "uid://diigywt0dm170"
 
 [sub_resource type="Resource" id="3"]
@@ -68,6 +55,26 @@ script = ExtResource("4_pf7w8")
 target = NodePath(".")
 trigger = 6
 animation = 16
+metadata/_custom_type_script = "uid://diigywt0dm170"
+
+[sub_resource type="Resource" id="Resource_iwetj"]
+script = ExtResource("1_w0svl")
+value = ["Player: ", ExtResource("5_iwetj")]
+metadata/_custom_type_script = "uid://st55qiias3cb"
+
+[sub_resource type="Resource" id="Resource_52s1b"]
+script = ExtResource("4_pf7w8")
+target = NodePath(".")
+trigger = 5
+animation = 17
+preserve_position = true
+metadata/_custom_type_script = "uid://diigywt0dm170"
+
+[sub_resource type="Resource" id="Resource_ljngm"]
+script = ExtResource("4_pf7w8")
+target = NodePath(".")
+trigger = 7
+animation = 22
 metadata/_custom_type_script = "uid://diigywt0dm170"
 
 [node name="ReactiveUI" type="Control"]
@@ -108,21 +115,6 @@ script = ExtResource("4_a2h71")
 disabled_state = ExtResource("3_a2h71")
 animation_targets = Array[ExtResource("4_pf7w8")]([SubResource("Resource_p7nh0")])
 metadata/_custom_type_script = "uid://lv5ixpw5hlvp"
-
-[node name="Label" type="Label" parent="VBox"]
-layout_mode = 2
-text = "Player: "
-script = ExtResource("2_o0is5")
-text_state = SubResource("Resource_iwetj")
-metadata/_custom_type_script = "uid://bw7gojuop1hic"
-
-[node name="LineEdit" type="LineEdit" parent="VBox"]
-layout_mode = 2
-placeholder_text = "Type here to update the label"
-script = ExtResource("1_xdli5")
-text_state = ExtResource("5_iwetj")
-animation_targets = Array[ExtResource("4_pf7w8")]([SubResource("Resource_52s1b")])
-metadata/_custom_type_script = "uid://cgoqls6mehlqv"
 
 [node name="Slider" type="HSlider" parent="VBox"]
 layout_mode = 2
@@ -173,6 +165,37 @@ metadata/_custom_type_script = "uid://dohh71knb8vid"
 layout_mode = 2
 metadata/_tab_index = 0
 
+[node name="Label" type="Label" parent="VBox/ReactiveTabContainer/Panel"]
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -39.5
+offset_bottom = -16.5
+grow_horizontal = 2
+grow_vertical = 2
+text = "Player: "
+script = ExtResource("2_o0is5")
+text_state = SubResource("Resource_iwetj")
+metadata/_custom_type_script = "uid://bw7gojuop1hic"
+
+[node name="LineEdit" type="LineEdit" parent="VBox/ReactiveTabContainer/Panel"]
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -15.5
+offset_bottom = 15.5
+grow_horizontal = 2
+grow_vertical = 2
+placeholder_text = "Type here to update the label"
+script = ExtResource("1_xdli5")
+text_state = ExtResource("5_iwetj")
+animation_targets = Array[ExtResource("4_pf7w8")]([SubResource("Resource_52s1b")])
+metadata/_custom_type_script = "uid://cgoqls6mehlqv"
+
 [node name="Panel2" type="Panel" parent="VBox/ReactiveTabContainer"]
 visible = false
 layout_mode = 2
@@ -186,4 +209,5 @@ metadata/_custom_type_script = "uid://duphbaan8pk5f"
 [node name="ReactiveSpinBox" type="SpinBox" parent="VBox"]
 layout_mode = 2
 script = ExtResource("15_mbr4o")
+animation_targets = Array[ExtResource("4_pf7w8")]([SubResource("Resource_ljngm")])
 metadata/_custom_type_script = "uid://diihw85b5p4bd"

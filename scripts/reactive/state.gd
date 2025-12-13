@@ -19,4 +19,3 @@ func set_value(new_value: Variant) -> void:
 func set_silent(new_value: Variant) -> void:
 	value = new_value
 	emit_changed()
-
