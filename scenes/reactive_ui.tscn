@@ -17,24 +17,24 @@
 [ext_resource type="Script" uid="uid://duphbaan8pk5f" path="res://scripts/reactive/reactive_item_list.gd" id="14_mbe61"]
 [ext_resource type="Script" uid="uid://diihw85b5p4bd" path="res://scripts/reactive/reactive_spin_box.gd" id="15_mbr4o"]
 
-[sub_resource type="Resource" id="Resource_8mpai"]
-script = ExtResource("4_pf7w8")
-animation = 17
-stagger = 0.45
-metadata/_custom_type_script = "uid://bgtvl8wqnhhg3"
-
 [sub_resource type="Resource" id="Resource_3pbam"]
 script = ExtResource("4_pf7w8")
 animation = 19
+stagger = 0.5
+repeat_count = 2
+metadata/_custom_type_script = "uid://bgtvl8wqnhhg3"
+
+[sub_resource type="Resource" id="Resource_8mpai"]
+script = ExtResource("4_pf7w8")
+animation = 23
 stagger = 0.5
 metadata/_custom_type_script = "uid://bgtvl8wqnhhg3"
 
 [sub_resource type="Resource" id="Resource_yjg32"]
 script = ExtResource("5_8mpai")
-execution_mode = 0
 trigger = 2
 targets = Array[NodePath]([NodePath("../DisableActionsToggle"), NodePath("."), NodePath("../Slider"), NodePath("../Progress")])
-animations = Array[ExtResource("4_pf7w8")]([SubResource("Resource_8mpai"), SubResource("Resource_3pbam")])
+animations = Array[ExtResource("4_pf7w8")]([SubResource("Resource_3pbam"), SubResource("Resource_8mpai")])
 metadata/_custom_type_script = "uid://bnno246gj404t"
 
 [sub_resource type="Resource" id="3"]
