@@ -9,7 +9,7 @@ class_name ReactiveSpinBox
 ## Drag nodes here and configure each target's animation properties directly in the Inspector.
 ## Each target can specify its own trigger (value changed, increased, decreased, text entered, focus entered/exited, hover),
 ## animation type, duration, and settings - no resource files needed!
-@export var animations: Array = []
+@export var animations: Array[AnimationReel] = []
 
 var _updating: bool = false
 var _last_value: float = 0.0
@@ -32,7 +32,7 @@ func _ready() -> void:
 ## Validates animation reels and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_reels() -> void:
-	var valid_reels: Array = []
+	var valid_reels: Array[AnimationReel] = []
 	var has_hover_enter_targets = false
 	var has_hover_exit_targets = false
 

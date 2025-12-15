@@ -8,7 +8,7 @@ class_name ReactiveLabel
 ## Drag nodes here and configure each target's animation properties directly in the Inspector.
 ## Each target can specify its own trigger (text changed, hover enter/exit), animation type,
 ## duration, and settings - no resource files needed! Leave empty to use manual signal connections.
-@export var animations: Array = []
+@export var animations: Array[AnimationReel] = []
 
 var _updating: bool = false
 var _nested_states: Array[State] = []

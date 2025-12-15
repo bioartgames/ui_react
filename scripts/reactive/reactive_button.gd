@@ -9,7 +9,7 @@ class_name ReactiveButton
 ## Drag AnimationReel resources here in the Inspector. Each reel can specify its trigger type
 ## (pressed, hover enter/exit, toggled on/off), target controls to animate, and animation clips
 ## to execute. Supports automatic execution modes: single, multi-target, and sequences.
-@export var animations: Array = []
+@export var animations: Array[AnimationReel] = []
 
 var _updating: bool = false
 var _is_initializing: bool = true

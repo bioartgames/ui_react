@@ -9,7 +9,7 @@ class_name ReactiveOptionButton
 ## Drag nodes here and configure each target's animation properties directly in the Inspector.
 ## Each target can specify its own trigger (selection changed, hover enter/exit), animation type,
 ## duration, and settings - no resource files needed! Leave empty to use manual signal connections.
-@export var animations: Array = []
+@export var animations: Array[AnimationReel] = []
 
 var _updating: bool = false
 var _is_initializing: bool = true
@@ -29,7 +29,7 @@ func _ready() -> void:
 ## Validates animation targets and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_reels() -> void:
-	var valid_reels: Array = []
+	var valid_reels: Array[AnimationReel] = []
 	var has_selection_changed_targets = false
 	var has_hover_enter_targets = false
 	var has_hover_exit_targets = false

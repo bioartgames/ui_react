@@ -8,7 +8,7 @@ class_name ReactiveLineEdit
 ## Drag nodes here and configure each target's animation properties directly in the Inspector.
 ## Each target can specify its own trigger (text changed, text entered, focus entered/exited, hover),
 ## animation type, duration, and settings - no resource files needed!
-@export var animations: Array = []
+@export var animations: Array[AnimationReel] = []
 
 var _updating: bool = false
 var _is_initializing: bool = true

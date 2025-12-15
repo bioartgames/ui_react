@@ -1974,7 +1974,6 @@ static func animate_stagger_from_clip(source_node: Node, targets: Array[Control]
 
 ## Helper node for stagger animations.
 class _StaggerHelper extends Node:
-	signal all_finished
 	signal stagger_finished
 	var _is_running = false
 	var _source_node: Node = null
@@ -2028,7 +2027,6 @@ class _StaggerHelper extends Node:
 
 		# Calculate total delay
 		var total_delay = delay_between * (targets.size() - 1)
-		var signals: Array[Signal] = []
 
 		# Start animations with stagger
 		for i in range(targets.size()):
@@ -2044,18 +2042,16 @@ class _StaggerHelper extends Node:
 				await get_tree().create_timer(delay_time).timeout
 
 			if is_instance_valid(target) and _is_running:
-				var signal_result = clip.execute(source_node, target, tween_easing)
-				if signal_result is Signal:
-					signals.append(signal_result)
+				# Execute animation - we don't need to store the signal since
+				# we use a timer-based approach to wait for completion
+				clip.execute(source_node, target, tween_easing)
 
 		# Wait for all animations to complete
 		# Calculate max time: last animation starts at total_delay and runs for clip.duration
+		# This timer is sufficient - we don't need to await individual signals since they may
+		# become invalid if their Tweens are freed before we await them
 		var max_time = total_delay + clip.duration
 		await get_tree().create_timer(max_time).timeout
-
-		# Also wait for all signals to ensure completion
-		for sig in signals:
-			await sig
 
 		if _is_running:
 			stagger_finished.emit()

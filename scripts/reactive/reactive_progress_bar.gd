@@ -8,7 +8,7 @@ class_name ReactiveProgressBar
 ## Drag nodes here and configure each target's animation properties directly in the Inspector.
 ## Each target can specify its own trigger (value changed, increased, decreased, completed, hover),
 ## animation type, duration, and settings - no resource files needed!
-@export var animations: Array = []
+@export var animations: Array[AnimationReel] = []
 
 var _updating: bool = false
 var _last_value: float = 0.0
