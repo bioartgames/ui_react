@@ -4,12 +4,12 @@ class_name ReactiveCheckBox
 @export var checked_state: State
 @export var disabled_state: State
 
-## Targets to animate based on checkbox events.
+## Animation reels to execute based on checkbox events.
 ##
-## Drag nodes here and configure each target's animation properties directly in the Inspector.
-## Each target can specify its own trigger (toggled on/off, hover enter/exit), animation type,
-## duration, and settings - no resource files needed! Leave empty to use manual signal connections.
-@export var animation_targets: Array[AnimationTarget] = []
+## Drag AnimationReel resources here in the Inspector. Each reel can specify its trigger type
+## (toggled on/off, hover enter/exit), target controls to animate, and animation clips
+## to execute. Supports automatic execution modes: single, multi-target, and sequences.
+@export var animations: Array = []
 
 var _updating: bool = false
 var _is_initializing: bool = true
@@ -22,53 +22,55 @@ func _ready() -> void:
 	if disabled_state:
 		disabled_state.value_changed.connect(_on_disabled_state_changed)
 		_on_disabled_state_changed(disabled_state.value, disabled_state.value)
-	_validate_animation_targets()
+	_validate_animation_reels()
 	# Finish initialization after all signals are processed
 	call_deferred("_finish_initialization")
 
-## Validates animation targets and filters out invalid ones.
+## Validates animation reels and filters out invalid ones.
 ## Called automatically in [method _ready].
-func _validate_animation_targets() -> void:
-	var valid_targets: Array[AnimationTarget] = []
+func _validate_animation_reels() -> void:
+	var valid_reels: Array[AnimationReel] = []
 	var has_toggled_on_targets = false
 	var has_toggled_off_targets = false
 	var has_hover_enter_targets = false
 	var has_hover_exit_targets = false
-	
-	for anim_target in animation_targets:
-		if anim_target == null:
+
+	for reel in animations:
+		if reel == null:
 			continue
-		
-		# Check if target is set
-		if anim_target.target.is_empty():
-			push_warning("ReactiveCheckBox '%s': AnimationTarget has no target. Set target (NodePath) in the Inspector. Tip: Drag a node to target." % name)
+
+		# Validate targets array (at least one target required)
+		if reel.targets.size() == 0:
+			push_warning("ReactiveCheckBox '%s': AnimationReel has no targets. Add at least one target NodePath." % name)
 			continue
-		
-		# Verify the target resolves to a valid Control
-		var target_node = get_node_or_null(anim_target.target)
-		if target_node == null:
-			push_warning("ReactiveCheckBox '%s': AnimationTarget target '%s' not found. Check the NodePath." % [name, anim_target.target])
+
+		# Validate all targets resolve to Controls
+		var has_valid_target = false
+		for path in reel.targets:
+			var node = get_node_or_null(path)
+			if node is Control:
+				has_valid_target = true
+				break
+
+		if not has_valid_target:
+			push_warning("ReactiveCheckBox '%s': AnimationReel has no valid targets. Check NodePaths." % name)
 			continue
-		
-		if not (target_node is Control):
-			push_warning("ReactiveCheckBox '%s': AnimationTarget target '%s' is not a Control node." % [name, anim_target.target])
-			continue
-		
-		valid_targets.append(anim_target)
-		
+
+		valid_reels.append(reel)
+
 		# Track which triggers we need to connect
-		match anim_target.trigger:
-			AnimationTarget.Trigger.TOGGLED_ON:
+		match reel.trigger:
+			AnimationReel.Trigger.TOGGLED_ON:
 				has_toggled_on_targets = true
-			AnimationTarget.Trigger.TOGGLED_OFF:
+			AnimationReel.Trigger.TOGGLED_OFF:
 				has_toggled_off_targets = true
-			AnimationTarget.Trigger.HOVER_ENTER:
+			AnimationReel.Trigger.HOVER_ENTER:
 				has_hover_enter_targets = true
-			AnimationTarget.Trigger.HOVER_EXIT:
+			AnimationReel.Trigger.HOVER_EXIT:
 				has_hover_exit_targets = true
-	
-	animation_targets = valid_targets
-	
+
+	animations = valid_reels
+
 	# Connect signals based on which triggers are used
 	if has_toggled_on_targets or has_toggled_off_targets:
 		if not toggled.is_connected(_on_trigger_toggled):
@@ -91,37 +93,34 @@ func _on_trigger_toggled(active: bool) -> void:
 		return
 	
 	if active:
-		_trigger_animations(AnimationTarget.Trigger.TOGGLED_ON)
+		_trigger_animations(AnimationReel.Trigger.TOGGLED_ON)
 	else:
-		_trigger_animations(AnimationTarget.Trigger.TOGGLED_OFF)
+		_trigger_animations(AnimationReel.Trigger.TOGGLED_OFF)
 
 ## Handles HOVER_ENTER trigger animations.
 func _on_trigger_hover_enter() -> void:
-	_trigger_animations(AnimationTarget.Trigger.HOVER_ENTER)
+	_trigger_animations(AnimationReel.Trigger.HOVER_ENTER)
 
 ## Handles HOVER_EXIT trigger animations.
 func _on_trigger_hover_exit() -> void:
-	_trigger_animations(AnimationTarget.Trigger.HOVER_EXIT)
+	_trigger_animations(AnimationReel.Trigger.HOVER_EXIT)
 
-## Triggers animations for targets matching the specified trigger type.
+## Triggers animations for reels matching the specified trigger type.
 ## [param trigger_type]: The trigger type to match.
-func _trigger_animations(trigger_type: AnimationTarget.Trigger) -> void:
-	if animation_targets.size() == 0:
+func _trigger_animations(trigger_type) -> void:
+	if animations.size() == 0:
 		return
-	
-	# Apply animations for targets matching this trigger
-	for anim_target in animation_targets:
-		if anim_target == null:
+
+	# Apply animations for reels matching this trigger
+	for reel in animations:
+		if reel == null:
 			continue
-		
-		if anim_target.trigger != trigger_type:
+
+		if reel.trigger != trigger_type:
 			continue
-		
-		# Respect disabled state if configured
-		if anim_target.respect_disabled and disabled:
-			continue
-		
-		anim_target.apply(self)
+
+		# Note: respect_disabled is now per-clip, not per-reel
+		reel.apply(self)
 
 func _on_toggled(active: bool) -> void:
 	if not checked_state or _updating:

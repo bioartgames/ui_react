@@ -1942,102 +1942,40 @@ static func stop_stagger_animations(source_node: Node, targets: Array[Control]) 
 			target.scale = current_scale
 			target.position = current_position
 
-## Animates multiple controls with a stagger effect (each animates with a delay).
-## Automatically interrupts any existing stagger animations before starting.
-## [param source_node]: The node to create tweens from (usually self).
+## Animates multiple targets with stagger timing using AnimationClip.
+## Animates multiple targets with stagger timing using AnimationClip.
+## [param source_node]: The node to create tweens from.
 ## [param targets]: Array of controls to animate.
-## [param delay_between]: Delay between each item in seconds (default: 0.1).
-## [param animation_config]: AnimationActionConfig that defines the animation to apply to each target.
-## The config's reverse property determines if items are revealed (false) or hidden (true).
-## All customization options (flash_color, pop_overshoot, etc.) are supported.
-## [return]: Signal that emits when all animations complete.
-static func animate_stagger(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_config: AnimationActionConfig = null) -> Signal:
+## [param delay_between]: Delay between each target in seconds.
+## [param clip]: AnimationClip defining the animation to perform on each target.
+## [return]: Signal that emits when all stagger animations complete.
+static func animate_stagger_from_clip(source_node: Node, targets: Array[Control], delay_between: float, clip: AnimationClip) -> Signal:
 	if not source_node or targets.size() == 0:
-		push_warning("UIAnimationUtils: Invalid source_node or empty targets for animate_stagger")
+		push_warning("UIAnimationUtils: Invalid source_node or empty targets for animate_stagger_from_clip")
 		return Signal()
-	
-	if not animation_config:
-		push_warning("UIAnimationUtils: animate_stagger requires animation_config")
+
+	if not clip:
+		push_warning("UIAnimationUtils: animate_stagger_from_clip requires clip")
 		return Signal()
-	
+
 	# Stop any existing stagger animations first
 	stop_stagger_animations(source_node, targets)
-	
-	# Reset targets based on whether we're revealing or hiding
-	var is_reveal = not animation_config.reverse
 
-	for target in targets:
-		if target and is_instance_valid(target):
-			if is_reveal:
-				# For reveal: ensure target is visible (animation will handle its own initial state via auto_visible)
-				# Don't pre-set scale/alpha - let each animation handle what it needs
-				target.visible = true
-			else:
-				# For hide: ensure target is visible so hide animation can work
-				target.visible = true
-				# Reset to normal state so hide animations start from visible state
-				target.modulate.a = 1.0
-				target.scale = Vector2.ONE
-	
+	# Create helper node for stagger execution
 	var helper = _StaggerHelper.new()
 	source_node.add_child(helper)
-	helper.execute_stagger(source_node, targets, delay_between, animation_config, is_reveal)
-	return helper.all_finished
+	helper.set_meta("_is_stagger_helper", true)
+	helper.set_meta("_stagger_type", "stagger")
 
-## Animates multiple controls with a stagger effect using per-target configs.
-## Automatically interrupts any existing stagger animations before starting.
-## [param source_node]: The node to create tweens from (usually self).
-## [param targets]: Array of controls to animate.
-## [param delay_between]: Delay between each item in seconds (default: 0.1).
-## [param animation_configs]: Array of AnimationActionConfig, one per target.
-## Each config's reverse property determines if items are revealed (false) or hidden (true).
-## All customization options (flash_color, pop_overshoot, etc.) are supported per target.
-## If configs array is smaller than targets, the last config is reused for remaining targets.
-## [return]: Signal that emits when all animations complete.
-static func animate_stagger_multi(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_configs: Array[AnimationActionConfig] = []) -> Signal:
-	if not source_node or targets.size() == 0:
-		push_warning("UIAnimationUtils: Invalid source_node or empty targets for animate_stagger_multi")
-		return Signal()
-	
-	if animation_configs.size() == 0:
-		push_warning("UIAnimationUtils: animate_stagger_multi requires at least one animation_config")
-		return Signal()
-	
-	# Stop any existing stagger animations first
-	stop_stagger_animations(source_node, targets)
-	
-	# Reset targets based on their individual configs
-	for i in range(targets.size()):
-		var target = targets[i]
-		if not target or not is_instance_valid(target):
-			continue
-		
-		# Get config for this target (use last config if not enough provided)
-		var config_idx = min(i, animation_configs.size() - 1)
-		var config = animation_configs[config_idx]
-		if not config:
-			continue
-		
-		var is_reveal = not config.reverse
-		
-		if is_reveal:
-			# For reveal: ensure target is visible (animation will handle its own initial state)
-			target.visible = true
-		else:
-			# For hide: ensure target is visible so hide animation can work
-			target.visible = true
-			# Reset to normal state so hide animations start from visible state
-			target.modulate.a = 1.0
-			target.scale = Vector2.ONE
-	
-	var helper = _StaggerHelper.new()
-	source_node.add_child(helper)
-	helper.execute_stagger_multi(source_node, targets, delay_between, animation_configs)
-	return helper.all_finished
+	# Execute stagger using AnimationClip
+	helper.execute_stagger_from_clip(source_node, targets, delay_between, clip)
+
+	return helper.stagger_finished
 
 ## Helper node for stagger animations.
 class _StaggerHelper extends Node:
-	var all_finished = Signal()
+	signal all_finished
+	signal stagger_finished
 	var _is_running = false
 	var _source_node: Node = null
 	var _targets: Array[Control] = []
@@ -2065,105 +2003,78 @@ class _StaggerHelper extends Node:
 				target.position = current_position
 		queue_free()
 
-	func execute_stagger(source_node: Node, targets: Array[Control], delay_between: float, animation_config: AnimationActionConfig, is_reveal: bool) -> void:
+	## Executes stagger animation using AnimationClip.
+	## [param source_node]: The node to create tweens from.
+	## [param targets]: Array of controls to animate.
+	## [param delay_between]: Delay between each target.
+	## [param clip]: AnimationClip resource defining the animation.
+	## Executes stagger animation using AnimationClip.
+	## [param source_node]: The node to create tweens from.
+	## [param targets]: Array of controls to animate.
+	## [param delay_between]: Delay between each target.
+	## [param clip]: AnimationClip resource defining the animation.
+	func execute_stagger_from_clip(source_node: Node, targets: Array[Control], delay_between: float, clip: AnimationClip) -> void:
+		if targets.size() == 0 or not clip:
+			stagger_finished.emit()
+			queue_free()
+			return
+
 		_source_node = source_node
 		_targets = targets
 		_is_running = true
 
-		# Determine iteration order: forward for reveal, reverse for hide
-		var start_idx = 0
-		var end_idx = targets.size()
-		var step = 1
-		if not is_reveal:
-			start_idx = targets.size() - 1
-			end_idx = -1
-			step = -1
+		# Get animation parameters from AnimationClip
+		var tween_easing: int = _get_tween_easing_from_clip(clip)
 
-		var i = start_idx
-		while i != end_idx:
-			if not _is_running:
-				return
+		# Calculate total delay
+		var total_delay = delay_between * (targets.size() - 1)
+		var signals: Array[Signal] = []
 
+		# Start animations with stagger
+		for i in range(targets.size()):
 			var target = targets[i]
-			if target == null or not is_instance_valid(target):
-				i += step
+			if not is_instance_valid(target):
 				continue
 
-			# Wait for delay (skip delay for first item)
-			if i != start_idx:
-				await UIAnimationUtils.delay(source_node, delay_between)
-				if not _is_running:
-					return
+			var delay_time = delay_between * i
 
-			# Apply animation using the config's apply_to_control method
-			var animation_signal = animation_config.apply_to_control(source_node, target)
-			if animation_signal:
-				await animation_signal
+			# Create delayed animation
+			if delay_time > 0.0:
+				# Use a helper to delay and then execute
+				await get_tree().create_timer(delay_time).timeout
 
-			if not _is_running:
-				return
+			if is_instance_valid(target) and _is_running:
+				var signal_result = clip.execute(source_node, target, tween_easing)
+				if signal_result is Signal:
+					signals.append(signal_result)
 
-			i += step
+		# Wait for all animations to complete
+		# Calculate max time: last animation starts at total_delay and runs for clip.duration
+		var max_time = total_delay + clip.duration
+		await get_tree().create_timer(max_time).timeout
+
+		# Also wait for all signals to ensure completion
+		for sig in signals:
+			await sig
 
 		if _is_running:
-			all_finished.emit()
+			stagger_finished.emit()
 		queue_free()
 
-	func execute_stagger_multi(source_node: Node, targets: Array[Control], delay_between: float, animation_configs: Array[AnimationActionConfig]) -> void:
-		_source_node = source_node
-		_targets = targets
-		_is_running = true
-
-		# Determine iteration order based on first config (all should have same reverse state)
-		var is_reveal = true
-		if animation_configs.size() > 0 and animation_configs[0]:
-			is_reveal = not animation_configs[0].reverse
-
-		var start_idx = 0
-		var end_idx = targets.size()
-		var step = 1
-		if not is_reveal:
-			start_idx = targets.size() - 1
-			end_idx = -1
-			step = -1
-
-		var i = start_idx
-		while i != end_idx:
-			if not _is_running:
-				return
-
-			var target = targets[i]
-			if target == null or not is_instance_valid(target):
-				i += step
-				continue
-
-			# Wait for delay (skip delay for first item)
-			if i != start_idx:
-				await UIAnimationUtils.delay(source_node, delay_between)
-				if not _is_running:
-					return
-
-			# Get config for this target (use last config if not enough provided)
-			var config_idx = min(i if is_reveal else (targets.size() - 1 - i), animation_configs.size() - 1)
-			var config = animation_configs[config_idx]
-			if not config:
-				i += step
-				continue
-
-			# Apply animation using the config's apply_to_control method
-			# This reuses the single source of truth for animation logic
-			var animation_signal = config.apply_to_control(source_node, target)
-			if animation_signal:
-				await animation_signal
-
-			if not _is_running:
-				return
-
-			i += step
-
-		if _is_running:
-			all_finished.emit()
-		queue_free()
+	## Helper to get tween easing from AnimationClip.
+	## Helper to get tween easing from AnimationClip.
+	func _get_tween_easing_from_clip(clip: AnimationClip) -> int:
+		match clip.easing:
+			clip.Easing.EASE_IN:
+				return Tween.EASE_IN
+			clip.Easing.EASE_OUT:
+				return Tween.EASE_OUT
+			clip.Easing.EASE_IN_OUT:
+				return Tween.EASE_IN_OUT
+			clip.Easing.EASE_OUT_IN:
+				return Tween.EASE_OUT_IN
+			_:
+				return Tween.EASE_OUT
 
 ## Creates a delay signal that can be used in animation sequences.
 ## [param source_node]: The node to get the scene tree from.
@@ -2212,7 +2123,7 @@ static func _loop_animation(_source_node: Node, target: Control, animation_calla
 	for i in range(total_plays):
 		sequence.add(animation_callable)
 
-	# Execute sequence asynchronously using existing helper from animation_sequence_action_config
+	# Execute sequence asynchronously using helper node
 	var finite_helper = _FiniteLoopHelper.new()
 	target.add_child(finite_helper)
 	finite_helper.execute_sequence(sequence)
@@ -2220,7 +2131,7 @@ static func _loop_animation(_source_node: Node, target: Control, animation_calla
 
 ## Helper node for executing finite animation loops.
 class _FiniteLoopHelper extends Node:
-	var sequence_finished = Signal()
+	signal sequence_finished
 
 	func execute_sequence(sequence: AnimationSequence) -> void:
 		await sequence.play()
@@ -2230,7 +2141,7 @@ class _FiniteLoopHelper extends Node:
 ## Helper node for managing infinite animation loops.
 class _AnimationLoopHelper extends Node:
 	const HELPER_TYPE = "_AnimationLoopHelper"  # Identifier for helper detection
-	var loop_finished = Signal()
+	signal loop_finished
 	var _is_running = false
 	var _target_control: Control = null  # Store target to interrupt animations
 	var _active_tweens: Array[Tween] = []  # Track all active tweens

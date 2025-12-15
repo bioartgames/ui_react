@@ -2,7 +2,7 @@
 class_name FiniteLoopHelper
 extends Node
 
-var sequence_finished = Signal()
+signal sequence_finished
 
 func execute_sequence(sequence) -> void:
 	await sequence.play()
