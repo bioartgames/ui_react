@@ -3,6 +3,7 @@
 ## AnimationClip contains all the properties for a single animation type,
 ## including timing, easing, and animation-specific parameters. It can
 ## execute animations on target controls through its execute() method.
+@tool
 class_name AnimationClip
 extends Resource
 
@@ -37,7 +38,16 @@ enum Easing {
 ## ============================================
 
 ## Animation type to perform (dropdown selection in Inspector).
-@export var animation: AnimationAction = AnimationAction.EXPAND
+var _animation: AnimationAction = AnimationAction.EXPAND
+
+## Animation type to perform (dropdown selection in Inspector).
+@export var animation: AnimationAction:
+	set(value):
+		if _animation != value:
+			_animation = value
+			notify_property_list_changed()
+	get:
+		return _animation
 
 ## ============================================
 ## TIMING & EASING
@@ -83,35 +93,175 @@ enum Easing {
 ## ============================================
 ## ANIMATION-SPECIFIC SETTINGS
 ## ============================================
+## These properties are conditionally shown based on the selected animation type.
 
-@export_group("Rotate (for ROTATE_IN animation)")
-## Starting angle in degrees for ROTATE_IN animation (default: -360.0).
-@export var rotate_start_angle: float = -360.0
+## Starting angle in degrees for ROTATE_IN animation.
+var rotate_start_angle: float = -360.0
 
-@export_group("Pop (for POP animation)")
-## Overshoot amount for POP animation (default: 1.2, meaning 20% overshoot).
-@export var pop_overshoot: float = 1.2
+## Overshoot amount for POP animation.
+var pop_overshoot: float = 1.2
 
-@export_group("Pulse (for PULSE animation)")
-## Pulse scale amount for PULSE animation (default: 1.1, meaning 10% scale increase).
-@export var pulse_amount: float = 1.1
+## Pulse scale amount for PULSE animation.
+var pulse_amount: float = 1.1
 
-## Number of pulses for PULSE animation (default: 2).
-@export var pulse_count: int = 2
+## Number of pulses for PULSE animation.
+var pulse_count: int = 2
 
-@export_group("Shake (for SHAKE animation)")
-## Shake intensity in pixels for SHAKE animation (default: 10.0).
-@export var shake_intensity: float = 10.0
+## Shake intensity in pixels for SHAKE animation.
+var shake_intensity: float = 10.0
 
-## Number of shakes for SHAKE animation (default: 5).
-@export var shake_count: int = 5
+## Number of shakes for SHAKE animation.
+var shake_count: int = 5
 
-@export_group("Color Flash (for COLOR_FLASH animation)")
 ## Flash color for COLOR_FLASH animation.
-@export var flash_color: Color = Color.YELLOW
+var flash_color: Color = Color.YELLOW
 
 ## Flash intensity multiplier for COLOR_FLASH animation.
-@export var flash_intensity: float = 1.5
+var flash_intensity: float = 1.5
+
+## Returns the property list for conditional display of animation-specific properties.
+func _get_property_list() -> Array:
+	var properties: Array = []
+	
+	# Conditionally show animation-specific groups based on selected animation
+	match _animation:
+		AnimationAction.ROTATE_IN:
+			properties.append({
+				"name": "Rotate",
+				"type": TYPE_NIL,
+				"usage": PROPERTY_USAGE_GROUP,
+				"hint_string": "rotate_"
+			})
+			properties.append({
+				"name": "rotate_start_angle",
+				"type": TYPE_FLOAT,
+				"usage": PROPERTY_USAGE_DEFAULT,
+				"hint": PROPERTY_HINT_NONE
+			})
+		
+		AnimationAction.POP:
+			properties.append({
+				"name": "Pop",
+				"type": TYPE_NIL,
+				"usage": PROPERTY_USAGE_GROUP,
+				"hint_string": "pop_"
+			})
+			properties.append({
+				"name": "pop_overshoot",
+				"type": TYPE_FLOAT,
+				"usage": PROPERTY_USAGE_DEFAULT,
+				"hint": PROPERTY_HINT_NONE
+			})
+		
+		AnimationAction.PULSE:
+			properties.append({
+				"name": "Pulse",
+				"type": TYPE_NIL,
+				"usage": PROPERTY_USAGE_GROUP,
+				"hint_string": "pulse_"
+			})
+			properties.append({
+				"name": "pulse_amount",
+				"type": TYPE_FLOAT,
+				"usage": PROPERTY_USAGE_DEFAULT,
+				"hint": PROPERTY_HINT_NONE
+			})
+			properties.append({
+				"name": "pulse_count",
+				"type": TYPE_INT,
+				"usage": PROPERTY_USAGE_DEFAULT,
+				"hint": PROPERTY_HINT_NONE
+			})
+		
+		AnimationAction.SHAKE:
+			properties.append({
+				"name": "Shake",
+				"type": TYPE_NIL,
+				"usage": PROPERTY_USAGE_GROUP,
+				"hint_string": "shake_"
+			})
+			properties.append({
+				"name": "shake_intensity",
+				"type": TYPE_FLOAT,
+				"usage": PROPERTY_USAGE_DEFAULT,
+				"hint": PROPERTY_HINT_NONE
+			})
+			properties.append({
+				"name": "shake_count",
+				"type": TYPE_INT,
+				"usage": PROPERTY_USAGE_DEFAULT,
+				"hint": PROPERTY_HINT_NONE
+			})
+		
+		AnimationAction.COLOR_FLASH:
+			properties.append({
+				"name": "Color Flash",
+				"type": TYPE_NIL,
+				"usage": PROPERTY_USAGE_GROUP,
+				"hint_string": "flash_"
+			})
+			properties.append({
+				"name": "flash_color",
+				"type": TYPE_COLOR,
+				"usage": PROPERTY_USAGE_DEFAULT,
+				"hint": PROPERTY_HINT_NONE
+			})
+			properties.append({
+				"name": "flash_intensity",
+				"type": TYPE_FLOAT,
+				"usage": PROPERTY_USAGE_DEFAULT,
+				"hint": PROPERTY_HINT_NONE
+			})
+	
+	return properties
+
+## Handles setting animation-specific properties.
+func _set(property: StringName, value: Variant) -> bool:
+	if property == "rotate_start_angle":
+		rotate_start_angle = value
+		return true
+	elif property == "pop_overshoot":
+		pop_overshoot = value
+		return true
+	elif property == "pulse_amount":
+		pulse_amount = value
+		return true
+	elif property == "pulse_count":
+		pulse_count = value
+		return true
+	elif property == "shake_intensity":
+		shake_intensity = value
+		return true
+	elif property == "shake_count":
+		shake_count = value
+		return true
+	elif property == "flash_color":
+		flash_color = value
+		return true
+	elif property == "flash_intensity":
+		flash_intensity = value
+		return true
+	return false
+
+## Handles getting animation-specific properties.
+func _get(property: StringName) -> Variant:
+	if property == "rotate_start_angle":
+		return rotate_start_angle
+	elif property == "pop_overshoot":
+		return pop_overshoot
+	elif property == "pulse_amount":
+		return pulse_amount
+	elif property == "pulse_count":
+		return pulse_count
+	elif property == "shake_intensity":
+		return shake_intensity
+	elif property == "shake_count":
+		return shake_count
+	elif property == "flash_color":
+		return flash_color
+	elif property == "flash_intensity":
+		return flash_intensity
+	return null
 
 ## Executes this animation clip on the specified target control.
 ## [param owner]: The node that owns the animation (for creating tweens).
@@ -120,7 +270,7 @@ enum Easing {
 ## [return]: Signal that emits when animation completes (or empty Signal if not applicable).
 func execute(owner: Node, target: Control, tween_easing: int) -> Signal:
 	# Match on animation type and call appropriate UIAnimationUtils function
-	match animation:
+	match _animation:
 		AnimationAction.EXPAND:
 			if reverse:
 				return UIAnimationUtils.animate_shrink(owner, target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
@@ -217,5 +367,5 @@ func execute(owner: Node, target: Control, tween_easing: int) -> Signal:
 			# This resets all properties using the unified snapshot system
 			return UIAnimationUtils.animate_reset_all(owner, target, 0.0, tween_easing, true)
 		_:
-			push_warning("AnimationClip: Unsupported animation type %d" % animation)
+			push_warning("AnimationClip: Unsupported animation type %d" % _animation)
 			return Signal()
