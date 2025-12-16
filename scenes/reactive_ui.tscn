@@ -32,9 +32,10 @@ metadata/_custom_type_script = "uid://bgtvl8wqnhhg3"
 
 [sub_resource type="Resource" id="Resource_yjg32"]
 script = ExtResource("5_8mpai")
-trigger = 2
 targets = Array[NodePath]([NodePath("../DisableActionsToggle"), NodePath("."), NodePath("../Slider"), NodePath("../Progress")])
 animations = Array[ExtResource("4_pf7w8")]([SubResource("Resource_3pbam"), SubResource("Resource_8mpai")])
+trigger = 2
+execution_mode = 1
 metadata/_custom_type_script = "uid://bnno246gj404t"
 
 [sub_resource type="Resource" id="3"]
@@ -54,9 +55,10 @@ metadata/_custom_type_script = "uid://bgtvl8wqnhhg3"
 
 [sub_resource type="Resource" id="Resource_qynsm"]
 script = ExtResource("5_8mpai")
-trigger = 6
 targets = Array[NodePath]([NodePath("../OptionSelectionLabel")])
 animations = Array[ExtResource("4_pf7w8")]([SubResource("Resource_a72v2")])
+trigger = 6
+execution_mode = 1
 metadata/_custom_type_script = "uid://bnno246gj404t"
 
 [sub_resource type="Resource" id="Resource_iwetj"]
@@ -73,10 +75,10 @@ metadata/_custom_type_script = "uid://bgtvl8wqnhhg3"
 
 [sub_resource type="Resource" id="Resource_oqryg"]
 script = ExtResource("5_8mpai")
-execution_mode = 0
-trigger = 5
 targets = Array[NodePath]([NodePath("."), NodePath("../Label")])
 animations = Array[ExtResource("4_pf7w8")]([SubResource("Resource_6fcom")])
+trigger = 5
+execution_mode = 0
 metadata/_custom_type_script = "uid://bnno246gj404t"
 
 [node name="ReactiveUI" type="Control"]

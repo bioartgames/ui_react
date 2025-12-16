@@ -496,18 +496,18 @@ class _SequenceStaggerHelper extends Node:
 ## Validates an array of animation reels for a control and returns valid ones.
 ## Does NOT handle signal connections (those are control-specific).
 ## [param owner]: The control instance (for get_node_or_null and name)
-## [param animations]: Array of AnimationReel to validate
+## [param reels]: Array of AnimationReel to validate
 ## [return]: Dictionary with:
 ##   - "valid_reels": Array[AnimationReel] - filtered valid reels
 ##   - "trigger_map": Dictionary - maps trigger types to boolean (which triggers are used)
 static func validate_for_control(
 	owner: Control,
-	animations: Array[AnimationReel]
+	reels: Array[AnimationReel]
 ) -> Dictionary:
 	var valid_reels: Array[AnimationReel] = []
 	var trigger_map: Dictionary = {}
 
-	for reel in animations:
+	for reel in reels:
 		if reel == null:
 			continue
 
@@ -539,17 +539,17 @@ static func validate_for_control(
 ## Triggers animations for reels matching the specified trigger type.
 ## Pure function - no state needed, can be static.
 ## [param owner]: The control instance (passed to reel.apply())
-## [param animations]: Array of AnimationReel to check
+## [param reels]: Array of AnimationReel to check
 ## [param trigger_type]: The AnimationReel.Trigger enum value to match
 static func trigger_matching(
 	owner: Control,
-	animations: Array[AnimationReel],
+	reels: Array[AnimationReel],
 	trigger_type: Trigger
 ) -> void:
-	if animations.is_empty():
+	if reels.is_empty():
 		return
 
-	for reel in animations:
+	for reel in reels:
 		if reel == null:
 			continue
 		if reel.trigger != trigger_type:

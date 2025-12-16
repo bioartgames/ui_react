@@ -262,11 +262,11 @@ func _get(property: StringName) -> Variant:
 	return null
 
 ## Converts AnimationClip.Easing enum to Tween.EASE_* constant.
-## [param easing]: The AnimationClip.Easing enum value (can be passed directly or from clip.easing)
+## [param easing_mode]: The AnimationClip.Easing enum value (can be passed directly or from clip.easing)
 ## [return]: The corresponding Tween.EASE_* constant
-static func to_tween_easing(easing: Easing) -> int:
+static func to_tween_easing(easing_mode: Easing) -> int:
 	# Within AnimationClip class, Easing refers to AnimationClip.Easing
-	match easing:
+	match easing_mode:
 		Easing.EASE_IN:
 			return Tween.EASE_IN
 		Easing.EASE_OUT:
