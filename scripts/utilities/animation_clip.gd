@@ -40,6 +40,7 @@ enum Easing {
 ## Animation type to perform (dropdown selection in Inspector).
 var _animation: AnimationAction = AnimationAction.EXPAND
 
+@export_group("Animation Settings")
 ## Animation type to perform (dropdown selection in Inspector).
 @export var animation: AnimationAction:
 	set(value):
@@ -49,10 +50,7 @@ var _animation: AnimationAction = AnimationAction.EXPAND
 	get:
 		return _animation
 
-## ============================================
-## TIMING & EASING
-## ============================================
-
+@export_group("Timing & Easing")
 ## Delay before this animation starts (for sequences).
 ## Set to > 0.0 to add delay before this clip begins.
 @export_range(0.0, 10.0) var delay: float = 0.0
@@ -263,109 +261,183 @@ func _get(property: StringName) -> Variant:
 		return flash_intensity
 	return null
 
+## Converts AnimationClip.Easing enum to Tween.EASE_* constant.
+## [param easing]: The AnimationClip.Easing enum value (can be passed directly or from clip.easing)
+## [return]: The corresponding Tween.EASE_* constant
+static func to_tween_easing(easing: Easing) -> int:
+	# Within AnimationClip class, Easing refers to AnimationClip.Easing
+	match easing:
+		Easing.EASE_IN:
+			return Tween.EASE_IN
+		Easing.EASE_OUT:
+			return Tween.EASE_OUT
+		Easing.EASE_IN_OUT:
+			return Tween.EASE_IN_OUT
+		Easing.EASE_OUT_IN:
+			return Tween.EASE_OUT_IN
+		_:
+			return Tween.EASE_OUT
+
+## Animation strategy registry for extensible animation execution.
+static var _animation_strategies: Dictionary = {}
+
+## Registers an animation strategy for an AnimationAction.
+## [param action]: The AnimationAction enum value
+## [param strategy]: Callable that takes (owner, target, clip, tween_easing) and returns Signal
+static func register_animation_strategy(action: AnimationAction, strategy: Callable) -> void:
+	_animation_strategies[action] = strategy
+
+## Initializes default animation strategies.
+static func _initialize_default_strategies() -> void:
+	register_animation_strategy(AnimationAction.EXPAND, _strategy_expand)
+	register_animation_strategy(AnimationAction.EXPAND_X, _strategy_expand_x)
+	register_animation_strategy(AnimationAction.EXPAND_Y, _strategy_expand_y)
+	register_animation_strategy(AnimationAction.FADE_IN, _strategy_fade_in)
+	register_animation_strategy(AnimationAction.SLIDE_FROM_LEFT, _strategy_slide_from_left)
+	register_animation_strategy(AnimationAction.SLIDE_FROM_RIGHT, _strategy_slide_from_right)
+	register_animation_strategy(AnimationAction.SLIDE_FROM_TOP, _strategy_slide_from_top)
+	register_animation_strategy(AnimationAction.SLIDE_FROM_BOTTOM, _strategy_slide_from_bottom)
+	register_animation_strategy(AnimationAction.FROM_LEFT_TO_CENTER, _strategy_from_left_to_center)
+	register_animation_strategy(AnimationAction.FROM_RIGHT_TO_CENTER, _strategy_from_right_to_center)
+	register_animation_strategy(AnimationAction.FROM_TOP_TO_CENTER, _strategy_from_top_to_center)
+	register_animation_strategy(AnimationAction.FROM_BOTTOM_TO_CENTER, _strategy_from_bottom_to_center)
+	register_animation_strategy(AnimationAction.BOUNCE_IN, _strategy_bounce_in)
+	register_animation_strategy(AnimationAction.ELASTIC_IN, _strategy_elastic_in)
+	register_animation_strategy(AnimationAction.ROTATE_IN, _strategy_rotate_in)
+	register_animation_strategy(AnimationAction.POP, _strategy_pop)
+	register_animation_strategy(AnimationAction.PULSE, _strategy_pulse)
+	register_animation_strategy(AnimationAction.SHAKE, _strategy_shake)
+	register_animation_strategy(AnimationAction.BREATHING, _strategy_breathing)
+	register_animation_strategy(AnimationAction.WOBBLE, _strategy_wobble)
+	register_animation_strategy(AnimationAction.FLOAT, _strategy_float)
+	register_animation_strategy(AnimationAction.GLOW_PULSE, _strategy_glow_pulse)
+	register_animation_strategy(AnimationAction.COLOR_FLASH, _strategy_color_flash)
+	register_animation_strategy(AnimationAction.RESET, _strategy_reset)
+
 ## Executes this animation clip on the specified target control.
 ## [param owner]: The node that owns the animation (for creating tweens).
 ## [param target]: The control to animate.
 ## [param tween_easing]: The easing type (Tween.EASE_* constant).
 ## [return]: Signal that emits when animation completes (or empty Signal if not applicable).
 func execute(owner: Node, target: Control, tween_easing: int) -> Signal:
-	# Match on animation type and call appropriate UIAnimationUtils function
-	match _animation:
-		AnimationAction.EXPAND:
-			if reverse:
-				return UIAnimationUtils.animate_shrink(owner, target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
-			else:
-				return UIAnimationUtils.animate_expand(owner, target, duration, pivot_offset, true, false, false, repeat_count, tween_easing)
-		AnimationAction.EXPAND_X:
-			if reverse:
-				return UIAnimationUtils.animate_shrink_x(owner, target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
-			else:
-				return UIAnimationUtils.animate_expand_x(owner, target, duration, pivot_offset, true, repeat_count, tween_easing)
-		AnimationAction.EXPAND_Y:
-			if reverse:
-				return UIAnimationUtils.animate_shrink_y(owner, target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
-			else:
-				return UIAnimationUtils.animate_expand_y(owner, target, duration, pivot_offset, true, repeat_count, tween_easing)
-		AnimationAction.FADE_IN:
-			if reverse:
-				return UIAnimationUtils.animate_fade_out(owner, target, duration, true, true, repeat_count, tween_easing)
-			else:
-				return UIAnimationUtils.animate_fade_in(owner, target, duration, true, repeat_count, tween_easing)
-		AnimationAction.SLIDE_FROM_LEFT:
-			if reverse:
-				return UIAnimationUtils.animate_slide_to_left(owner, target, 8.0, duration, true, tween_easing)
-			else:
-				return UIAnimationUtils.animate_slide_from_left(owner, target, 8.0, duration, true, tween_easing)
-		AnimationAction.SLIDE_FROM_RIGHT:
-			if reverse:
-				return UIAnimationUtils.animate_slide_to_right(owner, target, 8.0, duration, true, tween_easing)
-			else:
-				return UIAnimationUtils.animate_slide_from_right(owner, target, 8.0, duration, true, tween_easing)
-		AnimationAction.SLIDE_FROM_TOP:
-			if reverse:
-				return UIAnimationUtils.animate_slide_to_top(owner, target, duration, true, tween_easing)
-			else:
-				return UIAnimationUtils.animate_slide_from_top(owner, target, 8.0, duration, true, tween_easing)
-		AnimationAction.SLIDE_FROM_BOTTOM:
-			if reverse:
-				return UIAnimationUtils.animate_slide_to_bottom(owner, target, duration, true, tween_easing)
-			else:
-				return UIAnimationUtils.animate_slide_from_bottom(owner, target, 8.0, duration, true, tween_easing)
-		AnimationAction.FROM_LEFT_TO_CENTER:
-			if reverse:
-				return UIAnimationUtils.animate_from_center_to_left(owner, target, duration, true, tween_easing)
-			else:
-				return UIAnimationUtils.animate_from_left_to_center(owner, target, duration, true, tween_easing)
-		AnimationAction.FROM_RIGHT_TO_CENTER:
-			if reverse:
-				return UIAnimationUtils.animate_from_center_to_right(owner, target, duration, true, tween_easing)
-			else:
-				return UIAnimationUtils.animate_from_right_to_center(owner, target, duration, true, tween_easing)
-		AnimationAction.FROM_TOP_TO_CENTER:
-			if reverse:
-				return UIAnimationUtils.animate_from_center_to_top(owner, target, duration, true, tween_easing)
-			else:
-				return UIAnimationUtils.animate_from_top_to_center(owner, target, duration, true, tween_easing)
-		AnimationAction.FROM_BOTTOM_TO_CENTER:
-			if reverse:
-				return UIAnimationUtils.animate_from_center_to_bottom(owner, target, duration, true, tween_easing)
-			else:
-				return UIAnimationUtils.animate_from_bottom_to_center(owner, target, duration, true, tween_easing)
-		AnimationAction.BOUNCE_IN:
-			if reverse:
-				return UIAnimationUtils.animate_bounce_out(owner, target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
-			else:
-				return UIAnimationUtils.animate_bounce_in(owner, target, duration, pivot_offset, true, tween_easing)
-		AnimationAction.ELASTIC_IN:
-			if reverse:
-				return UIAnimationUtils.animate_elastic_out(owner, target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
-			else:
-				return UIAnimationUtils.animate_elastic_in(owner, target, duration, pivot_offset, true, tween_easing)
-		AnimationAction.ROTATE_IN:
-			if reverse:
-				return UIAnimationUtils.animate_rotate_out(owner, target, duration, 360.0, true, true, true, tween_easing)
-			else:
-				return UIAnimationUtils.animate_rotate_in(owner, target, duration, rotate_start_angle, pivot_offset, true, repeat_count, tween_easing)
-		AnimationAction.POP:
-			return UIAnimationUtils.animate_pop(owner, target, duration, pop_overshoot, pivot_offset, true, repeat_count, tween_easing)
-		AnimationAction.PULSE:
-			return UIAnimationUtils.animate_pulse(owner, target, duration, pulse_amount, pulse_count, pivot_offset, true, repeat_count, tween_easing)
-		AnimationAction.SHAKE:
-			return UIAnimationUtils.animate_shake(owner, target, duration, shake_intensity, shake_count, true, repeat_count, tween_easing)
-		AnimationAction.BREATHING:
-			return UIAnimationUtils.animate_breathing(owner, target, duration, repeat_count, tween_easing, pivot_offset)
-		AnimationAction.WOBBLE:
-			return UIAnimationUtils.animate_wobble(owner, target, duration, repeat_count, tween_easing, pivot_offset)
-		AnimationAction.FLOAT:
-			return UIAnimationUtils.animate_float(owner, target, duration, repeat_count, tween_easing, 10.0, false)
-		AnimationAction.GLOW_PULSE:
-			return UIAnimationUtils.animate_glow_pulse(owner, target, duration, repeat_count, tween_easing)
-		AnimationAction.COLOR_FLASH:
-			return UIAnimationUtils.animate_color_flash(owner, target, flash_color, duration, flash_intensity, true, tween_easing)
-		AnimationAction.RESET:
-			# Use comprehensive reset with duration=0 for instant reset
-			# This resets all properties using the unified snapshot system
-			return UIAnimationUtils.animate_reset_all(owner, target, 0.0, tween_easing, true)
-		_:
-			push_warning("AnimationClip: Unsupported animation type %d" % _animation)
-			return Signal()
+	# Lazy initialization: register strategies on first call
+	if _animation_strategies.is_empty():
+		_initialize_default_strategies()
+
+	var strategy = _animation_strategies.get(_animation)
+	if strategy == null:
+		push_warning("AnimationClip: No strategy registered for %s" % _animation)
+		return Signal()
+
+	# Call the strategy function with clip instance (self) so it can access clip properties including reverse
+	return strategy.call(owner, target, self, tween_easing)
+
+## Strategy functions for each animation type
+
+static func _strategy_expand(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	if clip.reverse:
+		return ScaleAnimationUtils.animate_shrink(owner, target, clip.duration, clip.pivot_offset, true, true, true, clip.repeat_count, tween_easing)
+	else:
+		return ScaleAnimationUtils.animate_expand(owner, target, clip.duration, clip.pivot_offset, true, false, false, clip.repeat_count, tween_easing)
+
+static func _strategy_expand_x(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	if clip.reverse:
+		return ScaleAnimationUtils.animate_shrink_x(owner, target, clip.duration, clip.pivot_offset, true, true, true, clip.repeat_count, tween_easing)
+	else:
+		return ScaleAnimationUtils.animate_expand_x(owner, target, clip.duration, clip.pivot_offset, true, clip.repeat_count, tween_easing)
+
+static func _strategy_expand_y(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	if clip.reverse:
+		return ScaleAnimationUtils.animate_shrink_y(owner, target, clip.duration, clip.pivot_offset, true, true, true, clip.repeat_count, tween_easing)
+	else:
+		return ScaleAnimationUtils.animate_expand_y(owner, target, clip.duration, clip.pivot_offset, true, clip.repeat_count, tween_easing)
+
+static func _strategy_fade_in(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	if clip.reverse:
+		return FadeAnimationUtils.animate_fade_out(owner, target, clip.duration, true, true, clip.repeat_count, tween_easing)
+	else:
+		return FadeAnimationUtils.animate_fade_in(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+
+static func _strategy_slide_from_left(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	if clip.reverse:
+		return SlideAnimationUtils.animate_slide_to_left(owner, target, AnimationCoreUtils.DEFAULT_OFFSET, clip.duration, true, clip.repeat_count, tween_easing)
+	else:
+		return SlideAnimationUtils.animate_slide_from_left(owner, target, AnimationCoreUtils.DEFAULT_OFFSET, clip.duration, true, clip.repeat_count, tween_easing)
+
+static func _strategy_slide_from_right(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	if clip.reverse:
+		return SlideAnimationUtils.animate_slide_to_right(owner, target, AnimationCoreUtils.DEFAULT_OFFSET, clip.duration, true, clip.repeat_count, tween_easing)
+	else:
+		return SlideAnimationUtils.animate_slide_from_right(owner, target, AnimationCoreUtils.DEFAULT_OFFSET, clip.duration, true, clip.repeat_count, tween_easing)
+
+static func _strategy_slide_from_top(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	if clip.reverse:
+		return SlideAnimationUtils.animate_slide_to_top(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+	else:
+		return SlideAnimationUtils.animate_slide_from_top(owner, target, AnimationCoreUtils.DEFAULT_OFFSET, clip.duration, true, clip.repeat_count, tween_easing)
+
+static func _strategy_slide_from_bottom(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	if clip.reverse:
+		return SlideAnimationUtils.animate_slide_to_bottom(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+	else:
+		return SlideAnimationUtils.animate_slide_from_bottom(owner, target, AnimationCoreUtils.DEFAULT_OFFSET, clip.duration, true, clip.repeat_count, tween_easing)
+
+static func _strategy_from_left_to_center(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	if clip.reverse:
+		return SlideAnimationUtils.animate_from_center_to_left(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+	else:
+		return SlideAnimationUtils.animate_from_left_to_center(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+
+static func _strategy_from_right_to_center(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	if clip.reverse:
+		return SlideAnimationUtils.animate_from_center_to_right(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+	else:
+		return SlideAnimationUtils.animate_from_right_to_center(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+
+static func _strategy_from_top_to_center(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	if clip.reverse:
+		return SlideAnimationUtils.animate_from_center_to_top(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+	else:
+		return SlideAnimationUtils.animate_from_top_to_center(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+
+static func _strategy_from_bottom_to_center(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	if clip.reverse:
+		return SlideAnimationUtils.animate_from_center_to_bottom(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+	else:
+		return SlideAnimationUtils.animate_from_bottom_to_center(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+
+static func _strategy_bounce_in(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	return UIAnimationUtils.animate_bounce_in(owner, target, clip.duration, clip.pivot_offset, true, clip.repeat_count, tween_easing)
+
+static func _strategy_elastic_in(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	return UIAnimationUtils.animate_elastic_in(owner, target, clip.duration, clip.pivot_offset, true, clip.repeat_count, tween_easing)
+
+static func _strategy_rotate_in(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	return UIAnimationUtils.animate_rotate_in(owner, target, clip.duration, clip.rotate_start_angle, clip.pivot_offset, true, clip.repeat_count, tween_easing)
+
+static func _strategy_pop(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	return SpecialAnimationUtils.animate_pop(owner, target, clip.duration, clip.pop_overshoot, clip.pivot_offset, true, clip.repeat_count, tween_easing)
+
+static func _strategy_pulse(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	return UIAnimationUtils.animate_pulse(owner, target, clip.duration, clip.pulse_amount, clip.pulse_count, clip.pivot_offset, true, clip.repeat_count, tween_easing)
+
+static func _strategy_shake(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	return UIAnimationUtils.animate_shake(owner, target, clip.duration, clip.shake_intensity, clip.shake_count, true, clip.repeat_count, tween_easing)
+
+static func _strategy_breathing(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	return UIAnimationUtils.animate_breathing(owner, target, clip.duration, clip.repeat_count, tween_easing, clip.pivot_offset, true)
+
+static func _strategy_wobble(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	return UIAnimationUtils.animate_wobble(owner, target, clip.duration, clip.repeat_count, tween_easing, clip.pivot_offset, true)
+
+static func _strategy_float(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	return UIAnimationUtils.animate_float(owner, target, clip.duration, clip.repeat_count, tween_easing, 10.0, true)
+
+static func _strategy_glow_pulse(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	return UIAnimationUtils.animate_glow_pulse(owner, target, clip.duration, clip.repeat_count, tween_easing, 0.7, true)
+
+static func _strategy_color_flash(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	return UIAnimationUtils.animate_color_flash(owner, target, clip.flash_color, clip.duration, clip.flash_intensity, true, tween_easing)
+
+static func _strategy_reset(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
+	return AnimationStateUtils.animate_reset_all(owner, target, clip.duration, tween_easing)

@@ -36,11 +36,11 @@ func _on_gui_input(event: InputEvent) -> void:
 			if mouse_event.pressed:
 				if not _is_dragging:
 					_is_dragging = true
-					_trigger_animations(11)  # DRAG_STARTED
+					_trigger_animations(AnimationReel.Trigger.DRAG_STARTED)
 			else:
 				if _is_dragging:
 					_is_dragging = false
-					_trigger_animations(12)  # DRAG_ENDED
+					_trigger_animations(AnimationReel.Trigger.DRAG_ENDED)
 
 ## Validates animation targets and filters out invalid ones.
 ## Called automatically in [method _ready].

@@ -58,10 +58,13 @@ func _validate_animation_reels() -> void:
 		valid_reels.append(reel)
 
 		# Track which triggers we need to connect
-		# For now, assume all triggers are possible since we can't access AnimationReel enum
-		has_selection_changed_targets = true
-		has_hover_enter_targets = true
-		has_hover_exit_targets = true
+		match reel.trigger:
+			AnimationReel.Trigger.SELECTION_CHANGED:
+				has_selection_changed_targets = true
+			AnimationReel.Trigger.HOVER_ENTER:
+				has_hover_enter_targets = true
+			AnimationReel.Trigger.HOVER_EXIT:
+				has_hover_exit_targets = true
 
 	animations = valid_reels
 
@@ -86,15 +89,15 @@ func _on_trigger_selection_changed(_index: int) -> void:
 	if _is_initializing:
 		return
 	
-	_trigger_animations(6)  # SELECTION_CHANGED
+	_trigger_animations(AnimationReel.Trigger.SELECTION_CHANGED)
 
 ## Handles HOVER_ENTER trigger animations.
 func _on_trigger_hover_enter() -> void:
-	_trigger_animations(1)  # HOVER_ENTER
+	_trigger_animations(AnimationReel.Trigger.HOVER_ENTER)
 
 ## Handles HOVER_EXIT trigger animations.
 func _on_trigger_hover_exit() -> void:
-	_trigger_animations(2)  # HOVER_EXIT
+	_trigger_animations(AnimationReel.Trigger.HOVER_EXIT)
 
 ## Triggers animations for reels matching the specified trigger type.
 ## [param trigger_type]: The trigger type to match.

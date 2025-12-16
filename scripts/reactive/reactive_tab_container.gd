@@ -1,13 +1,16 @@
 extends TabContainer
 class_name ReactiveTabContainer
 
+@export_group("State Binding")
 ## Binds the selected tab index to a State resource for two-way data binding.
 @export var selected_state: State
 
+@export_group("Configuration")
 ## Configuration resource for dynamic tab management, content binding, and tab states.
 ## Create a TabContainerConfig resource and assign it here to enable advanced tab features.
 @export var tab_config: TabContainerConfig
 
+@export_group("Animation")
 ## Targets to animate based on tab container events.
 ##
 ## Drag nodes here and configure each target's animation properties directly in the Inspector.
@@ -15,14 +18,19 @@ class_name ReactiveTabContainer
 ## duration, and settings - no resource files needed!
 @export var animations: Array[AnimationReel] = []
 
+var _helper: TabContainerHelper
 var _updating: bool = false
 var _previous_tab_index: int = -1
 var _is_initializing: bool = true
 
 func _ready() -> void:
+	# Initialize helper with tab config
+	if tab_config:
+		_helper = TabContainerHelper.new(self, tab_config)
+
 	tab_selected.connect(_on_tab_selected)
 	_previous_tab_index = current_tab
-	
+
 	if selected_state:
 		selected_state.value_changed.connect(_on_selected_state_changed)
 		_on_selected_state_changed(selected_state.value, selected_state.value)
@@ -188,114 +196,21 @@ func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void
 func _on_tabs_state_changed(new_value: Variant, _old_value: Variant) -> void:
 	if _updating:
 		return
-	
+
 	if not (new_value is Array):
 		push_warning("ReactiveTabContainer '%s': tabs_state.value must be an Array. Got: %s" % [name, typeof(new_value)])
 		return
-	
-	var tabs_array: Array = new_value
-	var current_count = get_tab_count()
-	var new_count = tabs_array.size()
-	
+
 	_updating = true
-	
-	# Remove excess tabs (remove from end)
-	if new_count < current_count:
-		for i in range(current_count - 1, new_count - 1, -1):
-			var child = get_tab_control(i)
-			if child:
-				remove_child(child)
-				child.queue_free()
-	
-	# Add or update tabs
-	for i in range(new_count):
-		var tab_data = tabs_array[i]
-		var tab_title: String = ""
-		var tab_icon: Texture2D = null
-		
-		# Handle different data formats
-		if tab_data is Dictionary:
-			tab_title = tab_data.get("title", "")
-			tab_icon = tab_data.get("icon", null)
-		elif tab_data is String:
-			tab_title = tab_data
-		else:
-			tab_title = str(tab_data)
-		
-		# Update existing tab or create new one
-		if i < current_count:
-			# Update existing tab
-			set_tab_title(i, tab_title)
-			if tab_icon:
-				set_tab_icon(i, tab_icon)
-		else:
-			# Create new tab (TabContainer creates tabs for child nodes)
-			# Create a placeholder Control if needed
-			var child = Control.new()
-			child.name = "Tab%d" % i
-			add_child(child)
-			set_tab_title(i, tab_title)
-			if tab_icon:
-				set_tab_icon(i, tab_icon)
-	
-	# Validate current_tab is still valid
-	if current_tab >= new_count and new_count > 0:
-		current_tab = new_count - 1
-		_previous_tab_index = current_tab
-	elif current_tab < 0 and new_count > 0:
-		current_tab = 0
-		_previous_tab_index = 0
-	
-	# Resize tab_content_states array to match tab count if needed
-	if tab_config and tab_config.tab_content_states.size() < new_count:
-		tab_config.tab_content_states.resize(new_count)
-	
+	_helper.update_tabs_from_state(new_value)
+	_previous_tab_index = current_tab
 	_updating = false
 
 ## Binds the selected tab's content to its corresponding State.
 ## This allows each tab's content to be reactive to its own State resource.
 func _bind_tab_content_state(tab_index: int) -> void:
-	if not tab_config or tab_index < 0 or tab_index >= tab_config.tab_content_states.size():
-		return
-	
-	var content_state = tab_config.tab_content_states[tab_index]
-	if content_state == null:
-		return
-	
-	# Get the tab's child control
-	var tab_child = get_tab_control(tab_index)
-	if tab_child == null:
-		return
-	
-	# Try to find a State property in the child
-	# Common patterns: text_state, value_state, selected_state, etc.
-	var state_properties = ["text_state", "value_state", "selected_state", "checked_state", "pressed_state"]
-	for prop in state_properties:
-		if tab_child.has(prop):
-			var child_state = tab_child.get(prop)
-			if child_state is State:
-				# Update the child's State with the content State's value
-				child_state.set_silent(content_state.value)
-				# Connect for future updates (disconnect first to avoid duplicates)
-				var callable = _on_tab_content_state_changed.bind(tab_index, prop)
-				if content_state.value_changed.is_connected(callable):
-					content_state.value_changed.disconnect(callable)
-				content_state.value_changed.connect(callable)
-				return  # Found and bound, exit
-	
-	# Also check direct children for reactive controls (first child only)
-	var first_child = tab_child.get_child(0) if tab_child.get_child_count() > 0 else null
-	if first_child != null:
-		for prop in state_properties:
-			if first_child.has(prop):
-				var child_state = first_child.get(prop)
-				if child_state is State:
-					child_state.set_silent(content_state.value)
-					var callable = _on_tab_content_state_changed.bind(tab_index, "child_" + prop)
-					if content_state.value_changed.is_connected(callable):
-						content_state.value_changed.disconnect(callable)
-					content_state.value_changed.connect(callable)
-					return
+	if _helper:
+		_helper.bind_tab_content_state(tab_index)
 
 ## Helper to update tab content when its State changes.
 func _on_tab_content_state_changed(new_value: Variant, _old_value: Variant, tab_index: int, property: String) -> void:
@@ -323,20 +238,13 @@ func _on_tab_content_state_changed(new_value: Variant, _old_value: Variant, tab_
 func _on_disabled_tabs_state_changed(new_value: Variant, _old_value: Variant) -> void:
 	if _updating:
 		return
-	
+
 	if not (new_value is Array):
 		push_warning("ReactiveTabContainer '%s': disabled_tabs_state.value must be an Array. Got: %s" % [name, typeof(new_value)])
 		return
-	
-	var disabled_array: Array = new_value
-	var tab_count = get_tab_count()
-	
+
 	_updating = true
-	
-	for i in range(min(disabled_array.size(), tab_count)):
-		var is_disabled = bool(disabled_array[i])
-		set_tab_disabled(i, is_disabled)
-	
+	_helper.update_disabled_tabs(new_value)
 	_updating = false
 
 ## Handles tab visibility control from visible_tabs_state.
@@ -344,20 +252,13 @@ func _on_disabled_tabs_state_changed(new_value: Variant, _old_value: Variant) ->
 func _on_visible_tabs_state_changed(new_value: Variant, _old_value: Variant) -> void:
 	if _updating:
 		return
-	
+
 	if not (new_value is Array):
 		push_warning("ReactiveTabContainer '%s': visible_tabs_state.value must be an Array. Got: %s" % [name, typeof(new_value)])
 		return
-	
-	var visible_array: Array = new_value
-	var tab_count = get_tab_count()
-	
+
 	_updating = true
-	
-	for i in range(min(visible_array.size(), tab_count)):
-		var tab_visible = bool(visible_array[i])
-		set_tab_hidden(i, not tab_visible)
-	
+	_helper.update_visible_tabs(new_value)
 	_updating = false
 
 ## Animates tab switching by fading out old tab content and fading in new tab content.

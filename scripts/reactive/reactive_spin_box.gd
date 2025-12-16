@@ -60,9 +60,11 @@ func _validate_animation_reels() -> void:
 		valid_reels.append(reel)
 
 		# Track which triggers we need to connect (only hover needs signal connections)
-		# For now, assume all triggers are possible since we can't access AnimationReel enum
-		has_hover_enter_targets = true
-		has_hover_exit_targets = true
+		match reel.trigger:
+			AnimationReel.Trigger.HOVER_ENTER:
+				has_hover_enter_targets = true
+			AnimationReel.Trigger.HOVER_EXIT:
+				has_hover_exit_targets = true
 
 	animations = valid_reels
 
@@ -86,30 +88,30 @@ func _on_trigger_value_changed(new_value: float) -> void:
 		_last_value = new_value
 		return
 	
-	_trigger_animations(7)  # VALUE_CHANGED
+	_trigger_animations(AnimationReel.Trigger.VALUE_CHANGED)
 
 	if new_value > _last_value:
-		_trigger_animations(8)  # VALUE_INCREASED
+		_trigger_animations(AnimationReel.Trigger.VALUE_INCREASED)
 	elif new_value < _last_value:
-		_trigger_animations(9)  # VALUE_DECREASED
+		_trigger_animations(AnimationReel.Trigger.VALUE_DECREASED)
 
 	_last_value = new_value
 
 ## Handles FOCUS_ENTERED trigger animations.
 func _on_trigger_focus_entered() -> void:
-	_trigger_animations(14)  # FOCUS_ENTERED
+	_trigger_animations(AnimationReel.Trigger.FOCUS_ENTERED)
 
 ## Handles FOCUS_EXITED trigger animations.
 func _on_trigger_focus_exited() -> void:
-	_trigger_animations(15)  # FOCUS_EXITED
+	_trigger_animations(AnimationReel.Trigger.FOCUS_EXITED)
 
 ## Handles HOVER_ENTER trigger animations.
 func _on_trigger_hover_enter() -> void:
-	_trigger_animations(1)  # HOVER_ENTER
+	_trigger_animations(AnimationReel.Trigger.HOVER_ENTER)
 
 ## Handles HOVER_EXIT trigger animations.
 func _on_trigger_hover_exit() -> void:
-	_trigger_animations(2)  # HOVER_EXIT
+	_trigger_animations(AnimationReel.Trigger.HOVER_EXIT)
 
 ## Triggers animations for reels matching the specified trigger type.
 ## [param trigger_type]: The trigger type to match.

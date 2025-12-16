@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3 uid="uid://1ctyp6anyhbh"]
+[gd_scene load_steps=27 format=3 uid="uid://1ctyp6anyhbh"]
 
 [ext_resource type="Script" uid="uid://st55qiias3cb" path="res://scripts/reactive/state.gd" id="1_w0svl"]
 [ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://scripts/reactive/reactive_line_edit.gd" id="1_xdli5"]
@@ -45,6 +45,20 @@ value = 25.0
 script = ExtResource("1_w0svl")
 value = ["Preset: ", ExtResource("10_krjhy")]
 
+[sub_resource type="Resource" id="Resource_a72v2"]
+script = ExtResource("4_pf7w8")
+animation = 22
+flash_color = Color(1, 1, 0, 1)
+flash_intensity = 1.5
+metadata/_custom_type_script = "uid://bgtvl8wqnhhg3"
+
+[sub_resource type="Resource" id="Resource_qynsm"]
+script = ExtResource("5_8mpai")
+trigger = 6
+targets = Array[NodePath]([NodePath("../OptionSelectionLabel")])
+animations = Array[ExtResource("4_pf7w8")]([SubResource("Resource_a72v2")])
+metadata/_custom_type_script = "uid://bnno246gj404t"
+
 [sub_resource type="Resource" id="Resource_iwetj"]
 script = ExtResource("1_w0svl")
 value = ["Player: ", ExtResource("5_iwetj")]
@@ -53,7 +67,7 @@ metadata/_custom_type_script = "uid://st55qiias3cb"
 [sub_resource type="Resource" id="Resource_6fcom"]
 script = ExtResource("4_pf7w8")
 animation = 17
-shake_intensity = 100.0
+shake_intensity = 1.0
 shake_count = 5
 metadata/_custom_type_script = "uid://bgtvl8wqnhhg3"
 
@@ -61,7 +75,7 @@ metadata/_custom_type_script = "uid://bgtvl8wqnhhg3"
 script = ExtResource("5_8mpai")
 execution_mode = 0
 trigger = 5
-targets = Array[NodePath]([NodePath(".")])
+targets = Array[NodePath]([NodePath("."), NodePath("../Label")])
 animations = Array[ExtResource("4_pf7w8")]([SubResource("Resource_6fcom")])
 metadata/_custom_type_script = "uid://bnno246gj404t"
 
@@ -136,6 +150,7 @@ popup/item_1/id = 1
 script = ExtResource("10_m40cl")
 selected_state = ExtResource("10_krjhy")
 disabled_state = ExtResource("3_a2h71")
+animations = Array[ExtResource("5_8mpai")]([SubResource("Resource_qynsm")])
 metadata/_custom_type_script = "uid://b75p2so2hr0wd"
 
 [node name="ReactiveTabContainer" type="TabContainer" parent="VBox"]

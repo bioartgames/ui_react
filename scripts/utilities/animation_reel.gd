@@ -59,10 +59,10 @@ enum ExecutionMode {
 ## [return]: Signal that emits when animation completes (or empty Signal if no animations).
 func apply(owner: Node) -> Signal:
 	# Early validation
-	if animations.size() == 0:
+	if animations.is_empty():
 		return Signal()  # No-op if no clips
 
-	if targets.size() == 0:
+	if targets.is_empty():
 		push_warning("AnimationReel: No targets specified")
 		return Signal()
 
@@ -73,7 +73,7 @@ func apply(owner: Node) -> Signal:
 		if node is Control:
 			resolved_targets.append(node as Control)
 
-	if resolved_targets.size() == 0:
+	if resolved_targets.is_empty():
 		push_warning("AnimationReel: No valid targets found")
 		return Signal()
 
@@ -98,7 +98,7 @@ func _apply_single(owner: Node, target: Control, clip: AnimationClip) -> Signal:
 		return Signal()  # Skip if disabled
 
 	# Get tween easing from clip
-	var tween_easing: int = _get_tween_easing_from_clip(clip)
+	var tween_easing: int = AnimationClip.to_tween_easing(clip.easing)
 
 	# Execute clip animation
 	return clip.execute(owner, target, tween_easing)
@@ -131,7 +131,7 @@ func _apply_multi(owner: Node, resolved_targets: Array[Control], clip: Animation
 ## [return]: Signal that emits when all animations complete.
 func _apply_multi_parallel(owner: Node, resolved_targets: Array[Control], clip: AnimationClip) -> Signal:
 	var signals: Array[Signal] = []
-	var tween_easing: int = _get_tween_easing_from_clip(clip)
+	var tween_easing: int = AnimationClip.to_tween_easing(clip.easing)
 
 	for target in resolved_targets:
 		var signal_result = clip.execute(owner, target, tween_easing)
@@ -160,7 +160,7 @@ func _apply_multi_stagger(owner: Node, resolved_targets: Array[Control], clip: A
 ## [param clips]: Array of animation clips to execute in parallel.
 ## [return]: Signal that emits when all parallel animations complete.
 func _apply_parallel(owner: Node, resolved_targets: Array[Control], clips: Array[AnimationClip]) -> Signal:
-	if clips.size() == 0:
+	if clips.is_empty():
 		return Signal()
 
 	# Special case: Single clip with multiple targets and stagger enabled
@@ -188,7 +188,7 @@ func _apply_parallel(owner: Node, resolved_targets: Array[Control], clips: Array
 			if clip.respect_disabled and owner.has_method("is_disabled") and owner.is_disabled():
 				continue  # Skip this clip
 
-			var tween_easing = _get_tween_easing_from_clip(clip)
+			var tween_easing = AnimationClip.to_tween_easing(clip.easing)
 			var signal_result = clip.execute(owner, target, tween_easing)
 			if signal_result is Signal:
 				all_signals.append(signal_result)
@@ -213,21 +213,6 @@ func _apply_sequence(owner: Node, resolved_targets: Array[Control], clips: Array
 	helper.execute_sequence_with_stagger(owner, resolved_targets, clips)
 	return helper.sequence_finished
 
-## Converts AnimationClip.Easing enum to Tween.EASE_* constant.
-## [param clip]: The animation clip to get easing from.
-## [return]: Tween easing constant.
-func _get_tween_easing_from_clip(clip: AnimationClip) -> int:
-	match clip.easing:
-		AnimationClip.Easing.EASE_IN:
-			return Tween.EASE_IN
-		AnimationClip.Easing.EASE_OUT:
-			return Tween.EASE_OUT
-		AnimationClip.Easing.EASE_IN_OUT:
-			return Tween.EASE_IN_OUT
-		AnimationClip.Easing.EASE_OUT_IN:
-			return Tween.EASE_OUT_IN
-		_:
-			return Tween.EASE_OUT
 
 ## Waits for all signals to complete (for parallel execution).
 ## [param owner]: The node to attach helper to.
@@ -238,15 +223,6 @@ func _wait_for_all_signals(owner: Node, signals: Array[Signal]) -> Signal:
 	owner.add_child(helper)
 	helper.wait_for_all(signals)
 	return helper.all_finished
-
-## Helper node for executing animation sequences asynchronously.
-class _SequenceHelper extends Node:
-	signal sequence_finished
-
-	func execute_sequence(sequence: AnimationSequence) -> void:
-		await sequence.play()
-		sequence_finished.emit()
-		queue_free()
 
 ## Helper node for waiting for multiple parallel animations to complete.
 class _ParallelWaitHelper extends Node:
@@ -266,10 +242,11 @@ class _ParallelWaitHelper extends Node:
 		# Connect to each signal to track completion
 		# This avoids the null object error when awaiting signals from freed Tweens
 		for signal_item in signals:
-			if signal_item == null:
+			# Use centralized validation utility
+			if not AnimationCoreUtils.is_valid_signal(signal_item):
 				completed_count[0] += 1
 				continue
-			
+
 			# Connect callback to track when this signal fires
 			var callback = func():
 				completed_count[0] += 1
@@ -319,7 +296,7 @@ class _SequenceStaggerHelper extends Node:
 			
 			if resolved_targets.size() == 1:
 				# Single target: just execute normally
-				var tween_easing = _get_tween_easing_from_clip_helper(clip)
+				var tween_easing = AnimationClip.to_tween_easing(clip.easing)
 				clip_signal = clip.execute(owner_node, resolved_targets[0], tween_easing)
 			elif clip.stagger > 0.0:
 				# Multiple targets with stagger: use stagger utility
@@ -327,7 +304,7 @@ class _SequenceStaggerHelper extends Node:
 			else:
 				# Multiple targets without stagger: apply simultaneously
 				var signals: Array[Signal] = []
-				var tween_easing = _get_tween_easing_from_clip_helper(clip)
+				var tween_easing = AnimationClip.to_tween_easing(clip.easing)
 				for target in resolved_targets:
 					var signal_result = clip.execute(owner_node, target, tween_easing)
 					if signal_result is Signal:
@@ -349,16 +326,65 @@ class _SequenceStaggerHelper extends Node:
 		sequence_finished.emit()
 		queue_free()
 
-	## Helper to get tween easing from AnimationClip.
-	func _get_tween_easing_from_clip_helper(clip: AnimationClip) -> int:
-		match clip.easing:
-			AnimationClip.Easing.EASE_IN:
-				return Tween.EASE_IN
-			AnimationClip.Easing.EASE_OUT:
-				return Tween.EASE_OUT
-			AnimationClip.Easing.EASE_IN_OUT:
-				return Tween.EASE_IN_OUT
-			AnimationClip.Easing.EASE_OUT_IN:
-				return Tween.EASE_OUT_IN
-			_:
-				return Tween.EASE_OUT
+## Validates an array of animation reels for a control and returns valid ones.
+## Does NOT handle signal connections (those are control-specific).
+## [param owner]: The control instance (for get_node_or_null and name)
+## [param animations]: Array of AnimationReel to validate
+## [return]: Dictionary with:
+##   - "valid_reels": Array[AnimationReel] - filtered valid reels
+##   - "trigger_map": Dictionary - maps trigger types to boolean (which triggers are used)
+static func validate_for_control(
+	owner: Control,
+	animations: Array[AnimationReel]
+) -> Dictionary:
+	var valid_reels: Array[AnimationReel] = []
+	var trigger_map: Dictionary = {}
+
+	for reel in animations:
+		if reel == null:
+			continue
+
+		# Validate targets array
+		if reel.targets.is_empty():
+			push_warning("%s '%s': AnimationReel has no targets." % [owner.get_class(), owner.name])
+			continue
+
+		# Validate targets resolve to Controls
+		var has_valid_target = false
+		for path in reel.targets:
+			var node = owner.get_node_or_null(path)
+			if node is Control:
+				has_valid_target = true
+				break
+
+		if not has_valid_target:
+			push_warning("%s '%s': AnimationReel has no valid targets." % [owner.get_class(), owner.name])
+			continue
+
+		valid_reels.append(reel)
+		trigger_map[reel.trigger] = true
+
+	return {
+		"valid_reels": valid_reels,
+		"trigger_map": trigger_map
+	}
+
+## Triggers animations for reels matching the specified trigger type.
+## Pure function - no state needed, can be static.
+## [param owner]: The control instance (passed to reel.apply())
+## [param animations]: Array of AnimationReel to check
+## [param trigger_type]: The AnimationReel.Trigger enum value to match
+static func trigger_matching(
+	owner: Control,
+	animations: Array[AnimationReel],
+	trigger_type: Trigger
+) -> void:
+	if animations.is_empty():
+		return
+
+	for reel in animations:
+		if reel == null:
+			continue
+		if reel.trigger != trigger_type:
+			continue
+		reel.apply(owner)
