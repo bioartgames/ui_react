@@ -1,3 +1,4 @@
+@tool
 extends Label
 class_name ReactiveLabel
 
@@ -15,6 +16,11 @@ var _nested_states: Array[State] = []
 var _is_initializing: bool = true
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		# In the editor, only validate reels so trigger options are filtered.
+		_validate_animation_reels()
+		return
+
 	if text_state:
 		text_state.value_changed.connect(_on_text_state_changed)
 		_on_text_state_changed(text_state.value, text_state.value)
@@ -25,41 +31,18 @@ func _ready() -> void:
 ## Validates animation reels and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_reels() -> void:
-	var valid_reels: Array[AnimationReel] = []
-	var has_hover_enter_targets = false
-	var has_hover_exit_targets = false
+	var result = AnimationReel.validate_for_control(self, animations)
+	animations = result.valid_reels
 
+	# Set control context on each reel for Inspector filtering
+	var control_type = _get_control_type_hint()
 	for reel in animations:
-		if reel == null:
-			continue
+		if reel:
+			reel.control_type_context = control_type
 
-		# Validate targets array (at least one target required)
-		if reel.targets.size() == 0:
-			push_warning("ReactiveLabel '%s': AnimationReel has no targets. Add at least one target NodePath." % name)
-			continue
-
-		# Validate all targets resolve to Controls
-		var has_valid_target = false
-		for path in reel.targets:
-			var node = get_node_or_null(path)
-			if node is Control:
-				has_valid_target = true
-				break
-
-		if not has_valid_target:
-			push_warning("ReactiveLabel '%s': AnimationReel has no valid targets. Check NodePaths." % name)
-			continue
-
-		valid_reels.append(reel)
-
-		# Track which triggers we need to connect (only hover needs signal connections)
-		match reel.trigger:
-			AnimationReel.Trigger.HOVER_ENTER:
-				has_hover_enter_targets = true
-			AnimationReel.Trigger.HOVER_EXIT:
-				has_hover_exit_targets = true
-
-	animations = valid_reels
+	# Control-specific signal connections (stays in class)
+	var has_hover_enter_targets = result.trigger_map.get(AnimationReel.Trigger.HOVER_ENTER, false)
+	var has_hover_exit_targets = result.trigger_map.get(AnimationReel.Trigger.HOVER_EXIT, false)
 
 	# Connect signals based on which triggers are used
 	if has_hover_enter_targets:
@@ -149,4 +132,9 @@ func _to_text(value: Variant) -> String:
 			parts.append(_to_text(v))
 		return "".join(parts)
 	return str(value)
+
+## Gets the control type hint for this reactive control.
+## Used to filter available triggers in the Inspector.
+func _get_control_type_hint() -> AnimationReel.ControlTypeHint:
+	return AnimationReel.ControlTypeHint.LABEL
 

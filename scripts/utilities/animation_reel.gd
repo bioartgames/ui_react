@@ -4,6 +4,7 @@
 ## and provides manual execution mode selection. It can execute animations in two modes:
 ## - PARALLEL: All animation clips run simultaneously on all targets
 ## - SEQUENCE: Animation clips run sequentially on each target (all targets run their sequences simultaneously)
+@tool
 class_name AnimationReel
 extends Resource
 
@@ -33,6 +34,17 @@ enum ExecutionMode {
 	SEQUENCE     # Animation clips run one after another
 }
 
+## Control type hint for filtering available triggers in Inspector.
+## Set by reactive controls during validation to show only relevant triggers.
+enum ControlTypeHint {
+	AUTO_DETECT,      # Show all triggers (default, used when context isn't set)
+	BUTTON,           # Button, CheckBox - shows: PRESSED, TOGGLED_ON/OFF, HOVER_ENTER/EXIT
+	TEXT_INPUT,       # LineEdit - shows: TEXT_CHANGED, TEXT_ENTERED, FOCUS_ENTERED/EXITED, HOVER_ENTER/EXIT
+	VALUE_INPUT,      # Slider, SpinBox, ProgressBar - shows: VALUE_CHANGED, VALUE_INCREASED/DECREASED, DRAG_STARTED/ENDED, COMPLETED, FOCUS_ENTERED/EXITED, HOVER_ENTER/EXIT
+	SELECTION,        # OptionButton, ItemList, TabContainer - shows: SELECTION_CHANGED, HOVER_ENTER/EXIT
+	LABEL,            # Label - shows: TEXT_CHANGED, HOVER_ENTER/EXIT
+}
+
 ## ============================================
 ## CORE SETTINGS
 ## ============================================
@@ -40,10 +52,30 @@ enum ExecutionMode {
 ## Execution mode for this animation reel.
 ## PARALLEL: All clips run simultaneously
 ## SEQUENCE: Clips run one after another
-@export var execution_mode: ExecutionMode = ExecutionMode.SEQUENCE
+var execution_mode: ExecutionMode = ExecutionMode.SEQUENCE
+
+## Control type context for filtering triggers.
+## This is automatically set by reactive controls during validation.
+## Determines which triggers are shown in the Inspector dropdown.
+var control_type_context: ControlTypeHint = ControlTypeHint.AUTO_DETECT:
+	set(value):
+		if control_type_context != value:
+			control_type_context = value
+			notify_property_list_changed()
 
 ## When to trigger this animation reel (dropdown selection in Inspector).
-@export var trigger: Trigger = Trigger.PRESSED
+## Available options are automatically filtered based on control_type_context.
+var _trigger: Trigger = Trigger.PRESSED
+
+## Non-exported property; Inspector definition is provided via [_get_property_list].
+## This avoids duplicate trigger fields while still allowing a filtered enum.
+var trigger: Trigger:
+	set(value):
+		if _trigger != value:
+			_trigger = value
+			notify_property_list_changed()
+	get:
+		return _trigger
 
 ## Multiple targets for this reel (drag and drop nodes from scene tree).
 ## If empty, animations will not execute. At least one target is required.
@@ -52,6 +84,141 @@ enum ExecutionMode {
 ## Animation clips to execute in this reel.
 ## Supports single clip (applied to all targets), or multiple clips (executed as sequence).
 @export var animations: Array[AnimationClip] = []
+
+## Returns the property list for conditional display of trigger options.
+## Filters the trigger dropdown based on control_type_context to show only relevant triggers.
+func _get_property_list() -> Array:
+	var properties: Array = []
+
+	# Get available triggers based on control type context
+	var available_triggers = _get_available_triggers_for_type(control_type_context)
+
+	# Build enum hint string for trigger
+	if available_triggers.is_empty():
+		# Show all triggers if AUTO_DETECT or no filtering
+		var full_hint = "Pressed:0,Hover Enter:1,Hover Exit:2,Toggled On:3,Toggled Off:4,Text Changed:5,Selection Changed:6,Value Changed:7,Value Increased:8,Value Decreased:9,Drag Started:10,Drag Ended:11,Completed:12,Text Entered:13,Focus Entered:14,Focus Exited:15"
+		properties.append({
+			"name": "trigger",
+			"type": TYPE_INT,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_ENUM,
+			"hint_string": full_hint
+		})
+	else:
+		# Build filtered enum hint string with only available triggers
+		var hint_parts: Array[String] = []
+		for trigger_value in available_triggers:
+			var display_name = _trigger_to_display_string(trigger_value)
+			hint_parts.append("%s:%d" % [display_name, trigger_value])
+
+		properties.append({
+			"name": "trigger",
+			"type": TYPE_INT,
+			"usage": PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_ENUM,
+			"hint_string": ",".join(hint_parts)
+		})
+
+	# Ensure execution_mode appears immediately after trigger in the Inspector.
+	properties.append({
+		"name": "execution_mode",
+		"type": TYPE_INT,
+		"usage": PROPERTY_USAGE_DEFAULT,
+		"hint": PROPERTY_HINT_ENUM,
+		"hint_string": "Parallel:0,Sequence:1"
+	})
+
+	return properties
+
+## Gets available triggers for a specific control type.
+## [param control_type]: The ControlTypeHint enum value
+## [return]: Array of Trigger enum values that are valid for this control type
+func _get_available_triggers_for_type(control_type: ControlTypeHint) -> Array[Trigger]:
+	match control_type:
+		ControlTypeHint.BUTTON:
+			return [
+				Trigger.PRESSED,
+				Trigger.HOVER_ENTER,
+				Trigger.HOVER_EXIT,
+				Trigger.TOGGLED_ON,
+				Trigger.TOGGLED_OFF
+			]
+		ControlTypeHint.TEXT_INPUT:
+			return [
+				Trigger.TEXT_CHANGED,
+				Trigger.TEXT_ENTERED,
+				Trigger.FOCUS_ENTERED,
+				Trigger.FOCUS_EXITED,
+				Trigger.HOVER_ENTER,
+				Trigger.HOVER_EXIT
+			]
+		ControlTypeHint.VALUE_INPUT:
+			return [
+				Trigger.VALUE_CHANGED,
+				Trigger.VALUE_INCREASED,
+				Trigger.VALUE_DECREASED,
+				Trigger.DRAG_STARTED,
+				Trigger.DRAG_ENDED,
+				Trigger.COMPLETED,
+				Trigger.FOCUS_ENTERED,
+				Trigger.FOCUS_EXITED,
+				Trigger.HOVER_ENTER,
+				Trigger.HOVER_EXIT
+			]
+		ControlTypeHint.SELECTION:
+			return [
+				Trigger.SELECTION_CHANGED,
+				Trigger.HOVER_ENTER,
+				Trigger.HOVER_EXIT
+			]
+		ControlTypeHint.LABEL:
+			return [
+				Trigger.TEXT_CHANGED,
+				Trigger.HOVER_ENTER,
+				Trigger.HOVER_EXIT
+			]
+		_:  # AUTO_DETECT or unknown
+			return []  # Empty means show all triggers
+
+## Converts Trigger enum to display string for Inspector dropdown.
+## [param trigger_value]: The Trigger enum value to convert
+## [return]: Human-readable string for the Inspector
+static func _trigger_to_display_string(trigger_value: Trigger) -> String:
+	match trigger_value:
+		Trigger.PRESSED:
+			return "Pressed"
+		Trigger.HOVER_ENTER:
+			return "Hover Enter"
+		Trigger.HOVER_EXIT:
+			return "Hover Exit"
+		Trigger.TOGGLED_ON:
+			return "Toggled On"
+		Trigger.TOGGLED_OFF:
+			return "Toggled Off"
+		Trigger.TEXT_CHANGED:
+			return "Text Changed"
+		Trigger.SELECTION_CHANGED:
+			return "Selection Changed"
+		Trigger.VALUE_CHANGED:
+			return "Value Changed"
+		Trigger.VALUE_INCREASED:
+			return "Value Increased"
+		Trigger.VALUE_DECREASED:
+			return "Value Decreased"
+		Trigger.DRAG_STARTED:
+			return "Drag Started"
+		Trigger.DRAG_ENDED:
+			return "Drag Ended"
+		Trigger.COMPLETED:
+			return "Completed"
+		Trigger.TEXT_ENTERED:
+			return "Text Entered"
+		Trigger.FOCUS_ENTERED:
+			return "Focus Entered"
+		Trigger.FOCUS_EXITED:
+			return "Focus Exited"
+		_:
+			return "Unknown"
 
 ## Applies this animation reel to the specified owner node.
 ## Uses the selected execution_mode to determine how to run the animations.

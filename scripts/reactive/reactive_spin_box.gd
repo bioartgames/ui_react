@@ -1,3 +1,4 @@
+@tool
 extends SpinBox
 class_name ReactiveSpinBox
 
@@ -16,6 +17,11 @@ var _last_value: float = 0.0
 var _is_initializing: bool = true
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		# In the editor, only validate reels so trigger options are filtered.
+		_validate_animation_reels()
+		return
+
 	value_changed.connect(_on_value_changed)
 	focus_entered.connect(_on_focus_entered)
 	focus_exited.connect(_on_focus_exited)
@@ -32,41 +38,18 @@ func _ready() -> void:
 ## Validates animation reels and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_reels() -> void:
-	var valid_reels: Array[AnimationReel] = []
-	var has_hover_enter_targets = false
-	var has_hover_exit_targets = false
+	var result = AnimationReel.validate_for_control(self, animations)
+	animations = result.valid_reels
 
+	# Set control context on each reel for Inspector filtering
+	var control_type = _get_control_type_hint()
 	for reel in animations:
-		if reel == null:
-			continue
+		if reel:
+			reel.control_type_context = control_type
 
-		# Validate targets array (at least one target required)
-		if reel.targets.size() == 0:
-			push_warning("ReactiveSpinBox '%s': AnimationReel has no targets. Add at least one target NodePath." % name)
-			continue
-
-		# Validate all targets resolve to Controls
-		var has_valid_target = false
-		for path in reel.targets:
-			var node = get_node_or_null(path)
-			if node is Control:
-				has_valid_target = true
-				break
-
-		if not has_valid_target:
-			push_warning("ReactiveSpinBox '%s': AnimationReel has no valid targets. Check NodePaths." % name)
-			continue
-
-		valid_reels.append(reel)
-
-		# Track which triggers we need to connect (only hover needs signal connections)
-		match reel.trigger:
-			AnimationReel.Trigger.HOVER_ENTER:
-				has_hover_enter_targets = true
-			AnimationReel.Trigger.HOVER_EXIT:
-				has_hover_exit_targets = true
-
-	animations = valid_reels
+	# Control-specific signal connections (stays in class)
+	var has_hover_enter_targets = result.trigger_map.get(AnimationReel.Trigger.HOVER_ENTER, false)
+	var has_hover_exit_targets = result.trigger_map.get(AnimationReel.Trigger.HOVER_EXIT, false)
 
 	# Connect signals based on which triggers are used
 	# Note: value_changed, focus_entered, and focus_exited are always connected
@@ -167,4 +150,9 @@ func _on_value_state_changed(new_value: Variant, _old_value: Variant) -> void:
 func _on_disabled_state_changed(_new_value: Variant, _old_value: Variant) -> void:
 	# Note: SpinBox doesn't expose disabled property in Godot 4.5, so this is a no-op
 	pass
+
+## Gets the control type hint for this reactive control.
+## Used to filter available triggers in the Inspector.
+func _get_control_type_hint() -> AnimationReel.ControlTypeHint:
+	return AnimationReel.ControlTypeHint.VALUE_INPUT
 

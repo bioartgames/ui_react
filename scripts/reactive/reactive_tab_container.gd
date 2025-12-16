@@ -1,3 +1,4 @@
+@tool
 extends TabContainer
 class_name ReactiveTabContainer
 
@@ -24,6 +25,11 @@ var _previous_tab_index: int = -1
 var _is_initializing: bool = true
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		# In the editor, only validate reels so trigger options are filtered.
+		_validate_animation_reels()
+		return
+
 	# Initialize helper with tab config
 	if tab_config:
 		_helper = TabContainerHelper.new(self, tab_config)
@@ -51,47 +57,22 @@ func _ready() -> void:
 	# Finish initialization after all signals are processed
 	call_deferred("_finish_initialization")
 
-## Validates animation targets and filters out invalid ones.
+## Validates animation reels and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_reels() -> void:
-	var valid_reels: Array[AnimationReel] = []
-	var has_selection_changed_targets = false
-	var has_hover_enter_targets = false
-	var has_hover_exit_targets = false
+	var result = AnimationReel.validate_for_control(self, animations)
+	animations = result.valid_reels
 
+	# Set control context on each reel for Inspector filtering
+	var control_type = _get_control_type_hint()
 	for reel in animations:
-		if reel == null:
-			continue
+		if reel:
+			reel.control_type_context = control_type
 
-		# Validate targets array (at least one target required)
-		if reel.targets.size() == 0:
-			push_warning("ReactiveTabContainer '%s': AnimationReel has no targets. Add at least one target NodePath." % name)
-			continue
-
-		# Validate all targets resolve to Controls
-		var has_valid_target = false
-		for path in reel.targets:
-			var node = get_node_or_null(path)
-			if node is Control:
-				has_valid_target = true
-				break
-
-		if not has_valid_target:
-			push_warning("ReactiveTabContainer '%s': AnimationReel has no valid targets. Check NodePaths." % name)
-			continue
-
-		valid_reels.append(reel)
-
-		# Track which triggers we need to connect
-		match reel.trigger:
-			AnimationReel.Trigger.SELECTION_CHANGED:
-				has_selection_changed_targets = true
-			AnimationReel.Trigger.HOVER_ENTER:
-				has_hover_enter_targets = true
-			AnimationReel.Trigger.HOVER_EXIT:
-				has_hover_exit_targets = true
-
-	animations = valid_reels
+	# Control-specific signal connections (stays in class)
+	var has_selection_changed_targets = result.trigger_map.get(AnimationReel.Trigger.SELECTION_CHANGED, false)
+	var has_hover_enter_targets = result.trigger_map.get(AnimationReel.Trigger.HOVER_ENTER, false)
+	var has_hover_exit_targets = result.trigger_map.get(AnimationReel.Trigger.HOVER_EXIT, false)
 
 	# Connect signals based on which triggers are used
 	if has_selection_changed_targets:
@@ -291,4 +272,9 @@ func _animate_tab_switch(old_index: int, new_index: int) -> void:
 				reel.apply(old_child)
 			if targets_new and new_child:
 				reel.apply(new_child)
+
+## Gets the control type hint for this reactive control.
+## Used to filter available triggers in the Inspector.
+func _get_control_type_hint() -> AnimationReel.ControlTypeHint:
+	return AnimationReel.ControlTypeHint.SELECTION
 

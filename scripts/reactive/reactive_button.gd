@@ -1,3 +1,4 @@
+@tool
 extends Button
 class_name ReactiveButton
 
@@ -16,6 +17,11 @@ class_name ReactiveButton
 var _helper: ReactiveControlHelper
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		# In the editor, only validate reels so trigger options are filtered.
+		_validate_animation_reels()
+		return
+
 	# Initialize helper FIRST, before any state connections
 	_helper = ReactiveControlHelper.new(self)
 
@@ -36,6 +42,12 @@ func _ready() -> void:
 func _validate_animation_reels() -> void:
 	var result = AnimationReel.validate_for_control(self, animations)
 	animations = result.valid_reels
+
+	# Set control context on each reel for Inspector filtering
+	var control_type = _get_control_type_hint()
+	for reel in animations:
+		if reel:
+			reel.control_type_context = control_type
 
 	# Control-specific signal connections (stays in class)
 	# Only connect signals for triggers that this control type supports
@@ -74,11 +86,16 @@ func _on_trigger_toggled(active: bool) -> void:
 	# Skip animations during initialization
 	if _helper.is_initializing():
 		return
-	
+
 	if active:
 		AnimationReel.trigger_matching(self, animations, AnimationReel.Trigger.TOGGLED_ON)
 	else:
 		AnimationReel.trigger_matching(self, animations, AnimationReel.Trigger.TOGGLED_OFF)
+
+## Gets the control type hint for this reactive control.
+## Used to filter available triggers in the Inspector.
+func _get_control_type_hint() -> AnimationReel.ControlTypeHint:
+	return AnimationReel.ControlTypeHint.BUTTON
 
 func _on_pressed() -> void:
 	if not pressed_state or toggle_mode:
