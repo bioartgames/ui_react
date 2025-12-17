@@ -277,4 +277,3 @@ func _animate_tab_switch(old_index: int, new_index: int) -> void:
 ## Used to filter available triggers in the Inspector.
 func _get_control_type_hint() -> AnimationReel.ControlTypeHint:
 	return AnimationReel.ControlTypeHint.SELECTION
-
