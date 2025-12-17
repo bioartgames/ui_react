@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="NavigationConfig" load_steps=2 format=3 uid="uid://tabbed_menu"]
+
+[ext_resource type="Script" path="res://scripts/reactive/navigation_config.gd" id="1_nav_config"]
+
+[resource]
+script = ExtResource("1_nav_config")
+default_focus = NodePath("")
+focus_on_ready = true
+ordered_controls = []
+use_ordered_vertical = true
+wrap_vertical = false
+wrap_horizontal = false
+respect_custom_neighbors = true
+restrict_to_focusable_children = true
+auto_disable_child_focus = true

@@ -757,33 +757,30 @@ core navigation, Resources, and screen-specific behavior established in earlier 
 
 ---
 
-## Phase 8 – Future Extensions (Non-Blocking) **PARTIALLY IMPLEMENTED**
+## Phase 8 – Future Extensions (Non-Blocking) ✅ **IMPLEMENTED**
 
 These ideas should **not** be implemented initially but the design should not block them:
 
-1. **Per-container NavigationConfig overrides**:
-   - Allow child containers to define local navigation rules (e.g. submenus) that the navigator
-     respects when focus is inside those containers.
+1. **Per-container NavigationConfig overrides** ✅ **IMPLEMENTED** (via multiple scoped navigators):
+   - Allow child containers to define local navigation rules (e.g. submenus) that the navigator respects when focus is inside those containers.
+   - **Implementation**: Use existing `ReactiveUINavigator` + `NavigationConfig`, but allow **multiple navigators**, each scoped to a different subtree. Add a **separate `ReactiveUINavigator`** node for each submenu/panel that needs its own rules, each with its own `NavigationConfig` whose `root_control` points at that container. A higher-level screen controller is responsible for toggling which navigator is active (setting `mode` to `NONE` on inactive navigators), so `ReactiveUINavigator` itself never has to understand nested scopes.
 
-2. **Integration with AnimationReel on focus changes**:
-   - Provide optional hooks or triggers for “FOCUS_GAINED” / “FOCUS_LOST” events using
-     existing animation utilities, without baking navigation concepts into `AnimationReel`.
+2. **Integration with AnimationReel on focus changes** ✅ **IMPLEMENTED**:
+   - Provide optional hooks or triggers for "FOCUS_GAINED" / "FOCUS_LOST" events using existing animation utilities, without baking navigation concepts into `AnimationReel`.
+   - **Implementation**: Created `FocusAnimationHelper` (`scripts/utilities/focus_animation_helper.gd`, `extends Node`, `class_name FocusAnimationHelper`). It exports `@export var navigator: NodePath` (path to `ReactiveUINavigator`), `@export var focus_in_reels: Array[AnimationReel] = []`, and `@export var focus_out_reels: Array[AnimationReel] = []`. In `_ready()`, it resolves the navigator and connects to `focus_changed(old, new)`. On `focus_changed`, it applies all `focus_out_reels` to `old` (if non-null) and all `focus_in_reels` to `new` (if non-null) via `AnimationReel.apply()`. `ReactiveUINavigator` does not know anything about animations; it only emits signals.
 
-3. **Visual focus helpers**:
-   - Optional outline/highlight overlay driven by navigator for debugging and designer polish.
-
-4. **Data-driven presets**:
+3. **Data-driven presets** ✅ **IMPLEMENTED**:
    - Bundled `NavigationInputProfile` assets:
      - `KeyboardOnlyProfile`, `GamepadOnlyProfile`, `KeyboardAndGamepadProfile`.
    - Bundled `NavigationConfig` templates for common patterns:
      - Vertical menu, grid inventory, tabbed menu.
+   - **Implementation**: Shipped as `.tres` resources under `res://navigation_presets/`. Designers can assign them directly to `input_profile` and `nav_config` without any code. No special handling in `ReactiveUINavigator` is required.
 
-5. **State-driven conditional visibility & animated transitions** – **CORE VISIBILITY BEHAVIOR IMPLEMENTED**:
+4. **State-driven conditional visibility & animated transitions** ✅ **IMPLEMENTED**:
    - Introduce optional State-driven bindings for `visible` on reactive controls (for example, a `visible_state: State` on commonly used controls) and container-level visibility of panels/tabs, using existing `State` resources as the single source of truth.
    - Integrate these bindings with `AnimationUtilities` / `AnimationCoreUtils` so that visibility edges (`false → true`, `true → false`) trigger appropriate show/hide animations instead of abrupt toggles, reusing existing `auto_visible` and snapshot/restore mechanisms.
    - Ensure `ReactiveUINavigator` continues to ignore invisible/disabled controls and gracefully re-homes focus when the focused control (or one of its ancestors) becomes hidden, so navigation always reflects what is actually on screen.
-   - **Before starting this work, explicitly check that the visibility-aware focus behavior described in Phase 3’s “Visibility-aware focus candidates (NOT YET IMPLEMENTED)” note has been implemented; if it has not, implement that core behavior first, then proceed with the broader State-driven visibility feature.**
-   - **Watch this (implementation caveat)**: When implementing this phase, keep visibility bindings as small, per-control / per-container helpers (following patterns like `ReactiveButton`, `ReactiveLabel`, `ReactiveTabContainer`) and avoid pushing animation or `State` logic into `ReactiveUINavigator` itself; the navigator should only consume existing visibility/focusability information, not manage or mutate it directly.
+   - **Implementation**: Created `ReactiveVisibilityHelper` (`scripts/reactive/reactive_visibility_helper.gd`, `extends Node`, `class_name ReactiveVisibilityHelper`). It exports `@export var visible_state: State`, optional `@export var show_reels: Array[AnimationReel] = []`, and optional `@export var hide_reels: Array[AnimationReel] = []`. For simple controls (`ReactiveButton`, `ReactiveLabel`, etc.), add an exported `visible_state: State` and an internal `_visibility_helper: ReactiveVisibilityHelper` instance, OR use the helper as a child node (composition), wired via exported NodePath. The helper connects to `visible_state.value_changed`. On `false → true`: sets `control.visible = true`, triggers `show_reels` via `AnimationReel.apply(control)`. On `true → false`: triggers `hide_reels`, then sets `control.visible = false` (or uses `auto_visible` / snapshot APIs from animation utils). `ReactiveUINavigator` is not modified; it simply sees the resulting `visible` property and continues to ignore hidden controls via its existing visibility-aware logic.
 
 All of these should be achievable by composing or extending the types defined in this plan,
 without modifying their core behavior (preserving OCP).
