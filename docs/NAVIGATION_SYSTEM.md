@@ -69,9 +69,9 @@ states.submit.value = true  # Press submit
 | `use_ordered_vertical` | Whether ordered list is vertical-first |
 | `wrap_vertical` | Whether vertical navigation wraps around |
 | `wrap_horizontal` | Whether horizontal navigation wraps around |
-| `respect_custom_neighbors` | Use Control's focus_neighbor_* properties |
+| `respect_custom_neighbors` | When true, uses Control's focus_neighbor_* properties for navigation. Custom neighbors take priority over automatic navigation. |
 | `restrict_to_focusable_children` | Only navigate to FOCUS_ALL controls |
-| `auto_disable_child_focus` | Disable focus on container children |
+| `auto_disable_child_focus` | When true, disables focus on all children of root_control during initialization, keeping navigation flat. |
 
 ### NavigationInputProfile
 
@@ -120,6 +120,52 @@ The navigator supports two focus movement strategies:
 - Navigation is limited to controls under `nav_config.root_control`
 - `auto_disable_child_focus` can flatten navigation within containers
 - `restrict_to_focusable_children` filters out non-focusable controls
+
+### Custom Focus Neighbors
+
+When `respect_custom_neighbors` is enabled, the navigator will check each control's `focus_neighbor_*` properties before using automatic navigation. This allows you to:
+
+- Override automatic navigation for specific controls
+- Create custom navigation paths (e.g., skip intermediate controls)
+- Define navigation that doesn't follow visual layout
+- Override scope restrictions (custom neighbors can point outside `root_control`)
+
+**Priority Order:**
+1. Custom neighbors (if `respect_custom_neighbors` is enabled)
+2. Ordered controls (if `ordered_controls` array is set)
+3. Position-based heuristics (default)
+
+**Example:**
+```gdscript
+# In Godot Inspector, set focus_neighbor_bottom on Button1 to point to Button3
+# This skips Button2 when navigating down from Button1
+button1.focus_neighbor_bottom = NodePath("../Button3")
+
+# Configure navigator to respect custom neighbors
+config.respect_custom_neighbors = true
+```
+
+**Note:** Custom neighbors are validated in the editor and must point to valid Control nodes. Invalid paths will show warnings.
+
+### Auto-Disable Child Focus
+
+When `auto_disable_child_focus` is enabled, the navigator automatically sets `focus_mode = FOCUS_NONE` on all children of `root_control` during initialization. This creates a "flat" navigation structure where only top-level controls are focusable.
+
+**Use Cases:**
+- Tab containers where you want to navigate between tabs, not their contents
+- Panel containers where only the panel itself should be focusable
+- Complex nested UIs where you want to restrict navigation scope
+
+**Example:**
+```gdscript
+# Configure for tab container navigation
+config.root_control = NodePath("../TabContainer")
+config.auto_disable_child_focus = true
+
+# Now only the tab buttons are focusable, not the tab content panels
+```
+
+**Note:** This feature requires `root_control` to be set. A warning will appear in the editor if `root_control` is not set when this option is enabled.
 
 ## Signals and Callbacks
 
@@ -243,6 +289,18 @@ The navigation system integrates seamlessly with reactive controls:
    - Check `ordered_controls` configuration
    - Verify positional layout for heuristic navigation
    - Test with debug outlines enabled
+
+4. **Custom neighbors not working**
+   - Verify `respect_custom_neighbors` is enabled in NavigationConfig
+   - Check that `focus_neighbor_*` properties are set correctly in Inspector
+   - Ensure neighbor paths point to valid Control nodes
+   - Check editor warnings for invalid paths
+
+5. **Children still focusable with auto_disable_child_focus enabled**
+   - Verify `root_control` is set correctly
+   - Check that children are direct descendants of `root_control`
+   - Ensure `auto_disable_child_focus` is enabled in NavigationConfig
+   - Check editor warnings for missing `root_control`
 
 ### Debug Tips
 

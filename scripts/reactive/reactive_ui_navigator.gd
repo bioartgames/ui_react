@@ -41,39 +41,19 @@ enum NavigationMode {
 	BOTH            ## Reserved for the combined bridge mode described in the advanced features phase
 }
 
-@export_group("Mode", "mode_")
-@export var mode: NavigationMode = NavigationMode.INPUT_MAP:
+var mode: NavigationMode = NavigationMode.INPUT_MAP:
 	set(value):
 		mode = value
 		update_configuration()
 		notify_property_list_changed()
 
-@export var nav_config: NavigationConfig:
+var nav_config: NavigationConfig:
 	set(value):
 		nav_config = value
 		update_configuration()
 
-@export_group("Input (InputMap)", "input_profile_")
-@export var input_profile: NavigationInputProfile
-
-@export_group("Input (State-driven)", "nav_states_")
-@export var nav_states: NavigationStateBundle
-
-@export_group("Callbacks")
-## Optional callback when submit action is triggered.
-## Called with the currently focused control as the first argument.
-@export var on_submit: Callable
-## Optional callback when cancel action is triggered.
-## Called with the currently focused control as the first argument.
-@export var on_cancel: Callable
-
-@export_group("Callbacks / Paging")
-## Optional callback when page next action is triggered.
-## Called with the currently focused control as the first argument.
-@export var on_page_next: Callable
-## Optional callback when page previous action is triggered.
-## Called with the currently focused control as the first argument.
-@export var on_page_prev: Callable
+var input_profile: NavigationInputProfile
+var nav_states: NavigationStateBundle
 
 var _current_focus_owner: Control = null
 var _is_ready: bool = false
@@ -82,6 +62,8 @@ var _prev_submit_value: bool = false
 var _prev_cancel_value: bool = false
 var _prev_page_next_value: bool = false
 var _prev_page_prev_value: bool = false
+
+@export var debug_navigation: bool = false
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
@@ -98,8 +80,7 @@ func _ready() -> void:
 
 	# Optionally apply auto_disable_child_focus
 	if nav_config and nav_config.auto_disable_child_focus and root_control:
-		# Import and use AnimationUtilities.disable_focus_on_children if needed
-		pass  # TODO: Implement once AnimationUtilities is available
+		UIAnimationUtils.disable_focus_on_children(root_control)
 
 	# If focus_on_ready is true, set initial focus
 	if nav_config and nav_config.focus_on_ready:
@@ -158,28 +139,81 @@ func _validate_nav_config() -> void:
 		if path and not get_node_or_null(path):
 			push_warning("ReactiveUINavigator: ordered_controls[%d] path '%s' does not exist" % [i, path])
 
+	# Check auto_disable_child_focus requires root_control
+	if nav_config.auto_disable_child_focus:
+		if not nav_config.root_control or nav_config.root_control.is_empty():
+			push_warning("ReactiveUINavigator: auto_disable_child_focus requires root_control to be set")
+
+	# Validate custom neighbors if enabled
+	if nav_config.respect_custom_neighbors:
+		# Check if root_control has custom neighbors (if it's a Control)
+		if nav_config.root_control:
+			var root_node = get_node_or_null(nav_config.root_control)
+			if root_node is Control:
+				var root_control = root_node as Control
+				if NavigationUtils.has_custom_focus_neighbors(root_control):
+					# Validate each neighbor exists and is a Control
+					var neighbors = {
+						"top": root_control.focus_neighbor_top,
+						"bottom": root_control.focus_neighbor_bottom,
+						"left": root_control.focus_neighbor_left,
+						"right": root_control.focus_neighbor_right
+					}
+
+					for dir_name in neighbors:
+						var neighbor_path: NodePath = neighbors[dir_name]
+						if neighbor_path and not neighbor_path.is_empty():
+							var neighbor = root_control.get_node_or_null(neighbor_path)
+							if not neighbor:
+								push_warning("ReactiveUINavigator: focus_neighbor_%s path '%s' does not exist" % [
+									dir_name, neighbor_path
+								])
+							elif not (neighbor is Control):
+								push_warning("ReactiveUINavigator: focus_neighbor_%s must point to a Control node, got %s" % [
+									dir_name, neighbor.get_class()
+								])
+
+		# Also check default_focus if it's a Control with custom neighbors
+		if nav_config.default_focus:
+			var default_node = get_node_or_null(nav_config.default_focus)
+			if default_node is Control:
+				var default_control = default_node as Control
+				if NavigationUtils.has_custom_focus_neighbors(default_control):
+					var neighbors = {
+						"top": default_control.focus_neighbor_top,
+						"bottom": default_control.focus_neighbor_bottom,
+						"left": default_control.focus_neighbor_left,
+						"right": default_control.focus_neighbor_right
+					}
+
+					for dir_name in neighbors:
+						var neighbor_path: NodePath = neighbors[dir_name]
+						if neighbor_path and not neighbor_path.is_empty():
+							var neighbor = default_control.get_node_or_null(neighbor_path)
+							if not neighbor:
+								push_warning("ReactiveUINavigator: default_focus has invalid focus_neighbor_%s path '%s'" % [
+									dir_name, neighbor_path
+								])
+							elif not (neighbor is Control):
+								push_warning("ReactiveUINavigator: default_focus has invalid focus_neighbor_%s type (got %s)" % [
+									dir_name, neighbor.get_class()
+								])
+
+
 ## Custom property list to show/hide properties based on mode.
 func _get_property_list() -> Array[Dictionary]:
 	var properties: Array[Dictionary] = []
 
-	# Add base properties
+	# Mode - always shown, at the top
 	properties.append({
 		"name": "mode",
 		"type": TYPE_INT,
-		"usage": PROPERTY_USAGE_DEFAULT,
+		"usage": PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_STORAGE,
 		"hint": PROPERTY_HINT_ENUM,
 		"hint_string": "None,Input Map,State-driven,Both"
 	})
 
-	properties.append({
-		"name": "nav_config",
-		"type": TYPE_OBJECT,
-		"usage": PROPERTY_USAGE_DEFAULT,
-		"hint": PROPERTY_HINT_RESOURCE_TYPE,
-		"hint_string": "NavigationConfig"
-	})
-
-	# Input (InputMap) group - only show for INPUT_MAP or BOTH modes
+	# Input Profile - conditional, right after mode
 	if mode == NavigationMode.INPUT_MAP or mode == NavigationMode.BOTH:
 		properties.append({
 			"name": "input_profile",
@@ -189,7 +223,16 @@ func _get_property_list() -> Array[Dictionary]:
 			"hint_string": "NavigationInputProfile"
 		})
 
-	# Input (State-driven) group - only show for STATE_DRIVEN or BOTH modes
+	# Nav Config - always shown, after input_profile
+	properties.append({
+		"name": "nav_config",
+		"type": TYPE_OBJECT,
+		"usage": PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_STORAGE,
+		"hint": PROPERTY_HINT_RESOURCE_TYPE,
+		"hint_string": "NavigationConfig"
+	})
+
+	# Nav States - conditional, at the end
 	if mode == NavigationMode.STATE_DRIVEN or mode == NavigationMode.BOTH:
 		properties.append({
 			"name": "nav_states",
@@ -197,31 +240,6 @@ func _get_property_list() -> Array[Dictionary]:
 			"usage": PROPERTY_USAGE_DEFAULT,
 			"hint": PROPERTY_HINT_RESOURCE_TYPE,
 			"hint_string": "NavigationStateBundle"
-		})
-
-	# Callbacks group - always show
-	properties.append({
-		"name": "on_submit",
-		"type": TYPE_CALLABLE,
-		"usage": PROPERTY_USAGE_DEFAULT
-	})
-
-	properties.append({
-		"name": "on_cancel",
-		"type": TYPE_CALLABLE,
-		"usage": PROPERTY_USAGE_DEFAULT
-	})
-
-	properties.append({
-		"name": "on_page_next",
-		"type": TYPE_CALLABLE,
-		"usage": PROPERTY_USAGE_DEFAULT
-	})
-
-	properties.append({
-		"name": "on_page_prev",
-		"type": TYPE_CALLABLE,
-		"usage": PROPERTY_USAGE_DEFAULT
 	})
 
 	return properties
@@ -272,8 +290,6 @@ func _handle_input_map_navigation(event: InputEvent) -> void:
 		elif action_pressed == input_profile.action_accept and is_just_pressed:
 			_queue_submit()
 			submit_fired.emit(_current_focus_owner)
-			if on_submit.is_valid():
-				on_submit.call(_current_focus_owner)
 			# Mirror to state bundle in BOTH mode
 			if mode == NavigationMode.BOTH and nav_states and nav_states.submit:
 				nav_states.submit.value = true
@@ -284,8 +300,6 @@ func _handle_input_map_navigation(event: InputEvent) -> void:
 		elif action_pressed == input_profile.action_cancel and is_just_pressed:
 			_queue_cancel()
 			cancel_fired.emit(_current_focus_owner)
-			if on_cancel.is_valid():
-				on_cancel.call(_current_focus_owner)
 			# Mirror to state bundle in BOTH mode
 			if mode == NavigationMode.BOTH and nav_states and nav_states.cancel:
 				nav_states.cancel.value = true
@@ -445,14 +459,10 @@ func _process_state_navigation() -> void:
 	if submit_value and not _prev_submit_value:
 		_queue_submit()
 		submit_fired.emit(_current_focus_owner)
-		if on_submit.is_valid():
-			on_submit.call(_current_focus_owner)
 
 	if cancel_value and not _prev_cancel_value:
 		_queue_cancel()
 		cancel_fired.emit(_current_focus_owner)
-		if on_cancel.is_valid():
-			on_cancel.call(_current_focus_owner)
 
 	# Handle page navigation with edge detection
 	var page_next_value = nav_states.page_next.value if nav_states.page_next else false
@@ -461,14 +471,10 @@ func _process_state_navigation() -> void:
 	if page_next_value and not _prev_page_next_value:
 		_queue_page(1)
 		page_changed.emit(1, _current_focus_owner)
-		if on_page_next.is_valid():
-			on_page_next.call(_current_focus_owner)
 
 	if page_prev_value and not _prev_page_prev_value:
 		_queue_page(-1)
 		page_changed.emit(-1, _current_focus_owner)
-		if on_page_prev.is_valid():
-			on_page_prev.call(_current_focus_owner)
 
 	_prev_submit_value = submit_value
 	_prev_cancel_value = cancel_value
@@ -530,10 +536,42 @@ func _queue_page(delta: int) -> void:
 
 ## Processes a movement command.
 func _process_move_command(direction: Vector2) -> void:
+	if debug_navigation:
+		var direction_name = ""
+		if direction.y < 0:
+			direction_name = "UP"
+		elif direction.y > 0:
+			direction_name = "DOWN"
+		elif direction.x < 0:
+			direction_name = "LEFT"
+		elif direction.x > 0:
+			direction_name = "RIGHT"
+		print("\n[NAV DEBUG] ========================================")
+		print("[NAV DEBUG] MOVE COMMAND: %s" % direction_name)
+		print("[NAV DEBUG] Current focus: %s" % _get_control_name(_current_focus_owner))
+		print("[NAV DEBUG] ========================================\n")
+	
 	var next_control = _find_next_focusable_control(direction)
+	
+	if debug_navigation:
+		print("[NAV DEBUG] Result from _find_next_focusable_control: %s" % _get_control_name(next_control))
+	
 	if next_control and next_control != _current_focus_owner:
+		# Safety check: ensure control can actually receive focus (defensive programming)
+		if next_control.focus_mode != Control.FOCUS_NONE:
+			if debug_navigation:
+				print("[NAV DEBUG] ✓ Moving focus to: %s" % _get_control_name(next_control))
 		next_control.grab_focus()
 		_update_current_focus_owner(next_control)
+	else:
+		if debug_navigation:
+			print("[NAV DEBUG] ✗ Cannot move focus: target has FOCUS_NONE")
+		else:
+			if debug_navigation:
+				if not next_control:
+					print("[NAV DEBUG] ✗ No next control found")
+				else:
+					print("[NAV DEBUG] ✗ Next control is same as current, no movement")
 
 ## Processes a submit command.
 func _process_submit_command() -> void:
@@ -576,33 +614,137 @@ func _process_page_command(_delta: int) -> void:
 ## Finds the next focusable control in the given direction.
 func _find_next_focusable_control(direction: Vector2) -> Control:
 	if not _current_focus_owner or not nav_config:
+		if debug_navigation:
+			print("[NAV DEBUG] _find_next_focusable_control: No current focus owner or nav_config")
 		return null
 
+	if debug_navigation:
+		print("[NAV DEBUG] --- _find_next_focusable_control ---")
+		print("[NAV DEBUG] Current focus: %s" % _get_control_name(_current_focus_owner))
+		print("[NAV DEBUG] respect_custom_neighbors: %s" % nav_config.respect_custom_neighbors)
+		print("[NAV DEBUG] ordered_controls.size(): %d" % nav_config.ordered_controls.size())
+
+	# Check custom neighbors first if enabled
+	var custom_neighbor = _find_custom_neighbor_target(direction)
+	if custom_neighbor:
+		if debug_navigation:
+			print("[NAV DEBUG] ✓ Using custom neighbor: %s (focus_mode: %s)" % [_get_control_name(custom_neighbor), _get_focus_mode_str(custom_neighbor.focus_mode)])
+		# Validate focusability before returning
+		if custom_neighbor.focus_mode == Control.FOCUS_NONE:
+			if debug_navigation:
+				print("[NAV DEBUG] ✗ WARNING: Custom neighbor has FOCUS_NONE, returning null")
+			return null
+		return custom_neighbor
+
+	# If ordered controls are specified, use that logic (don't need candidates)
+	if not nav_config.ordered_controls.is_empty():
+		if debug_navigation:
+			print("[NAV DEBUG] Using ordered_controls path")
+		var result = _find_next_in_ordered_list(direction)
+		if debug_navigation:
+			if result:
+				print("[NAV DEBUG] Ordered list returned: %s (focus_mode: %s)" % [_get_control_name(result), _get_focus_mode_str(result.focus_mode)])
+			else:
+				print("[NAV DEBUG] Ordered list returned: null")
+		# Validate focusability before returning
+		if result and result.focus_mode == Control.FOCUS_NONE:
+			if debug_navigation:
+				print("[NAV DEBUG] ✗ WARNING: Ordered list returned control with FOCUS_NONE, returning null")
+			return null
+		return result
+
+	# Otherwise use directional heuristics (need candidates)
 	var candidates = _get_focusable_candidates()
 
 	if candidates.is_empty():
+		if debug_navigation:
+			print("[NAV DEBUG] No focusable candidates found")
 		return null
 
-	# If ordered controls are specified, use that logic
-	if not nav_config.ordered_controls.is_empty():
-		return _find_next_in_ordered_list(direction)
+	if debug_navigation:
+		print("[NAV DEBUG] Found %d candidates" % candidates.size())
+		print("[NAV DEBUG] Using position-based heuristics path")
+	var result = _find_next_by_position(direction, candidates)
+	if debug_navigation:
+		if result:
+			print("[NAV DEBUG] Position-based returned: %s (focus_mode: %s)" % [_get_control_name(result), _get_focus_mode_str(result.focus_mode)])
+		else:
+			print("[NAV DEBUG] Position-based returned: null")
+	# Validate focusability before returning
+	if result and result.focus_mode == Control.FOCUS_NONE:
+		if debug_navigation:
+			print("[NAV DEBUG] ✗ WARNING: Position-based returned control with FOCUS_NONE, returning null")
+		return null
+	return result
 
-	# Otherwise use directional heuristics
-	return _find_next_by_position(direction, candidates)
+## Finds a custom neighbor target if one exists and is valid.
+func _find_custom_neighbor_target(direction: Vector2) -> Control:
+	if not nav_config.respect_custom_neighbors or not _current_focus_owner:
+		return null
+
+	if debug_navigation:
+		print("[NAV DEBUG] Checking for custom neighbors on: %s" % _get_control_name(_current_focus_owner))
+
+	var custom_neighbor = NavigationUtils.get_custom_focus_neighbor(_current_focus_owner, direction)
+	if not custom_neighbor:
+		if debug_navigation:
+			print("[NAV DEBUG] No custom neighbor found in direction")
+		return null
+
+	if debug_navigation:
+		print("[NAV DEBUG] ⚠ CUSTOM NEIGHBOR FOUND: %s (this will override ordered_controls!)" % _get_control_name(custom_neighbor))
+
+	# Validate the custom neighbor is within scope and visible
+	if not _is_control_visible(custom_neighbor):
+		if debug_navigation:
+			print("[NAV DEBUG] Custom neighbor is not visible, ignoring")
+		return null
+
+	var valid_candidates = _get_focusable_candidates()
+	if custom_neighbor in valid_candidates:
+		if debug_navigation:
+			print("[NAV DEBUG] Custom neighbor is in valid candidates, using it")
+		return custom_neighbor
+
+	# If not in candidates but is valid, still allow it
+	# (custom neighbors can override scope restrictions)
+	if custom_neighbor.focus_mode != Control.FOCUS_NONE:
+		if debug_navigation:
+			print("[NAV DEBUG] Custom neighbor is focusable but not in candidates, using it anyway")
+		return custom_neighbor
+
+	if debug_navigation:
+		print("[NAV DEBUG] Custom neighbor is not focusable, ignoring")
+	return null
 
 ## Gets all focusable candidates within the navigation scope.
 func _get_focusable_candidates() -> Array[Control]:
 	var candidates: Array[Control] = []
 
 	if not nav_config:
+		if debug_navigation:
+			print("[NAV DEBUG] _get_focusable_candidates: No nav_config")
 		return candidates
 
 	var root = get_node(nav_config.root_control) if nav_config.root_control else get_viewport()
 	if not root:
+		if debug_navigation:
+			print("[NAV DEBUG] _get_focusable_candidates: Root node not found (path: %s)" % nav_config.root_control)
 		return candidates
+
+	if debug_navigation:
+		print("[NAV DEBUG] _get_focusable_candidates: Starting search from root: %s" % _get_node_name(root))
+		print("[NAV DEBUG]   restrict_to_focusable_children: %s" % nav_config.restrict_to_focusable_children)
 
 	# Find all focusable controls in the scope
 	_find_focusable_in_node(root, candidates)
+
+	if debug_navigation:
+		print("[NAV DEBUG] _get_focusable_candidates: Found %d focusable candidates" % candidates.size())
+		for i in range(min(candidates.size(), 10)):  # Show first 10
+			print("[NAV DEBUG]   [%d] %s (focus_mode: %s)" % [i, _get_control_name(candidates[i]), _get_focus_mode_str(candidates[i].focus_mode)])
+		if candidates.size() > 10:
+			print("[NAV DEBUG]   ... and %d more" % (candidates.size() - 10))
 
 	return candidates
 
@@ -610,66 +752,246 @@ func _get_focusable_candidates() -> Array[Control]:
 func _find_focusable_in_node(node: Node, candidates: Array[Control]) -> void:
 	if node is Control:
 		var control = node as Control
+		var is_visible = _is_control_visible(control)
+		var is_focusable = control.focus_mode != Control.FOCUS_NONE
+		
+		if debug_navigation:
+			print("[NAV DEBUG] _find_focusable_in_node: Checking %s" % _get_node_name(node))
+			print("[NAV DEBUG]   visible: %s, focusable: %s, focus_mode: %s" % [is_visible, is_focusable, _get_focus_mode_str(control.focus_mode)])
+		
 		# Check visibility of control and all ancestors before considering focusability
-		if _is_control_visible(control):
-			if nav_config.restrict_to_focusable_children and control.focus_mode == Control.FOCUS_NONE:
-				# Skip non-focusable controls if restriction is enabled
-				pass
-			else:
+		if is_visible:
+			# Only add controls that are actually focusable
+			# The restrict_to_focusable_children setting affects whether we traverse
+			# into non-focusable containers, but we always filter to focusable controls
+			if is_focusable:
 				candidates.append(control)
+				if debug_navigation:
+					print("[NAV DEBUG]   ✓ Added to candidates")
+			elif nav_config.restrict_to_focusable_children:
+				# If restrict_to_focusable_children is true, don't traverse into
+				# non-focusable containers (they're not candidates and we skip their children)
+				if debug_navigation:
+					print("[NAV DEBUG]   ✗ Skipping children (restrict_to_focusable_children=true)")
+				return
+		else:
+			if debug_navigation:
+				print("[NAV DEBUG]   ✗ Not visible, skipping")
 
 	# Recursively check children (only if this node itself is visible)
 	if node is Control and _is_control_visible(node as Control):
-		for child in node.get_children():
+		# If restrict_to_focusable_children is true and this control is not focusable,
+		# we already returned above, so we won't traverse children
+		var children = node.get_children()
+		if debug_navigation:
+			print("[NAV DEBUG]   Traversing %d children" % children.size())
+		for child in children:
 			_find_focusable_in_node(child, candidates)
+
+## Helper: Finds the next focusable control in ordered_controls starting from an index, with wrapping.
+func _find_next_focusable_in_ordered_list(start_index: int, direction_int: int, wrap: bool) -> Control:
+	if nav_config.ordered_controls.is_empty():
+		if debug_navigation:
+			print("[NAV DEBUG] ordered_controls is empty, returning null")
+		return null
+	
+	var size = nav_config.ordered_controls.size()
+	var checked = 0
+	
+	# Find first and last focusable indices for proper wrapping
+	var first_focusable_index = -1
+	var last_focusable_index = -1
+	for i in range(size):
+		var path = nav_config.ordered_controls[i]
+		var control = get_node(path) as Control
+		if control and control.focus_mode != Control.FOCUS_NONE:
+			if first_focusable_index == -1:
+				first_focusable_index = i
+			last_focusable_index = i
+	
+	if debug_navigation:
+		var direction_str = "UP/LEFT" if direction_int < 0 else "DOWN/RIGHT"
+		print("[NAV DEBUG] === Starting ordered list search ===")
+		print("[NAV DEBUG] Start index: %d" % start_index)
+		print("[NAV DEBUG] Direction: %s (direction_int: %d)" % [direction_str, direction_int])
+		print("[NAV DEBUG] Wrapping enabled: %s" % wrap)
+		print("[NAV DEBUG] Total controls in list: %d" % size)
+		print("[NAV DEBUG] First focusable index: %d, Last focusable index: %d" % [first_focusable_index, last_focusable_index])
+		print("[NAV DEBUG] Current focus: %s (index %d)" % [_get_control_name(_current_focus_owner), start_index])
+		print("[NAV DEBUG] Ordered controls list:")
+		for i in range(size):
+			var path = nav_config.ordered_controls[i]
+			var control = get_node(path) as Control
+			var focusable = control and control.focus_mode != Control.FOCUS_NONE
+			var marker = " <-- CURRENT" if i == start_index else ""
+			print("[NAV DEBUG]   [%d] %s -> %s (focusable: %s)%s" % [i, path, _get_control_name(control), focusable, marker])
+	
+	# Check if we're at a boundary and should wrap immediately
+	var at_boundary = false
+	if direction_int < 0:  # Going up/left
+		at_boundary = (start_index == first_focusable_index)
+	elif direction_int > 0:  # Going down/right
+		at_boundary = (start_index == last_focusable_index)
+	
+	if at_boundary and wrap:
+		if debug_navigation:
+			print("[NAV DEBUG] At boundary of focusable items, wrapping immediately...")
+		# Wrap to the opposite end (last focusable for up, first focusable for down)
+		var target_index = last_focusable_index if direction_int < 0 else first_focusable_index
+		var path = nav_config.ordered_controls[target_index]
+		var control = get_node(path) as Control
+		if control and control.focus_mode != Control.FOCUS_NONE:
+			if debug_navigation:
+				print("[NAV DEBUG] ✓ Wrapped to index %d: %s" % [target_index, _get_control_name(control)])
+				print("[NAV DEBUG] === Search complete ===")
+			return control
+		# If wrapped target is not focusable (shouldn't happen), fall through to normal search
+	
+	# Normal search: start from the NEXT position (skip current item)
+	var current_index = start_index + direction_int
+	
+	while checked < size:
+		if debug_navigation:
+			print("[NAV DEBUG] --- Step %d ---" % (checked + 1))
+			print("[NAV DEBUG] Current index: %d" % current_index)
+		
+		# Check if we've gone out of bounds
+		if current_index < 0 or current_index >= size:
+			# Out of bounds - stop (wrapping already handled above if at boundary)
+			if debug_navigation:
+				print("[NAV DEBUG] Out of bounds, stopping search")
+			break
+		
+		checked += 1
+		
+		var path = nav_config.ordered_controls[current_index]
+		var control = get_node(path) as Control
+		var is_focusable = control and control.focus_mode != Control.FOCUS_NONE
+		
+		if debug_navigation:
+			print("[NAV DEBUG] Checking index %d: %s" % [current_index, path])
+			print("[NAV DEBUG]   Control: %s" % _get_control_name(control))
+			print("[NAV DEBUG]   Focusable: %s" % is_focusable)
+			if control:
+				print("[NAV DEBUG]   Focus mode: %s" % _get_focus_mode_str(control.focus_mode))
+		
+		if is_focusable:
+			if debug_navigation:
+				print("[NAV DEBUG] ✓ Found focusable control at index %d: %s" % [current_index, _get_control_name(control)])
+				print("[NAV DEBUG] === Search complete ===")
+			return control
+		else:
+			if debug_navigation:
+				print("[NAV DEBUG] ✗ Control not focusable, continuing search...")
+			# Move to next position
+			current_index += direction_int
+	
+	if debug_navigation:
+		print("[NAV DEBUG] ✗ No focusable control found after %d checks" % checked)
+		print("[NAV DEBUG] === Search complete (no result) ===")
+	
+	return null
 
 ## Finds next control in ordered list based on direction.
 func _find_next_in_ordered_list(direction: Vector2) -> Control:
 	if not nav_config or nav_config.ordered_controls.is_empty():
+		if debug_navigation:
+			print("[NAV DEBUG] _find_next_in_ordered_list: nav_config or ordered_controls is empty")
+		return null
+
+	# Check if we should use ordered_controls for this direction
+	var is_vertical = abs(direction.y) > abs(direction.x)
+	if is_vertical and not nav_config.use_ordered_vertical:
+		if debug_navigation:
+			print("[NAV DEBUG] _find_next_in_ordered_list: Vertical movement but use_ordered_vertical is false, returning null")
+		return null
+	if not is_vertical and nav_config.use_ordered_vertical:
+		if debug_navigation:
+			print("[NAV DEBUG] _find_next_in_ordered_list: Horizontal movement but use_ordered_vertical is true, returning null")
 		return null
 
 	var current_index = -1
+	if debug_navigation:
+		print("[NAV DEBUG] Searching for current focus owner in ordered_controls...")
+		print("[NAV DEBUG] Current focus owner: %s" % _get_control_name(_current_focus_owner))
+	
 	for i in range(nav_config.ordered_controls.size()):
 		var path = nav_config.ordered_controls[i]
 		var control = get_node(path) as Control
+		if debug_navigation:
+			print("[NAV DEBUG]   Checking index %d: path=%s, control=%s, matches=%s" % [i, path, _get_control_name(control), control == _current_focus_owner])
 		if control == _current_focus_owner:
 			current_index = i
+			if debug_navigation:
+				print("[NAV DEBUG] ✓ Found current focus at index %d" % current_index)
 			break
 
 	if current_index == -1:
+		if debug_navigation:
+			print("[NAV DEBUG] ✗ _find_next_in_ordered_list: Current focus owner not found in ordered_controls")
+			print("[NAV DEBUG] Current focus: %s" % _get_control_name(_current_focus_owner))
+			print("[NAV DEBUG] This will cause navigation to fail - check that ordered_controls includes the current focus")
 		return null
 
-	var next_index = current_index
+	# Determine direction and wrapping
+	var direction_int = 0
+	var wrap = false
+	var direction_name = ""
 	if direction.y < 0:  # Up
-		next_index -= 1
+		direction_int = -1
+		wrap = nav_config.wrap_vertical
+		direction_name = "UP"
 	elif direction.y > 0:  # Down
-		next_index += 1
-	elif direction.x < 0 and not nav_config.use_ordered_vertical:  # Left (if horizontal ordering)
-		next_index -= 1
-	elif direction.x > 0 and not nav_config.use_ordered_vertical:  # Right (if horizontal ordering)
-		next_index += 1
+		direction_int = 1
+		wrap = nav_config.wrap_vertical
+		direction_name = "DOWN"
+	elif direction.x < 0:  # Left
+		direction_int = -1
+		wrap = nav_config.wrap_horizontal
+		direction_name = "LEFT"
+	elif direction.x > 0:  # Right
+		direction_int = 1
+		wrap = nav_config.wrap_horizontal
+		direction_name = "RIGHT"
+	
+	if debug_navigation:
+		print("[NAV DEBUG] ========================================")
+		print("[NAV DEBUG] NAVIGATION REQUEST: %s" % direction_name)
+		print("[NAV DEBUG] Direction vector: %s" % direction)
+		print("[NAV DEBUG] use_ordered_vertical: %s" % nav_config.use_ordered_vertical)
+		print("[NAV DEBUG] wrap_vertical: %s" % nav_config.wrap_vertical)
+		print("[NAV DEBUG] wrap_horizontal: %s" % nav_config.wrap_horizontal)
+		print("[NAV DEBUG] ========================================")
 
-	# Handle wrapping
-	if next_index < 0:
-		next_index = nav_config.ordered_controls.size() - 1 if nav_config.wrap_vertical else 0
-	elif next_index >= nav_config.ordered_controls.size():
-		next_index = 0 if nav_config.wrap_vertical else nav_config.ordered_controls.size() - 1
-
-	var next_path = nav_config.ordered_controls[next_index]
-	return get_node(next_path) as Control
+	# Use helper to find next focusable control
+	return _find_next_focusable_in_ordered_list(current_index, direction_int, wrap)
 
 ## Finds next control by position-based heuristics.
 func _find_next_by_position(direction: Vector2, candidates: Array[Control]) -> Control:
 	if not _current_focus_owner:
-		return candidates[0] if not candidates.is_empty() else null
+		var first = candidates[0] if not candidates.is_empty() else null
+		if debug_navigation:
+			print("[NAV DEBUG] _find_next_by_position: No current focus, returning first candidate: %s" % _get_control_name(first))
+		return first
 
 	var current_pos = _current_focus_owner.get_global_rect().get_center()
 	var best_candidate: Control = null
 	var best_distance = INF
 	var best_angle_diff = INF
 
+	if debug_navigation:
+		print("[NAV DEBUG] _find_next_by_position: Checking %d candidates" % candidates.size())
+
 	for candidate in candidates:
 		if candidate == _current_focus_owner:
+			if debug_navigation:
+				print("[NAV DEBUG]   Skipping current focus owner: %s" % _get_control_name(candidate))
+			continue
+
+		# Skip non-focusable candidates
+		if candidate.focus_mode == Control.FOCUS_NONE:
+			if debug_navigation:
+				print("[NAV DEBUG]   Skipping non-focusable candidate: %s" % _get_control_name(candidate))
 			continue
 
 		var candidate_pos = candidate.get_global_rect().get_center()
@@ -678,6 +1000,8 @@ func _find_next_by_position(direction: Vector2, candidates: Array[Control]) -> C
 		# Check if candidate is in the general direction (within 90 degrees)
 		var angle_diff = abs(direction.angle_to(to_candidate))
 		if angle_diff > PI/2:  # More than 90 degrees off
+			if debug_navigation:
+				print("[NAV DEBUG]   Skipping candidate (wrong direction): %s (angle_diff: %.2f)" % [_get_control_name(candidate), angle_diff])
 			continue
 
 		var distance = to_candidate.length()
@@ -685,6 +1009,26 @@ func _find_next_by_position(direction: Vector2, candidates: Array[Control]) -> C
 			best_candidate = candidate
 			best_distance = distance
 			best_angle_diff = angle_diff
+			if debug_navigation:
+				print("[NAV DEBUG]   New best candidate: %s (distance: %.2f, angle: %.2f)" % [_get_control_name(candidate), distance, angle_diff])
+
+	# If no candidate found, return null (position-based navigation stops at boundaries)
+	# NOTE: Wrapping only works with ordered_controls, not position-based navigation.
+	# Position-based navigation relies on spatial relationships, so wrapping doesn't make sense.
+	# Use ordered_controls if you need wrapping behavior.
+	if not best_candidate:
+		if debug_navigation:
+			print("[NAV DEBUG]   No candidate found in requested direction (position-based navigation stops at boundaries)")
+		return null
+
+	if debug_navigation:
+		print("[NAV DEBUG] _find_next_by_position: Best candidate: %s" % _get_control_name(best_candidate))
+
+	# Safety check: never return the current focus owner
+	if best_candidate == _current_focus_owner:
+		if debug_navigation:
+			print("[NAV DEBUG] ✗ WARNING: Best candidate is current focus owner, returning null")
+		return null
 
 	return best_candidate
 
@@ -735,3 +1079,33 @@ func auto_populate_ordered_controls() -> void:
 
 	nav_config.ordered_controls = paths
 	print("ReactiveUINavigator: Auto-populated %d ordered controls" % paths.size())
+
+## Helper function for debug output: Gets a readable name for a control.
+func _get_control_name(control: Control) -> String:
+	if not control:
+		return "null"
+	var control_name = control.name
+	if control.get_parent():
+		control_name = "%s/%s" % [control.get_parent().name, control_name]
+	return control_name
+
+## Helper function for debug output: Gets a readable name for a node (not just Control).
+func _get_node_name(node: Node) -> String:
+	if not node:
+		return "null"
+	var node_name = node.name
+	if node.get_parent():
+		node_name = "%s/%s" % [node.get_parent().name, node_name]
+	return node_name
+
+## Helper function for debug output: Gets a string representation of focus mode.
+func _get_focus_mode_str(focus_mode: Control.FocusMode) -> String:
+	match focus_mode:
+		Control.FOCUS_NONE:
+			return "FOCUS_NONE"
+		Control.FOCUS_CLICK:
+			return "FOCUS_CLICK"
+		Control.FOCUS_ALL:
+			return "FOCUS_ALL"
+		_:
+			return "UNKNOWN(%d)" % focus_mode

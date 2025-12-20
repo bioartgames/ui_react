@@ -51,3 +51,54 @@ static func find_closest_in_direction(current: Control, candidates: Array[Contro
 			best_angle_diff = angle_diff
 
 	return best_candidate
+
+## Gets the custom focus neighbor for a control in the given direction.
+## Returns the control specified by focus_neighbor_* properties, or null if not set.
+## [param control]: The control to get neighbor for.
+## [param direction]: Direction vector (normalized or not).
+## [return]: The neighbor control, or null if not configured.
+static func get_custom_focus_neighbor(control: Control, direction: Vector2) -> Control:
+	if not control:
+		return null
+
+	# Normalize direction to determine which neighbor property to check
+	var normalized_dir = direction.normalized()
+	var threshold = 0.5  # Threshold for diagonal detection
+
+	# Determine primary direction (prioritize larger component)
+	var neighbor_path: NodePath
+	if abs(normalized_dir.y) > abs(normalized_dir.x):
+		# Vertical movement
+		if normalized_dir.y < -threshold:  # Up
+			neighbor_path = control.focus_neighbor_top
+		elif normalized_dir.y > threshold:  # Down
+			neighbor_path = control.focus_neighbor_bottom
+	else:
+		# Horizontal movement
+		if normalized_dir.x < -threshold:  # Left
+			neighbor_path = control.focus_neighbor_left
+		elif normalized_dir.x > threshold:  # Right
+			neighbor_path = control.focus_neighbor_right
+
+	# Resolve the NodePath to get the actual Control
+	if neighbor_path and not neighbor_path.is_empty():
+		var neighbor = control.get_node_or_null(neighbor_path)
+		if neighbor is Control:
+			return neighbor as Control
+
+	return null
+
+## Checks if a control has custom focus neighbors configured.
+## [param control]: The control to check.
+## [return]: true if any focus_neighbor_* property is set.
+static func has_custom_focus_neighbors(control: Control) -> bool:
+	if not control:
+		return false
+
+	# Check all four directions using focus_neighbor_* properties directly
+	return (
+		control.focus_neighbor_top != null and not control.focus_neighbor_top.is_empty() or
+		control.focus_neighbor_bottom != null and not control.focus_neighbor_bottom.is_empty() or
+		control.focus_neighbor_left != null and not control.focus_neighbor_left.is_empty() or
+		control.focus_neighbor_right != null and not control.focus_neighbor_right.is_empty()
+	)
