@@ -19,6 +19,19 @@
 [ext_resource type="Script" uid="uid://c1me6yio68gy0" path="res://scripts/reactive/navigation_config.gd" id="19_6fcom"]
 [ext_resource type="Script" uid="uid://c1cwa4vmk0wog" path="res://scripts/reactive/navigation_input_profile.gd" id="20_a72v2"]
 
+[sub_resource type="Resource" id="Resource_hdbj1"]
+script = ExtResource("20_a72v2")
+metadata/_custom_type_script = "uid://c1cwa4vmk0wog"
+
+[sub_resource type="Resource" id="Resource_lkfh0"]
+script = ExtResource("19_6fcom")
+root_control = NodePath("../VBox")
+default_focus = NodePath("../VBox/DisableActionsToggle")
+use_ordered_vertical = false
+respect_custom_neighbors = false
+restrict_to_focusable_children = false
+metadata/_custom_type_script = "uid://c1me6yio68gy0"
+
 [sub_resource type="Resource" id="Resource_a72v2"]
 script = ExtResource("4_pf7w8")
 animation = 22
@@ -96,20 +109,6 @@ trigger = 1
 execution_mode = 1
 metadata/_custom_type_script = "uid://bnno246gj404t"
 
-[sub_resource type="Resource" id="Resource_hdbj1"]
-script = ExtResource("20_a72v2")
-metadata/_custom_type_script = "uid://c1cwa4vmk0wog"
-
-[sub_resource type="Resource" id="Resource_lkfh0"]
-script = ExtResource("19_6fcom")
-root_control = NodePath("../VBox")
-default_focus = NodePath("../VBox/DisableActionsToggle")
-ordered_controls = Array[NodePath]([NodePath("../VBox/ReactiveOptionButton"), NodePath("../VBox/DisableActionsToggle"), NodePath("../VBox/ReactiveButton"), NodePath("../VBox/Slider"), NodePath("../VBox/ReactiveTabContainer"), NodePath("../VBox/ReactiveTabContainer/Panel/ReactiveRichTextLabel"), NodePath("../VBox/ReactiveTabContainer/Panel/LineEdit")])
-use_ordered_vertical = false
-wrap_vertical = true
-respect_custom_neighbors = false
-metadata/_custom_type_script = "uid://c1me6yio68gy0"
-
 [node name="ReactiveUI" type="Control"]
 layout_mode = 3
 anchors_preset = 15
@@ -121,6 +120,14 @@ offset_right = -16.0
 offset_bottom = -16.0
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="ReactiveUINavigator" type="Node" parent="."]
+script = ExtResource("18_3pbam")
+debug_navigation = true
+mode = 1
+input_profile = SubResource("Resource_hdbj1")
+nav_config = SubResource("Resource_lkfh0")
+metadata/_custom_type_script = "uid://8owlseiiorpp"
 
 [node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -240,11 +247,3 @@ metadata/_custom_type_script = "uid://b4ap43ix3i0u0"
 visible = false
 layout_mode = 2
 metadata/_tab_index = 1
-
-[node name="ReactiveUINavigator" type="Node" parent="."]
-script = ExtResource("18_3pbam")
-debug_navigation = true
-mode = 1
-input_profile = SubResource("Resource_hdbj1")
-nav_config = SubResource("Resource_lkfh0")
-metadata/_custom_type_script = "uid://8owlseiiorpp"

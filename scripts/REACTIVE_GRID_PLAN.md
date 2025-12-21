@@ -15,9 +15,9 @@ The plan is **design-only**; no code is implemented yet.
   - Binds its **contents and selection** to `State` resources.
   - Is suitable for inventory/equipment style UIs (grids of items/slots).
   - Integrates with:
-    - The **reactive state system** (`State` resources).
-    - The **animation system** (`AnimationReel`, `AnimationClip`, triggers, control type hints).
-    - The existing **navigation system** (`ReactiveUINavigator`, `NavigationConfig`, etc.) for controller/keyboard navigation.
+	- The **reactive state system** (`State` resources).
+	- The **animation system** (`AnimationReel`, `AnimationClip`, triggers, control type hints).
+	- The existing **navigation system** (`ReactiveUINavigator`, `NavigationConfig`, etc.) for controller/keyboard navigation.
   - Matches the semantics of other reactive controls (`ReactiveItemList`, `ReactiveTabContainer`) as closely as possible.
 
 ### 0.2 Non‑Goals
@@ -35,8 +35,8 @@ The plan is **design-only**; no code is implemented yet.
   - Confirm/cancel actions on the **currently focused** cell.
   - Optional “move/swap” operations initiated by button presses (e.g., select a source slot, move focus, choose a target slot, confirm to swap).
   - This is modeled as:
-    - Focus management (handled by `ReactiveUINavigator` + Godot focus system).
-    - Selection/command handling (slots reacting to `submit`/`cancel` commands).
+	- Focus management (handled by `ReactiveUINavigator` + Godot focus system).
+	- Selection/command handling (slots reacting to `submit`/`cancel` commands).
 
 - **Drag and drop** (what we do NOT care about here):
   - Click/press on a slot, **dragging** the pointer while holding a button, then releasing to drop.
@@ -50,19 +50,19 @@ The following new scripts/resources will be introduced:
 
 - **Grid control**:
   - `scripts/reactive/reactive_grid_container.gd`
-    - `@tool`
-    - `extends GridContainer`
-    - `class_name ReactiveGridContainer`
+	- `@tool`
+	- `extends GridContainer`
+	- `class_name ReactiveGridContainer`
 
 - **Grid configuration resource**:
   - `scripts/reactive/grid_container_config.gd`
-    - `extends Resource`
-    - `class_name GridContainerConfig`
+	- `extends Resource`
+	- `class_name GridContainerConfig`
 
 - **Optional per-cell helper (if needed)**:
   - `scripts/reactive/reactive_grid_slot.gd`
-    - `extends Control` (or `Button` depending on design)
-    - `class_name ReactiveGridSlot`
+	- `extends Control` (or `Button` depending on design)
+	- `class_name ReactiveGridSlot`
 
 No new animation utilities or state types are required; the grid will reuse the existing systems.
 
@@ -86,17 +86,17 @@ class_name GridContainerConfig
 
 - Exported properties (initial set):
   - `@export var cell_scene: PackedScene`
-    - The scene to instantiate for each cell (e.g., an item slot).
-    - Each instance is expected to conform to a simple “cell contract” (see Phase 2.3).
+	- The scene to instantiate for each cell (e.g., an item slot).
+	- Each instance is expected to conform to a simple “cell contract” (see Phase 2.3).
   - `@export var columns_override: int = 0`
-    - `0` means use `GridContainer.columns`.
-    - `> 0` allows the config to override the number of columns if desired.
+	- `0` means use `GridContainer.columns`.
+	- `> 0` allows the config to override the number of columns if desired.
   - `@export var allow_empty_cells: bool = true`
-    - If false, cells are only created for actual items.
-    - If true, grid can render empty slots up to a target size (see Phase 2.2).
+	- If false, cells are only created for actual items.
+	- If true, grid can render empty slots up to a target size (see Phase 2.2).
   - `@export var target_cell_count: int = 0`
-    - `0` means “size matches item count”.
-    - `> 0` means pad with empty cells up to `target_cell_count`.
+	- `0` means “size matches item count”.
+	- `> 0` means pad with empty cells up to `target_cell_count`.
 
 ### 1.2 `ReactiveGridContainer` core API
 
@@ -114,8 +114,8 @@ Exported properties:
   - `items_state.value` is expected to be an `Array` (or `null`).
   - Each element represents one grid item “view model” (type defined in Phase 2).
   - The `State` itself is untyped (Variant-based) just like the rest of the system; this control
-    MUST treat `items_state.value` as a read-only array of item descriptors and never attempt
-    to enforce or mutate game logic (e.g., stacking rules) directly.
+	MUST treat `items_state.value` as a read-only array of item descriptors and never attempt
+	to enforce or mutate game logic (e.g., stacking rules) directly.
 - `@export var selection_state: State`
   - Optional.
   - If present, holds the **selected index** (int) or `null` for “no selection”.
@@ -170,11 +170,11 @@ Define how each element in `items_state.value` is interpreted. For v1:
 
 - Each item descriptor can be:
   - A `Dictionary` with standard keys (recommended), e.g.:
-    - `"id": Variant` (optional identifier).
-    - `"icon": Texture2D` (optional).
-    - `"name": String` (optional).
-    - `"count": int` (optional).
-    - `"disabled": bool` (optional).
+	- `"id": Variant` (optional identifier).
+	- `"icon": Texture2D` (optional).
+	- `"name": String` (optional).
+	- `"count": int` (optional).
+	- `"disabled": bool` (optional).
   - A custom `Resource` (e.g., `ItemViewModel`) – allowed but interpreted via a helper function.
 
 `ReactiveGridContainer` will not enforce a specific schema but **will**:
@@ -235,12 +235,12 @@ func _on_items_state_changed(new_value: Variant, _old_value: Variant) -> void:
 - Determine **target cell count**:
   - Start with `items.size()`.
   - If `grid_config` is set:
-    - If `grid_config.target_cell_count > 0`, use `max(items.size(), grid_config.target_cell_count)`.
-    - Else, use `items.size()`.
+	- If `grid_config.target_cell_count > 0`, use `max(items.size(), grid_config.target_cell_count)`.
+	- Else, use `items.size()`.
 - For `i` in `0 .. target_cell_count - 1`:
   - Determine `item_data`:
-    - If `i < items.size()`: `item_data = items[i]`.
-    - Else: `item_data = null` (represents an empty slot).
+	- If `i < items.size()`: `item_data = items[i]`.
+	- Else: `item_data = null` (represents an empty slot).
   - Instantiate a cell via `_create_cell(item_data, i)` (see below).
   - Add as child of the grid and append to `_current_cells`.
 
@@ -290,10 +290,10 @@ Selection update flow:
 
 - From state → UI:
   - Implement `_on_selection_state_changed(new_value: Variant, _old_value: Variant)`:
-    - Normalize to `int` or `null`.
-    - Iterate `_current_cells` and call `set_selected(i == selected_index)` on cells that implement it.
-    - Do this only when `_suppress_state_updates` is false.
-    - Trigger `SELECTION_CHANGED` animations if configured (after `_is_initializing` check).
+	- Normalize to `int` or `null`.
+	- Iterate `_current_cells` and call `set_selected(i == selected_index)` on cells that implement it.
+	- Do this only when `_suppress_state_updates` is false.
+	- Trigger `SELECTION_CHANGED` animations if configured (after `_is_initializing` check).
 
 - From UI → state:
   - When a cell is "activated" (e.g., button press, submit from navigator), call `_select_index(index: int)`:
@@ -342,8 +342,8 @@ func _select_index(index: int) -> void:
 - Optionally:
   - On `focus_entered` of a cell, update `selection_state` (to have focus == selection), or
   - Only update selection on explicit submit; this behavior can be made configurable via a boolean export, e.g.:
-    - `@export var select_on_focus: bool = false`
-    - `@export var select_on_submit: bool = true`
+	- `@export var select_on_focus: bool = false`
+	- `@export var select_on_submit: bool = true`
 
 ### 3.3 Controller “move/swap” behavior (optional extension)
 
@@ -352,9 +352,9 @@ For now, **full item moving/swapping via controller is optional** and will be tr
 - Potential approach:
   - Add a `move_mode_state: State` (bool) and `move_source_index_state: State` (int or null).
   - When the player presses a “pick up/move” action:
-    - If not in move mode: enter move mode and record current selection as source index.
-    - Move focus/selection using normal navigation.
-    - On second press: perform a swap or move in `items_state.value`, then exit move mode.
+	- If not in move mode: enter move mode and record current selection as source index.
+	- Move focus/selection using normal navigation.
+	- On second press: perform a swap or move in `items_state.value`, then exit move mode.
 - This logic is **not** part of the initial grid implementation but the design should not prevent it.
 
 ### 3.4 Cell activation and callbacks
@@ -561,5 +561,3 @@ The design should allow, but does not initially implement:
    - Introducing a dedicated `ItemViewModel` Resource to replace free-form Dictionaries for stronger semantics and inspector support.
 
 These can be added in later tiers without breaking the initial API if the above plan is followed.
-
-

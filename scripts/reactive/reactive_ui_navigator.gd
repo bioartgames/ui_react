@@ -82,6 +82,11 @@ func _ready() -> void:
 	if nav_config and nav_config.auto_disable_child_focus and root_control:
 		UIAnimationUtils.disable_focus_on_children(root_control)
 
+	# Set up focus neighbors for wrapping navigation
+	# Works with both ordered_controls (custom order) and tree order (when ordered_controls is empty)
+	if nav_config:
+		setup_focus_neighbors()
+
 	# If focus_on_ready is true, set initial focus
 	if nav_config and nav_config.focus_on_ready:
 		var initial_focus: Control = null
@@ -624,19 +629,44 @@ func _find_next_focusable_control(direction: Vector2) -> Control:
 		print("[NAV DEBUG] respect_custom_neighbors: %s" % nav_config.respect_custom_neighbors)
 		print("[NAV DEBUG] ordered_controls.size(): %d" % nav_config.ordered_controls.size())
 
-	# Check custom neighbors first if enabled
+	# Check if this direction is explicitly disabled (neighbor path is empty)
+	# This happens when we set focus_neighbor_* to NodePath("") for unsupported directions
+	var normalized_dir = direction.normalized()
+	var threshold = 0.5
+	var neighbor_path: NodePath = NodePath()
+	var is_horizontal = abs(normalized_dir.x) > abs(normalized_dir.y)
+	
+	if is_horizontal:
+		if normalized_dir.x < -threshold:  # Left
+			neighbor_path = _current_focus_owner.focus_neighbor_left
+		elif normalized_dir.x > threshold:  # Right
+			neighbor_path = _current_focus_owner.focus_neighbor_right
+	else:
+		if normalized_dir.y < -threshold:  # Up
+			neighbor_path = _current_focus_owner.focus_neighbor_top
+		elif normalized_dir.y > threshold:  # Down
+			neighbor_path = _current_focus_owner.focus_neighbor_bottom
+	
+	# If neighbor path is explicitly empty, this direction is disabled - return null immediately
+	# This prevents falling back to position-based heuristics for unsupported directions
+	# When we set focus_neighbor_* to NodePath("") in setup_focus_neighbors(), it means
+	# this direction is not supported for this layout (e.g., left/right in vertical layout)
+	if neighbor_path != null and neighbor_path.is_empty():
+		if debug_navigation:
+			print("[NAV DEBUG] Direction explicitly disabled (empty NodePath) - returning null")
+		return null
+
+	# ALWAYS check focus neighbors first (they support wrapping out of the box)
+	# This works regardless of ordered_controls or use_ordered_vertical settings
 	var custom_neighbor = _find_custom_neighbor_target(direction)
 	if custom_neighbor:
 		if debug_navigation:
-			print("[NAV DEBUG] ✓ Using custom neighbor: %s (focus_mode: %s)" % [_get_control_name(custom_neighbor), _get_focus_mode_str(custom_neighbor.focus_mode)])
+			print("[NAV DEBUG] ✓ Using focus neighbor: %s (focus_mode: %s)" % [_get_control_name(custom_neighbor), _get_focus_mode_str(custom_neighbor.focus_mode)])
 		# Validate focusability before returning
-		if custom_neighbor.focus_mode == Control.FOCUS_NONE:
-			if debug_navigation:
-				print("[NAV DEBUG] ✗ WARNING: Custom neighbor has FOCUS_NONE, returning null")
-			return null
-		return custom_neighbor
+		if custom_neighbor.focus_mode != Control.FOCUS_NONE:
+			return custom_neighbor
 
-	# If ordered controls are specified, use that logic (don't need candidates)
+	# If ordered controls are specified, use that logic as a fallback
 	if not nav_config.ordered_controls.is_empty():
 		if debug_navigation:
 			print("[NAV DEBUG] Using ordered_controls path")
@@ -646,12 +676,17 @@ func _find_next_focusable_control(direction: Vector2) -> Control:
 				print("[NAV DEBUG] Ordered list returned: %s (focus_mode: %s)" % [_get_control_name(result), _get_focus_mode_str(result.focus_mode)])
 			else:
 				print("[NAV DEBUG] Ordered list returned: null")
+		
+		# If manual navigation returned null, check focus neighbors again as fallback
+		if not result:
+			result = _find_custom_neighbor_target(direction)
+			if result:
+				if debug_navigation:
+					print("[NAV DEBUG] ✓ Fallback to focus neighbor: %s" % _get_control_name(result))
+		
 		# Validate focusability before returning
-		if result and result.focus_mode == Control.FOCUS_NONE:
-			if debug_navigation:
-				print("[NAV DEBUG] ✗ WARNING: Ordered list returned control with FOCUS_NONE, returning null")
-			return null
-		return result
+		if result and result.focus_mode != Control.FOCUS_NONE:
+			return result
 
 	# Otherwise use directional heuristics (need candidates)
 	var candidates = _get_focusable_candidates()
@@ -670,51 +705,66 @@ func _find_next_focusable_control(direction: Vector2) -> Control:
 			print("[NAV DEBUG] Position-based returned: %s (focus_mode: %s)" % [_get_control_name(result), _get_focus_mode_str(result.focus_mode)])
 		else:
 			print("[NAV DEBUG] Position-based returned: null")
+	
+	# If position-based returned null, check focus neighbors as final fallback
+	# This ensures wrapping works even when position-based navigation fails
+	if not result:
+		result = _find_custom_neighbor_target(direction)
+		if result:
+			if debug_navigation:
+				print("[NAV DEBUG] ✓ Final fallback to focus neighbor: %s" % _get_control_name(result))
+	
 	# Validate focusability before returning
-	if result and result.focus_mode == Control.FOCUS_NONE:
-		if debug_navigation:
-			print("[NAV DEBUG] ✗ WARNING: Position-based returned control with FOCUS_NONE, returning null")
-		return null
-	return result
+	if result and result.focus_mode != Control.FOCUS_NONE:
+		return result
+	return null
 
 ## Finds a custom neighbor target if one exists and is valid.
+## Always checks focus neighbors - they're set up programmatically for wrapping support.
+## respect_custom_neighbors only affects whether manually-set neighbors override automatic navigation.
 func _find_custom_neighbor_target(direction: Vector2) -> Control:
-	if not nav_config.respect_custom_neighbors or not _current_focus_owner:
+	# Always check focus neighbors - they're set up programmatically for wrapping support
+	# respect_custom_neighbors only affects whether manually-set neighbors override automatic navigation
+	if not _current_focus_owner:
 		return null
 
 	if debug_navigation:
-		print("[NAV DEBUG] Checking for custom neighbors on: %s" % _get_control_name(_current_focus_owner))
+		print("[NAV DEBUG] Checking for focus neighbors on: %s" % _get_control_name(_current_focus_owner))
 
 	var custom_neighbor = NavigationUtils.get_custom_focus_neighbor(_current_focus_owner, direction)
 	if not custom_neighbor:
 		if debug_navigation:
-			print("[NAV DEBUG] No custom neighbor found in direction")
+			print("[NAV DEBUG] No focus neighbor found in direction")
 		return null
 
 	if debug_navigation:
-		print("[NAV DEBUG] ⚠ CUSTOM NEIGHBOR FOUND: %s (this will override ordered_controls!)" % _get_control_name(custom_neighbor))
+		print("[NAV DEBUG] ⚠ FOCUS NEIGHBOR FOUND: %s" % _get_control_name(custom_neighbor))
 
-	# Validate the custom neighbor is within scope and visible
+	# Validate the focus neighbor is visible
 	if not _is_control_visible(custom_neighbor):
 		if debug_navigation:
-			print("[NAV DEBUG] Custom neighbor is not visible, ignoring")
+			print("[NAV DEBUG] Focus neighbor is not visible, ignoring")
 		return null
 
+	# If respect_custom_neighbors is false, only use programmatically set neighbors
+	# (not manually set ones in the Inspector)
+	# But we always respect programmatically set neighbors for wrapping support
+	# Check if this is a manually set neighbor (outside scope) vs programmatically set
 	var valid_candidates = _get_focusable_candidates()
-	if custom_neighbor in valid_candidates:
+	if not nav_config.respect_custom_neighbors and custom_neighbor not in valid_candidates:
+		# This is a manually set neighbor and respect_custom_neighbors is false
 		if debug_navigation:
-			print("[NAV DEBUG] Custom neighbor is in valid candidates, using it")
-		return custom_neighbor
+			print("[NAV DEBUG] Focus neighbor is manually set and respect_custom_neighbors is false, ignoring")
+		return null
 
-	# If not in candidates but is valid, still allow it
-	# (custom neighbors can override scope restrictions)
+	# Validate focusability
 	if custom_neighbor.focus_mode != Control.FOCUS_NONE:
 		if debug_navigation:
-			print("[NAV DEBUG] Custom neighbor is focusable but not in candidates, using it anyway")
+			print("[NAV DEBUG] Focus neighbor is valid and focusable")
 		return custom_neighbor
 
 	if debug_navigation:
-		print("[NAV DEBUG] Custom neighbor is not focusable, ignoring")
+		print("[NAV DEBUG] Focus neighbor is not focusable, ignoring")
 	return null
 
 ## Gets all focusable candidates within the navigation scope.
@@ -893,22 +943,17 @@ func _find_next_focusable_in_ordered_list(start_index: int, direction_int: int, 
 	return null
 
 ## Finds next control in ordered list based on direction.
+## This is a fallback for custom ordered navigation. Focus neighbors handle wrapping automatically.
+## The use_ordered_vertical flag only affects how the list is interpreted (grid vs linear), not which directions are allowed.
 func _find_next_in_ordered_list(direction: Vector2) -> Control:
 	if not nav_config or nav_config.ordered_controls.is_empty():
 		if debug_navigation:
 			print("[NAV DEBUG] _find_next_in_ordered_list: nav_config or ordered_controls is empty")
 		return null
 
-	# Check if we should use ordered_controls for this direction
-	var is_vertical = abs(direction.y) > abs(direction.x)
-	if is_vertical and not nav_config.use_ordered_vertical:
-		if debug_navigation:
-			print("[NAV DEBUG] _find_next_in_ordered_list: Vertical movement but use_ordered_vertical is false, returning null")
-		return null
-	if not is_vertical and nav_config.use_ordered_vertical:
-		if debug_navigation:
-			print("[NAV DEBUG] _find_next_in_ordered_list: Horizontal movement but use_ordered_vertical is true, returning null")
-		return null
+	# REMOVED: Don't block navigation based on use_ordered_vertical
+	# Focus neighbors handle wrapping, and this is just a fallback for custom ordered navigation
+	# The use_ordered_vertical flag only affects how the list is interpreted (grid vs linear)
 
 	var current_index = -1
 	if debug_navigation:
@@ -1097,6 +1142,247 @@ func _get_node_name(node: Node) -> String:
 	if node.get_parent():
 		node_name = "%s/%s" % [node.get_parent().name, node_name]
 	return node_name
+
+## Automatically configures focus_neighbor_* properties for wrapping navigation.
+## This should be called after NavigationConfig is set up.
+## Uses Godot's built-in focus neighbor system for more reliable wrapping behavior.
+## When ordered_controls is empty, uses tree order (focusable candidates in scene order).
+func setup_focus_neighbors() -> void:
+	if not nav_config:
+		return
+	
+	var controls: Array[Control] = []
+	
+	if not nav_config.ordered_controls.is_empty():
+		# Use explicit ordered_controls list
+		for path in nav_config.ordered_controls:
+			var control = get_node_or_null(path) as Control
+			if control and control.focus_mode != Control.FOCUS_NONE:
+				controls.append(control)
+	else:
+		# Use tree order (get focusable candidates in scene order)
+		controls = _get_focusable_candidates()
+	
+	if controls.is_empty():
+		return
+	
+	# Determine if we're in grid mode or linear mode
+	# When using tree order (no ordered_controls), treat as linear unless use_ordered_vertical suggests grid
+	var is_grid = nav_config.use_ordered_vertical and controls.size() > 0
+	var columns = _detect_grid_columns(controls) if is_grid else 0
+	
+	# In linear mode, detect if layout is horizontal or vertical
+	# This ensures we only set neighbors in the appropriate direction
+	var is_horizontal_layout = true
+	if columns == 0 and controls.size() > 1:
+		is_horizontal_layout = _detect_layout_orientation(controls)
+	
+	# Set up neighbors for each control
+	for i in range(controls.size()):
+		var control = controls[i]
+		
+		# Horizontal neighbors - only set if layout is horizontal or grid
+		if columns > 0 or is_horizontal_layout:
+			if nav_config.wrap_horizontal:
+				control.focus_neighbor_left = _get_left_neighbor_path(control, i, controls, columns)
+				control.focus_neighbor_right = _get_right_neighbor_path(control, i, controls, columns)
+			else:
+				# No wrapping - set to adjacent or empty
+				control.focus_neighbor_left = _get_left_neighbor_path(control, i, controls, columns, false)
+				control.focus_neighbor_right = _get_right_neighbor_path(control, i, controls, columns, false)
+		else:
+			# Vertical layout - don't set horizontal neighbors (no adjacent controls left/right)
+			control.focus_neighbor_left = NodePath("")
+			control.focus_neighbor_right = NodePath("")
+		
+		# Vertical neighbors - only set if layout is vertical or grid
+		if columns > 0 or not is_horizontal_layout:
+			if nav_config.wrap_vertical:
+				control.focus_neighbor_top = _get_top_neighbor_path(control, i, controls, columns)
+				control.focus_neighbor_bottom = _get_bottom_neighbor_path(control, i, controls, columns)
+			else:
+				# No wrapping
+				control.focus_neighbor_top = _get_top_neighbor_path(control, i, controls, columns, false)
+				control.focus_neighbor_bottom = _get_bottom_neighbor_path(control, i, controls, columns, false)
+		else:
+			# Horizontal layout - don't set vertical neighbors (no adjacent controls up/down)
+			control.focus_neighbor_top = NodePath("")
+			control.focus_neighbor_bottom = NodePath("")
+
+## Helper: Gets left neighbor path with optional wrapping
+func _get_left_neighbor_path(current_control: Control, index: int, controls: Array[Control], columns: int, wrap: bool = true) -> NodePath:
+	if columns > 0:
+		# Grid mode
+		var row = index / columns
+		var col = index % columns
+		var new_col = col - 1
+		
+		if new_col < 0:
+			if wrap:
+				new_col = columns - 1  # Wrap to right side
+			else:
+				return NodePath("")  # No neighbor
+		
+		var new_index = row * columns + new_col
+		if new_index >= 0 and new_index < controls.size():
+			return current_control.get_path_to(controls[new_index])
+	else:
+		# Linear mode
+		var new_index = index - 1
+		if new_index < 0:
+			if wrap:
+				new_index = controls.size() - 1  # Wrap to end
+			else:
+				return NodePath("")
+		
+		if new_index >= 0 and new_index < controls.size():
+			return current_control.get_path_to(controls[new_index])
+	
+	return NodePath("")
+
+## Helper: Gets right neighbor path with optional wrapping
+func _get_right_neighbor_path(current_control: Control, index: int, controls: Array[Control], columns: int, wrap: bool = true) -> NodePath:
+	if columns > 0:
+		# Grid mode
+		var row = index / columns
+		var col = index % columns
+		var new_col = col + 1
+		
+		if new_col >= columns:
+			if wrap:
+				new_col = 0  # Wrap to left side
+			else:
+				return NodePath("")
+		
+		var new_index = row * columns + new_col
+		if new_index >= 0 and new_index < controls.size():
+			return current_control.get_path_to(controls[new_index])
+	else:
+		# Linear mode
+		var new_index = index + 1
+		if new_index >= controls.size():
+			if wrap:
+				new_index = 0  # Wrap to beginning
+			else:
+				return NodePath("")
+		
+		if new_index >= 0 and new_index < controls.size():
+			return current_control.get_path_to(controls[new_index])
+	
+	return NodePath("")
+
+## Helper: Gets top neighbor path with optional wrapping
+func _get_top_neighbor_path(current_control: Control, index: int, controls: Array[Control], columns: int, wrap: bool = true) -> NodePath:
+	if columns > 0:
+		# Grid mode
+		var row = index / columns
+		var col = index % columns
+		var new_row = row - 1
+		
+		if new_row < 0:
+			if wrap:
+				# Wrap to bottom row, same column
+				var total_rows = ceili(float(controls.size()) / columns)
+				new_row = total_rows - 1
+				# Adjust for last row which might not be full
+				var new_index = new_row * columns + col
+				if new_index >= controls.size():
+					new_index = controls.size() - 1
+				return current_control.get_path_to(controls[new_index])
+			else:
+				return NodePath("")
+		
+		var new_index = new_row * columns + col
+		if new_index >= 0 and new_index < controls.size():
+			return current_control.get_path_to(controls[new_index])
+	else:
+		# Linear mode (single column)
+		var new_index = index - 1
+		if new_index < 0:
+			if wrap:
+				new_index = controls.size() - 1
+			else:
+				return NodePath("")
+		
+		if new_index >= 0 and new_index < controls.size():
+			return current_control.get_path_to(controls[new_index])
+	
+	return NodePath("")
+
+## Helper: Gets bottom neighbor path with optional wrapping
+func _get_bottom_neighbor_path(current_control: Control, index: int, controls: Array[Control], columns: int, wrap: bool = true) -> NodePath:
+	if columns > 0:
+		# Grid mode
+		var row = index / columns
+		var col = index % columns
+		var new_row = row + 1
+		var total_rows = ceili(float(controls.size()) / columns)
+		
+		if new_row >= total_rows:
+			if wrap:
+				# Wrap to top row, same column
+				new_row = 0
+				var new_index = new_row * columns + col
+				if new_index >= controls.size():
+					new_index = col  # Fallback to first item in column
+				return current_control.get_path_to(controls[new_index])
+			else:
+				return NodePath("")
+		
+		var new_index = new_row * columns + col
+		if new_index >= 0 and new_index < controls.size():
+			return current_control.get_path_to(controls[new_index])
+	else:
+		# Linear mode (single column)
+		var new_index = index + 1
+		if new_index >= controls.size():
+			if wrap:
+				new_index = 0
+			else:
+				return NodePath("")
+		
+		if new_index >= 0 and new_index < controls.size():
+			return current_control.get_path_to(controls[new_index])
+	
+	return NodePath("")
+
+## Detects if controls are arranged horizontally or vertically in linear mode.
+## Returns true if horizontal (controls side-by-side), false if vertical (stacked).
+func _detect_layout_orientation(controls: Array[Control]) -> bool:
+	if controls.size() <= 1:
+		return true  # Default to horizontal for single item
+	
+	# Compare first two controls to determine orientation
+	var pos1 = controls[0].get_global_rect().get_center()
+	var pos2 = controls[1].get_global_rect().get_center()
+	
+	var horizontal_diff = abs(pos2.x - pos1.x)
+	var vertical_diff = abs(pos2.y - pos1.y)
+	
+	# If horizontal difference is greater, it's a horizontal layout
+	# If vertical difference is greater, it's a vertical layout
+	return horizontal_diff > vertical_diff
+
+## Detects grid column count from control layout (heuristic).
+## This attempts to determine the number of columns by checking if controls
+## are arranged horizontally (similar Y positions).
+func _detect_grid_columns(controls: Array[Control]) -> int:
+	if controls.size() <= 1:
+		return 0
+	
+	# Try to detect columns by finding controls on the same Y position
+	var first_pos = controls[0].get_global_rect().get_center()
+	var columns = 1
+	
+	for i in range(1, controls.size()):
+		var pos = controls[i].get_global_rect().get_center()
+		# If Y position is similar, assume same row
+		if abs(pos.y - first_pos.y) < 10.0:  # 10px threshold
+			columns += 1
+		else:
+			break
+	
+	return columns
 
 ## Helper function for debug output: Gets a string representation of focus mode.
 func _get_focus_mode_str(focus_mode: Control.FocusMode) -> String:
