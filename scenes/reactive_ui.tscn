@@ -139,6 +139,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 script = ExtResource("10_6fcom")
 wrap_horizontal = true
+disable_vertical_navigation = null
 
 [node name="DisableActionsToggle" type="CheckBox" parent="VBox/ReactiveHBoxContainer"]
 layout_mode = 2
@@ -183,6 +184,7 @@ layout_mode = 2
 size_flags_vertical = 3
 current_tab = 0
 script = ExtResource("13_p7nh0")
+disable_horizontal_navigation = null
 metadata/_custom_type_script = "uid://dohh71knb8vid"
 
 [node name="Panel" type="Panel" parent="VBox/ReactiveTabContainer"]

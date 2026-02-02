@@ -48,32 +48,34 @@ func _ready() -> void:
 		return
 	
 	call_deferred("_setup_wrapping")
+	call_deferred("_setup_initial_focus")
 
-## Gets the appropriate focus target for a child control.
-##
-## If the child is a reactive container (ReactiveVBoxContainer or ReactiveHBoxContainer),
-## returns the first or last focusable control within it. Otherwise returns the child itself.
-##
-## [param child]: The child control to get focus target for.
-## [param get_first]: If true, returns first focusable; if false, returns last focusable.
-## [return]: The focusable control to link to, or null if none found.
-func _get_focusable_target(child: Control, get_first: bool) -> Control:
-	# Check if child is a reactive container
-	if child is ReactiveVBoxContainer or child is ReactiveHBoxContainer:
-		# Find all focusable controls within the nested container
-		var focusable_controls = NavigationUtils.find_focusable_controls(child, true)
-		if focusable_controls.is_empty():
-			# No focusable controls found, return the container itself
-			return child
-		
-		# Return first or last focusable control
-		if get_first:
-			return focusable_controls[0]
-		else:
-			return focusable_controls[focusable_controls.size() - 1]
-	
-	# Not a reactive container, return the child itself
-	return child
+## Gets sibling targets for vertical navigation.
+func _get_sibling_targets(children: Array[Control], index: int, _get_first: bool) -> Dictionary:
+	var result = {}
+	if index > 0:
+		result.previous = ReactiveBoxContainerBase.get_focusable_target(children[index - 1], false)
+	elif wrap_vertical:
+		result.wrap_previous = ReactiveBoxContainerBase.get_focusable_target(children[children.size() - 1], false)
+	if index < children.size() - 1:
+		result.next = ReactiveBoxContainerBase.get_focusable_target(children[index + 1], true)
+	elif wrap_vertical:
+		result.wrap_next = ReactiveBoxContainerBase.get_focusable_target(children[0], true)
+	return result
+
+## Applies neighbor properties to a direct child for vertical navigation.
+func _apply_neighbors_to_child(child: Control, targets: Dictionary) -> void:
+	var top_target = targets.get("previous") if targets.has("previous") else targets.get("wrap_previous")
+	var bottom_target = targets.get("next") if targets.has("next") else targets.get("wrap_next")
+	ReactiveBoxContainerBase.set_focus_neighbor(child, top_target, "top")
+	ReactiveBoxContainerBase.set_focus_neighbor(child, bottom_target, "bottom")
+
+## Applies neighbor properties to inner first/last of enterable containers for vertical navigation.
+func _apply_neighbors_to_inner(first_in: Control, last_in: Control, targets: Dictionary) -> void:
+	if first_in and targets.has("previous"):
+		ReactiveBoxContainerBase.set_focus_neighbor(first_in, targets.previous, "top")
+	if last_in and targets.has("next"):
+		ReactiveBoxContainerBase.set_focus_neighbor(last_in, targets.next, "bottom")
 
 ## Configures focus neighbor properties for direct children with wrapping support.
 ##
@@ -82,60 +84,13 @@ func _get_focusable_target(child: Control, get_first: bool) -> Control:
 ## wrapping. Nested ReactiveVBoxContainer and ReactiveHBoxContainer automatically
 ## link to their first/last focusable controls.
 func _setup_wrapping() -> void:
-	var children: Array[Control] = []
-	
-	# Use direct children in scene order
-	for child in get_children():
-		if child is Control:
-			children.append(child as Control)
-	
-	# Need at least 2 children for wrapping to make sense
-	if children.size() < 2:
-		return
-	
-	# Set up focus neighbors for vertical navigation
-	for i in range(children.size()):
-		var current = children[i]
-		
-		# Resolve top and bottom targets (previous sibling's last, next sibling's first, or wrap)
-		var top_target: Control = null
-		var bottom_target: Control = null
-		if i > 0:
-			top_target = _get_focusable_target(children[i - 1], false)
-		elif wrap_vertical:
-			top_target = _get_focusable_target(children[children.size() - 1], false)
-		if i < children.size() - 1:
-			bottom_target = _get_focusable_target(children[i + 1], true)
-		elif wrap_vertical:
-			bottom_target = _get_focusable_target(children[0], true)
+	ReactiveBoxContainerBase.setup_wrapping(
+		self,
+		_get_sibling_targets,
+		_apply_neighbors_to_child,
+		_apply_neighbors_to_inner
+	)
 
-		# Set neighbors on the direct child
-		if top_target:
-			current.focus_neighbor_top = current.get_path_to(top_target)
-		else:
-			current.focus_neighbor_top = NodePath("")
-		if bottom_target:
-			current.focus_neighbor_bottom = current.get_path_to(bottom_target)
-		else:
-			current.focus_neighbor_bottom = NodePath("")
-
-		# For enterable containers, also set inner first/last so focus can wrap out to VBox siblings
-		if current is ReactiveVBoxContainer or current is ReactiveHBoxContainer:
-			var first_in := _get_focusable_target(current, true)
-			var last_in := _get_focusable_target(current, false)
-			if first_in and first_in != current and top_target:
-				first_in.focus_neighbor_top = first_in.get_path_to(top_target)
-			if last_in and last_in != current and bottom_target:
-				last_in.focus_neighbor_bottom = last_in.get_path_to(bottom_target)
-	
-	# Set initial focus if focus_on_ready is enabled
-	if focus_on_ready:
-		var initial_focus: Control = null
-		if default_focus and not default_focus.is_empty():
-			initial_focus = get_node_or_null(default_focus) as Control
-		if not initial_focus and not children.is_empty():
-			# Fallback to first child
-			initial_focus = children[0]
-		
-		if initial_focus and initial_focus.focus_mode != Control.FOCUS_NONE:
-			initial_focus.grab_focus()
+## Sets up initial focus if focus_on_ready is enabled.
+func _setup_initial_focus() -> void:
+	ReactiveBoxContainerBase.setup_initial_focus(self, default_focus, focus_on_ready)

@@ -347,34 +347,6 @@ func _get_first_focusable_inside() -> Control:
 			return focusables[0]
 	return null
 
-## Returns true if the event is a "pressed" accept input (Enter, Space, A, or ui_accept action).
-func _is_accept_event(event: InputEvent) -> bool:
-	if event is InputEventAction:
-		var ae = event as InputEventAction
-		return ae.pressed and ae.action == "ui_accept"
-	if event is InputEventKey:
-		var ke = event as InputEventKey
-		return ke.pressed and not ke.echo and ke.keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE]
-	if event is InputEventJoypadButton:
-		var jb = event as InputEventJoypadButton
-		# South = 0 = A (Xbox) / Cross (PlayStation) = accept
-		return jb.pressed and not jb.echo and jb.button_index == 0
-	return false
-
-## Returns true if the event is a "pressed" cancel input (Escape, B, or ui_cancel action).
-func _is_cancel_event(event: InputEvent) -> bool:
-	if event is InputEventAction:
-		var ae = event as InputEventAction
-		return ae.pressed and ae.action == "ui_cancel"
-	if event is InputEventKey:
-		var ke = event as InputEventKey
-		return ke.pressed and not ke.echo and ke.keycode == KEY_ESCAPE
-	if event is InputEventJoypadButton:
-		var jb = event as InputEventJoypadButton
-		# East = 1 = B (Xbox) / Circle (PlayStation) = cancel
-		return jb.pressed and not jb.echo and jb.button_index == 1
-	return false
-
 ## Handles input for entering/exiting TabContainer.
 ## Enter: ui_accept / Enter / Space / A when focused and not entered
 ## Exit: ui_cancel / Escape / B when entered and focus is inside
@@ -383,7 +355,7 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	
 	# Enter on accept (key/action/joypad) when TabContainer has focus and not entered
-	if _is_accept_event(event) and has_focus() and not _entered:
+	if NavigationUtils.is_accept_event(event) and has_focus() and not _entered:
 		var first_inside = _get_first_focusable_inside()
 		if first_inside:
 			_entered = true
@@ -392,7 +364,7 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	
 	# Exit on cancel when entered and focus is inside TabContainer
-	if _is_cancel_event(event) and _entered:
+	if NavigationUtils.is_cancel_event(event) and _entered:
 		var focus_owner = get_viewport().gui_get_focus_owner()
 		if focus_owner and is_ancestor_of(focus_owner):
 			_entered = false
@@ -409,7 +381,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if not _entered:
 		return
 	
-	if _is_cancel_event(event):
+	if NavigationUtils.is_cancel_event(event):
 		var focus_owner = get_viewport().gui_get_focus_owner()
 		if focus_owner and is_ancestor_of(focus_owner):
 			_entered = false
@@ -439,23 +411,5 @@ func _setup_internal_focus() -> void:
 		var tab_focusables = NavigationUtils.find_focusable_controls(current_tab_control, true)
 		focus_chain.append_array(tab_focusables)
 	
-	if focus_chain.size() < 2:
-		return  # Need at least 2 items for a chain
-	
-	# Set up vertical chain (top/bottom neighbors)
-	for i in range(focus_chain.size()):
-		var current = focus_chain[i]
-		
-		# Top neighbor (previous item, or wrap to last)
-		if i > 0:
-			current.focus_neighbor_top = current.get_path_to(focus_chain[i - 1])
-		else:
-			# First item wraps to last
-			current.focus_neighbor_top = current.get_path_to(focus_chain[focus_chain.size() - 1])
-		
-		# Bottom neighbor (next item, or wrap to first)
-		if i < focus_chain.size() - 1:
-			current.focus_neighbor_bottom = current.get_path_to(focus_chain[i + 1])
-		else:
-			# Last item wraps to first
-			current.focus_neighbor_bottom = current.get_path_to(focus_chain[0])
+	# Use NavigationUtils to set up the focus chain with vertical wrapping
+	NavigationUtils.setup_focus_chain(focus_chain, true, false)
