@@ -1,4 +1,4 @@
-[gd_scene load_steps=33 format=3 uid="uid://cdjyj7c3wt0wr"]
+[gd_scene load_steps=30 format=3 uid="uid://cdjyj7c3wt0wr"]
 
 [ext_resource type="Script" uid="uid://st55qiias3cb" path="res://scripts/reactive/state.gd" id="1_w0svl"]
 [ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://scripts/reactive/reactive_line_edit.gd" id="1_xdli5"]
@@ -6,31 +6,17 @@
 [ext_resource type="Resource" uid="uid://cxl14gsie0wgq" path="res://ui_resources/bool.tres" id="3_a2h71"]
 [ext_resource type="Script" uid="uid://3m8buhv674ja" path="res://scripts/reactive/reactive_check_box.gd" id="3_iwetj"]
 [ext_resource type="Script" uid="uid://lv5ixpw5hlvp" path="res://scripts/reactive/reactive_button.gd" id="4_a2h71"]
+[ext_resource type="Script" uid="uid://qcgwkaiou5u3" path="res://scripts/reactive/reactive_vbox_container.gd" id="4_oqryg"]
 [ext_resource type="Script" uid="uid://bgtvl8wqnhhg3" path="res://scripts/utilities/animation_clip.gd" id="4_pf7w8"]
 [ext_resource type="Script" uid="uid://bnno246gj404t" path="res://scripts/utilities/animation_reel.gd" id="5_8mpai"]
 [ext_resource type="Resource" uid="uid://cvu2qm22ysl0y" path="res://ui_resources/text.tres" id="5_iwetj"]
 [ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://scripts/reactive/reactive_slider.gd" id="5_m40cl"]
 [ext_resource type="Script" uid="uid://s6xiov8r6bil" path="res://scripts/reactive/reactive_progress_bar.gd" id="6_krjhy"]
+[ext_resource type="Script" uid="uid://d1gq3iytjbrtk" path="res://scripts/reactive/reactive_hbox_container.gd" id="10_6fcom"]
 [ext_resource type="Resource" uid="uid://dp3cawtta2kbd" path="res://ui_resources/items.tres" id="10_krjhy"]
 [ext_resource type="Script" uid="uid://b75p2so2hr0wd" path="res://scripts/reactive/reactive_option_button.gd" id="10_m40cl"]
 [ext_resource type="Script" uid="uid://dohh71knb8vid" path="res://scripts/reactive/reactive_tab_container.gd" id="13_p7nh0"]
 [ext_resource type="Script" uid="uid://b4ap43ix3i0u0" path="res://scripts/reactive/reactive_rich_text_label.gd" id="15_yjg32"]
-[ext_resource type="Script" uid="uid://8owlseiiorpp" path="res://scripts/reactive/reactive_ui_navigator.gd" id="18_3pbam"]
-[ext_resource type="Script" uid="uid://c1me6yio68gy0" path="res://scripts/reactive/navigation_config.gd" id="19_6fcom"]
-[ext_resource type="Script" uid="uid://c1cwa4vmk0wog" path="res://scripts/reactive/navigation_input_profile.gd" id="20_a72v2"]
-
-[sub_resource type="Resource" id="Resource_hdbj1"]
-script = ExtResource("20_a72v2")
-metadata/_custom_type_script = "uid://c1cwa4vmk0wog"
-
-[sub_resource type="Resource" id="Resource_lkfh0"]
-script = ExtResource("19_6fcom")
-root_control = NodePath("../VBox")
-default_focus = NodePath("../VBox/DisableActionsToggle")
-use_ordered_vertical = false
-respect_custom_neighbors = false
-restrict_to_focusable_children = false
-metadata/_custom_type_script = "uid://c1me6yio68gy0"
 
 [sub_resource type="Resource" id="Resource_a72v2"]
 script = ExtResource("4_pf7w8")
@@ -62,7 +48,7 @@ metadata/_custom_type_script = "uid://bgtvl8wqnhhg3"
 
 [sub_resource type="Resource" id="Resource_yjg32"]
 script = ExtResource("5_8mpai")
-targets = Array[NodePath]([NodePath("../DisableActionsToggle"), NodePath("."), NodePath("../Slider"), NodePath("../Progress")])
+targets = Array[NodePath]([NodePath("../DisableActionsToggle"), NodePath("."), NodePath("../../Slider"), NodePath("../../Progress")])
 animations = Array[ExtResource("4_pf7w8")]([SubResource("Resource_3pbam"), SubResource("Resource_8mpai")])
 trigger = 2
 execution_mode = 1
@@ -121,14 +107,6 @@ offset_bottom = -16.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="ReactiveUINavigator" type="Node" parent="."]
-script = ExtResource("18_3pbam")
-debug_navigation = true
-mode = 1
-input_profile = SubResource("Resource_hdbj1")
-nav_config = SubResource("Resource_lkfh0")
-metadata/_custom_type_script = "uid://8owlseiiorpp"
-
 [node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
@@ -137,6 +115,9 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 12
+script = ExtResource("4_oqryg")
+wrap_vertical = true
+focus_on_ready = true
 
 [node name="ReactiveOptionButton" type="OptionButton" parent="VBox"]
 layout_mode = 2
@@ -153,7 +134,13 @@ disabled_state = ExtResource("3_a2h71")
 animations = Array[ExtResource("5_8mpai")]([SubResource("Resource_qynsm")])
 metadata/_custom_type_script = "uid://b75p2so2hr0wd"
 
-[node name="DisableActionsToggle" type="CheckBox" parent="VBox"]
+[node name="ReactiveHBoxContainer" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+script = ExtResource("10_6fcom")
+wrap_horizontal = true
+
+[node name="DisableActionsToggle" type="CheckBox" parent="VBox/ReactiveHBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Disable actions"
@@ -161,7 +148,7 @@ script = ExtResource("3_iwetj")
 checked_state = ExtResource("3_a2h71")
 metadata/_custom_type_script = "uid://3m8buhv674ja"
 
-[node name="ReactiveButton" type="Button" parent="VBox"]
+[node name="ReactiveButton" type="Button" parent="VBox/ReactiveHBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -233,17 +220,18 @@ text_state = ExtResource("5_iwetj")
 animations = Array[ExtResource("5_8mpai")]([SubResource("Resource_oqryg")])
 metadata/_custom_type_script = "uid://cgoqls6mehlqv"
 
-[node name="ReactiveRichTextLabel" type="RichTextLabel" parent="VBox/ReactiveTabContainer/Panel"]
+[node name="Panel2" type="Panel" parent="VBox/ReactiveTabContainer"]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 1
+
+[node name="ReactiveRichTextLabel" type="RichTextLabel" parent="VBox/ReactiveTabContainer/Panel2"]
 layout_mode = 0
+offset_top = 31.0
 offset_right = 1119.0
-offset_bottom = 40.0
+offset_bottom = 71.0
 bbcode_enabled = true
 script = ExtResource("15_yjg32")
 text_state = ExtResource("5_iwetj")
 animations = Array[ExtResource("5_8mpai")]([SubResource("Resource_dlatp")])
 metadata/_custom_type_script = "uid://b4ap43ix3i0u0"
-
-[node name="Panel2" type="Panel" parent="VBox/ReactiveTabContainer"]
-visible = false
-layout_mode = 2
-metadata/_tab_index = 1

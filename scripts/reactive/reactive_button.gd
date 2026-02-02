@@ -60,6 +60,13 @@ func _validate_animation_reels() -> void:
 	if result.trigger_map.get(AnimationReel.Trigger.HOVER_EXIT, false):
 		if not mouse_exited.is_connected(_on_trigger_hover_exit):
 			mouse_exited.connect(_on_trigger_hover_exit)
+	# Connect focus signals for navigation-driven hover animations
+	var has_hover_triggers = result.trigger_map.get(AnimationReel.Trigger.HOVER_ENTER, false) or result.trigger_map.get(AnimationReel.Trigger.HOVER_EXIT, false)
+	if has_hover_triggers:
+		if not focus_entered.is_connected(_on_navigation_focus_entered):
+			focus_entered.connect(_on_navigation_focus_entered)
+		if not focus_exited.is_connected(_on_navigation_focus_exited):
+			focus_exited.connect(_on_navigation_focus_exited)
 	if result.trigger_map.get(AnimationReel.Trigger.TOGGLED_ON, false) or result.trigger_map.get(AnimationReel.Trigger.TOGGLED_OFF, false):
 		if not toggled.is_connected(_on_trigger_toggled):
 			toggled.connect(_on_trigger_toggled)
@@ -75,6 +82,35 @@ func _on_trigger_hover_enter() -> void:
 ## Handles HOVER_EXIT trigger animations.
 func _on_trigger_hover_exit() -> void:
 	AnimationReel.trigger_matching(self, animations, AnimationReel.Trigger.HOVER_EXIT)
+
+## Handles navigation-driven focus changes to trigger hover animations.
+func _on_navigation_focus_entered() -> void:
+	# Skip animations during initialization
+	if _helper.is_initializing():
+		return
+
+	# Only trigger hover animations if this focus change was caused by navigation (not mouse)
+	const META_NAVIGATION_FOCUS = "_navigation_focus_change"
+	if has_meta(META_NAVIGATION_FOCUS):
+		# Remove the meta flag immediately to avoid lingering state
+		remove_meta(META_NAVIGATION_FOCUS)
+		# Mark that navigation hover is active
+		set_meta("_nav_hover_active", true)
+		# Trigger hover enter animation
+		AnimationReel.trigger_matching(self, animations, AnimationReel.Trigger.HOVER_ENTER)
+
+## Handles navigation-driven focus loss to trigger hover exit animations.
+func _on_navigation_focus_exited() -> void:
+	# Skip animations during initialization
+	if _helper.is_initializing():
+		return
+
+	# Only trigger hover exit if navigation hover was active
+	if has_meta("_nav_hover_active"):
+		# Clear the active flag
+		remove_meta("_nav_hover_active")
+		# Trigger hover exit animation
+		AnimationReel.trigger_matching(self, animations, AnimationReel.Trigger.HOVER_EXIT)
 
 ## Finishes initialization, allowing animations to trigger on toggle changes.
 func _finish_initialization() -> void:
@@ -125,6 +161,7 @@ func _on_disabled_state_changed(new_value: Variant, _old_value: Variant) -> void
 	if _helper.is_initializing():
 		return
 	_helper.update_property_if_changed("disabled", new_value, func(x): return bool(x))
+	_helper.sync_focus_mode_to_disabled()
 
 func _exit_tree() -> void:
 	# Clean up any unified snapshots when the control is freed

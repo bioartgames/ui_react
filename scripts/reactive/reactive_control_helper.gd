@@ -7,7 +7,11 @@
 ## - Property update synchronization to prevent infinite loops
 ## - Initialization state tracking
 ## - Type-safe property updates with conversion functions
+## - Syncing focus_mode so disabled controls are not focusable
 class_name ReactiveControlHelper
+
+## Storage for focus_mode when using static sync (instance_id -> focus_mode).
+static var _stored_focus_modes: Dictionary = {}
 
 ## Reference to the control this helper manages.
 var _owner: Control
@@ -15,6 +19,8 @@ var _owner: Control
 var _updating: bool = false
 ## Flag indicating if the control is still in its initialization phase.
 var _is_initializing: bool = true
+## Stored focus_mode when the control was last enabled (-1 means not stored).
+var _focus_mode_when_enabled: int = -1
 
 ## Creates a new ReactiveControlHelper for the specified control.
 ## [param owner]: The Control node this helper will manage.
@@ -75,3 +81,39 @@ func finish_initialization() -> void:
 ## [return]: true if still initializing, false if initialization is complete.
 func is_initializing() -> bool:
 	return _is_initializing
+
+## Syncs the owner's focus_mode to its disabled state: when disabled, sets focus_mode to
+## FOCUS_NONE so the control cannot be focused; when enabled, restores the previous focus_mode.
+## Call this after updating the owner's disabled property (e.g. from disabled_state).
+func sync_focus_mode_to_disabled() -> void:
+	if _owner.disabled:
+		if _focus_mode_when_enabled == -1:
+			_focus_mode_when_enabled = _owner.focus_mode
+		_owner.focus_mode = Control.FOCUS_NONE
+	else:
+		if _focus_mode_when_enabled != -1:
+			_owner.focus_mode = _focus_mode_when_enabled as Control.FocusMode
+			_focus_mode_when_enabled = -1
+		else:
+			_owner.focus_mode = Control.FOCUS_ALL
+
+## Static variant: syncs [param control]'s focus_mode to its disabled state.
+## Use for controls that do not have a ReactiveControlHelper instance (e.g. ReactiveCheckBox, ReactiveOptionButton).
+## Call after setting the control's disabled property.
+static func sync_focus_mode_to_disabled_static(control: Control) -> void:
+	var id = control.get_instance_id()
+	if control.disabled:
+		if not _stored_focus_modes.has(id):
+			_stored_focus_modes[id] = control.focus_mode
+		control.focus_mode = Control.FOCUS_NONE
+	else:
+		if _stored_focus_modes.has(id):
+			control.focus_mode = _stored_focus_modes[id] as Control.FocusMode
+			_stored_focus_modes.erase(id)
+		else:
+			control.focus_mode = Control.FOCUS_ALL
+
+## Removes stored focus_mode for [param control] from the static cache.
+## Call from _exit_tree for controls that use sync_focus_mode_to_disabled_static, so freed nodes do not leak entries.
+static func release_stored_focus_mode(control: Control) -> void:
+	_stored_focus_modes.erase(control.get_instance_id())

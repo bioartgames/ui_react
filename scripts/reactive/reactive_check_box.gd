@@ -60,6 +60,12 @@ func _validate_animation_reels() -> void:
 	if has_hover_exit_targets:
 		if not mouse_exited.is_connected(_on_trigger_hover_exit):
 			mouse_exited.connect(_on_trigger_hover_exit)
+	# Connect focus signals for navigation-driven hover animations
+	if has_hover_enter_targets or has_hover_exit_targets:
+		if not focus_entered.is_connected(_on_navigation_focus_entered):
+			focus_entered.connect(_on_navigation_focus_entered)
+		if not focus_exited.is_connected(_on_navigation_focus_exited):
+			focus_exited.connect(_on_navigation_focus_exited)
 
 ## Finishes initialization, allowing animations to trigger on toggle changes.
 func _finish_initialization() -> void:
@@ -83,6 +89,35 @@ func _on_trigger_hover_enter() -> void:
 ## Handles HOVER_EXIT trigger animations.
 func _on_trigger_hover_exit() -> void:
 	_trigger_animations(AnimationReel.Trigger.HOVER_EXIT)
+
+## Handles navigation-driven focus changes to trigger hover animations.
+func _on_navigation_focus_entered() -> void:
+	# Skip animations during initialization
+	if _is_initializing:
+		return
+
+	# Only trigger hover animations if this focus change was caused by navigation (not mouse)
+	const META_NAVIGATION_FOCUS = "_navigation_focus_change"
+	if has_meta(META_NAVIGATION_FOCUS):
+		# Remove the meta flag immediately to avoid lingering state
+		remove_meta(META_NAVIGATION_FOCUS)
+		# Mark that navigation hover is active
+		set_meta("_nav_hover_active", true)
+		# Trigger hover enter animation
+		_trigger_animations(AnimationReel.Trigger.HOVER_ENTER)
+
+## Handles navigation-driven focus loss to trigger hover exit animations.
+func _on_navigation_focus_exited() -> void:
+	# Skip animations during initialization
+	if _is_initializing:
+		return
+
+	# Only trigger hover exit if navigation hover was active
+	if has_meta("_nav_hover_active"):
+		# Clear the active flag
+		remove_meta("_nav_hover_active")
+		# Trigger hover exit animation
+		_trigger_animations(AnimationReel.Trigger.HOVER_EXIT)
 
 ## Triggers animations for reels matching the specified trigger type.
 ## [param trigger_type]: The trigger type to match.
@@ -125,8 +160,12 @@ func _on_disabled_state_changed(new_value: Variant, _old_value: Variant) -> void
 	if disabled == desired:
 		return
 	disabled = desired
+	ReactiveControlHelper.sync_focus_mode_to_disabled_static(self)
 
 ## Gets the control type hint for this reactive control.
 ## Used to filter available triggers in the Inspector.
 func _get_control_type_hint() -> AnimationReel.ControlTypeHint:
 	return AnimationReel.ControlTypeHint.BUTTON
+
+func _exit_tree() -> void:
+	ReactiveControlHelper.release_stored_focus_mode(self)

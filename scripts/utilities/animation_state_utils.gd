@@ -151,7 +151,8 @@ static func animate_reset_all(source_node: Node, target: Control, duration: floa
 
 	var snapshot = _get_unified_snapshot(target)
 	if not snapshot:
-		push_warning("AnimationStateUtils.animate_reset_all(): Unified snapshot exists but is null for target '%s'" % target.name)
+		# No snapshot exists - control was never animated, so nothing to reset
+		# This is expected behavior, not an error
 		return Signal()
 
 	# Create animation to reset to original state

@@ -131,10 +131,27 @@ func _on_focus_entered() -> void:
 	if animations.size() > 0:
 		_on_trigger_focus_entered()
 
+	# Also trigger HOVER_ENTER if this focus change was caused by navigation
+	const META_NAVIGATION_FOCUS = "_navigation_focus_change"
+	if has_meta(META_NAVIGATION_FOCUS):
+		# Remove the meta flag immediately to avoid lingering state
+		remove_meta(META_NAVIGATION_FOCUS)
+		# Mark that navigation hover is active
+		set_meta("_nav_hover_active", true)
+		# Trigger hover enter animation
+		_on_trigger_hover_enter()
+
 func _on_focus_exited() -> void:
 	# Trigger animations if configured
 	if animations.size() > 0:
 		_on_trigger_focus_exited()
+
+	# Also trigger HOVER_EXIT if navigation hover was active
+	if has_meta("_nav_hover_active"):
+		# Clear the active flag
+		remove_meta("_nav_hover_active")
+		# Trigger hover exit animation
+		_on_trigger_hover_exit()
 
 func _on_value_state_changed(new_value: Variant, _old_value: Variant) -> void:
 	if _updating:

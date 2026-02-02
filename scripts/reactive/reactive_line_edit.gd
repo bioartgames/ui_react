@@ -76,11 +76,30 @@ func _on_trigger_text_entered(_text: String) -> void:
 
 ## Handles FOCUS_ENTERED trigger animations.
 func _on_focus_entered() -> void:
+	# Trigger FOCUS_ENTERED animations
 	_trigger_animations(AnimationReel.Trigger.FOCUS_ENTERED)
+
+	# Also trigger HOVER_ENTER if this focus change was caused by navigation
+	const META_NAVIGATION_FOCUS = "_navigation_focus_change"
+	if has_meta(META_NAVIGATION_FOCUS):
+		# Remove the meta flag immediately to avoid lingering state
+		remove_meta(META_NAVIGATION_FOCUS)
+		# Mark that navigation hover is active
+		set_meta("_nav_hover_active", true)
+		# Trigger hover enter animation
+		_trigger_animations(AnimationReel.Trigger.HOVER_ENTER)
 
 ## Handles FOCUS_EXITED trigger animations.
 func _on_focus_exited() -> void:
+	# Trigger FOCUS_EXITED animations
 	_trigger_animations(AnimationReel.Trigger.FOCUS_EXITED)
+
+	# Also trigger HOVER_EXIT if navigation hover was active
+	if has_meta("_nav_hover_active"):
+		# Clear the active flag
+		remove_meta("_nav_hover_active")
+		# Trigger hover exit animation
+		_trigger_animations(AnimationReel.Trigger.HOVER_EXIT)
 
 ## Handles HOVER_ENTER trigger animations.
 func _on_trigger_hover_enter() -> void:

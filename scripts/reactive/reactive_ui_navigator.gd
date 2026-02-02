@@ -41,6 +41,10 @@ enum NavigationMode {
 	BOTH            ## Reserved for the combined bridge mode described in the advanced features phase
 }
 
+## Metadata key used to mark controls that received focus via navigation (not mouse).
+## This allows reactive controls to trigger hover animations only on navigation-driven focus changes.
+const META_NAVIGATION_FOCUS = "_navigation_focus_change"
+
 var mode: NavigationMode = NavigationMode.INPUT_MAP:
 	set(value):
 		mode = value
@@ -84,8 +88,13 @@ func _ready() -> void:
 
 	# Set up focus neighbors for wrapping navigation
 	# Works with both ordered_controls (custom order) and tree order (when ordered_controls is empty)
+	# This is used by both INPUT_MAP (Godot's built-in navigation) and STATE_DRIVEN (custom navigation)
 	if nav_config:
 		setup_focus_neighbors()
+		
+		# Connect to focus signals to track focus changes for INPUT_MAP mode
+		if mode == NavigationMode.INPUT_MAP or mode == NavigationMode.BOTH:
+			_connect_focus_signals()
 
 	# If focus_on_ready is true, set initial focus
 	if nav_config and nav_config.focus_on_ready:
@@ -253,13 +262,21 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not _is_ready or mode == NavigationMode.NONE:
 		return
 
-	# Handle INPUT_MAP and BOTH modes (BOTH mode bridges InputMap to State bundle)
-	if (mode == NavigationMode.INPUT_MAP or mode == NavigationMode.BOTH) and input_profile:
-		_handle_input_map_navigation(event)
+	# For INPUT_MAP mode, let Godot's built-in navigation handle directional input automatically
+	# We only intercept submit/cancel actions and STATE_DRIVEN mode
+	if mode == NavigationMode.INPUT_MAP and input_profile:
+		_handle_submit_cancel_only(event)
+	elif mode == NavigationMode.BOTH and input_profile:
+		# BOTH mode: handle submit/cancel, but let Godot handle directional navigation
+		_handle_submit_cancel_only(event)
 
 func _process(_delta: float) -> void:
 	if not _is_ready or mode == NavigationMode.NONE:
 		return
+
+	# For INPUT_MAP mode, track focus changes from Godot's built-in navigation
+	if mode == NavigationMode.INPUT_MAP or mode == NavigationMode.BOTH:
+		_track_focus_changes()
 
 	# Check if current focus owner became invisible and re-home focus if needed
 	_check_focus_visibility()
@@ -268,56 +285,35 @@ func _process(_delta: float) -> void:
 	if mode == NavigationMode.STATE_DRIVEN or mode == NavigationMode.BOTH:
 		_process_state_navigation()
 
-## Handles InputMap-based navigation input.
-func _handle_input_map_navigation(event: InputEvent) -> void:
+## Handles only submit/cancel actions for INPUT_MAP mode.
+## Directional navigation is handled by Godot's built-in system using focus_neighbor_* properties.
+func _handle_submit_cancel_only(event: InputEvent) -> void:
 	if not input_profile:
 		return
 
-	# Handle digital actions first
-	var action_pressed := ""
-	var is_just_pressed := false
-
-	# Check if this event corresponds to any configured navigation action
-	for action in [input_profile.action_up, input_profile.action_down,
-				   input_profile.action_left, input_profile.action_right,
-				   input_profile.action_accept, input_profile.action_cancel]:
-		if event.is_action(action):
-			action_pressed = action
-			is_just_pressed = event.is_pressed() and not event.is_echo()
-			break
-
-	if not action_pressed.is_empty():
-		# Handle repeat logic for directional inputs
-		if action_pressed in [input_profile.action_up, input_profile.action_down,
-							 input_profile.action_left, input_profile.action_right]:
-			_handle_directional_input(action_pressed, is_just_pressed)
-		# Handle instant actions (submit/cancel)
-		elif action_pressed == input_profile.action_accept and is_just_pressed:
-			_queue_submit()
-			submit_fired.emit(_current_focus_owner)
-			# Mirror to state bundle in BOTH mode
-			if mode == NavigationMode.BOTH and nav_states and nav_states.submit:
-				nav_states.submit.value = true
-				# Reset after brief delay to simulate button press
-				await get_tree().create_timer(0.1).timeout
-				if nav_states.submit:  # Check still exists
-					nav_states.submit.value = false
-		elif action_pressed == input_profile.action_cancel and is_just_pressed:
-			_queue_cancel()
-			cancel_fired.emit(_current_focus_owner)
-			# Mirror to state bundle in BOTH mode
-			if mode == NavigationMode.BOTH and nav_states and nav_states.cancel:
-				nav_states.cancel.value = true
-				# Reset after brief delay to simulate button press
-				await get_tree().create_timer(0.1).timeout
-				if nav_states.cancel:  # Check still exists
-					nav_states.cancel.value = false
-		return
-
-	# Handle analog input (gamepad sticks)
-	if event is InputEventJoypadMotion:
-		var joy_event = event as InputEventJoypadMotion
-		_handle_analog_input(joy_event)
+	# Only handle submit/cancel - let Godot handle directional navigation
+	if event.is_action(input_profile.action_accept) and event.is_pressed() and not event.is_echo():
+		_queue_submit()
+		submit_fired.emit(_current_focus_owner)
+		# Mirror to state bundle in BOTH mode
+		if mode == NavigationMode.BOTH and nav_states and nav_states.submit:
+			nav_states.submit.value = true
+			# Reset after brief delay to simulate button press
+			await get_tree().create_timer(0.1).timeout
+			if nav_states.submit:  # Check still exists
+				nav_states.submit.value = false
+		get_viewport().set_input_as_handled()
+	elif event.is_action(input_profile.action_cancel) and event.is_pressed() and not event.is_echo():
+		_queue_cancel()
+		cancel_fired.emit(_current_focus_owner)
+		# Mirror to state bundle in BOTH mode
+		if mode == NavigationMode.BOTH and nav_states and nav_states.cancel:
+			nav_states.cancel.value = true
+			# Reset after brief delay to simulate button press
+			await get_tree().create_timer(0.1).timeout
+			if nav_states.cancel:  # Check still exists
+				nav_states.cancel.value = false
+		get_viewport().set_input_as_handled()
 
 ## Handles directional input with repeat logic.
 func _handle_directional_input(action: StringName, just_pressed: bool) -> void:
@@ -495,6 +491,8 @@ func _check_focus_visibility() -> void:
 	if not _is_control_visible(_current_focus_owner):
 		var new_focus = _find_replacement_focus()
 		if new_focus:
+			# Mark this as navigation-driven focus so controls can trigger hover animations
+			new_focus.set_meta(META_NAVIGATION_FOCUS, true)
 			new_focus.grab_focus()
 			_update_current_focus_owner(new_focus)
 		else:
@@ -522,6 +520,38 @@ func _update_current_focus_owner(new_focus: Control) -> void:
 	_current_focus_owner = new_focus
 	if old_focus != new_focus:
 		focus_changed.emit(old_focus, new_focus)
+
+## Tracks focus changes from Godot's built-in navigation system (for INPUT_MAP mode).
+func _track_focus_changes() -> void:
+	var current_focus = get_viewport().gui_get_focus_owner()
+	if current_focus != _current_focus_owner:
+		# Focus changed via Godot's built-in navigation
+		if current_focus is Control:
+			_update_current_focus_owner(current_focus as Control)
+		else:
+			_current_focus_owner = null
+
+## Connects to focus signals on all focusable controls to track focus changes.
+func _connect_focus_signals() -> void:
+	if not nav_config:
+		return
+	
+	var root = get_node(nav_config.root_control) if nav_config.root_control else get_viewport()
+	if not root:
+		return
+	
+	# Get all focusable controls
+	var controls = _get_focusable_candidates()
+	
+	# Connect focus_entered signal to track focus changes
+	for control in controls:
+		if not control.focus_entered.is_connected(_on_control_focus_entered):
+			control.focus_entered.connect(_on_control_focus_entered.bind(control))
+
+## Called when a control receives focus (for INPUT_MAP mode tracking).
+func _on_control_focus_entered(control: Control) -> void:
+	if control != _current_focus_owner:
+		_update_current_focus_owner(control)
 
 ## Queues a movement command.
 func _queue_move(direction: Vector2) -> void:
@@ -566,6 +596,8 @@ func _process_move_command(direction: Vector2) -> void:
 		if next_control.focus_mode != Control.FOCUS_NONE:
 			if debug_navigation:
 				print("[NAV DEBUG] ✓ Moving focus to: %s" % _get_control_name(next_control))
+			# Mark this as navigation-driven focus so controls can trigger hover animations
+			next_control.set_meta(META_NAVIGATION_FOCUS, true)
 		next_control.grab_focus()
 		_update_current_focus_owner(next_control)
 	else:
@@ -601,6 +633,8 @@ func _process_cancel_command() -> void:
 	if nav_config and nav_config.default_focus:
 		var default_control = get_node(nav_config.default_focus) as Control
 		if default_control and default_control != _current_focus_owner:
+			# Mark this as navigation-driven focus so controls can trigger hover animations
+			default_control.set_meta(META_NAVIGATION_FOCUS, true)
 			default_control.grab_focus()
 			_update_current_focus_owner(default_control)
 
@@ -670,23 +704,23 @@ func _find_next_focusable_control(direction: Vector2) -> Control:
 	if not nav_config.ordered_controls.is_empty():
 		if debug_navigation:
 			print("[NAV DEBUG] Using ordered_controls path")
-		var result = _find_next_in_ordered_list(direction)
+		var ordered_result = _find_next_in_ordered_list(direction)
 		if debug_navigation:
-			if result:
-				print("[NAV DEBUG] Ordered list returned: %s (focus_mode: %s)" % [_get_control_name(result), _get_focus_mode_str(result.focus_mode)])
+			if ordered_result:
+				print("[NAV DEBUG] Ordered list returned: %s (focus_mode: %s)" % [_get_control_name(ordered_result), _get_focus_mode_str(ordered_result.focus_mode)])
 			else:
 				print("[NAV DEBUG] Ordered list returned: null")
 		
 		# If manual navigation returned null, check focus neighbors again as fallback
-		if not result:
-			result = _find_custom_neighbor_target(direction)
-			if result:
+		if not ordered_result:
+			ordered_result = _find_custom_neighbor_target(direction)
+			if ordered_result:
 				if debug_navigation:
-					print("[NAV DEBUG] ✓ Fallback to focus neighbor: %s" % _get_control_name(result))
+					print("[NAV DEBUG] ✓ Fallback to focus neighbor: %s" % _get_control_name(ordered_result))
 		
 		# Validate focusability before returning
-		if result and result.focus_mode != Control.FOCUS_NONE:
-			return result
+		if ordered_result and ordered_result.focus_mode != Control.FOCUS_NONE:
+			return ordered_result
 
 	# Otherwise use directional heuristics (need candidates)
 	var candidates = _get_focusable_candidates()
@@ -839,7 +873,7 @@ func _find_focusable_in_node(node: Node, candidates: Array[Control]) -> void:
 			_find_focusable_in_node(child, candidates)
 
 ## Helper: Finds the next focusable control in ordered_controls starting from an index, with wrapping.
-func _find_next_focusable_in_ordered_list(start_index: int, direction_int: int, wrap: bool) -> Control:
+func _find_next_focusable_in_ordered_list(start_index: int, direction_int: int, should_wrap: bool) -> Control:
 	if nav_config.ordered_controls.is_empty():
 		if debug_navigation:
 			print("[NAV DEBUG] ordered_controls is empty, returning null")
@@ -864,7 +898,7 @@ func _find_next_focusable_in_ordered_list(start_index: int, direction_int: int, 
 		print("[NAV DEBUG] === Starting ordered list search ===")
 		print("[NAV DEBUG] Start index: %d" % start_index)
 		print("[NAV DEBUG] Direction: %s (direction_int: %d)" % [direction_str, direction_int])
-		print("[NAV DEBUG] Wrapping enabled: %s" % wrap)
+		print("[NAV DEBUG] Wrapping enabled: %s" % should_wrap)
 		print("[NAV DEBUG] Total controls in list: %d" % size)
 		print("[NAV DEBUG] First focusable index: %d, Last focusable index: %d" % [first_focusable_index, last_focusable_index])
 		print("[NAV DEBUG] Current focus: %s (index %d)" % [_get_control_name(_current_focus_owner), start_index])
@@ -883,7 +917,7 @@ func _find_next_focusable_in_ordered_list(start_index: int, direction_int: int, 
 	elif direction_int > 0:  # Going down/right
 		at_boundary = (start_index == last_focusable_index)
 	
-	if at_boundary and wrap:
+	if at_boundary and should_wrap:
 		if debug_navigation:
 			print("[NAV DEBUG] At boundary of focusable items, wrapping immediately...")
 		# Wrap to the opposite end (last focusable for up, first focusable for down)
@@ -980,23 +1014,23 @@ func _find_next_in_ordered_list(direction: Vector2) -> Control:
 
 	# Determine direction and wrapping
 	var direction_int = 0
-	var wrap = false
+	var should_wrap = false
 	var direction_name = ""
 	if direction.y < 0:  # Up
 		direction_int = -1
-		wrap = nav_config.wrap_vertical
+		should_wrap = nav_config.wrap_vertical
 		direction_name = "UP"
 	elif direction.y > 0:  # Down
 		direction_int = 1
-		wrap = nav_config.wrap_vertical
+		should_wrap = nav_config.wrap_vertical
 		direction_name = "DOWN"
 	elif direction.x < 0:  # Left
 		direction_int = -1
-		wrap = nav_config.wrap_horizontal
+		should_wrap = nav_config.wrap_horizontal
 		direction_name = "LEFT"
 	elif direction.x > 0:  # Right
 		direction_int = 1
-		wrap = nav_config.wrap_horizontal
+		should_wrap = nav_config.wrap_horizontal
 		direction_name = "RIGHT"
 	
 	if debug_navigation:
@@ -1009,7 +1043,7 @@ func _find_next_in_ordered_list(direction: Vector2) -> Control:
 		print("[NAV DEBUG] ========================================")
 
 	# Use helper to find next focusable control
-	return _find_next_focusable_in_ordered_list(current_index, direction_int, wrap)
+	return _find_next_focusable_in_ordered_list(current_index, direction_int, should_wrap)
 
 ## Finds next control by position-based heuristics.
 func _find_next_by_position(direction: Vector2, candidates: Array[Control]) -> Control:
@@ -1198,8 +1232,29 @@ func setup_focus_neighbors() -> void:
 		# Vertical neighbors - only set if layout is vertical or grid
 		if columns > 0 or not is_horizontal_layout:
 			if nav_config.wrap_vertical:
-				control.focus_neighbor_top = _get_top_neighbor_path(control, i, controls, columns)
-				control.focus_neighbor_bottom = _get_bottom_neighbor_path(control, i, controls, columns)
+				var top_path = _get_top_neighbor_path(control, i, controls, columns)
+				var bottom_path = _get_bottom_neighbor_path(control, i, controls, columns)
+				control.focus_neighbor_top = top_path
+				control.focus_neighbor_bottom = bottom_path
+				
+				# Debug: Verify paths are valid and wrapping is set up correctly
+				if debug_navigation:
+					var top_valid = top_path != null and not top_path.is_empty() and control.get_node_or_null(top_path) != null
+					var bottom_valid = bottom_path != null and not bottom_path.is_empty() and control.get_node_or_null(bottom_path) != null
+					print("[NAV DEBUG] Control %d (%s):" % [i, _get_control_name(control)])
+					print("[NAV DEBUG]   focus_neighbor_top: %s (valid: %s)" % [top_path, top_valid])
+					print("[NAV DEBUG]   focus_neighbor_bottom: %s (valid: %s)" % [bottom_path, bottom_valid])
+					
+					# Special debug for first and last to verify wrapping
+					if i == 0:
+						print("[NAV DEBUG]   FIRST CONTROL - top should wrap to last")
+					if i == controls.size() - 1:
+						print("[NAV DEBUG]   LAST CONTROL - bottom should wrap to first")
+						var first_control = controls[0]
+						var expected_path = control.get_path_to(first_control)
+						print("[NAV DEBUG]   Expected bottom path to first: %s" % expected_path)
+						print("[NAV DEBUG]   Actual bottom path: %s" % bottom_path)
+						print("[NAV DEBUG]   Paths match: %s" % (bottom_path == expected_path))
 			else:
 				# No wrapping
 				control.focus_neighbor_top = _get_top_neighbor_path(control, i, controls, columns, false)
@@ -1208,17 +1263,36 @@ func setup_focus_neighbors() -> void:
 			# Horizontal layout - don't set vertical neighbors (no adjacent controls up/down)
 			control.focus_neighbor_top = NodePath("")
 			control.focus_neighbor_bottom = NodePath("")
+	
+	# Summary debug output
+	if debug_navigation:
+		print("[NAV DEBUG] ========================================")
+		print("[NAV DEBUG] Focus neighbors setup complete")
+		print("[NAV DEBUG] Total controls: %d" % controls.size())
+		print("[NAV DEBUG] Layout: %s" % ("horizontal" if is_horizontal_layout else "vertical"))
+		print("[NAV DEBUG] Grid columns: %d" % columns)
+		print("[NAV DEBUG] Wrap vertical: %s" % nav_config.wrap_vertical)
+		print("[NAV DEBUG] Wrap horizontal: %s" % nav_config.wrap_horizontal)
+		if controls.size() > 1:
+			var first = controls[0]
+			var last = controls[controls.size() - 1]
+			print("[NAV DEBUG] First control: %s" % _get_control_name(first))
+			print("[NAV DEBUG] Last control: %s" % _get_control_name(last))
+			if nav_config.wrap_vertical and (columns > 0 or not is_horizontal_layout):
+				print("[NAV DEBUG] First.focus_neighbor_top: %s" % first.focus_neighbor_top)
+				print("[NAV DEBUG] Last.focus_neighbor_bottom: %s" % last.focus_neighbor_bottom)
+		print("[NAV DEBUG] ========================================")
 
 ## Helper: Gets left neighbor path with optional wrapping
-func _get_left_neighbor_path(current_control: Control, index: int, controls: Array[Control], columns: int, wrap: bool = true) -> NodePath:
+func _get_left_neighbor_path(current_control: Control, index: int, controls: Array[Control], columns: int, should_wrap: bool = true) -> NodePath:
 	if columns > 0:
 		# Grid mode
-		var row = index / columns
+		var row = int(index / float(columns))
 		var col = index % columns
 		var new_col = col - 1
 		
 		if new_col < 0:
-			if wrap:
+			if should_wrap:
 				new_col = columns - 1  # Wrap to right side
 			else:
 				return NodePath("")  # No neighbor
@@ -1230,7 +1304,7 @@ func _get_left_neighbor_path(current_control: Control, index: int, controls: Arr
 		# Linear mode
 		var new_index = index - 1
 		if new_index < 0:
-			if wrap:
+			if should_wrap:
 				new_index = controls.size() - 1  # Wrap to end
 			else:
 				return NodePath("")
@@ -1241,15 +1315,15 @@ func _get_left_neighbor_path(current_control: Control, index: int, controls: Arr
 	return NodePath("")
 
 ## Helper: Gets right neighbor path with optional wrapping
-func _get_right_neighbor_path(current_control: Control, index: int, controls: Array[Control], columns: int, wrap: bool = true) -> NodePath:
+func _get_right_neighbor_path(current_control: Control, index: int, controls: Array[Control], columns: int, should_wrap: bool = true) -> NodePath:
 	if columns > 0:
 		# Grid mode
-		var row = index / columns
+		var row = int(index / float(columns))
 		var col = index % columns
 		var new_col = col + 1
 		
 		if new_col >= columns:
-			if wrap:
+			if should_wrap:
 				new_col = 0  # Wrap to left side
 			else:
 				return NodePath("")
@@ -1261,7 +1335,7 @@ func _get_right_neighbor_path(current_control: Control, index: int, controls: Ar
 		# Linear mode
 		var new_index = index + 1
 		if new_index >= controls.size():
-			if wrap:
+			if should_wrap:
 				new_index = 0  # Wrap to beginning
 			else:
 				return NodePath("")
@@ -1272,23 +1346,23 @@ func _get_right_neighbor_path(current_control: Control, index: int, controls: Ar
 	return NodePath("")
 
 ## Helper: Gets top neighbor path with optional wrapping
-func _get_top_neighbor_path(current_control: Control, index: int, controls: Array[Control], columns: int, wrap: bool = true) -> NodePath:
+func _get_top_neighbor_path(current_control: Control, index: int, controls: Array[Control], columns: int, should_wrap: bool = true) -> NodePath:
 	if columns > 0:
 		# Grid mode
-		var row = index / columns
+		var row = int(index / float(columns))
 		var col = index % columns
 		var new_row = row - 1
 		
 		if new_row < 0:
-			if wrap:
+			if should_wrap:
 				# Wrap to bottom row, same column
 				var total_rows = ceili(float(controls.size()) / columns)
 				new_row = total_rows - 1
 				# Adjust for last row which might not be full
-				var new_index = new_row * columns + col
-				if new_index >= controls.size():
-					new_index = controls.size() - 1
-				return current_control.get_path_to(controls[new_index])
+				var wrapped_index = new_row * columns + col
+				if wrapped_index >= controls.size():
+					wrapped_index = controls.size() - 1
+				return current_control.get_path_to(controls[wrapped_index])
 			else:
 				return NodePath("")
 		
@@ -1299,7 +1373,7 @@ func _get_top_neighbor_path(current_control: Control, index: int, controls: Arra
 		# Linear mode (single column)
 		var new_index = index - 1
 		if new_index < 0:
-			if wrap:
+			if should_wrap:
 				new_index = controls.size() - 1
 			else:
 				return NodePath("")
@@ -1310,22 +1384,22 @@ func _get_top_neighbor_path(current_control: Control, index: int, controls: Arra
 	return NodePath("")
 
 ## Helper: Gets bottom neighbor path with optional wrapping
-func _get_bottom_neighbor_path(current_control: Control, index: int, controls: Array[Control], columns: int, wrap: bool = true) -> NodePath:
+func _get_bottom_neighbor_path(current_control: Control, index: int, controls: Array[Control], columns: int, should_wrap: bool = true) -> NodePath:
 	if columns > 0:
 		# Grid mode
-		var row = index / columns
+		var row = int(index / float(columns))
 		var col = index % columns
 		var new_row = row + 1
 		var total_rows = ceili(float(controls.size()) / columns)
 		
 		if new_row >= total_rows:
-			if wrap:
+			if should_wrap:
 				# Wrap to top row, same column
 				new_row = 0
-				var new_index = new_row * columns + col
-				if new_index >= controls.size():
-					new_index = col  # Fallback to first item in column
-				return current_control.get_path_to(controls[new_index])
+				var wrapped_index = new_row * columns + col
+				if wrapped_index >= controls.size():
+					wrapped_index = col  # Fallback to first item in column
+				return current_control.get_path_to(controls[wrapped_index])
 			else:
 				return NodePath("")
 		
@@ -1336,7 +1410,7 @@ func _get_bottom_neighbor_path(current_control: Control, index: int, controls: A
 		# Linear mode (single column)
 		var new_index = index + 1
 		if new_index >= controls.size():
-			if wrap:
+			if should_wrap:
 				new_index = 0
 			else:
 				return NodePath("")

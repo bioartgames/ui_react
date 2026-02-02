@@ -23,12 +23,18 @@ var _helper: TabContainerHelper
 var _updating: bool = false
 var _previous_tab_index: int = -1
 var _is_initializing: bool = true
+## Whether focus has "entered" the TabContainer (user pressed Select).
+## When false, TabContainer acts as a single focusable item. When true, focus is inside.
+var _entered: bool = false
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		# In the editor, only validate reels so trigger options are filtered.
 		_validate_animation_reels()
 		return
+
+	# Make TabContainer focusable so VBox/HBox can focus it as a single item
+	focus_mode = Control.FOCUS_ALL
 
 	# Initialize helper with tab config
 	if tab_config:
@@ -56,6 +62,8 @@ func _ready() -> void:
 	_validate_animation_reels()
 	# Finish initialization after all signals are processed
 	call_deferred("_finish_initialization")
+	# Set up internal focus chain
+	call_deferred("_setup_internal_focus")
 
 ## Validates animation reels and filters out invalid ones.
 ## Called automatically in [method _ready].
@@ -84,6 +92,12 @@ func _validate_animation_reels() -> void:
 	if has_hover_exit_targets:
 		if not mouse_exited.is_connected(_on_trigger_hover_exit):
 			mouse_exited.connect(_on_trigger_hover_exit)
+	# Connect focus signals for navigation-driven hover animations
+	if has_hover_enter_targets or has_hover_exit_targets:
+		if not focus_entered.is_connected(_on_navigation_focus_entered):
+			focus_entered.connect(_on_navigation_focus_entered)
+		if not focus_exited.is_connected(_on_navigation_focus_exited):
+			focus_exited.connect(_on_navigation_focus_exited)
 
 ## Finishes initialization, allowing animations to trigger on selection changes.
 func _finish_initialization() -> void:
@@ -104,6 +118,40 @@ func _on_trigger_hover_enter() -> void:
 ## Handles HOVER_EXIT trigger animations.
 func _on_trigger_hover_exit() -> void:
 	_trigger_animations(AnimationReel.Trigger.HOVER_EXIT)
+
+## Handles navigation-driven focus changes to trigger hover animations.
+func _on_navigation_focus_entered() -> void:
+	# Skip animations during initialization
+	if _is_initializing:
+		return
+
+	# Only trigger hover animations if this focus change was caused by navigation (not mouse)
+	const META_NAVIGATION_FOCUS = "_navigation_focus_change"
+	if has_meta(META_NAVIGATION_FOCUS):
+		# Remove the meta flag immediately to avoid lingering state
+		remove_meta(META_NAVIGATION_FOCUS)
+		# Mark that navigation hover is active
+		set_meta("_nav_hover_active", true)
+		# Trigger hover enter animation
+		_trigger_animations(AnimationReel.Trigger.HOVER_ENTER)
+
+## Handles navigation-driven focus loss to trigger hover exit animations.
+func _on_navigation_focus_exited() -> void:
+	# Skip animations during initialization
+	if _is_initializing:
+		return
+
+	# Only trigger hover exit if navigation hover was active
+	if has_meta("_nav_hover_active"):
+		# Clear the active flag
+		remove_meta("_nav_hover_active")
+		# Trigger hover exit animation
+		_trigger_animations(AnimationReel.Trigger.HOVER_EXIT)
+	
+	# If focus left TabContainer entirely (not just moved inside), reset entered state
+	var focus_owner = get_viewport().gui_get_focus_owner()
+	if not focus_owner or not is_ancestor_of(focus_owner):
+		_entered = false
 
 ## Triggers animations for reels matching the specified trigger type.
 ## [param trigger_type]: The trigger type to match.
@@ -135,6 +183,9 @@ func _on_tab_selected(tab_index: int) -> void:
 	# Trigger animations if configured
 	if animations.size() > 0:
 		_on_trigger_selection_changed(tab_index)
+	
+	# Rebuild internal focus chain for new current tab
+	call_deferred("_setup_internal_focus")
 	
 	if not selected_state or _updating:
 		return
@@ -277,3 +328,134 @@ func _animate_tab_switch(old_index: int, new_index: int) -> void:
 ## Used to filter available triggers in the Inspector.
 func _get_control_type_hint() -> AnimationReel.ControlTypeHint:
 	return AnimationReel.ControlTypeHint.SELECTION
+
+## Gets the first focusable control inside the TabContainer for entering.
+## Prefers tab bar if focusable, otherwise first focusable in current tab.
+## [return]: The control to focus when entering, or null if none.
+func _get_first_focusable_inside() -> Control:
+	# Try tab bar first
+	var tab_bar = get_tab_bar()
+	if tab_bar is Control:
+		var bar_control: Control = tab_bar
+		if bar_control.focus_mode != Control.FOCUS_NONE:
+			return bar_control
+	# Fall back to first focusable in current tab
+	var current_tab_control = get_current_tab_control()
+	if current_tab_control:
+		var focusables = NavigationUtils.find_focusable_controls(current_tab_control, true)
+		if not focusables.is_empty():
+			return focusables[0]
+	return null
+
+## Returns true if the event is a "pressed" accept input (Enter, Space, A, or ui_accept action).
+func _is_accept_event(event: InputEvent) -> bool:
+	if event is InputEventAction:
+		var ae = event as InputEventAction
+		return ae.pressed and ae.action == "ui_accept"
+	if event is InputEventKey:
+		var ke = event as InputEventKey
+		return ke.pressed and not ke.echo and ke.keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE]
+	if event is InputEventJoypadButton:
+		var jb = event as InputEventJoypadButton
+		# South = 0 = A (Xbox) / Cross (PlayStation) = accept
+		return jb.pressed and not jb.echo and jb.button_index == 0
+	return false
+
+## Returns true if the event is a "pressed" cancel input (Escape, B, or ui_cancel action).
+func _is_cancel_event(event: InputEvent) -> bool:
+	if event is InputEventAction:
+		var ae = event as InputEventAction
+		return ae.pressed and ae.action == "ui_cancel"
+	if event is InputEventKey:
+		var ke = event as InputEventKey
+		return ke.pressed and not ke.echo and ke.keycode == KEY_ESCAPE
+	if event is InputEventJoypadButton:
+		var jb = event as InputEventJoypadButton
+		# East = 1 = B (Xbox) / Circle (PlayStation) = cancel
+		return jb.pressed and not jb.echo and jb.button_index == 1
+	return false
+
+## Handles input for entering/exiting TabContainer.
+## Enter: ui_accept / Enter / Space / A when focused and not entered
+## Exit: ui_cancel / Escape / B when entered and focus is inside
+func _gui_input(event: InputEvent) -> void:
+	if Engine.is_editor_hint():
+		return
+	
+	# Enter on accept (key/action/joypad) when TabContainer has focus and not entered
+	if _is_accept_event(event) and has_focus() and not _entered:
+		var first_inside = _get_first_focusable_inside()
+		if first_inside:
+			_entered = true
+			first_inside.grab_focus()
+			accept_event()
+		return
+	
+	# Exit on cancel when entered and focus is inside TabContainer
+	if _is_cancel_event(event) and _entered:
+		var focus_owner = get_viewport().gui_get_focus_owner()
+		if focus_owner and is_ancestor_of(focus_owner):
+			_entered = false
+			grab_focus()  # Return focus to TabContainer node itself
+			accept_event()
+
+## Handles unhandled key input for cancel when focus is inside TabContainer.
+## This catches Escape/B when children don't consume it.
+func _unhandled_key_input(event: InputEvent) -> void:
+	if Engine.is_editor_hint():
+		return
+	
+	# Only handle cancel when entered (focus is inside)
+	if not _entered:
+		return
+	
+	if _is_cancel_event(event):
+		var focus_owner = get_viewport().gui_get_focus_owner()
+		if focus_owner and is_ancestor_of(focus_owner):
+			_entered = false
+			grab_focus()  # Return focus to TabContainer node itself
+			get_viewport().set_input_as_handled()  # Mark event as handled
+
+## Sets up focus neighbor chain for tab bar and current tab content.
+## Creates a vertical chain: tab bar <-> first focusable <-> ... <-> last focusable.
+## Also sets wrap: first's top -> last, last's bottom -> first.
+func _setup_internal_focus() -> void:
+	if Engine.is_editor_hint():
+		return
+	
+	# Build list: tab bar (if focusable) + focusables in current tab
+	var focus_chain: Array[Control] = []
+	
+	# Add tab bar if focusable
+	var tab_bar = get_tab_bar()
+	if tab_bar is Control:
+		var bar_control: Control = tab_bar
+		if bar_control.focus_mode != Control.FOCUS_NONE:
+			focus_chain.append(bar_control)
+	
+	# Add focusables in current tab
+	var current_tab_control = get_current_tab_control()
+	if current_tab_control:
+		var tab_focusables = NavigationUtils.find_focusable_controls(current_tab_control, true)
+		focus_chain.append_array(tab_focusables)
+	
+	if focus_chain.size() < 2:
+		return  # Need at least 2 items for a chain
+	
+	# Set up vertical chain (top/bottom neighbors)
+	for i in range(focus_chain.size()):
+		var current = focus_chain[i]
+		
+		# Top neighbor (previous item, or wrap to last)
+		if i > 0:
+			current.focus_neighbor_top = current.get_path_to(focus_chain[i - 1])
+		else:
+			# First item wraps to last
+			current.focus_neighbor_top = current.get_path_to(focus_chain[focus_chain.size() - 1])
+		
+		# Bottom neighbor (next item, or wrap to first)
+		if i < focus_chain.size() - 1:
+			current.focus_neighbor_bottom = current.get_path_to(focus_chain[i + 1])
+		else:
+			# Last item wraps to first
+			current.focus_neighbor_bottom = current.get_path_to(focus_chain[0])
