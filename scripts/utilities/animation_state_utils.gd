@@ -24,13 +24,12 @@ class ControlStateSnapshot:
 	var visible: bool
 
 ## Acquires a unified snapshot of the target control's original state.
-## Used internally by animation functions to support universal reset functionality.
-## [param source_node]: The node requesting the snapshot (for validation).
+## Used by animation functions to support universal reset functionality.
 ## [param target]: The control to snapshot.
 ## [return]: The created snapshot.
-static func _acquire_unified_snapshot(source_node: Node, target: Control) -> ControlStateSnapshot:
-	if not source_node or not target:
-		push_warning("AnimationStateUtils._acquire_unified_snapshot(): Failed to create baseline snapshot for target '%s'" % target.name)
+static func acquire_unified_snapshot(target: Control) -> ControlStateSnapshot:
+	if not target:
+		push_warning("AnimationStateUtils.acquire_unified_snapshot(): Failed to create baseline snapshot for target.")
 		return null
 
 	var target_id = target.get_instance_id()
@@ -55,9 +54,9 @@ static func _acquire_unified_snapshot(source_node: Node, target: Control) -> Con
 ## [param target]: The control whose snapshot to release.
 ## [param restore_immediately]: If true, restores the control to its original state.
 ## [return]: true if snapshot was released, false otherwise.
-static func _release_unified_snapshot(target: Control, restore_immediately: bool = true) -> bool:
+static func release_unified_snapshot(target: Control, restore_immediately: bool = true) -> bool:
 	if not target:
-		push_warning("AnimationStateUtils._release_unified_snapshot(): Cannot restore state of null control.")
+		push_warning("AnimationStateUtils.release_unified_snapshot(): Cannot restore state of null control.")
 		return false
 
 	var target_id = target.get_instance_id()
@@ -86,19 +85,10 @@ static func _release_unified_snapshot(target: Control, restore_immediately: bool
 ## Gets the unified snapshot for a target control.
 ## [param target]: The control to get snapshot for.
 ## [return]: The snapshot, or null if none exists.
-static func _get_unified_snapshot(target: Control) -> ControlStateSnapshot:
+static func get_unified_snapshot(target: Control) -> ControlStateSnapshot:
 	if not target:
 		return null
 	return _unified_original_snapshots.get(target.get_instance_id())
-
-## Clears the unified snapshot for a target control.
-## [param target]: The control whose snapshot to clear.
-static func _clear_unified_snapshot(target: Control) -> void:
-	if not target:
-		return
-	var target_id = target.get_instance_id()
-	_unified_original_snapshots.erase(target_id)
-	_active_animation_count.erase(target_id)
 
 ## Creates a snapshot of a control's current state.
 ## [param target]: The control to snapshot.
@@ -149,7 +139,7 @@ static func animate_reset_all(source_node: Node, target: Control, duration: floa
 		push_warning("AnimationStateUtils.animate_reset_all(): Invalid source_node or target")
 		return Signal()
 
-	var snapshot = _get_unified_snapshot(target)
+	var snapshot = AnimationStateUtils.get_unified_snapshot(target)
 	if not snapshot:
 		# No snapshot exists - control was never animated, so nothing to reset
 		# This is expected behavior, not an error
@@ -187,7 +177,7 @@ static func animate_reset_all(source_node: Node, target: Control, duration: floa
 
 	# Clear snapshot after reset completes
 	result_signal.connect(func():
-		_clear_unified_snapshot(target)
+		clear_unified_snapshot_for_target(target)
 	, CONNECT_ONE_SHOT)
 
 	return result_signal
@@ -195,4 +185,8 @@ static func animate_reset_all(source_node: Node, target: Control, duration: floa
 ## Clears the unified snapshot for a specific target.
 ## [param target]: The control whose snapshot to clear.
 static func clear_unified_snapshot_for_target(target: Control) -> void:
-	_clear_unified_snapshot(target)
+	if not target:
+		return
+	var target_id = target.get_instance_id()
+	_unified_original_snapshots.erase(target_id)
+	_active_animation_count.erase(target_id)

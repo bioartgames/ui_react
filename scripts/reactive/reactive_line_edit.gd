@@ -101,19 +101,7 @@ func _on_trigger_hover_exit() -> void:
 ## Triggers animations for reels matching the specified trigger type.
 ## [param trigger_type]: The trigger type to match.
 func _trigger_animations(trigger_type) -> void:
-	if animations.size() == 0:
-		return
-
-	# Apply animations for reels matching this trigger
-	for reel in animations:
-		if reel == null:
-			continue
-
-		if reel.trigger != trigger_type:
-			continue
-
-		# Note: respect_disabled is now per-clip, not per-reel
-		reel.apply(self)
+	AnimationReel.trigger_matching(self, animations, trigger_type)
 
 func _on_text_changed(new_text: String) -> void:
 	# Trigger animations if configured

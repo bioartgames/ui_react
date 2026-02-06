@@ -40,27 +40,18 @@ func _ready() -> void:
 ## Validates animation reels and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_reels() -> void:
-	var result = AnimationReel.validate_for_control(self, animations)
-	animations = result.valid_reels
-
-	# Set control context on each reel for Inspector filtering
-	var control_type = _get_control_type_hint()
-	for reel in animations:
-		if reel:
-			reel.control_type_context = control_type
-
-	# Control-specific signal connections (stays in class)
-	var has_hover_enter_targets = result.trigger_map.get(AnimationReel.Trigger.HOVER_ENTER, false)
-	var has_hover_exit_targets = result.trigger_map.get(AnimationReel.Trigger.HOVER_EXIT, false)
-
-	# Connect signals based on which triggers are used
-	# Note: value_changed, focus_entered, and focus_exited are always connected
-	if has_hover_enter_targets:
-		if not mouse_entered.is_connected(_on_trigger_hover_enter):
-			mouse_entered.connect(_on_trigger_hover_enter)
-	if has_hover_exit_targets:
-		if not mouse_exited.is_connected(_on_trigger_hover_exit):
-			mouse_exited.connect(_on_trigger_hover_exit)
+	var trigger_map = ReactiveAnimationSetup.setup_reels(self, animations, _get_control_type_hint())
+	
+	# Connect trigger signals
+	# Note: value_changed, focus_entered, and focus_exited are always connected in _ready
+	var bindings: Array = [
+		[AnimationReel.Trigger.HOVER_ENTER, mouse_entered, _on_trigger_hover_enter],
+		[AnimationReel.Trigger.HOVER_EXIT, mouse_exited, _on_trigger_hover_exit],
+	]
+	ReactiveAnimationSetup.connect_trigger_bindings(self, trigger_map, bindings)
+	
+	# Note: FOCUS_ENTERED/FOCUS_EXITED are handled directly in _on_focus_entered/_on_focus_exited
+	# Focus-driven hover is also handled there
 
 ## Finishes initialization, allowing animations to trigger on value changes.
 func _finish_initialization() -> void:
@@ -101,19 +92,7 @@ func _on_trigger_hover_exit() -> void:
 ## Triggers animations for reels matching the specified trigger type.
 ## [param trigger_type]: The trigger type to match.
 func _trigger_animations(trigger_type) -> void:
-	if animations.size() == 0:
-		return
-	
-	# Apply animations for reels matching this trigger
-	for reel in animations:
-		if reel == null:
-			continue
-
-		if reel.trigger != trigger_type:
-			continue
-
-		# Note: respect_disabled is now per-clip, not per-reel
-		reel.apply(self)
+	AnimationReel.trigger_matching(self, animations, trigger_type)
 
 func _on_value_changed(new_value: float) -> void:
 	# Trigger animations if configured

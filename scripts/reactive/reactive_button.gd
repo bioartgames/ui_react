@@ -40,36 +40,22 @@ func _ready() -> void:
 ## Validates animation reels and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_reels() -> void:
-	var result = AnimationReel.validate_for_control(self, animations)
-	animations = result.valid_reels
-
-	# Set control context on each reel for Inspector filtering
-	var control_type = _get_control_type_hint()
-	for reel in animations:
-		if reel:
-			reel.control_type_context = control_type
-
-	# Control-specific signal connections (stays in class)
-	# Only connect signals for triggers that this control type supports
-	if result.trigger_map.get(AnimationReel.Trigger.PRESSED, false):
-		if not pressed.is_connected(_on_trigger_pressed):
-			pressed.connect(_on_trigger_pressed)
-	if result.trigger_map.get(AnimationReel.Trigger.HOVER_ENTER, false):
-		if not mouse_entered.is_connected(_on_trigger_hover_enter):
-			mouse_entered.connect(_on_trigger_hover_enter)
-	if result.trigger_map.get(AnimationReel.Trigger.HOVER_EXIT, false):
-		if not mouse_exited.is_connected(_on_trigger_hover_exit):
-			mouse_exited.connect(_on_trigger_hover_exit)
-	# Connect focus signals for navigation-driven hover animations
-	var has_hover_triggers = result.trigger_map.get(AnimationReel.Trigger.HOVER_ENTER, false) or result.trigger_map.get(AnimationReel.Trigger.HOVER_EXIT, false)
+	var trigger_map = ReactiveAnimationSetup.setup_reels(self, animations, _get_control_type_hint())
+	
+	# Connect trigger signals
+	var bindings: Array = [
+		[AnimationReel.Trigger.PRESSED, pressed, _on_trigger_pressed],
+		[AnimationReel.Trigger.HOVER_ENTER, mouse_entered, _on_trigger_hover_enter],
+		[AnimationReel.Trigger.HOVER_EXIT, mouse_exited, _on_trigger_hover_exit],
+		[AnimationReel.Trigger.TOGGLED_ON, toggled, _on_trigger_toggled],
+		[AnimationReel.Trigger.TOGGLED_OFF, toggled, _on_trigger_toggled],
+	]
+	ReactiveAnimationSetup.connect_trigger_bindings(self, trigger_map, bindings)
+	
+	# Connect focus-driven hover animations
+	var has_hover_triggers = trigger_map.get(AnimationReel.Trigger.HOVER_ENTER, false) or trigger_map.get(AnimationReel.Trigger.HOVER_EXIT, false)
 	if has_hover_triggers:
-		if not focus_entered.is_connected(_on_navigation_focus_entered):
-			focus_entered.connect(_on_navigation_focus_entered)
-		if not focus_exited.is_connected(_on_navigation_focus_exited):
-			focus_exited.connect(_on_navigation_focus_exited)
-	if result.trigger_map.get(AnimationReel.Trigger.TOGGLED_ON, false) or result.trigger_map.get(AnimationReel.Trigger.TOGGLED_OFF, false):
-		if not toggled.is_connected(_on_trigger_toggled):
-			toggled.connect(_on_trigger_toggled)
+		ReactiveAnimationSetup.connect_focus_driven_hover(self, animations, func(): return _helper.is_initializing())
 
 ## Handles PRESSED trigger animations.
 func _on_trigger_pressed() -> void:
@@ -83,13 +69,6 @@ func _on_trigger_hover_enter() -> void:
 func _on_trigger_hover_exit() -> void:
 	AnimationReel.trigger_matching(self, animations, AnimationReel.Trigger.HOVER_EXIT)
 
-## Handles navigation-driven focus changes to trigger hover animations.
-func _on_navigation_focus_entered() -> void:
-	FocusDrivenHover.handle_focus_entered(self, animations, func(): return _helper.is_initializing())
-
-## Handles navigation-driven focus loss to trigger hover exit animations.
-func _on_navigation_focus_exited() -> void:
-	FocusDrivenHover.handle_focus_exited(self, animations, func(): return _helper.is_initializing())
 
 ## Finishes initialization, allowing animations to trigger on toggle changes.
 func _finish_initialization() -> void:

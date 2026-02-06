@@ -45,32 +45,25 @@ const SCALE_MAX := Vector2.ONE
 ## Multiplier for calculating center pivot offset (0.5 = center).
 const PIVOT_CENTER_MULTIPLIER := 0.5
 
-## Tracks unified original state snapshots per target control.
-## This snapshot is locked when the first animation starts and only unlocked
-## when all animations complete. Contains position, scale, modulate, rotation, pivot_offset, and visible.
-## Key: Control node (object ID), Value: ControlStateSnapshot
-static var _unified_original_snapshots: Dictionary = {}
-
-## Tracks active animation count per target control.
-## When count reaches 0, the unified snapshot is restored and unlocked.
-## Key: Control node (object ID), Value: int (active animation count)
-static var _active_animation_count: Dictionary = {}
+## Unified snapshot system is now managed by AnimationStateUtils.
+## This class delegates snapshot operations to AnimationStateUtils to maintain
+## a single source of truth for animation state tracking.
 
 ## Acquires the unified baseline snapshot for a target control.
-## If no baseline snapshot exists, captures the current state as baseline and locks it.
-## All animations on this control will share this same baseline snapshot.
-## Increments the active animation counter.
-## Interrupts all active tweens on animatable properties before snapshotting.
+## Interrupts all active tweens on animatable properties before snapshotting,
+## then delegates to AnimationStateUtils for snapshot management.
 ## [param source_node]: The node to create interrupt tweens from.
 ## [param target]: The control to acquire baseline snapshot for.
-## [return]: The baseline snapshot (ControlStateSnapshot).
-static func _acquire_unified_snapshot(source_node: Node, target: Control) -> ControlStateSnapshot:
+## [return]: The baseline snapshot (AnimationStateUtils.ControlStateSnapshot).
+static func _acquire_unified_snapshot(source_node: Node, target: Control) -> AnimationStateUtils.ControlStateSnapshot:
 	if not target:
 		return null
 
-	# If baseline snapshot doesn't exist, save current state as baseline and initialize counter
-	if not _unified_original_snapshots.has(target):
-		# Interrupt all active tweens on animatable properties to get accurate baseline state
+	# Interrupt all active tweens on animatable properties to get accurate baseline state
+	# This must happen before the first snapshot is taken
+	var snapshot = AnimationStateUtils.get_unified_snapshot(target)
+	if snapshot == null:
+		# Only interrupt tweens if we're creating a new snapshot
 		var interrupt_tween = source_node.create_tween()
 		if interrupt_tween:
 			# Interrupt position tweens
@@ -83,70 +76,29 @@ static func _acquire_unified_snapshot(source_node: Node, target: Control) -> Con
 			interrupt_tween.tween_property(target, "rotation_degrees", target.rotation_degrees, 0.0)
 			interrupt_tween.kill()
 
-		# Create baseline snapshot of current state
-		var baseline_snapshot = snapshot_control_state(target)
-		if not baseline_snapshot:
-			push_warning("UIAnimationUtils._acquire_unified_snapshot(): Failed to create baseline snapshot for target '%s'" % target.name)
-			return null
-		_unified_original_snapshots[target] = baseline_snapshot
-		_active_animation_count[target] = 0
-
-	# Increment active animation counter (shared across all animations on this control)
-	_active_animation_count[target] = _active_animation_count[target] + 1
-
-	return _unified_original_snapshots[target]
+	# Delegate to AnimationStateUtils for snapshot acquisition
+	return AnimationStateUtils.acquire_unified_snapshot(target)
 
 ## Releases the unified original snapshot for a target control.
-## Decrements the active animation counter.
-## If counter reaches 0, restores all properties from snapshot and unlocks it.
+## Delegates to AnimationStateUtils for snapshot release.
 ## [param target]: The control to release unified snapshot for.
 ## [param restore_immediately]: If true, immediately restores state when counter reaches 0 (default: true).
 ## [return]: true if state was restored, false otherwise.
 static func _release_unified_snapshot(target: Control, restore_immediately: bool = true) -> bool:
-	if not target:
-		return false
-
-	if not _active_animation_count.has(target):
-		return false
-
-	# Decrement counter
-	_active_animation_count[target] = _active_animation_count[target] - 1
-
-	# If counter reached 0, restore state and unlock
-	if _active_animation_count[target] <= 0:
-		if _unified_original_snapshots.has(target):
-			var snapshot = _unified_original_snapshots[target]
-			if snapshot and restore_immediately:
-				restore_control_state(target, snapshot)
-			# Clean up tracking dictionaries
-			_unified_original_snapshots.erase(target)
-			_active_animation_count.erase(target)
-			return true
-
-	return false
+	return AnimationStateUtils.release_unified_snapshot(target, restore_immediately)
 
 ## Gets the unified original snapshot for a target without acquiring it.
-## Returns null if no unified snapshot exists.
+## Delegates to AnimationStateUtils.
 ## [param target]: The control to get unified snapshot for.
 ## [return]: The unified original snapshot, or null if not set.
-static func _get_unified_snapshot(target: Control) -> ControlStateSnapshot:
-	if not target:
-		return null
-
-	if _unified_original_snapshots.has(target):
-		return _unified_original_snapshots[target]
-
-	return null
+static func _get_unified_snapshot(target: Control) -> AnimationStateUtils.ControlStateSnapshot:
+	return AnimationStateUtils.get_unified_snapshot(target)
 
 ## Manually clears the unified snapshot system for a target.
-## Useful for edge cases or manual cleanup.
+## Delegates to AnimationStateUtils.
 ## [param target]: The control to clear unified snapshot for.
 static func _clear_unified_snapshot(target: Control) -> void:
-	if not target:
-		return
-
-	_unified_original_snapshots.erase(target)
-	_active_animation_count.erase(target)
+	AnimationStateUtils.clear_unified_snapshot_for_target(target)
 
 ## Calculates the center X position of a node relative to the viewport.
 ## [param source_node]: The node to get viewport from.
@@ -190,51 +142,19 @@ static func create_safe_tween(node: Node) -> Tween:
 		push_warning("UIAnimationUtils.create_safe_tween(): Failed to create tween on node '%s'. Tip: Check if the node is in the scene tree and not already processing (e.g., during _ready())." % node.name)
 	return t
 
-## Snapshot of a control's state for restoration.
-## Contains position, scale, modulate, rotation, pivot_offset, and visible properties.
-class ControlStateSnapshot:
-	var position: Vector2
-	var scale: Vector2
-	var modulate: Color
-	var rotation_degrees: float
-	var pivot_offset: Vector2
-	var visible: bool
-
 ## Creates a snapshot of a control's current state.
+## Delegates to AnimationStateUtils.
 ## [param target]: The control to snapshot.
-## [return]: A ControlStateSnapshot containing the current state, or null if target is null.
-static func snapshot_control_state(target: Control) -> ControlStateSnapshot:
-	if not target:
-		push_warning("UIAnimationUtils.snapshot_control_state(): Cannot snapshot state of null control. Tip: Ensure the target Control is valid and in the scene tree before calling this function.")
-		return null
-	
-	var snapshot = ControlStateSnapshot.new()
-	snapshot.position = target.position
-	snapshot.scale = target.scale
-	snapshot.modulate = target.modulate
-	snapshot.rotation_degrees = target.rotation_degrees
-	snapshot.pivot_offset = target.pivot_offset
-	snapshot.visible = target.visible
-	return snapshot
+## [return]: An AnimationStateUtils.ControlStateSnapshot containing the current state, or null if target is null.
+static func snapshot_control_state(target: Control) -> AnimationStateUtils.ControlStateSnapshot:
+	return AnimationStateUtils.snapshot_control_state(target)
 
 ## Restores a control to a previously snapshotted state.
+## Delegates to AnimationStateUtils.
 ## [param target]: The control to restore.
-## [param snapshot]: The ControlStateSnapshot to restore from.
-static func restore_control_state(target: Control, snapshot: ControlStateSnapshot) -> void:
-	if not target:
-		push_warning("UIAnimationUtils.restore_control_state(): Cannot restore state of null control. Tip: Ensure the target Control is valid and in the scene tree before calling this function.")
-		return
-	
-	if not snapshot:
-		push_warning("UIAnimationUtils.restore_control_state(): Cannot restore from null snapshot. Tip: Ensure you have a valid ControlStateSnapshot from snapshot_control_state() before calling restore.")
-		return
-	
-	target.position = snapshot.position
-	target.scale = snapshot.scale
-	target.modulate = snapshot.modulate
-	target.rotation_degrees = snapshot.rotation_degrees
-	target.pivot_offset = snapshot.pivot_offset
-	target.visible = snapshot.visible
+## [param snapshot]: The AnimationStateUtils.ControlStateSnapshot to restore from.
+static func restore_control_state(target: Control, snapshot: AnimationStateUtils.ControlStateSnapshot) -> void:
+	AnimationStateUtils.restore_control_state(target, snapshot)
 
 ## Resets a control to "normal" state (scale=1, modulate.a=1, rotation=0).
 ## Does not reset position as that is usually intentional.
@@ -1484,16 +1404,9 @@ static func animate_reset_all(source_node: Node, target: Control, duration: floa
 		return Signal()
 
 	# Get the unified original snapshot (or current state if not set)
-	var snapshot: ControlStateSnapshot
-	if _unified_original_snapshots.has(target):
-		snapshot = _unified_original_snapshots[target]
-	else:
-		# No unified snapshot, use current state (no animation needed)
-		return Signal()
-
-	# Validate snapshot exists and is valid
+	var snapshot: AnimationStateUtils.ControlStateSnapshot = AnimationStateUtils.get_unified_snapshot(target)
 	if not snapshot:
-		push_warning("UIAnimationUtils.animate_reset_all(): Unified snapshot exists but is null for target '%s'" % target.name)
+		# No unified snapshot, use current state (no animation needed)
 		return Signal()
 
 	# If duration is 0, perform instant reset
@@ -1553,10 +1466,7 @@ static func animate_reset_all(source_node: Node, target: Control, duration: floa
 ## This should be called if a control is removed from the scene while animations are active.
 ## [param target]: The control to clear unified snapshot for.
 static func clear_unified_snapshot_for_target(target: Control) -> void:
-	if not target:
-		return
-
-	_clear_unified_snapshot(target)
+	AnimationStateUtils.clear_unified_snapshot_for_target(target)
 
 ## Animates a control with a continuous breathing effect (subtle scale pulse).
 ## [param source_node]: The node to create the tween from (usually self).

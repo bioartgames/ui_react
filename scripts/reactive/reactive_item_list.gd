@@ -38,36 +38,18 @@ func _ready() -> void:
 ## Validates animation reels and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_reels() -> void:
-	var result = AnimationReel.validate_for_control(self, animations)
-	animations = result.valid_reels
-
-	# Set control context on each reel for Inspector filtering
-	var control_type = _get_control_type_hint()
-	for reel in animations:
-		if reel:
-			reel.control_type_context = control_type
-
-	# Control-specific signal connections (stays in class)
-	var has_selection_changed_targets = result.trigger_map.get(AnimationReel.Trigger.SELECTION_CHANGED, false)
-	var has_hover_enter_targets = result.trigger_map.get(AnimationReel.Trigger.HOVER_ENTER, false)
-	var has_hover_exit_targets = result.trigger_map.get(AnimationReel.Trigger.HOVER_EXIT, false)
-
-	# Connect signals based on which triggers are used
-	if has_selection_changed_targets:
-		if not item_selected.is_connected(_on_trigger_selection_changed):
-			item_selected.connect(_on_trigger_selection_changed)
-	if has_hover_enter_targets:
-		if not mouse_entered.is_connected(_on_trigger_hover_enter):
-			mouse_entered.connect(_on_trigger_hover_enter)
-	if has_hover_exit_targets:
-		if not mouse_exited.is_connected(_on_trigger_hover_exit):
-			mouse_exited.connect(_on_trigger_hover_exit)
-	# Connect focus signals for navigation-driven hover animations
-	if has_hover_enter_targets or has_hover_exit_targets:
-		if not focus_entered.is_connected(_on_navigation_focus_entered):
-			focus_entered.connect(_on_navigation_focus_entered)
-		if not focus_exited.is_connected(_on_navigation_focus_exited):
-			focus_exited.connect(_on_navigation_focus_exited)
+	var trigger_map = ReactiveAnimationSetup.setup_reels(self, animations, _get_control_type_hint())
+	
+	# Connect trigger signals
+	var bindings: Array = [
+		[AnimationReel.Trigger.SELECTION_CHANGED, item_selected, _on_trigger_selection_changed],
+		[AnimationReel.Trigger.HOVER_ENTER, mouse_entered, _on_trigger_hover_enter],
+		[AnimationReel.Trigger.HOVER_EXIT, mouse_exited, _on_trigger_hover_exit],
+	]
+	ReactiveAnimationSetup.connect_trigger_bindings(self, trigger_map, bindings)
+	
+	# Connect focus-driven hover animations
+	ReactiveAnimationSetup.connect_focus_driven_hover(self, animations, func(): return _helper.is_initializing())
 
 ## Finishes initialization, allowing animations to trigger on selection changes.
 func _finish_initialization() -> void:
@@ -89,30 +71,11 @@ func _on_trigger_hover_enter() -> void:
 func _on_trigger_hover_exit() -> void:
 	_trigger_animations(AnimationReel.Trigger.HOVER_EXIT)
 
-## Handles navigation-driven focus changes to trigger hover animations.
-func _on_navigation_focus_entered() -> void:
-	FocusDrivenHover.handle_focus_entered(self, animations, func(): return _helper.is_initializing())
-
-## Handles navigation-driven focus loss to trigger hover exit animations.
-func _on_navigation_focus_exited() -> void:
-	FocusDrivenHover.handle_focus_exited(self, animations, func(): return _helper.is_initializing())
 
 ## Triggers animations for reels matching the specified trigger type.
 ## [param trigger_type]: The trigger type to match.
 func _trigger_animations(trigger_type) -> void:
-	if animations.size() == 0:
-		return
-
-	# Apply animations for reels matching this trigger
-	for reel in animations:
-		if reel == null:
-			continue
-
-		if reel.trigger != trigger_type:
-			continue
-
-		# Note: respect_disabled is now per-clip, not per-reel
-		reel.apply(self)
+	AnimationReel.trigger_matching(self, animations, trigger_type)
 
 func _on_item_selected(_index: int) -> void:
 	if not selected_state or _helper.is_updating():
