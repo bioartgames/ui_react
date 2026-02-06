@@ -117,3 +117,45 @@ static func sync_focus_mode_to_disabled_static(control: Control) -> void:
 ## Call from _exit_tree for controls that use sync_focus_mode_to_disabled_static, so freed nodes do not leak entries.
 static func release_stored_focus_mode(control: Control) -> void:
 	_stored_focus_modes.erase(control.get_instance_id())
+
+## Updates a property safely with optional skip-if-equal check and converter.
+## This is a more flexible version of update_property_if_changed that allows skipping
+## the equality check when needed (e.g., for complex state updates).
+##
+## [param property]: String name of the property to update.
+## [param new_value]: The new value from the State (typically a Variant).
+## [param converter]: Callable that converts the Variant to the appropriate property type.
+## [param skip_if_equal]: If true, skips update if value hasn't changed (default: true).
+## [return]: true if the property was updated, false otherwise.
+func update_property_safe(property: String, new_value: Variant, converter: Callable, skip_if_equal: bool = true) -> bool:
+	if not _owner:
+		return false
+	if _updating:
+		return false
+	
+	var desired = converter.call(new_value)
+	if skip_if_equal:
+		var current = _owner.get(property)
+		if current == desired:
+			return false
+	
+	_updating = true
+	_owner.set(property, desired)
+	_updating = false
+	return true
+
+## Checks if animations should be skipped (during initialization).
+## This is a convenience method for animation handlers to check initialization state.
+## [return]: true if animations should be skipped (during initialization), false otherwise.
+func should_skip_animation() -> bool:
+	return _is_initializing
+
+## Static factory method to create a ReactiveControlHelper for a control.
+## This provides a consistent way to create helpers and ensures proper initialization.
+## [param control]: The Control node to create a helper for.
+## [return]: A new ReactiveControlHelper instance for the control.
+static func create_for(control: Control) -> ReactiveControlHelper:
+	if not control:
+		push_error("ReactiveControlHelper.create_for(): control is null")
+		return null
+	return ReactiveControlHelper.new(control)

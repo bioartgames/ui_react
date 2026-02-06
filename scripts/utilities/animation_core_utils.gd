@@ -35,13 +35,46 @@ static func wrap_with_loop(
 		return animation_callable.call()
 
 ## Validates animation parameters (source_node and target).
+## Uses consistent error reporting with context for better debugging.
 ## [param source_node]: Node to validate
 ## [param target]: Control to validate
 ## [param function_name]: Name of calling function (for error messages)
 ## [return]: true if valid, false otherwise
 static func validate_animation_params(source_node: Node, target: Control, function_name: String) -> bool:
-	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for %s" % function_name)
+	if not source_node:
+		push_error("AnimationCoreUtils.%s(): source_node is null. Tip: Ensure the node is valid and in the scene tree before calling this function." % function_name)
+		return false
+	if not target:
+		push_error("AnimationCoreUtils.%s(): target is null. Tip: Ensure the target Control is valid and in the scene tree before calling this function." % function_name)
+		return false
+	return true
+
+## Validates that a node has a viewport and returns it.
+## Uses consistent error reporting with context.
+## [param node]: Node to get viewport from
+## [param function_name]: Name of calling function (for error messages)
+## [return]: Viewport if valid, null otherwise
+static func validate_viewport(node: Node, function_name: String) -> Viewport:
+	if not node:
+		push_error("AnimationCoreUtils.%s(): node is null. Tip: Ensure the node is valid and in the scene tree before calling this function." % function_name)
+		return null
+	
+	var viewport = node.get_viewport()
+	if not viewport:
+		push_error("AnimationCoreUtils.%s(): node '%s' has no viewport. Tip: Ensure the node is added to the scene tree and has a viewport (usually happens after _ready())." % [function_name, node.name])
+		return null
+	
+	return viewport
+
+## Validates that a tween was created successfully.
+## Uses consistent error reporting with context.
+## [param tween]: Tween to validate
+## [param node_name]: Name of the node that created the tween (for error messages)
+## [param function_name]: Name of calling function (for error messages)
+## [return]: true if valid, false otherwise
+static func validate_tween(tween: Tween, node_name: String, function_name: String) -> bool:
+	if not tween:
+		push_error("AnimationCoreUtils.%s(): Failed to create tween on node '%s'. Tip: Check if the node is in the scene tree and not already processing (e.g., during _ready())." % [function_name, node_name])
 		return false
 	return true
 

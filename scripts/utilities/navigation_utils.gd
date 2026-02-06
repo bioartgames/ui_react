@@ -5,6 +5,17 @@
 extends RefCounted
 class_name NavigationUtils
 
+## Validates that a node is valid and not null.
+## Uses consistent error reporting with context.
+## [param node]: Node to validate
+## [param node_name]: Name/description of the node (for error messages)
+## [return]: true if valid, false otherwise
+static func validate_node(node: Node, node_name: String) -> bool:
+	if not node:
+		push_error("NavigationUtils: %s is null. Tip: Ensure the node is valid and in the scene tree before calling this function." % node_name)
+		return false
+	return true
+
 ## Finds all focusable controls within a given root node.
 static func find_focusable_controls(root: Node, restrict_to_focusable: bool = true) -> Array[Control]:
 	var candidates: Array[Control] = []

@@ -336,75 +336,75 @@ func execute(owner: Node, target: Control, tween_easing: int) -> Signal:
 
 static func _strategy_expand(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
 	if clip.reverse:
-		return ScaleAnimationUtils.animate_shrink(owner, target, clip.duration, clip.pivot_offset, true, true, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_shrink(owner, target, clip.duration, clip.pivot_offset, true, true, true, clip.repeat_count, tween_easing)
 	else:
-		return ScaleAnimationUtils.animate_expand(owner, target, clip.duration, clip.pivot_offset, true, false, false, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_expand(owner, target, clip.duration, clip.pivot_offset, true, false, false, clip.repeat_count, tween_easing)
 
 static func _strategy_expand_x(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
 	if clip.reverse:
-		return ScaleAnimationUtils.animate_shrink_x(owner, target, clip.duration, clip.pivot_offset, true, true, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_shrink_x(owner, target, clip.duration, clip.pivot_offset, true, true, true, clip.repeat_count, tween_easing)
 	else:
-		return ScaleAnimationUtils.animate_expand_x(owner, target, clip.duration, clip.pivot_offset, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_expand_x(owner, target, clip.duration, clip.pivot_offset, true, clip.repeat_count, tween_easing)
 
 static func _strategy_expand_y(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
 	if clip.reverse:
-		return ScaleAnimationUtils.animate_shrink_y(owner, target, clip.duration, clip.pivot_offset, true, true, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_shrink_y(owner, target, clip.duration, clip.pivot_offset, true, true, true, clip.repeat_count, tween_easing)
 	else:
-		return ScaleAnimationUtils.animate_expand_y(owner, target, clip.duration, clip.pivot_offset, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_expand_y(owner, target, clip.duration, clip.pivot_offset, true, clip.repeat_count, tween_easing)
 
 static func _strategy_fade_in(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
 	if clip.reverse:
-		return FadeAnimationUtils.animate_fade_out(owner, target, clip.duration, true, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_fade_out(owner, target, clip.duration, true, true, clip.repeat_count, tween_easing)
 	else:
-		return FadeAnimationUtils.animate_fade_in(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_fade_in(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
 
 static func _strategy_slide_from_left(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
 	if clip.reverse:
-		return SlideAnimationUtils.animate_slide_to_left(owner, target, AnimationCoreUtils.DEFAULT_OFFSET, clip.duration, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_slide_to_left(owner, target, AnimationCoreUtils.DEFAULT_OFFSET, clip.duration, true, clip.repeat_count, tween_easing)
 	else:
-		return SlideAnimationUtils.animate_slide_from_left(owner, target, AnimationCoreUtils.DEFAULT_OFFSET, clip.duration, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_slide_from_left(owner, target, AnimationCoreUtils.DEFAULT_OFFSET, clip.duration, true, clip.repeat_count, tween_easing)
 
 static func _strategy_slide_from_right(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
 	if clip.reverse:
-		return SlideAnimationUtils.animate_slide_to_right(owner, target, AnimationCoreUtils.DEFAULT_OFFSET, clip.duration, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_slide_to_right(owner, target, AnimationCoreUtils.DEFAULT_OFFSET, clip.duration, true, clip.repeat_count, tween_easing)
 	else:
-		return SlideAnimationUtils.animate_slide_from_right(owner, target, AnimationCoreUtils.DEFAULT_OFFSET, clip.duration, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_slide_from_right(owner, target, AnimationCoreUtils.DEFAULT_OFFSET, clip.duration, true, clip.repeat_count, tween_easing)
 
 static func _strategy_slide_from_top(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
 	if clip.reverse:
-		return SlideAnimationUtils.animate_slide_to_top(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_slide_to_top(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
 	else:
-		return SlideAnimationUtils.animate_slide_from_top(owner, target, AnimationCoreUtils.DEFAULT_OFFSET, clip.duration, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_slide_from_top(owner, target, AnimationCoreUtils.DEFAULT_OFFSET, clip.duration, true, clip.repeat_count, tween_easing)
 
 static func _strategy_slide_from_bottom(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
 	if clip.reverse:
-		return SlideAnimationUtils.animate_slide_to_bottom(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_slide_to_bottom(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
 	else:
-		return SlideAnimationUtils.animate_slide_from_bottom(owner, target, AnimationCoreUtils.DEFAULT_OFFSET, clip.duration, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_slide_from_bottom(owner, target, AnimationCoreUtils.DEFAULT_OFFSET, clip.duration, true, clip.repeat_count, tween_easing)
 
 static func _strategy_from_left_to_center(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
 	if clip.reverse:
-		return SlideAnimationUtils.animate_from_center_to_left(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_from_center_to_left(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
 	else:
-		return SlideAnimationUtils.animate_from_left_to_center(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_from_left_to_center(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
 
 static func _strategy_from_right_to_center(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
 	if clip.reverse:
-		return SlideAnimationUtils.animate_from_center_to_right(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_from_center_to_right(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
 	else:
-		return SlideAnimationUtils.animate_from_right_to_center(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_from_right_to_center(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
 
 static func _strategy_from_top_to_center(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
 	if clip.reverse:
-		return SlideAnimationUtils.animate_from_center_to_top(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_from_center_to_top(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
 	else:
-		return SlideAnimationUtils.animate_from_top_to_center(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_from_top_to_center(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
 
 static func _strategy_from_bottom_to_center(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
 	if clip.reverse:
-		return SlideAnimationUtils.animate_from_center_to_bottom(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_from_center_to_bottom(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
 	else:
-		return SlideAnimationUtils.animate_from_bottom_to_center(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
+		return UIAnimationUtils.animate_from_bottom_to_center(owner, target, clip.duration, true, clip.repeat_count, tween_easing)
 
 static func _strategy_bounce_in(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
 	return UIAnimationUtils.animate_bounce_in(owner, target, clip.duration, clip.pivot_offset, true, clip.repeat_count, tween_easing)
@@ -416,7 +416,7 @@ static func _strategy_rotate_in(owner: Node, target: Control, clip: AnimationCli
 	return UIAnimationUtils.animate_rotate_in(owner, target, clip.duration, clip.rotate_start_angle, clip.pivot_offset, true, clip.repeat_count, tween_easing)
 
 static func _strategy_pop(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
-	return SpecialAnimationUtils.animate_pop(owner, target, clip.duration, clip.pop_overshoot, clip.pivot_offset, true, clip.repeat_count, tween_easing)
+	return UIAnimationUtils.animate_pop(owner, target, clip.duration, clip.pop_overshoot, clip.pivot_offset, true, clip.repeat_count, tween_easing)
 
 static func _strategy_pulse(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
 	return UIAnimationUtils.animate_pulse(owner, target, clip.duration, clip.pulse_amount, clip.pulse_count, clip.pivot_offset, true, clip.repeat_count, tween_easing)

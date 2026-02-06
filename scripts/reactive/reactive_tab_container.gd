@@ -20,9 +20,8 @@ class_name ReactiveTabContainer
 @export var animations: Array[AnimationReel] = []
 
 var _helper: TabContainerHelper
-var _updating: bool = false
+var _control_helper: ReactiveControlHelper
 var _previous_tab_index: int = -1
-var _is_initializing: bool = true
 ## Whether focus has "entered" the TabContainer (user pressed Select).
 ## When false, TabContainer acts as a single focusable item. When true, focus is inside.
 var _entered: bool = false
@@ -35,6 +34,9 @@ func _ready() -> void:
 
 	# Make TabContainer focusable so VBox/HBox can focus it as a single item
 	focus_mode = Control.FOCUS_ALL
+
+	# Initialize control helper FIRST, before any state connections
+	_control_helper = ReactiveControlHelper.new(self)
 
 	# Initialize helper with tab config
 	if tab_config:
@@ -101,12 +103,12 @@ func _validate_animation_reels() -> void:
 
 ## Finishes initialization, allowing animations to trigger on selection changes.
 func _finish_initialization() -> void:
-	_is_initializing = false
+	_control_helper.finish_initialization()
 
 ## Handles SELECTION_CHANGED trigger animations.
 func _on_trigger_selection_changed(_tab_index: int) -> void:
 	# Skip animations during initialization
-	if _is_initializing:
+	if _control_helper.is_initializing():
 		return
 	
 	_trigger_animations(AnimationReel.Trigger.SELECTION_CHANGED)
@@ -121,32 +123,11 @@ func _on_trigger_hover_exit() -> void:
 
 ## Handles navigation-driven focus changes to trigger hover animations.
 func _on_navigation_focus_entered() -> void:
-	# Skip animations during initialization
-	if _is_initializing:
-		return
-
-	# Only trigger hover animations if this focus change was caused by navigation (not mouse)
-	const META_NAVIGATION_FOCUS = "_navigation_focus_change"
-	if has_meta(META_NAVIGATION_FOCUS):
-		# Remove the meta flag immediately to avoid lingering state
-		remove_meta(META_NAVIGATION_FOCUS)
-		# Mark that navigation hover is active
-		set_meta("_nav_hover_active", true)
-		# Trigger hover enter animation
-		_trigger_animations(AnimationReel.Trigger.HOVER_ENTER)
+	FocusDrivenHover.handle_focus_entered(self, animations, func(): return _control_helper.is_initializing())
 
 ## Handles navigation-driven focus loss to trigger hover exit animations.
 func _on_navigation_focus_exited() -> void:
-	# Skip animations during initialization
-	if _is_initializing:
-		return
-
-	# Only trigger hover exit if navigation hover was active
-	if has_meta("_nav_hover_active"):
-		# Clear the active flag
-		remove_meta("_nav_hover_active")
-		# Trigger hover exit animation
-		_trigger_animations(AnimationReel.Trigger.HOVER_EXIT)
+	FocusDrivenHover.handle_focus_exited(self, animations, func(): return _control_helper.is_initializing())
 	
 	# If focus left TabContainer entirely (not just moved inside), reset entered state
 	var focus_owner = get_viewport().gui_get_focus_owner()
@@ -187,17 +168,17 @@ func _on_tab_selected(tab_index: int) -> void:
 	# Rebuild internal focus chain for new current tab
 	call_deferred("_setup_internal_focus")
 	
-	if not selected_state or _updating:
+	if not selected_state or _control_helper.is_updating():
 		return
 	var new_value: Variant = tab_index
 	if selected_state.value == new_value:
 		return
-	_updating = true
+	_control_helper.set_updating(true)
 	selected_state.set_value(new_value)
-	_updating = false
+	_control_helper.set_updating(false)
 
 func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void:
-	if _updating:
+	if _control_helper.is_updating():
 		return
 	var index := -1
 	if new_value is int:
@@ -218,25 +199,25 @@ func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void
 		_animate_tab_switch(_previous_tab_index, index)
 	_bind_tab_content_state(index)
 	
-	_updating = true
+	_control_helper.set_updating(true)
 	_previous_tab_index = index
 	current_tab = index
-	_updating = false
+	_control_helper.set_updating(false)
 
 ## Handles dynamic tab management from tabs_state.
 ## tabs_state.value should be an Array of tab data (Dictionary with "title", "icon", etc., or just Strings).
 func _on_tabs_state_changed(new_value: Variant, _old_value: Variant) -> void:
-	if _updating:
+	if _control_helper.is_updating():
 		return
 
 	if not (new_value is Array):
 		push_warning("ReactiveTabContainer '%s': tabs_state.value must be an Array. Got: %s" % [name, typeof(new_value)])
 		return
 
-	_updating = true
+	_control_helper.set_updating(true)
 	_helper.update_tabs_from_state(new_value)
 	_previous_tab_index = current_tab
-	_updating = false
+	_control_helper.set_updating(false)
 
 ## Binds the selected tab's content to its corresponding State.
 ## This allows each tab's content to be reactive to its own State resource.
@@ -268,30 +249,30 @@ func _on_tab_content_state_changed(new_value: Variant, _old_value: Variant, tab_
 ## Handles per-tab enable/disable from disabled_tabs_state.
 ## disabled_tabs_state.value should be an Array of booleans (one per tab).
 func _on_disabled_tabs_state_changed(new_value: Variant, _old_value: Variant) -> void:
-	if _updating:
+	if _control_helper.is_updating():
 		return
 
 	if not (new_value is Array):
 		push_warning("ReactiveTabContainer '%s': disabled_tabs_state.value must be an Array. Got: %s" % [name, typeof(new_value)])
 		return
 
-	_updating = true
+	_control_helper.set_updating(true)
 	_helper.update_disabled_tabs(new_value)
-	_updating = false
+	_control_helper.set_updating(false)
 
 ## Handles tab visibility control from visible_tabs_state.
 ## visible_tabs_state.value should be an Array of booleans (one per tab).
 func _on_visible_tabs_state_changed(new_value: Variant, _old_value: Variant) -> void:
-	if _updating:
+	if _control_helper.is_updating():
 		return
 
 	if not (new_value is Array):
 		push_warning("ReactiveTabContainer '%s': visible_tabs_state.value must be an Array. Got: %s" % [name, typeof(new_value)])
 		return
 
-	_updating = true
+	_control_helper.set_updating(true)
 	_helper.update_visible_tabs(new_value)
-	_updating = false
+	_control_helper.set_updating(false)
 
 ## Animates tab switching by fading out old tab content and fading in new tab content.
 ## This enhances the SELECTION_CHANGED trigger to animate tab content transitions.
@@ -413,3 +394,6 @@ func _setup_internal_focus() -> void:
 	
 	# Use NavigationUtils to set up the focus chain with vertical wrapping
 	NavigationUtils.setup_focus_chain(focus_chain, true, false)
+
+func _exit_tree() -> void:
+	FocusDrivenHover.cleanup(self)

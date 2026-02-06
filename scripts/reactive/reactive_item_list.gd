@@ -12,14 +12,16 @@ class_name ReactiveItemList
 ## duration, and settings - no resource files needed!
 @export var animations: Array[AnimationReel] = []
 
-var _updating: bool = false
-var _is_initializing: bool = true
+var _helper: ReactiveControlHelper
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		# In the editor, only validate reels so trigger options are filtered.
 		_validate_animation_reels()
 		return
+
+	# Initialize helper FIRST, before any state connections
+	_helper = ReactiveControlHelper.new(self)
 
 	item_selected.connect(_on_item_selected)
 	item_activated.connect(_on_item_activated)
@@ -69,12 +71,12 @@ func _validate_animation_reels() -> void:
 
 ## Finishes initialization, allowing animations to trigger on selection changes.
 func _finish_initialization() -> void:
-	_is_initializing = false
+	_helper.finish_initialization()
 
 ## Handles SELECTION_CHANGED trigger animations.
 func _on_trigger_selection_changed(_index: int) -> void:
 	# Skip animations during initialization
-	if _is_initializing:
+	if _helper.is_initializing():
 		return
 	
 	_trigger_animations(AnimationReel.Trigger.SELECTION_CHANGED)
@@ -89,32 +91,11 @@ func _on_trigger_hover_exit() -> void:
 
 ## Handles navigation-driven focus changes to trigger hover animations.
 func _on_navigation_focus_entered() -> void:
-	# Skip animations during initialization
-	if _is_initializing:
-		return
-
-	# Only trigger hover animations if this focus change was caused by navigation (not mouse)
-	const META_NAVIGATION_FOCUS = "_navigation_focus_change"
-	if has_meta(META_NAVIGATION_FOCUS):
-		# Remove the meta flag immediately to avoid lingering state
-		remove_meta(META_NAVIGATION_FOCUS)
-		# Mark that navigation hover is active
-		set_meta("_nav_hover_active", true)
-		# Trigger hover enter animation
-		_trigger_animations(AnimationReel.Trigger.HOVER_ENTER)
+	FocusDrivenHover.handle_focus_entered(self, animations, func(): return _helper.is_initializing())
 
 ## Handles navigation-driven focus loss to trigger hover exit animations.
 func _on_navigation_focus_exited() -> void:
-	# Skip animations during initialization
-	if _is_initializing:
-		return
-
-	# Only trigger hover exit if navigation hover was active
-	if has_meta("_nav_hover_active"):
-		# Clear the active flag
-		remove_meta("_nav_hover_active")
-		# Trigger hover exit animation
-		_trigger_animations(AnimationReel.Trigger.HOVER_EXIT)
+	FocusDrivenHover.handle_focus_exited(self, animations, func(): return _helper.is_initializing())
 
 ## Triggers animations for reels matching the specified trigger type.
 ## [param trigger_type]: The trigger type to match.
@@ -134,7 +115,7 @@ func _trigger_animations(trigger_type) -> void:
 		reel.apply(self)
 
 func _on_item_selected(_index: int) -> void:
-	if not selected_state or _updating:
+	if not selected_state or _helper.is_updating():
 		return
 	
 	# Get selected items array
@@ -151,16 +132,16 @@ func _on_item_selected(_index: int) -> void:
 	if selected_state.value == new_value:
 		return
 	
-	_updating = true
+	_helper.set_updating(true)
 	selected_state.set_value(new_value)
-	_updating = false
+	_helper.set_updating(false)
 
 func _on_item_activated(index: int) -> void:
 	# Also trigger selection changed on activation
 	_on_item_selected(index)
 
 func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void:
-	if _updating:
+	if _helper.is_updating():
 		return
 	
 	if new_value is int:
@@ -169,11 +150,11 @@ func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void
 		if index < 0 or index >= item_count:
 			return
 		
-		_updating = true
+		_helper.set_updating(true)
 		deselect_all()
 		if index >= 0:
 			select(index)
-		_updating = false
+		_helper.set_updating(false)
 	elif new_value is Array:
 		# Multi selection mode
 		var indices: Array[int] = []
@@ -183,11 +164,11 @@ func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void
 				if idx >= 0 and idx < item_count:
 					indices.append(idx)
 		
-		_updating = true
+		_helper.set_updating(true)
 		deselect_all()
 		for idx in indices:
 			select(idx)
-		_updating = false
+		_helper.set_updating(false)
 
 func _on_disabled_state_changed(_new_value: Variant, _old_value: Variant) -> void:
 	# Note: ItemList doesn't expose disabled property in Godot 4.5, so this is a no-op
@@ -198,3 +179,5 @@ func _on_disabled_state_changed(_new_value: Variant, _old_value: Variant) -> voi
 func _get_control_type_hint() -> AnimationReel.ControlTypeHint:
 	return AnimationReel.ControlTypeHint.SELECTION
 
+func _exit_tree() -> void:
+	FocusDrivenHover.cleanup(self)

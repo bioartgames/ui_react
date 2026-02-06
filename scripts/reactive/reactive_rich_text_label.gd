@@ -40,9 +40,8 @@ class_name ReactiveRichTextLabel
 ## to execute. Supports automatic execution modes: single, multi-target, and sequences.
 @export var animations: Array[AnimationReel] = []
 
-var _updating: bool = false
+var _helper: ReactiveControlHelper
 var _nested_states: Array[State] = []
-var _is_initializing: bool = true
 
 ## Initializes the reactive rich text label.
 ##
@@ -54,6 +53,9 @@ func _ready() -> void:
 		# In the editor, only validate reels so trigger options are filtered.
 		_validate_animation_reels()
 		return
+
+	# Initialize helper FIRST, before any state connections
+	_helper = ReactiveControlHelper.new(self)
 
 	if text_state:
 		text_state.value_changed.connect(_on_text_state_changed)
@@ -101,7 +103,7 @@ func _validate_animation_reels() -> void:
 ## Called via call_deferred in _ready() to ensure all setup is complete before
 ## enabling animation triggers during state changes.
 func _finish_initialization() -> void:
-	_is_initializing = false
+	_helper.finish_initialization()
 
 ## Handles TEXT_CHANGED trigger animations.
 ##
@@ -109,7 +111,7 @@ func _finish_initialization() -> void:
 ## Skips animations during initialization to prevent unwanted effects on startup.
 func _on_trigger_text_changed(_new_value: Variant, _old_value: Variant) -> void:
 	# Skip animations during initialization
-	if _is_initializing:
+	if _helper.is_initializing():
 		return
 
 	_trigger_animations(AnimationReel.Trigger.TEXT_CHANGED)
@@ -128,32 +130,11 @@ func _on_trigger_hover_exit() -> void:
 
 ## Handles navigation-driven focus changes to trigger hover animations.
 func _on_navigation_focus_entered() -> void:
-	# Skip animations during initialization
-	if _is_initializing:
-		return
-
-	# Only trigger hover animations if this focus change was caused by navigation (not mouse)
-	const META_NAVIGATION_FOCUS = "_navigation_focus_change"
-	if has_meta(META_NAVIGATION_FOCUS):
-		# Remove the meta flag immediately to avoid lingering state
-		remove_meta(META_NAVIGATION_FOCUS)
-		# Mark that navigation hover is active
-		set_meta("_nav_hover_active", true)
-		# Trigger hover enter animation
-		_trigger_animations(AnimationReel.Trigger.HOVER_ENTER)
+	FocusDrivenHover.handle_focus_entered(self, animations, func(): return _helper.is_initializing())
 
 ## Handles navigation-driven focus loss to trigger hover exit animations.
 func _on_navigation_focus_exited() -> void:
-	# Skip animations during initialization
-	if _is_initializing:
-		return
-
-	# Only trigger hover exit if navigation hover was active
-	if has_meta("_nav_hover_active"):
-		# Clear the active flag
-		remove_meta("_nav_hover_active")
-		# Trigger hover exit animation
-		_trigger_animations(AnimationReel.Trigger.HOVER_EXIT)
+	FocusDrivenHover.handle_focus_exited(self, animations, func(): return _helper.is_initializing())
 
 ## Triggers animations for reels matching the specified trigger type.
 ##
@@ -179,27 +160,22 @@ func _trigger_animations(trigger_type) -> void:
 ## Handles changes to the text_state value.
 ##
 ## Converts the new value to rich text, updates the label's text property,
-## and triggers TEXT_CHANGED animations if configured. Uses the _updating flag
-## to prevent recursive updates and only updates when the text actually changes.
+## and triggers TEXT_CHANGED animations if configured. Uses the helper to
+## prevent recursive updates and only updates when the text actually changes.
 ##
 ## [param new_value]: The new value from text_state
 ## [param old_value]: The previous value from text_state
 func _on_text_state_changed(new_value: Variant, old_value: Variant) -> void:
-	if _updating:
+	if _helper.is_updating():
 		return
 	_rebind_nested_states(new_value)
 	var new_text := _to_rich_text(new_value)
-	if text == new_text:
-		return
-	_updating = true
-
-	text = new_text
-
-	# Trigger animations if configured
-	if animations.size() > 0:
-		_on_trigger_text_changed(new_value, old_value)
-
-	_updating = false
+	
+	# Use helper to update property safely
+	if _helper.update_property_if_changed("text", new_text, func(x): return str(x)):
+		# Trigger animations if configured
+		if animations.size() > 0:
+			_on_trigger_text_changed(new_value, old_value)
 
 ## Manages connections to nested State objects within the text_state value.
 ##
@@ -351,3 +327,6 @@ func _to_rich_text(value: Variant) -> String:
 ## Returns LABEL to show only text_changed and hover triggers for rich text labels.
 func _get_control_type_hint() -> AnimationReel.ControlTypeHint:
 	return AnimationReel.ControlTypeHint.LABEL
+
+func _exit_tree() -> void:
+	FocusDrivenHover.cleanup(self)

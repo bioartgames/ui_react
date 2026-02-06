@@ -363,24 +363,21 @@ static func animate_slide_to_left(source_node: Node, target: Control, _offset :=
 ## [return]: Signal that emits when animation finishes.
 static func animate_slide_from_right(source_node: Node, target: Control, offset := DEFAULT_OFFSET, duration := DEFAULT_DURATION, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	var animation_callable = func() -> Signal:
-		if not source_node or not target:
-			push_warning("UIAnimationUtils: Invalid source_node or target for animate_slide_from_right")
+		if not AnimationCoreUtils.validate_animation_params(source_node, target, "animate_slide_from_right"):
 			return Signal()
 		
 		if auto_visible:
 			target.visible = true
 		
-		var viewport = source_node.get_viewport()
+		var viewport = AnimationCoreUtils.validate_viewport(source_node, "animate_slide_from_right")
 		if not viewport:
-			push_warning("UIAnimationUtils: source_node has no viewport")
 			return Signal()
 		
 		var viewport_size = viewport.get_visible_rect().size.x
 		target.position.x = viewport_size
 		
 		var t = source_node.create_tween()
-		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+		if not AnimationCoreUtils.validate_tween(t, source_node.name, "animate_slide_from_right"):
 			return Signal()
 		
 		t.tween_property(target, "position:x", (viewport_size - target.size.x) - offset, duration).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -399,11 +396,20 @@ static func animate_slide_from_right(source_node: Node, target: Control, offset 
 ## [return]: Signal that emits when animation finishes.
 static func animate_slide_to_right(source_node: Node, target: Control, _offset := DEFAULT_OFFSET, duration := DEFAULT_DURATION, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	var animation_callable = func() -> Signal:
+		if not AnimationCoreUtils.validate_animation_params(source_node, target, "animate_slide_to_right"):
+			return Signal()
+		
 		if auto_visible:
 			target.visible = true
 		
+		var viewport = AnimationCoreUtils.validate_viewport(source_node, "animate_slide_to_right")
+		if not viewport:
+			return Signal()
+		
 		var t = source_node.create_tween()
-		t.tween_property(target, 'position:x', source_node.get_viewport().size.x, duration).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		if not AnimationCoreUtils.validate_tween(t, source_node.name, "animate_slide_to_right"):
+			return Signal()
+		t.tween_property(target, 'position:x', viewport.size.x, duration).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
 		if auto_visible:
 			t.finished.connect(func(): target.visible = false)
@@ -839,24 +845,21 @@ static func animate_from_center_to_left(source_node: Node, target: Control, dura
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
 static func animate_from_right_to_center(source_node: Node, target: Control, duration := DEFAULT_DURATION, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
-	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_from_right_to_center")
+	if not AnimationCoreUtils.validate_animation_params(source_node, target, "animate_from_right_to_center"):
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
 		if auto_visible:
 			target.visible = true
 		
-		var viewport = source_node.get_viewport()
+		var viewport = AnimationCoreUtils.validate_viewport(source_node, "animate_from_right_to_center")
 		if not viewport:
-			push_warning("UIAnimationUtils: source_node has no viewport")
 			return Signal()
 		
 		target.position.x = viewport.get_visible_rect().size.x
 		
 		var t = source_node.create_tween()
-		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+		if not AnimationCoreUtils.validate_tween(t, source_node.name, "animate_from_right_to_center"):
 			return Signal()
 		
 		t.tween_property(target, 'position:x', get_node_center(source_node, target), duration).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -896,25 +899,22 @@ static func animate_from_center_to_right(source_node: Node, target: Control, dur
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
 static func animate_slide_from_bottom(source_node: Node, target: Control, offset: float = DEFAULT_OFFSET, duration := DEFAULT_DURATION, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
-	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_slide_from_bottom")
+	if not AnimationCoreUtils.validate_animation_params(source_node, target, "animate_slide_from_bottom"):
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
 		if auto_visible:
 			target.visible = true
 		
-		var viewport = source_node.get_viewport()
+		var viewport = AnimationCoreUtils.validate_viewport(source_node, "animate_slide_from_bottom")
 		if not viewport:
-			push_warning("UIAnimationUtils: source_node has no viewport")
 			return Signal()
 		
 		var viewport_size = viewport.get_visible_rect().size.y
 		target.position.y = viewport_size
 		
 		var t = source_node.create_tween()
-		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+		if not AnimationCoreUtils.validate_tween(t, source_node.name, "animate_slide_from_bottom"):
 			return Signal()
 		
 		t.tween_property(target, 'position:y', (viewport_size - target.size.y) - offset, duration).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -931,22 +931,19 @@ static func animate_slide_from_bottom(source_node: Node, target: Control, offset
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
 static func animate_slide_to_bottom(source_node: Node, target: Control, duration := DEFAULT_DURATION, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
-	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_slide_to_bottom")
+	if not AnimationCoreUtils.validate_animation_params(source_node, target, "animate_slide_to_bottom"):
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
 		if auto_visible:
 			target.visible = true
 		
-		var viewport = source_node.get_viewport()
+		var viewport = AnimationCoreUtils.validate_viewport(source_node, "animate_slide_to_bottom")
 		if not viewport:
-			push_warning("UIAnimationUtils: source_node has no viewport")
 			return Signal()
 		
 		var t = source_node.create_tween()
-		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+		if not AnimationCoreUtils.validate_tween(t, source_node.name, "animate_slide_to_bottom"):
 			return Signal()
 		
 		t.tween_property(target, 'position:y', viewport.get_visible_rect().size.y, duration).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -1041,24 +1038,21 @@ static func animate_from_center_to_top(source_node: Node, target: Control, durat
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
 static func animate_from_bottom_to_center(source_node: Node, target: Control, duration := DEFAULT_DURATION, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
-	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_from_bottom_to_center")
+	if not AnimationCoreUtils.validate_animation_params(source_node, target, "animate_from_bottom_to_center"):
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
 		if auto_visible:
 			target.visible = true
 		
-		var viewport = source_node.get_viewport()
+		var viewport = AnimationCoreUtils.validate_viewport(source_node, "animate_from_bottom_to_center")
 		if not viewport:
-			push_warning("UIAnimationUtils: source_node has no viewport")
 			return Signal()
 		
 		target.position.y = viewport.get_visible_rect().size.y
 		
 		var t = source_node.create_tween()
-		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+		if not AnimationCoreUtils.validate_tween(t, source_node.name, "animate_from_bottom_to_center"):
 			return Signal()
 		
 		t.tween_property(target, 'position:y', get_node_center_y(source_node, target), duration).set_trans(Tween.TRANS_BACK).set_ease(easing)

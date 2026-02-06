@@ -12,14 +12,16 @@ class_name ReactiveOptionButton
 ## duration, and settings - no resource files needed! Leave empty to use manual signal connections.
 @export var animations: Array[AnimationReel] = []
 
-var _updating: bool = false
-var _is_initializing: bool = true
+var _helper: ReactiveControlHelper
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		# In the editor, only validate reels so trigger options are filtered.
 		_validate_animation_reels()
 		return
+
+	# Initialize helper FIRST, before any state connections
+	_helper = ReactiveControlHelper.new(self)
 
 	item_selected.connect(_on_item_selected)
 	if selected_state:
@@ -68,12 +70,12 @@ func _validate_animation_reels() -> void:
 
 ## Finishes initialization, allowing animations to trigger on selection changes.
 func _finish_initialization() -> void:
-	_is_initializing = false
+	_helper.finish_initialization()
 
 ## Handles SELECTION_CHANGED trigger animations.
 func _on_trigger_selection_changed(_index: int) -> void:
 	# Skip animations during initialization
-	if _is_initializing:
+	if _helper.is_initializing():
 		return
 	
 	_trigger_animations(AnimationReel.Trigger.SELECTION_CHANGED)
@@ -88,32 +90,11 @@ func _on_trigger_hover_exit() -> void:
 
 ## Handles navigation-driven focus changes to trigger hover animations.
 func _on_navigation_focus_entered() -> void:
-	# Skip animations during initialization
-	if _is_initializing:
-		return
-
-	# Only trigger hover animations if this focus change was caused by navigation (not mouse)
-	const META_NAVIGATION_FOCUS = "_navigation_focus_change"
-	if has_meta(META_NAVIGATION_FOCUS):
-		# Remove the meta flag immediately to avoid lingering state
-		remove_meta(META_NAVIGATION_FOCUS)
-		# Mark that navigation hover is active
-		set_meta("_nav_hover_active", true)
-		# Trigger hover enter animation
-		_trigger_animations(AnimationReel.Trigger.HOVER_ENTER)
+	FocusDrivenHover.handle_focus_entered(self, animations, func(): return _helper.is_initializing())
 
 ## Handles navigation-driven focus loss to trigger hover exit animations.
 func _on_navigation_focus_exited() -> void:
-	# Skip animations during initialization
-	if _is_initializing:
-		return
-
-	# Only trigger hover exit if navigation hover was active
-	if has_meta("_nav_hover_active"):
-		# Clear the active flag
-		remove_meta("_nav_hover_active")
-		# Trigger hover exit animation
-		_trigger_animations(AnimationReel.Trigger.HOVER_EXIT)
+	FocusDrivenHover.handle_focus_exited(self, animations, func(): return _helper.is_initializing())
 
 ## Triggers animations for reels matching the specified trigger type.
 ## [param trigger_type]: The trigger type to match.
@@ -133,17 +114,17 @@ func _trigger_animations(trigger_type) -> void:
 		reel.apply(self)
 
 func _on_item_selected(index: int) -> void:
-	if not selected_state or _updating:
+	if not selected_state or _helper.is_updating():
 		return
 	var new_value: Variant = get_item_text(index)
 	if selected_state.value == new_value:
 		return
-	_updating = true
+	_helper.set_updating(true)
 	selected_state.set_value(new_value)
-	_updating = false
+	_helper.set_updating(false)
 
 func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void:
-	if _updating:
+	if _helper.is_updating():
 		return
 	var index := -1
 	if new_value is String:
@@ -155,13 +136,15 @@ func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void
 	if get_selected_id() == index or selected == index:
 		return
 
-	_updating = true
+	_helper.set_updating(true)
 	select(index)
-	_updating = false
+	_helper.set_updating(false)
 
 func _on_disabled_state_changed(new_value: Variant, _old_value: Variant) -> void:
-	disabled = bool(new_value)
-	ReactiveControlHelper.sync_focus_mode_to_disabled_static(self)
+	if _helper.is_initializing():
+		return
+	if _helper.update_property_if_changed("disabled", new_value, func(x): return bool(x)):
+		_helper.sync_focus_mode_to_disabled()
 
 func _find_item_by_text(text_value: String) -> int:
 	for i in item_count:
@@ -175,4 +158,6 @@ func _get_control_type_hint() -> AnimationReel.ControlTypeHint:
 	return AnimationReel.ControlTypeHint.SELECTION
 
 func _exit_tree() -> void:
-	ReactiveControlHelper.release_stored_focus_mode(self)
+	FocusDrivenHover.cleanup(self)
+	# Clean up any unified snapshots when the control is freed
+	AnimationStateUtils.clear_unified_snapshot_for_target(self)

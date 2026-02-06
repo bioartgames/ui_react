@@ -12,14 +12,16 @@ class_name ReactiveCheckBox
 ## to execute. Supports automatic execution modes: single, multi-target, and sequences.
 @export var animations: Array[AnimationReel] = []
 
-var _updating: bool = false
-var _is_initializing: bool = true
+var _helper: ReactiveControlHelper
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		# In the editor, only validate reels so trigger options are filtered.
 		_validate_animation_reels()
 		return
+
+	# Initialize helper FIRST, before any state connections
+	_helper = ReactiveControlHelper.new(self)
 
 	toggled.connect(_on_toggled)
 	if checked_state:
@@ -69,12 +71,12 @@ func _validate_animation_reels() -> void:
 
 ## Finishes initialization, allowing animations to trigger on toggle changes.
 func _finish_initialization() -> void:
-	_is_initializing = false
+	_helper.finish_initialization()
 
 ## Handles TOGGLED_ON and TOGGLED_OFF trigger animations.
 func _on_trigger_toggled(active: bool) -> void:
 	# Skip animations during initialization
-	if _is_initializing:
+	if _helper.is_initializing():
 		return
 	
 	if active:
@@ -92,32 +94,11 @@ func _on_trigger_hover_exit() -> void:
 
 ## Handles navigation-driven focus changes to trigger hover animations.
 func _on_navigation_focus_entered() -> void:
-	# Skip animations during initialization
-	if _is_initializing:
-		return
-
-	# Only trigger hover animations if this focus change was caused by navigation (not mouse)
-	const META_NAVIGATION_FOCUS = "_navigation_focus_change"
-	if has_meta(META_NAVIGATION_FOCUS):
-		# Remove the meta flag immediately to avoid lingering state
-		remove_meta(META_NAVIGATION_FOCUS)
-		# Mark that navigation hover is active
-		set_meta("_nav_hover_active", true)
-		# Trigger hover enter animation
-		_trigger_animations(AnimationReel.Trigger.HOVER_ENTER)
+	FocusDrivenHover.handle_focus_entered(self, animations, func(): return _helper.is_initializing())
 
 ## Handles navigation-driven focus loss to trigger hover exit animations.
 func _on_navigation_focus_exited() -> void:
-	# Skip animations during initialization
-	if _is_initializing:
-		return
-
-	# Only trigger hover exit if navigation hover was active
-	if has_meta("_nav_hover_active"):
-		# Clear the active flag
-		remove_meta("_nav_hover_active")
-		# Trigger hover exit animation
-		_trigger_animations(AnimationReel.Trigger.HOVER_EXIT)
+	FocusDrivenHover.handle_focus_exited(self, animations, func(): return _helper.is_initializing())
 
 ## Triggers animations for reels matching the specified trigger type.
 ## [param trigger_type]: The trigger type to match.
@@ -137,23 +118,18 @@ func _trigger_animations(trigger_type) -> void:
 		reel.apply(self)
 
 func _on_toggled(active: bool) -> void:
-	if not checked_state or _updating:
+	if not checked_state or _helper.is_updating():
 		return
 	if checked_state.value == active:
 		return
-	_updating = true
+	_helper.set_updating(true)
 	checked_state.set_value(active)
-	_updating = false
+	_helper.set_updating(false)
 
 func _on_checked_state_changed(new_value: Variant, _old_value: Variant) -> void:
-	if _updating:
+	if _helper.is_initializing():
 		return
-	var desired := bool(new_value)
-	if button_pressed == desired:
-		return
-	_updating = true
-	button_pressed = desired
-	_updating = false
+	_helper.update_property_if_changed("button_pressed", new_value, func(x): return bool(x))
 
 func _on_disabled_state_changed(new_value: Variant, _old_value: Variant) -> void:
 	var desired := bool(new_value)
@@ -168,4 +144,6 @@ func _get_control_type_hint() -> AnimationReel.ControlTypeHint:
 	return AnimationReel.ControlTypeHint.BUTTON
 
 func _exit_tree() -> void:
-	ReactiveControlHelper.release_stored_focus_mode(self)
+	FocusDrivenHover.cleanup(self)
+	# Clean up any unified snapshots when the control is freed
+	AnimationStateUtils.clear_unified_snapshot_for_target(self)

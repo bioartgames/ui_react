@@ -11,14 +11,16 @@ class_name ReactiveLineEdit
 ## animation type, duration, and settings - no resource files needed!
 @export var animations: Array[AnimationReel] = []
 
-var _updating: bool = false
-var _is_initializing: bool = true
+var _helper: ReactiveControlHelper
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		# In the editor, only validate reels so trigger options are filtered.
 		_validate_animation_reels()
 		return
+
+	# Initialize helper FIRST, before any state connections
+	_helper = ReactiveControlHelper.new(self)
 
 	text_changed.connect(_on_text_changed)
 	if text_state:
@@ -60,12 +62,12 @@ func _validate_animation_reels() -> void:
 
 ## Finishes initialization, allowing animations to trigger on text changes.
 func _finish_initialization() -> void:
-	_is_initializing = false
+	_helper.finish_initialization()
 
 ## Handles TEXT_CHANGED trigger animations.
 func _on_trigger_text_changed(_new_text: String) -> void:
 	# Skip animations during initialization
-	if _is_initializing:
+	if _helper.is_initializing():
 		return
 	
 	_trigger_animations(AnimationReel.Trigger.TEXT_CHANGED)
@@ -78,28 +80,15 @@ func _on_trigger_text_entered(_text: String) -> void:
 func _on_focus_entered() -> void:
 	# Trigger FOCUS_ENTERED animations
 	_trigger_animations(AnimationReel.Trigger.FOCUS_ENTERED)
-
-	# Also trigger HOVER_ENTER if this focus change was caused by navigation
-	const META_NAVIGATION_FOCUS = "_navigation_focus_change"
-	if has_meta(META_NAVIGATION_FOCUS):
-		# Remove the meta flag immediately to avoid lingering state
-		remove_meta(META_NAVIGATION_FOCUS)
-		# Mark that navigation hover is active
-		set_meta("_nav_hover_active", true)
-		# Trigger hover enter animation
-		_trigger_animations(AnimationReel.Trigger.HOVER_ENTER)
+	# Handle focus-driven hover animations
+	FocusDrivenHover.handle_focus_entered(self, animations, func(): return _helper.is_initializing())
 
 ## Handles FOCUS_EXITED trigger animations.
 func _on_focus_exited() -> void:
 	# Trigger FOCUS_EXITED animations
 	_trigger_animations(AnimationReel.Trigger.FOCUS_EXITED)
-
-	# Also trigger HOVER_EXIT if navigation hover was active
-	if has_meta("_nav_hover_active"):
-		# Clear the active flag
-		remove_meta("_nav_hover_active")
-		# Trigger hover exit animation
-		_trigger_animations(AnimationReel.Trigger.HOVER_EXIT)
+	# Handle focus-driven hover animations
+	FocusDrivenHover.handle_focus_exited(self, animations, func(): return _helper.is_initializing())
 
 ## Handles HOVER_ENTER trigger animations.
 func _on_trigger_hover_enter() -> void:
@@ -131,23 +120,21 @@ func _on_text_changed(new_text: String) -> void:
 	if animations.size() > 0:
 		_on_trigger_text_changed(new_text)
 	
-	if not text_state or _updating:
+	if not text_state or _helper.is_updating():
 		return
 	if text_state.value == new_text:
 		return
-	_updating = true
+	_helper.set_updating(true)
 	text_state.set_value(new_text)
-	_updating = false
+	_helper.set_updating(false)
 
 func _on_text_state_changed(new_value: Variant, _old_value: Variant) -> void:
-	if _updating:
+	if _helper.is_updating():
 		return
 	var new_text := _to_text(new_value)
-	if text == new_text:
-		return
-	_updating = true
-	text = new_text
-	_updating = false
+	
+	# Use helper to update property safely
+	_helper.update_property_if_changed("text", new_text, func(x): return str(x))
 
 func _to_text(value: Variant) -> String:
 	if value is Array:
@@ -161,3 +148,6 @@ func _to_text(value: Variant) -> String:
 ## Used to filter available triggers in the Inspector.
 func _get_control_type_hint() -> AnimationReel.ControlTypeHint:
 	return AnimationReel.ControlTypeHint.TEXT_INPUT
+
+func _exit_tree() -> void:
+	FocusDrivenHover.cleanup(self)

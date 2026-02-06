@@ -12,15 +12,17 @@ class_name ReactiveSpinBox
 ## animation type, duration, and settings - no resource files needed!
 @export var animations: Array[AnimationReel] = []
 
-var _updating: bool = false
+var _helper: ReactiveControlHelper
 var _last_value: float = 0.0
-var _is_initializing: bool = true
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		# In the editor, only validate reels so trigger options are filtered.
 		_validate_animation_reels()
 		return
+
+	# Initialize helper FIRST, before any state connections
+	_helper = ReactiveControlHelper.new(self)
 
 	value_changed.connect(_on_value_changed)
 	focus_entered.connect(_on_focus_entered)
@@ -62,12 +64,12 @@ func _validate_animation_reels() -> void:
 
 ## Finishes initialization, allowing animations to trigger on value changes.
 func _finish_initialization() -> void:
-	_is_initializing = false
+	_helper.finish_initialization()
 
 ## Handles VALUE_CHANGED, VALUE_INCREASED, and VALUE_DECREASED trigger animations.
 func _on_trigger_value_changed(new_value: float) -> void:
 	# Skip animations during initialization
-	if _is_initializing:
+	if _helper.is_initializing():
 		_last_value = new_value
 		return
 	
@@ -118,51 +120,38 @@ func _on_value_changed(new_value: float) -> void:
 	if animations.size() > 0:
 		_on_trigger_value_changed(new_value)
 	
-	if not value_state or _updating:
+	if not value_state or _helper.is_updating():
 		return
 	if float(value_state.value) == new_value:
 		return
-	_updating = true
+	_helper.set_updating(true)
 	value_state.set_value(new_value)
-	_updating = false
+	_helper.set_updating(false)
 
 func _on_focus_entered() -> void:
 	# Trigger animations if configured
 	if animations.size() > 0:
 		_on_trigger_focus_entered()
-
-	# Also trigger HOVER_ENTER if this focus change was caused by navigation
-	const META_NAVIGATION_FOCUS = "_navigation_focus_change"
-	if has_meta(META_NAVIGATION_FOCUS):
-		# Remove the meta flag immediately to avoid lingering state
-		remove_meta(META_NAVIGATION_FOCUS)
-		# Mark that navigation hover is active
-		set_meta("_nav_hover_active", true)
-		# Trigger hover enter animation
-		_on_trigger_hover_enter()
+	# Handle focus-driven hover animations
+	FocusDrivenHover.handle_focus_entered(self, animations, func(): return _helper.is_initializing())
 
 func _on_focus_exited() -> void:
 	# Trigger animations if configured
 	if animations.size() > 0:
 		_on_trigger_focus_exited()
-
-	# Also trigger HOVER_EXIT if navigation hover was active
-	if has_meta("_nav_hover_active"):
-		# Clear the active flag
-		remove_meta("_nav_hover_active")
-		# Trigger hover exit animation
-		_on_trigger_hover_exit()
+	# Handle focus-driven hover animations
+	FocusDrivenHover.handle_focus_exited(self, animations, func(): return _helper.is_initializing())
 
 func _on_value_state_changed(new_value: Variant, _old_value: Variant) -> void:
-	if _updating:
+	if _helper.is_updating():
 		return
 	var target_value := float(new_value)
 	if is_equal_approx(value, target_value):
 		return
-	_updating = true
+	_helper.set_updating(true)
 	value = target_value
 	_last_value = value
-	_updating = false
+	_helper.set_updating(false)
 
 func _on_disabled_state_changed(_new_value: Variant, _old_value: Variant) -> void:
 	# Note: SpinBox doesn't expose disabled property in Godot 4.5, so this is a no-op
@@ -173,3 +162,5 @@ func _on_disabled_state_changed(_new_value: Variant, _old_value: Variant) -> voi
 func _get_control_type_hint() -> AnimationReel.ControlTypeHint:
 	return AnimationReel.ControlTypeHint.VALUE_INPUT
 
+func _exit_tree() -> void:
+	FocusDrivenHover.cleanup(self)
