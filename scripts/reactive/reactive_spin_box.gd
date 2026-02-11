@@ -40,7 +40,7 @@ func _ready() -> void:
 ## Validates animation reels and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_reels() -> void:
-	var trigger_map = ReactiveAnimationSetup.setup_reels(self, animations, _get_control_type_hint())
+	var trigger_map: Dictionary = ReactiveAnimationSetup.setup_reels(self, animations, _get_control_type_hint())
 	
 	# Connect trigger signals
 	# Note: value_changed, focus_entered, and focus_exited are always connected in _ready

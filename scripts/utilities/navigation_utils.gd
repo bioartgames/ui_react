@@ -5,6 +5,11 @@
 extends RefCounted
 class_name NavigationUtils
 
+## Threshold for diagonal direction detection (0.5 = 45 degrees).
+const DIAGONAL_DIRECTION_THRESHOLD := 0.5
+## Half of PI radians (90 degrees).
+const HALF_PI := PI / 2.0
+
 ## Validates that a node is valid and not null.
 ## Uses consistent error reporting with context.
 ## [param node]: Node to validate
@@ -38,24 +43,24 @@ static func find_closest_in_direction(current: Control, candidates: Array[Contro
 	if not current:
 		return candidates[0] if not candidates.is_empty() else null
 
-	var current_pos = current.get_global_rect().get_center()
+	var current_pos: Vector2 = current.get_global_rect().get_center()
 	var best_candidate: Control = null
-	var best_distance = INF
-	var best_angle_diff = INF
+	var best_distance: float = INF
+	var best_angle_diff: float = INF
 
 	for candidate in candidates:
 		if candidate == current:
 			continue
 
-		var candidate_pos = candidate.get_global_rect().get_center()
-		var to_candidate = candidate_pos - current_pos
+		var candidate_pos: Vector2 = candidate.get_global_rect().get_center()
+		var to_candidate: Vector2 = candidate_pos - current_pos
 
 		# Check if candidate is in the general direction (within 90 degrees)
-		var angle_diff = abs(direction.angle_to(to_candidate))
-		if angle_diff > PI/2:  # More than 90 degrees off
+		var angle_diff: float = abs(direction.angle_to(to_candidate))
+		if angle_diff > HALF_PI:  # More than 90 degrees off
 			continue
 
-		var distance = to_candidate.length()
+		var distance: float = to_candidate.length()
 		if angle_diff < best_angle_diff or (angle_diff == best_angle_diff and distance < best_distance):
 			best_candidate = candidate
 			best_distance = distance
@@ -73,8 +78,8 @@ static func get_custom_focus_neighbor(control: Control, direction: Vector2) -> C
 		return null
 
 	# Normalize direction to determine which neighbor property to check
-	var normalized_dir = direction.normalized()
-	var threshold = 0.5  # Threshold for diagonal detection
+	var normalized_dir: Vector2 = direction.normalized()
+	var threshold: float = DIAGONAL_DIRECTION_THRESHOLD
 
 	# Determine primary direction (prioritize larger component)
 	var neighbor_path: NodePath
@@ -93,7 +98,7 @@ static func get_custom_focus_neighbor(control: Control, direction: Vector2) -> C
 
 	# Resolve the NodePath to get the actual Control
 	if neighbor_path and not neighbor_path.is_empty():
-		var neighbor = control.get_node_or_null(neighbor_path)
+		var neighbor: Node = control.get_node_or_null(neighbor_path)
 		if neighbor is Control:
 			return neighbor as Control
 

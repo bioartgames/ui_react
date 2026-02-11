@@ -32,7 +32,7 @@ static func acquire_unified_snapshot(target: Control) -> ControlStateSnapshot:
 		push_warning("AnimationStateUtils.acquire_unified_snapshot(): Failed to create baseline snapshot for target.")
 		return null
 
-	var target_id = target.get_instance_id()
+	var target_id: int = target.get_instance_id()
 
 	# If we don't have a snapshot yet, create one
 	if not _unified_original_snapshots.has(target_id):
@@ -59,10 +59,10 @@ static func release_unified_snapshot(target: Control, restore_immediately: bool 
 		push_warning("AnimationStateUtils.release_unified_snapshot(): Cannot restore state of null control.")
 		return false
 
-	var target_id = target.get_instance_id()
+	var target_id: int = target.get_instance_id()
 
 	# Decrement animation count
-	var current_count = _active_animation_count.get(target_id, 0)
+	var current_count: int = _active_animation_count.get(target_id, 0)
 	if current_count > 0:
 		current_count -= 1
 		_active_animation_count[target_id] = current_count
@@ -139,7 +139,7 @@ static func animate_reset_all(source_node: Node, target: Control, duration: floa
 		push_warning("AnimationStateUtils.animate_reset_all(): Invalid source_node or target")
 		return Signal()
 
-	var snapshot = AnimationStateUtils.get_unified_snapshot(target)
+	var snapshot: ControlStateSnapshot = AnimationStateUtils.get_unified_snapshot(target)
 	if not snapshot:
 		# No snapshot exists - control was never animated, so nothing to reset
 		# This is expected behavior, not an error
@@ -160,18 +160,18 @@ static func animate_reset_all(source_node: Node, target: Control, duration: floa
 			return Signal()  # Return empty signal for instant operations
 		else:
 			# Animated reset
-			var t = source_node.create_tween()
-			if not t:
+			var tween: Tween = source_node.create_tween()
+			if not tween:
 				push_warning("AnimationStateUtils.animate_reset_all(): Failed to create one or more tweens for target '%s'" % target.name)
 				return Signal()
 
-			t.tween_property(target, 'position', snapshot.position, duration).set_ease(easing)
-			t.tween_property(target, 'scale', snapshot.scale, duration).set_ease(easing)
-			t.tween_property(target, 'modulate', snapshot.modulate, duration).set_ease(easing)
-			t.tween_property(target, 'rotation_degrees', snapshot.rotation_degrees, duration).set_ease(easing)
-			t.tween_property(target, 'pivot_offset', snapshot.pivot_offset, duration).set_ease(easing)
+			tween.tween_property(target, 'position', snapshot.position, duration).set_ease(easing)
+			tween.tween_property(target, 'scale', snapshot.scale, duration).set_ease(easing)
+			tween.tween_property(target, 'modulate', snapshot.modulate, duration).set_ease(easing)
+			tween.tween_property(target, 'rotation_degrees', snapshot.rotation_degrees, duration).set_ease(easing)
+			tween.tween_property(target, 'pivot_offset', snapshot.pivot_offset, duration).set_ease(easing)
 
-			return t.finished
+			return tween.finished
 
 	var result_signal = AnimationCoreUtils.wrap_with_loop(source_node, target, animation_callable, 0)
 
@@ -187,6 +187,6 @@ static func animate_reset_all(source_node: Node, target: Control, duration: floa
 static func clear_unified_snapshot_for_target(target: Control) -> void:
 	if not target:
 		return
-	var target_id = target.get_instance_id()
+	var target_id: int = target.get_instance_id()
 	_unified_original_snapshots.erase(target_id)
 	_active_animation_count.erase(target_id)

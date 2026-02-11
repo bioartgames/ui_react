@@ -52,7 +52,7 @@ func _ready() -> void:
 
 ## Gets sibling targets for horizontal navigation.
 func _get_sibling_targets(children: Array[Control], index: int, _get_first: bool) -> Dictionary:
-	var result = {}
+	var result: Dictionary = {}
 	if index > 0:
 		result.previous = ReactiveBoxContainerBase.get_focusable_target(children[index - 1], false)
 	elif wrap_horizontal:
@@ -65,8 +65,8 @@ func _get_sibling_targets(children: Array[Control], index: int, _get_first: bool
 
 ## Applies neighbor properties to a direct child for horizontal navigation.
 func _apply_neighbors_to_child(child: Control, targets: Dictionary) -> void:
-	var left_target = targets.get("previous") if targets.has("previous") else targets.get("wrap_previous")
-	var right_target = targets.get("next") if targets.has("next") else targets.get("wrap_next")
+	var left_target: Control = targets.get("previous") if targets.has("previous") else targets.get("wrap_previous")
+	var right_target: Control = targets.get("next") if targets.has("next") else targets.get("wrap_next")
 	ReactiveBoxContainerBase.set_focus_neighbor(child, left_target, "left")
 	ReactiveBoxContainerBase.set_focus_neighbor(child, right_target, "right")
 

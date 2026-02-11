@@ -38,7 +38,7 @@ static func handle_focus_entered(
 	if not control or skip_animations.call():
 		return
 	
-	var instance_id = control.get_instance_id()
+	var instance_id: int = control.get_instance_id()
 	
 	# Check if this focus change was caused by navigation
 	if _marked_for_focus_driven.has(instance_id):
@@ -61,7 +61,7 @@ static func handle_focus_exited(
 	if not control or skip_animations.call():
 		return
 	
-	var instance_id = control.get_instance_id()
+	var instance_id: int = control.get_instance_id()
 	
 	# Check if navigation hover was active
 	if _active_hover_controls.has(instance_id):
@@ -76,6 +76,6 @@ static func handle_focus_exited(
 static func cleanup(control: Control) -> void:
 	if not control:
 		return
-	var instance_id = control.get_instance_id()
+	var instance_id: int = control.get_instance_id()
 	_marked_for_focus_driven.erase(instance_id)
 	_active_hover_controls.erase(instance_id)

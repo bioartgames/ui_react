@@ -71,7 +71,7 @@ func _ready() -> void:
 ## Sets the control type context on each reel for Inspector filtering and connects
 ## hover signals based on which animation triggers are actually used.
 func _validate_animation_reels() -> void:
-	var trigger_map = ReactiveAnimationSetup.setup_reels(self, animations, _get_control_type_hint())
+	var trigger_map: Dictionary = ReactiveAnimationSetup.setup_reels(self, animations, _get_control_type_hint())
 	
 	# Connect trigger signals
 	var bindings: Array = [

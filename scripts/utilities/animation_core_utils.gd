@@ -16,6 +16,16 @@ const DEFAULT_OFFSET := 8.0
 const DEFAULT_DURATION := 0.3
 ## Default duration for shrink animations in seconds.
 const SHRINK_ANIMATION_DURATION := 0.15
+## Pivot offset value indicating center pivot (use center calculation).
+const PIVOT_OFFSET_CENTER := Vector2(-1, -1)
+## Multiplier for calculating center pivot offset (0.5 = center).
+const PIVOT_CENTER_MULTIPLIER := 0.5
+## Duration for instant tween operations (0.0 = immediate).
+const INSTANT_TWEEN_DURATION := 0.0
+## Repeat count value indicating no repeats.
+const REPEAT_NONE := 0
+## Repeat count value indicating infinite repeats.
+const REPEAT_INFINITE := -1
 
 ## Wraps an animation callable with loop handling.
 ## [param source_node]: Node to create tween on
@@ -29,7 +39,7 @@ static func wrap_with_loop(
 	animation_callable: Callable,
 	repeat_count: int
 ) -> Signal:
-	if repeat_count != 0:
+	if repeat_count != REPEAT_NONE:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
@@ -59,7 +69,7 @@ static func validate_viewport(node: Node, function_name: String) -> Viewport:
 		push_error("AnimationCoreUtils.%s(): node is null. Tip: Ensure the node is valid and in the scene tree before calling this function." % function_name)
 		return null
 	
-	var viewport = node.get_viewport()
+	var viewport: Viewport = node.get_viewport()
 	if not viewport:
 		push_error("AnimationCoreUtils.%s(): node '%s' has no viewport. Tip: Ensure the node is added to the scene tree and has a viewport (usually happens after _ready())." % [function_name, node.name])
 		return null
@@ -80,9 +90,9 @@ static func validate_tween(tween: Tween, node_name: String, function_name: Strin
 
 ## Sets up pivot offset for scale animations.
 ## [param target]: Control to set pivot on
-## [param pivot_offset]: Desired pivot offset (Vector2(-1, -1) = center)
+## [param pivot_offset]: Desired pivot offset (PIVOT_OFFSET_CENTER = center)
 static func setup_pivot_offset(target: Control, pivot_offset: Vector2) -> void:
-	if pivot_offset == Vector2(-1, -1):
+	if pivot_offset == PIVOT_OFFSET_CENTER:
 		target.pivot_offset = get_center_pivot_offset(target)  # Calls static method in same class
 	else:
 		target.pivot_offset = pivot_offset
@@ -93,45 +103,7 @@ static func setup_pivot_offset(target: Control, pivot_offset: Vector2) -> void:
 static func get_center_pivot_offset(target: Control) -> Vector2:
 	if not target:
 		return Vector2.ZERO
-	return Vector2(target.size.x * 0.5, target.size.y * 0.5)
-
-## Gets the horizontal center position for a control within its viewport.
-## [param source_node]: The node to get viewport from.
-## [param target]: The control to center.
-## [return]: X position that centers the control horizontally.
-static func get_node_center(source_node: Node, target: Control) -> float:
-	if not source_node or not target:
-		var source_name: String = "null"
-		var target_name: String = "null"
-		if source_node != null:
-			source_name = source_node.name
-		if target != null:
-			target_name = target.name
-		push_warning("AnimationCoreUtils.get_node_center(): Invalid source_node (%s) or target (%s). Tip: Ensure both nodes are valid and in the scene tree before calling this function." % [source_name, target_name])
-		return 0.0
-
-	var viewport = source_node.get_viewport()
-	if not viewport:
-		push_warning("AnimationCoreUtils.get_node_center(): source_node '%s' has no viewport. Tip: Ensure the node is added to the scene tree and has a viewport (usually happens after _ready())." % source_node.name)
-		return 0.0
-
-	return (viewport.get_visible_rect().size.x * 0.5) - (target.size.x * 0.5)
-
-## Gets the vertical center position for a control within its viewport.
-## [param source_node]: The node to get viewport from.
-## [param target]: The control to center.
-## [return]: Y position that centers the control vertically.
-static func get_node_center_y(source_node: Node, target: Control) -> float:
-	if not source_node or not target:
-		push_warning("AnimationCoreUtils: Invalid source_node or target for get_node_center_y")
-		return 0.0
-
-	var viewport = source_node.get_viewport()
-	if not viewport:
-		push_warning("AnimationCoreUtils: source_node has no viewport")
-		return 0.0
-
-	return (viewport.get_visible_rect().size.y * 0.5) - (target.size.y * 0.5)
+	return Vector2(target.size.x * PIVOT_CENTER_MULTIPLIER, target.size.y * PIVOT_CENTER_MULTIPLIER)
 
 ## Validates that a Signal object has a valid underlying object.
 ## Signals from freed objects (like Tweens) can exist but have null objects.
@@ -142,7 +114,7 @@ static func is_valid_signal(signal_item: Signal) -> bool:
 	if signal_item == null:
 		return false
 
-	var signal_object = signal_item.get_object()
+	var signal_object: Object = signal_item.get_object()
 	if signal_object == null or not is_instance_valid(signal_object):
 		return false
 
@@ -162,17 +134,17 @@ static func handle_auto_visible(target: Control, auto_visible: bool) -> void:
 ## [param repeat_count]: Number of repeats (0 = no repeat, -1 = infinite, 1+ = finite repeats)
 ## [return]: Signal that fires when animation completes
 static func _loop_animation(source_node: Node, target: Control, animation_callable: Callable, repeat_count: int) -> Signal:
-	if repeat_count == 0:
+	if repeat_count == REPEAT_NONE:
 		# No repeats, just execute once
 		return animation_callable.call()
 
-	if repeat_count == -1:
+	if repeat_count == REPEAT_INFINITE:
 		# Infinite loop - attach helper to target control
-		var infinite_helper = _AnimationLoopHelper.new()
+		var infinite_helper: _AnimationLoopHelper = _AnimationLoopHelper.new()
 		infinite_helper._target_control = target  # Store target reference to interrupt animations
 		target.add_child(infinite_helper)
 		# Wrap the callable to capture tween references and pass helper directly
-		var wrapped_callable = infinite_helper._wrap_animation_callable(animation_callable, source_node)
+		var wrapped_callable: Callable = infinite_helper._wrap_animation_callable(animation_callable, source_node)
 		infinite_helper.start_infinite_loop(wrapped_callable)
 
 		# Always return the signal to maintain type contract
@@ -180,14 +152,14 @@ static func _loop_animation(source_node: Node, target: Control, animation_callab
 		return infinite_helper.loop_finished
 
 	# Finite repeats - use AnimationSequence, attach helper to target control
-	var sequence = AnimationSequence.create()
+	var sequence: AnimationSequence = AnimationSequence.create()
 	# repeat_count represents number of repeats, so total plays = repeat_count + 1
-	var total_plays = repeat_count + 1
+	var total_plays: int = repeat_count + 1
 	for i in range(total_plays):
 		sequence.add(animation_callable)
 
 	# Execute sequence asynchronously using helper node
-	var finite_helper = _FiniteLoopHelper.new()
+	var finite_helper: _FiniteLoopHelper = _FiniteLoopHelper.new()
 	target.add_child(finite_helper)
 	finite_helper.execute_sequence(sequence)
 	return finite_helper.sequence_finished
@@ -205,7 +177,7 @@ class _FiniteLoopHelper extends Node:
 class _AnimationLoopHelper extends Node:
 	const HELPER_TYPE = "_AnimationLoopHelper"  # Identifier for helper detection
 	signal loop_finished
-	var _is_running = false
+	var _is_running: bool = false
 	var _target_control: Control = null  # Store target to interrupt animations
 	var _active_tweens: Array[Tween] = []  # Track all active tweens
 
@@ -218,7 +190,7 @@ class _AnimationLoopHelper extends Node:
 	## [param source_node]: The node to create the tween from
 	## [param helper]: Optional helper to track the tween in
 	static func create_tracked_tween(source_node: Node, helper: _AnimationLoopHelper = null) -> Tween:
-		var tween = source_node.create_tween()
+		var tween: Tween = source_node.create_tween()
 		if tween and helper:
 			helper._active_tweens.append(tween)
 		return tween
@@ -252,7 +224,7 @@ class _AnimationLoopHelper extends Node:
 			return is_instance_valid(t) and t.is_valid() and t.is_running()
 		)
 
-		var signal_result = animation_callable.call()
+		var signal_result: Signal = animation_callable.call()
 		if signal_result is Signal:
 			await signal_result
 			if _is_running:
@@ -269,10 +241,10 @@ class _AnimationLoopHelper extends Node:
 
 		# Also interrupt by directly setting properties to stop any untracked tweens
 		if _target_control:
-			var current_pos = _target_control.position
-			var current_scale = _target_control.scale
-			var current_modulate = _target_control.modulate
-			var current_rotation = _target_control.rotation_degrees
+			var current_pos: Vector2 = _target_control.position
+			var current_scale: Vector2 = _target_control.scale
+			var current_modulate: Color = _target_control.modulate
+			var current_rotation: float = _target_control.rotation_degrees
 
 			# Directly set properties - this interrupts tweens in Godot 4
 			_target_control.position = current_pos

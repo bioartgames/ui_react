@@ -40,7 +40,7 @@ func _ready() -> void:
 ## Validates animation reels and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_reels() -> void:
-	var trigger_map = ReactiveAnimationSetup.setup_reels(self, animations, _get_control_type_hint())
+	var trigger_map: Dictionary = ReactiveAnimationSetup.setup_reels(self, animations, _get_control_type_hint())
 	
 	# Connect trigger signals
 	var bindings: Array = [
@@ -53,7 +53,7 @@ func _validate_animation_reels() -> void:
 	ReactiveAnimationSetup.connect_trigger_bindings(self, trigger_map, bindings)
 	
 	# Connect focus-driven hover animations
-	var has_hover_triggers = trigger_map.get(AnimationReel.Trigger.HOVER_ENTER, false) or trigger_map.get(AnimationReel.Trigger.HOVER_EXIT, false)
+	var has_hover_triggers: bool = trigger_map.get(AnimationReel.Trigger.HOVER_ENTER, false) or trigger_map.get(AnimationReel.Trigger.HOVER_EXIT, false)
 	if has_hover_triggers:
 		ReactiveAnimationSetup.connect_focus_driven_hover(self, animations, func(): return _helper.is_initializing())
 

@@ -16,7 +16,7 @@ class_name ReactiveBoxContainerBase
 static func get_focusable_target(child: Control, get_first: bool) -> Control:
 	# Check if child is an enterable container
 	if is_enterable_container(child):
-		var focusable_controls = NavigationUtils.find_focusable_controls(child, true)
+		var focusable_controls: Array[Control] = NavigationUtils.find_focusable_controls(child, true)
 		if focusable_controls.is_empty():
 			return child
 		if get_first:
@@ -79,8 +79,8 @@ static func setup_wrapping(
 		return
 	
 	for i in range(children.size()):
-		var current = children[i]
-		var targets = get_sibling_targets_func.call(children, i, false)
+		var current: Control = children[i]
+		var targets: Dictionary = get_sibling_targets_func.call(children, i, false)
 		
 		# Set neighbors on direct child
 		apply_neighbors_to_child_func.call(current, targets)
@@ -107,7 +107,7 @@ static func setup_initial_focus(
 	if default_focus and not default_focus.is_empty():
 		initial_focus = container.get_node_or_null(default_focus) as Control
 	if not initial_focus and container.get_child_count() > 0:
-		var first_child = container.get_child(0)
+		var first_child: Node = container.get_child(0)
 		if first_child is Control:
 			initial_focus = first_child as Control
 	

@@ -22,6 +22,8 @@ class_name ReactiveTabContainer
 var _helper: TabContainerHelper
 var _control_helper: ReactiveControlHelper
 var _previous_tab_index: int = -1
+## Prefix for child property access (e.g., "child_text_state").
+const CHILD_PREFIX := "child_"
 ## Whether focus has "entered" the TabContainer (user pressed Select).
 ## When false, TabContainer acts as a single focusable item. When true, focus is inside.
 var _entered: bool = false
@@ -70,7 +72,7 @@ func _ready() -> void:
 ## Validates animation reels and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_reels() -> void:
-	var trigger_map = ReactiveAnimationSetup.setup_reels(self, animations, _get_control_type_hint())
+	var trigger_map: Dictionary = ReactiveAnimationSetup.setup_reels(self, animations, _get_control_type_hint())
 	
 	# Connect trigger signals
 	var bindings: Array = [
@@ -190,22 +192,22 @@ func _bind_tab_content_state(tab_index: int) -> void:
 
 ## Helper to update tab content when its State changes.
 func _on_tab_content_state_changed(new_value: Variant, _old_value: Variant, tab_index: int, property: String) -> void:
-	var tab_child = get_tab_control(tab_index)
+	var tab_child: Control = get_tab_control(tab_index)
 	if tab_child == null:
 		return
 	
 	# Handle child property (e.g., "child_text_state")
-	if property.begins_with("child_"):
-		var actual_prop = property.substr(6)  # Remove "child_" prefix
-		var first_child = tab_child.get_child(0) if tab_child.get_child_count() > 0 else null
+	if property.begins_with(CHILD_PREFIX):
+		var actual_prop: String = property.substr(CHILD_PREFIX.length())  # Remove "child_" prefix
+		var first_child: Node = tab_child.get_child(0) if tab_child.get_child_count() > 0 else null
 		if first_child != null and first_child.has(actual_prop):
-			var child_state = first_child.get(actual_prop)
+			var child_state: Variant = first_child.get(actual_prop)
 			if child_state is State:
 				child_state.set_silent(new_value)
 	else:
 		# Handle direct property
 		if tab_child.has(property):
-			var child_state = tab_child.get(property)
+			var child_state: Variant = tab_child.get(property)
 			if child_state is State:
 				child_state.set_silent(new_value)
 
@@ -240,8 +242,8 @@ func _on_visible_tabs_state_changed(new_value: Variant, _old_value: Variant) -> 
 ## Animates tab switching by fading out old tab content and fading in new tab content.
 ## This enhances the SELECTION_CHANGED trigger to animate tab content transitions.
 func _animate_tab_switch(old_index: int, new_index: int) -> void:
-	var old_child = get_tab_control(old_index)
-	var new_child = get_tab_control(new_index)
+	var old_child: Control = get_tab_control(old_index)
+	var new_child: Control = get_tab_control(new_index)
 	
 	if old_child == null or new_child == null:
 		return
@@ -257,16 +259,15 @@ func _animate_tab_switch(old_index: int, new_index: int) -> void:
 		var new_path = get_path_to(new_child)
 
 		# Check if any of the reel's targets match the old or new tab
-		var targets_old = old_path in reel.targets or reel.targets.size() == 0
-		var targets_new = new_path in reel.targets or reel.targets.size() == 0
+		var targets_old: bool = old_path in reel.targets or reel.targets.size() == 0
+		var targets_new: bool = new_path in reel.targets or reel.targets.size() == 0
 
-		# For now, apply the reel to both old and new children
-		# TODO: This logic may need to be redesigned for AnimationReel system
+		# Tab switch uses apply_to_control so reels stay configured relative to TabContainer.
 		if targets_old or targets_new:
 			if targets_old and old_child:
-				reel.apply(old_child)
+				reel.apply_to_control(self, old_child)
 			if targets_new and new_child:
-				reel.apply(new_child)
+				reel.apply_to_control(self, new_child)
 
 ## Gets the control type hint for this reactive control.
 ## Used to filter available triggers in the Inspector.
@@ -278,15 +279,15 @@ func _get_control_type_hint() -> AnimationReel.ControlTypeHint:
 ## [return]: The control to focus when entering, or null if none.
 func _get_first_focusable_inside() -> Control:
 	# Try tab bar first
-	var tab_bar = get_tab_bar()
+	var tab_bar: TabBar = get_tab_bar()
 	if tab_bar is Control:
 		var bar_control: Control = tab_bar
 		if bar_control.focus_mode != Control.FOCUS_NONE:
 			return bar_control
 	# Fall back to first focusable in current tab
-	var current_tab_control = get_current_tab_control()
+	var current_tab_control: Control = get_current_tab_control()
 	if current_tab_control:
-		var focusables = NavigationUtils.find_focusable_controls(current_tab_control, true)
+		var focusables: Array[Control] = NavigationUtils.find_focusable_controls(current_tab_control, true)
 		if not focusables.is_empty():
 			return focusables[0]
 	return null
@@ -343,20 +344,20 @@ func _setup_internal_focus() -> void:
 	var focus_chain: Array[Control] = []
 	
 	# Add tab bar if focusable
-	var tab_bar = get_tab_bar()
+	var tab_bar: TabBar = get_tab_bar()
 	if tab_bar is Control:
 		var bar_control: Control = tab_bar
 		if bar_control.focus_mode != Control.FOCUS_NONE:
 			focus_chain.append(bar_control)
 	
 	# Add focusables in current tab
-	var current_tab_control = get_current_tab_control()
+	var current_tab_control: Control = get_current_tab_control()
 	if current_tab_control:
-		var tab_focusables = NavigationUtils.find_focusable_controls(current_tab_control, true)
+		var tab_focusables: Array[Control] = NavigationUtils.find_focusable_controls(current_tab_control, true)
 		focus_chain.append_array(tab_focusables)
 	
-	# Use NavigationUtils to set up the focus chain with vertical wrapping
-	NavigationUtils.setup_focus_chain(focus_chain, true, false)
+	# Use NavigationUtils to set up the focus chain with vertical and horizontal wrapping
+	NavigationUtils.setup_focus_chain(focus_chain, true, true)
 
 func _exit_tree() -> void:
 	FocusDrivenHover.cleanup(self)

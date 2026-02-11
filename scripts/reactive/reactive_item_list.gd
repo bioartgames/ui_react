@@ -38,7 +38,7 @@ func _ready() -> void:
 ## Validates animation reels and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_reels() -> void:
-	var trigger_map = ReactiveAnimationSetup.setup_reels(self, animations, _get_control_type_hint())
+	var trigger_map: Dictionary = ReactiveAnimationSetup.setup_reels(self, animations, _get_control_type_hint())
 	
 	# Connect trigger signals
 	var bindings: Array = [
@@ -109,7 +109,7 @@ func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void
 	
 	if new_value is int:
 		# Single selection mode
-		var index = int(new_value)
+		var index: int = int(new_value)
 		if index < 0 or index >= item_count:
 			return
 		
@@ -123,7 +123,7 @@ func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void
 		var indices: Array[int] = []
 		for item in new_value:
 			if item is int:
-				var idx = int(item)
+				var idx: int = int(item)
 				if idx >= 0 and idx < item_count:
 					indices.append(idx)
 		

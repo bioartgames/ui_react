@@ -1,4 +1,4 @@
-[gd_scene load_steps=30 format=3 uid="uid://cdjyj7c3wt0wr"]
+[gd_scene load_steps=29 format=3 uid="uid://cdjyj7c3wt0wr"]
 
 [ext_resource type="Script" uid="uid://st55qiias3cb" path="res://scripts/reactive/state.gd" id="1_w0svl"]
 [ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://scripts/reactive/reactive_line_edit.gd" id="1_xdli5"]
@@ -16,7 +16,6 @@
 [ext_resource type="Resource" uid="uid://dp3cawtta2kbd" path="res://ui_resources/items.tres" id="10_krjhy"]
 [ext_resource type="Script" uid="uid://b75p2so2hr0wd" path="res://scripts/reactive/reactive_option_button.gd" id="10_m40cl"]
 [ext_resource type="Script" uid="uid://dohh71knb8vid" path="res://scripts/reactive/reactive_tab_container.gd" id="13_p7nh0"]
-[ext_resource type="Script" uid="uid://b4ap43ix3i0u0" path="res://scripts/reactive/reactive_rich_text_label.gd" id="15_yjg32"]
 
 [sub_resource type="Resource" id="Resource_a72v2"]
 script = ExtResource("4_pf7w8")
@@ -62,6 +61,18 @@ value = 25.0
 script = ExtResource("1_w0svl")
 value = ["Preset: ", ExtResource("10_krjhy")]
 
+[sub_resource type="Resource" id="Resource_cswcw"]
+script = ExtResource("4_pf7w8")
+metadata/_custom_type_script = "uid://bgtvl8wqnhhg3"
+
+[sub_resource type="Resource" id="Resource_lkfh0"]
+script = ExtResource("5_8mpai")
+targets = Array[NodePath]([NodePath("Panel/LineEdit"), NodePath("Panel/LineEdit2")])
+animations = Array[ExtResource("4_pf7w8")]([SubResource("Resource_cswcw")])
+trigger = 6
+execution_mode = 1
+metadata/_custom_type_script = "uid://bnno246gj404t"
+
 [sub_resource type="Resource" id="Resource_iwetj"]
 script = ExtResource("1_w0svl")
 value = ["Player: ", ExtResource("5_iwetj")]
@@ -80,19 +91,6 @@ targets = Array[NodePath]([NodePath("."), NodePath("../Label")])
 animations = Array[ExtResource("4_pf7w8")]([SubResource("Resource_6fcom")])
 trigger = 5
 execution_mode = 0
-metadata/_custom_type_script = "uid://bnno246gj404t"
-
-[sub_resource type="Resource" id="Resource_hu6yn"]
-script = ExtResource("4_pf7w8")
-animation = 18
-metadata/_custom_type_script = "uid://bgtvl8wqnhhg3"
-
-[sub_resource type="Resource" id="Resource_dlatp"]
-script = ExtResource("5_8mpai")
-targets = Array[NodePath]([NodePath(".")])
-animations = Array[ExtResource("4_pf7w8")]([SubResource("Resource_hu6yn")])
-trigger = 1
-execution_mode = 1
 metadata/_custom_type_script = "uid://bnno246gj404t"
 
 [node name="ReactiveUI" type="Control"]
@@ -183,6 +181,7 @@ layout_mode = 2
 size_flags_vertical = 3
 current_tab = 0
 script = ExtResource("13_p7nh0")
+animations = Array[ExtResource("5_8mpai")]([SubResource("Resource_lkfh0")])
 metadata/_custom_type_script = "uid://dohh71knb8vid"
 
 [node name="Panel" type="Panel" parent="VBox/ReactiveTabContainer"]
@@ -195,8 +194,9 @@ anchors_preset = 14
 anchor_top = 0.5
 anchor_right = 1.0
 anchor_bottom = 0.5
-offset_top = -39.5
-offset_bottom = -16.5
+offset_top = -125.0
+offset_right = 17.0
+offset_bottom = -102.0
 grow_horizontal = 2
 grow_vertical = 2
 text = "Player: "
@@ -210,8 +210,26 @@ anchors_preset = 14
 anchor_top = 0.5
 anchor_right = 1.0
 anchor_bottom = 0.5
-offset_top = -15.5
-offset_bottom = 15.5
+offset_top = -101.0
+offset_right = 28.5625
+offset_bottom = -70.0
+grow_horizontal = 2
+grow_vertical = 2
+placeholder_text = "Type here to update the label"
+script = ExtResource("1_xdli5")
+text_state = ExtResource("5_iwetj")
+animations = Array[ExtResource("5_8mpai")]([SubResource("Resource_oqryg")])
+metadata/_custom_type_script = "uid://cgoqls6mehlqv"
+
+[node name="LineEdit2" type="LineEdit" parent="VBox/ReactiveTabContainer/Panel"]
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -54.0
+offset_right = 28.5625
+offset_bottom = -23.0
 grow_horizontal = 2
 grow_vertical = 2
 placeholder_text = "Type here to update the label"
@@ -225,13 +243,52 @@ visible = false
 layout_mode = 2
 metadata/_tab_index = 1
 
-[node name="ReactiveRichTextLabel" type="RichTextLabel" parent="VBox/ReactiveTabContainer/Panel2"]
-layout_mode = 0
-offset_top = 31.0
-offset_right = 1119.0
-offset_bottom = 71.0
-bbcode_enabled = true
-script = ExtResource("15_yjg32")
+[node name="Label" type="Label" parent="VBox/ReactiveTabContainer/Panel2"]
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -62.0
+offset_right = 17.0
+offset_bottom = -39.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Player: "
+script = ExtResource("2_o0is5")
+text_state = SubResource("Resource_iwetj")
+metadata/_custom_type_script = "uid://bw7gojuop1hic"
+
+[node name="LineEdit" type="LineEdit" parent="VBox/ReactiveTabContainer/Panel2"]
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -38.0
+offset_right = 28.5625
+offset_bottom = -7.0
+grow_horizontal = 2
+grow_vertical = 2
+placeholder_text = "Type here to update the label"
+script = ExtResource("1_xdli5")
 text_state = ExtResource("5_iwetj")
-animations = Array[ExtResource("5_8mpai")]([SubResource("Resource_dlatp")])
-metadata/_custom_type_script = "uid://b4ap43ix3i0u0"
+animations = Array[ExtResource("5_8mpai")]([SubResource("Resource_oqryg")])
+metadata/_custom_type_script = "uid://cgoqls6mehlqv"
+
+[node name="LineEdit2" type="LineEdit" parent="VBox/ReactiveTabContainer/Panel2"]
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = 9.0
+offset_right = 28.5625
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+placeholder_text = "Type here to update the label"
+script = ExtResource("1_xdli5")
+text_state = ExtResource("5_iwetj")
+animations = Array[ExtResource("5_8mpai")]([SubResource("Resource_oqryg")])
+metadata/_custom_type_script = "uid://cgoqls6mehlqv"

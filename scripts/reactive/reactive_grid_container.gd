@@ -81,7 +81,7 @@ func _ready() -> void:
 ## Sets the control context on each reel for Inspector filtering and connects
 ## hover signals based on which animation triggers are actually used.
 func _validate_animation_reels() -> void:
-	var trigger_map = ReactiveAnimationSetup.setup_reels(self, animations, _get_control_type_hint())
+	var trigger_map: Dictionary = ReactiveAnimationSetup.setup_reels(self, animations, _get_control_type_hint())
 	
 	# Connect trigger signals
 	# Note: SELECTION_CHANGED and VALUE_CHANGED are handled via state connections in _ready()
@@ -159,9 +159,9 @@ func _on_selection_state_changed(new_value: Variant, _old_value: Variant) -> voi
 
 	# Update cell selection states and trigger cell-level animations
 	for i in range(_current_cells.size()):
-		var cell = _current_cells[i]
+		var cell: Control = _current_cells[i]
 		if cell:
-			var is_selected = i == selected_index
+			var is_selected: bool = i == selected_index
 
 			# Update selection state
 			if cell.has_method("set_selected"):
@@ -209,7 +209,7 @@ func _rebuild_cells(items: Array) -> void:
 		else:
 			item_data = null  # Empty slot
 
-		var cell = _create_cell(item_data, i)
+		var cell: Control = _create_cell(item_data, i)
 		if cell:
 			add_child(cell)
 			_current_cells.append(cell)
@@ -235,7 +235,7 @@ func _create_cell(item_data: Variant, index: int) -> Control:
 		cell_instance.queue_free()
 		return null
 
-	var cell = cell_instance as Control
+	var cell: Control = cell_instance as Control
 
 	# Set standard interface on the cell
 	if cell.has_method("set_item"):
@@ -290,11 +290,11 @@ func _on_cell_pressed(index: int) -> void:
 	# Emit activation signal with cell data
 	var item_data: Variant = null
 	if items_state and items_state.value is Array:
-		var items = items_state.value as Array
+		var items: Array = items_state.value as Array
 		if index >= 0 and index < items.size():
 			item_data = items[index]
 
-	var cell = _current_cells[index] if index >= 0 and index < _current_cells.size() else null
+	var cell: Control = _current_cells[index] if index >= 0 and index < _current_cells.size() else null
 	cell_activated.emit(index, item_data, cell)
 
 ## Handles GUI input on cells for controller submit events.
@@ -308,11 +308,11 @@ func _on_cell_gui_input(event: InputEvent, index: int) -> void:
 		# Emit activation signal with cell data
 		var item_data: Variant = null
 		if items_state and items_state.value is Array:
-			var items = items_state.value as Array
+			var items: Array = items_state.value as Array
 			if index >= 0 and index < items.size():
 				item_data = items[index]
 
-		var cell = _current_cells[index] if index >= 0 and index < _current_cells.size() else null
+		var cell: Control = _current_cells[index] if index >= 0 and index < _current_cells.size() else null
 		cell_activated.emit(index, item_data, cell)
 
 func _exit_tree() -> void:

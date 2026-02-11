@@ -254,6 +254,28 @@ func apply(owner: Node) -> Signal:
 			push_warning("AnimationReel: Invalid execution mode %d" % execution_mode)
 			return Signal()
 
+## Applies this reel to a single control without using the targets array.
+## Use when the caller supplies the target (e.g. TabContainer passing tab content).
+## [param owner]: Node for tweens and respect_disabled checks (e.g. TabContainer).
+## [param single_target]: The control to animate.
+## [return]: Signal when reel completes, or empty Signal on validation failure.
+func apply_to_control(owner: Node, single_target: Control) -> Signal:
+	if animations.is_empty():
+		return Signal()
+	if not owner:
+		return Signal()
+	if not single_target:
+		return Signal()
+	var resolved_targets: Array[Control] = [single_target]
+	match execution_mode:
+		ExecutionMode.PARALLEL:
+			return _apply_parallel(owner, resolved_targets, animations)
+		ExecutionMode.SEQUENCE:
+			return _apply_sequence(owner, resolved_targets, animations)
+		_:
+			push_warning("AnimationReel: Invalid execution mode %d" % execution_mode)
+			return Signal()
+
 ## Applies single animation clip to single target.
 ## [param owner]: The node that owns the animation.
 ## [param target]: The control to animate.
@@ -403,7 +425,7 @@ class _ParallelWaitHelper extends Node:
 		
 		# Use arrays to hold mutable state (lambdas capture by value, not reference)
 		var completed_count: Array[int] = [0]
-		var total_count = signals.size()
+		var total_count: int = signals.size()
 		var has_emitted: Array[bool] = [false]
 		
 		# Connect to each signal to track completion

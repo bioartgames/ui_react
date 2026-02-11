@@ -42,7 +42,7 @@ func _is_completed() -> bool:
 ## Validates animation targets and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_reels() -> void:
-	var trigger_map = ReactiveAnimationSetup.setup_reels(self, animations, _get_control_type_hint())
+	var trigger_map: Dictionary = ReactiveAnimationSetup.setup_reels(self, animations, _get_control_type_hint())
 	
 	# Connect trigger signals
 	var bindings: Array = [
@@ -75,7 +75,7 @@ func _on_trigger_value_changed(new_value: float) -> void:
 		_trigger_animations(AnimationReel.Trigger.VALUE_DECREASED)
 
 	# Check for completion
-	var is_completed = _is_completed()
+	var is_completed: bool = _is_completed()
 	if is_completed and not _was_completed:
 		_trigger_animations(AnimationReel.Trigger.COMPLETED)
 	_was_completed = is_completed

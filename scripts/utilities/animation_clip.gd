@@ -84,7 +84,7 @@ var _animation: AnimationAction = AnimationAction.EXPAND
 ## ============================================
 
 ## Custom pivot offset for scaling/rotation animations.
-## Use Vector2(-1, -1) for center (default), or specify custom offset in pixels.
+## Use Vector2(-1, -1) for center (default, equivalent to UIAnimationUtils.PIVOT_OFFSET_CENTER), or specify custom offset in pixels.
 ## Only affects animations that use pivot (EXPAND, SHRINK, POP, PULSE, ROTATE, etc.).
 @export var pivot_offset: Vector2 = Vector2(-1, -1)
 
@@ -324,7 +324,7 @@ func execute(owner: Node, target: Control, tween_easing: int) -> Signal:
 	if _animation_strategies.is_empty():
 		_initialize_default_strategies()
 
-	var strategy = _animation_strategies.get(_animation)
+	var strategy: Callable = _animation_strategies.get(_animation)
 	if strategy == null:
 		push_warning("AnimationClip: No strategy registered for %s" % _animation)
 		return Signal()
@@ -434,7 +434,7 @@ static func _strategy_float(owner: Node, target: Control, clip: AnimationClip, t
 	return UIAnimationUtils.animate_float(owner, target, clip.duration, clip.repeat_count, tween_easing, 10.0, true)
 
 static func _strategy_glow_pulse(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
-	return UIAnimationUtils.animate_glow_pulse(owner, target, clip.duration, clip.repeat_count, tween_easing, 0.7, true)
+	return UIAnimationUtils.animate_glow_pulse(owner, target, clip.duration, clip.repeat_count, tween_easing, UIAnimationUtils.GLOW_MIN_ALPHA, true)
 
 static func _strategy_color_flash(owner: Node, target: Control, clip: AnimationClip, tween_easing: int) -> Signal:
 	return UIAnimationUtils.animate_color_flash(owner, target, clip.flash_color, clip.duration, clip.flash_intensity, true, tween_easing)

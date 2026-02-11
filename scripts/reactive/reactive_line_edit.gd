@@ -35,8 +35,8 @@ func _ready() -> void:
 ## Validates animation reels and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_reels() -> void:
-	var result = AnimationReel.validate_for_control(self, animations)
-	animations = result.valid_reels
+	var validation_result = AnimationReel.validate_for_control(self, animations)
+	animations = validation_result.valid_reels
 
 	# Set control context on each reel for Inspector filtering
 	var control_type = _get_control_type_hint()
@@ -45,9 +45,9 @@ func _validate_animation_reels() -> void:
 			reel.control_type_context = control_type
 
 	# Control-specific signal connections (stays in class)
-	var has_text_entered_targets = result.trigger_map.get(AnimationReel.Trigger.TEXT_ENTERED, false)
-	var has_hover_enter_targets = result.trigger_map.get(AnimationReel.Trigger.HOVER_ENTER, false)
-	var has_hover_exit_targets = result.trigger_map.get(AnimationReel.Trigger.HOVER_EXIT, false)
+	var has_text_entered_targets: bool = validation_result.trigger_map.get(AnimationReel.Trigger.TEXT_ENTERED, false)
+	var has_hover_enter_targets: bool = validation_result.trigger_map.get(AnimationReel.Trigger.HOVER_ENTER, false)
+	var has_hover_exit_targets: bool = validation_result.trigger_map.get(AnimationReel.Trigger.HOVER_EXIT, false)
 
 	# Connect signals based on which triggers are used
 	if has_text_entered_targets:

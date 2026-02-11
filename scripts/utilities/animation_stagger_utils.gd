@@ -20,7 +20,7 @@ static func animate_stagger_from_clip(source_node: Node, targets: Array[Control]
 		return Signal()
 
 	# Create and configure stagger helper
-	var helper = _StaggerHelper.new()
+	var helper: _StaggerHelper = _StaggerHelper.new()
 	helper._source_node = source_node
 	helper._targets = targets
 	helper._delay_between = delay_between
@@ -66,25 +66,25 @@ class _StaggerHelper extends Node:
 		var tween_easing: int = AnimationClip.to_tween_easing(_clip.easing)
 
 		# Calculate total delay
-		var total_delay = _delay_between * (_targets.size() - 1)
+		var total_delay: float = _delay_between * (_targets.size() - 1)
 
 		# Start animations with stagger
 		for i in range(_targets.size()):
-			var target = _targets[i]
+			var target: Control = _targets[i]
 			if not is_instance_valid(target):
 				continue
 
-			var delay = _delay_between * i
+			var delay_time: float = _delay_between * i
 
 			# Create a timer for this target's delay
-			var timer = get_tree().create_timer(delay)
+			var timer: SceneTreeTimer = get_tree().create_timer(delay_time)
 			timer.timeout.connect(func():
 				if _is_running and is_instance_valid(target):
 					_clip.execute(_source_node, target, tween_easing)
 			)
 
 		# Wait for all animations to complete
-		var max_time = total_delay + _clip.duration
+		var max_time: float = total_delay + _clip.duration
 		await get_tree().create_timer(max_time).timeout
 
 		if _is_running:

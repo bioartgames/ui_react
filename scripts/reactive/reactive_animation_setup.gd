@@ -16,18 +16,18 @@ static func setup_reels(
 	animations: Array,
 	control_type_hint: AnimationReel.ControlTypeHint
 ) -> Dictionary:
-	var result = AnimationReel.validate_for_control(control, animations)
+	var validation_result = AnimationReel.validate_for_control(control, animations)
 	
 	# Assign valid reels back to the animations array (arrays are by reference in GDScript)
 	animations.clear()
-	animations.append_array(result.valid_reels)
+	animations.append_array(validation_result.valid_reels)
 	
 	# Set control context on each reel for Inspector filtering
 	for reel in animations:
 		if reel:
 			reel.control_type_context = control_type_hint
 	
-	return result.trigger_map
+	return validation_result.trigger_map
 
 ## Connects trigger signals to callbacks based on which triggers are used.
 ## [param _control]: The reactive control instance (unused, kept for API consistency).
@@ -72,10 +72,10 @@ static func connect_focus_driven_hover(
 		return
 	
 	# Create handlers once and reuse them
-	var focus_entered_handler = func():
+	var focus_entered_handler: Callable = func():
 		FocusDrivenHover.handle_focus_entered(control, animations, skip_animations)
 	
-	var focus_exited_handler = func():
+	var focus_exited_handler: Callable = func():
 		FocusDrivenHover.handle_focus_exited(control, animations, skip_animations)
 	
 	# Connect focus signals for navigation-driven hover animations

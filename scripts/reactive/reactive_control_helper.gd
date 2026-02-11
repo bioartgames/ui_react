@@ -10,17 +10,16 @@
 ## - Syncing focus_mode so disabled controls are not focusable
 class_name ReactiveControlHelper
 
-## Storage for focus_mode when using static sync (instance_id -> focus_mode).
-static var _stored_focus_modes: Dictionary = {}
-
 ## Reference to the control this helper manages.
 var _owner: Control
 ## Flag indicating if a property update is currently in progress (prevents infinite loops).
 var _updating: bool = false
 ## Flag indicating if the control is still in its initialization phase.
 var _is_initializing: bool = true
-## Stored focus_mode when the control was last enabled (-1 means not stored).
-var _focus_mode_when_enabled: int = -1
+## Constant indicating focus_mode has not been stored yet.
+const FOCUS_MODE_NOT_STORED := -1
+## Stored focus_mode when the control was last enabled (FOCUS_MODE_NOT_STORED means not stored).
+var _focus_mode_when_enabled: int = FOCUS_MODE_NOT_STORED
 
 ## Creates a new ReactiveControlHelper for the specified control.
 ## [param owner]: The Control node this helper will manage.
@@ -44,8 +43,8 @@ func update_property_if_changed(
 	if _updating:
 		return false
 
-	var desired = converter.call(new_value)
-	var current = _owner.get(property)
+	var desired: Variant = converter.call(new_value)
+	var current: Variant = _owner.get(property)
 
 	if current == desired:
 		return false
@@ -87,75 +86,13 @@ func is_initializing() -> bool:
 ## Call this after updating the owner's disabled property (e.g. from disabled_state).
 func sync_focus_mode_to_disabled() -> void:
 	if _owner.disabled:
-		if _focus_mode_when_enabled == -1:
+		if _focus_mode_when_enabled == FOCUS_MODE_NOT_STORED:
 			_focus_mode_when_enabled = _owner.focus_mode
 		_owner.focus_mode = Control.FOCUS_NONE
 	else:
-		if _focus_mode_when_enabled != -1:
+		if _focus_mode_when_enabled != FOCUS_MODE_NOT_STORED:
 			_owner.focus_mode = _focus_mode_when_enabled as Control.FocusMode
-			_focus_mode_when_enabled = -1
+			_focus_mode_when_enabled = FOCUS_MODE_NOT_STORED
 		else:
 			_owner.focus_mode = Control.FOCUS_ALL
 
-## Static variant: syncs [param control]'s focus_mode to its disabled state.
-## Use for controls that do not have a ReactiveControlHelper instance (e.g. ReactiveCheckBox, ReactiveOptionButton).
-## Call after setting the control's disabled property.
-static func sync_focus_mode_to_disabled_static(control: Control) -> void:
-	var id = control.get_instance_id()
-	if control.disabled:
-		if not _stored_focus_modes.has(id):
-			_stored_focus_modes[id] = control.focus_mode
-		control.focus_mode = Control.FOCUS_NONE
-	else:
-		if _stored_focus_modes.has(id):
-			control.focus_mode = _stored_focus_modes[id] as Control.FocusMode
-			_stored_focus_modes.erase(id)
-		else:
-			control.focus_mode = Control.FOCUS_ALL
-
-## Removes stored focus_mode for [param control] from the static cache.
-## Call from _exit_tree for controls that use sync_focus_mode_to_disabled_static, so freed nodes do not leak entries.
-static func release_stored_focus_mode(control: Control) -> void:
-	_stored_focus_modes.erase(control.get_instance_id())
-
-## Updates a property safely with optional skip-if-equal check and converter.
-## This is a more flexible version of update_property_if_changed that allows skipping
-## the equality check when needed (e.g., for complex state updates).
-##
-## [param property]: String name of the property to update.
-## [param new_value]: The new value from the State (typically a Variant).
-## [param converter]: Callable that converts the Variant to the appropriate property type.
-## [param skip_if_equal]: If true, skips update if value hasn't changed (default: true).
-## [return]: true if the property was updated, false otherwise.
-func update_property_safe(property: String, new_value: Variant, converter: Callable, skip_if_equal: bool = true) -> bool:
-	if not _owner:
-		return false
-	if _updating:
-		return false
-	
-	var desired = converter.call(new_value)
-	if skip_if_equal:
-		var current = _owner.get(property)
-		if current == desired:
-			return false
-	
-	_updating = true
-	_owner.set(property, desired)
-	_updating = false
-	return true
-
-## Checks if animations should be skipped (during initialization).
-## This is a convenience method for animation handlers to check initialization state.
-## [return]: true if animations should be skipped (during initialization), false otherwise.
-func should_skip_animation() -> bool:
-	return _is_initializing
-
-## Static factory method to create a ReactiveControlHelper for a control.
-## This provides a consistent way to create helpers and ensures proper initialization.
-## [param control]: The Control node to create a helper for.
-## [return]: A new ReactiveControlHelper instance for the control.
-static func create_for(control: Control) -> ReactiveControlHelper:
-	if not control:
-		push_error("ReactiveControlHelper.create_for(): control is null")
-		return null
-	return ReactiveControlHelper.new(control)
