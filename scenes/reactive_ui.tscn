@@ -1,5 +1,7 @@
-[gd_scene load_steps=29 format=3 uid="uid://cdjyj7c3wt0wr"]
+[gd_scene load_steps=33 format=3 uid="uid://cdjyj7c3wt0wr"]
 
+[ext_resource type="Script" uid="uid://dr562sfielcp5" path="res://scripts/reactive/reactive_grid_container.gd" id="1_grid"]
+[ext_resource type="Resource" uid="uid://c8kxqm2v7nwp4" path="res://ui_resources/grid_cell_config.tres" id="1_gridconfig"]
 [ext_resource type="Script" uid="uid://st55qiias3cb" path="res://scripts/reactive/state.gd" id="1_w0svl"]
 [ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://scripts/reactive/reactive_line_edit.gd" id="1_xdli5"]
 [ext_resource type="Script" uid="uid://bw7gojuop1hic" path="res://scripts/reactive/reactive_label.gd" id="2_o0is5"]
@@ -16,6 +18,7 @@
 [ext_resource type="Resource" uid="uid://dp3cawtta2kbd" path="res://ui_resources/items.tres" id="10_krjhy"]
 [ext_resource type="Script" uid="uid://b75p2so2hr0wd" path="res://scripts/reactive/reactive_option_button.gd" id="10_m40cl"]
 [ext_resource type="Script" uid="uid://dohh71knb8vid" path="res://scripts/reactive/reactive_tab_container.gd" id="13_p7nh0"]
+[ext_resource type="Resource" uid="uid://d15nwl2nvkgu7" path="res://ui_resources/inventory.tres" id="15_oqryg"]
 
 [sub_resource type="Resource" id="Resource_a72v2"]
 script = ExtResource("4_pf7w8")
@@ -61,13 +64,18 @@ value = 25.0
 script = ExtResource("1_w0svl")
 value = ["Preset: ", ExtResource("10_krjhy")]
 
+[sub_resource type="Resource" id="Resource_grid_selection"]
+script = ExtResource("1_w0svl")
+value = 0
+metadata/_custom_type_script = "uid://st55qiias3cb"
+
 [sub_resource type="Resource" id="Resource_cswcw"]
 script = ExtResource("4_pf7w8")
 metadata/_custom_type_script = "uid://bgtvl8wqnhhg3"
 
 [sub_resource type="Resource" id="Resource_lkfh0"]
 script = ExtResource("5_8mpai")
-targets = Array[NodePath]([NodePath("Panel/LineEdit"), NodePath("Panel/LineEdit2")])
+targets = Array[NodePath]([NodePath(""), NodePath("Panel/LineEdit")])
 animations = Array[ExtResource("4_pf7w8")]([SubResource("Resource_cswcw")])
 trigger = 6
 execution_mode = 1
@@ -121,6 +129,7 @@ focus_on_ready = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
+selected = 0
 item_count = 2
 popup/item_0/text = "Sword"
 popup/item_0/id = 0
@@ -176,6 +185,16 @@ script = ExtResource("5_m40cl")
 value_state = SubResource("3")
 metadata/_custom_type_script = "uid://toxmw3una1r3"
 
+[node name="ReactiveGridContainer" type="GridContainer" parent="VBox"]
+custom_minimum_size = Vector2(0, 180)
+layout_mode = 2
+columns = 3
+script = ExtResource("1_grid")
+items_state = ExtResource("15_oqryg")
+selection_state = SubResource("Resource_grid_selection")
+grid_config = ExtResource("1_gridconfig")
+metadata/_custom_type_script = "uid://dr562sfielcp5"
+
 [node name="ReactiveTabContainer" type="TabContainer" parent="VBox"]
 layout_mode = 2
 size_flags_vertical = 3
@@ -194,9 +213,9 @@ anchors_preset = 14
 anchor_top = 0.5
 anchor_right = 1.0
 anchor_bottom = 0.5
-offset_top = -125.0
+offset_top = -79.0
 offset_right = 17.0
-offset_bottom = -102.0
+offset_bottom = -56.0
 grow_horizontal = 2
 grow_vertical = 2
 text = "Player: "
@@ -205,23 +224,6 @@ text_state = SubResource("Resource_iwetj")
 metadata/_custom_type_script = "uid://bw7gojuop1hic"
 
 [node name="LineEdit" type="LineEdit" parent="VBox/ReactiveTabContainer/Panel"]
-layout_mode = 1
-anchors_preset = 14
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_top = -101.0
-offset_right = 28.5625
-offset_bottom = -70.0
-grow_horizontal = 2
-grow_vertical = 2
-placeholder_text = "Type here to update the label"
-script = ExtResource("1_xdli5")
-text_state = ExtResource("5_iwetj")
-animations = Array[ExtResource("5_8mpai")]([SubResource("Resource_oqryg")])
-metadata/_custom_type_script = "uid://cgoqls6mehlqv"
-
-[node name="LineEdit2" type="LineEdit" parent="VBox/ReactiveTabContainer/Panel"]
 layout_mode = 1
 anchors_preset = 14
 anchor_top = 0.5
@@ -268,23 +270,6 @@ anchor_bottom = 0.5
 offset_top = -38.0
 offset_right = 28.5625
 offset_bottom = -7.0
-grow_horizontal = 2
-grow_vertical = 2
-placeholder_text = "Type here to update the label"
-script = ExtResource("1_xdli5")
-text_state = ExtResource("5_iwetj")
-animations = Array[ExtResource("5_8mpai")]([SubResource("Resource_oqryg")])
-metadata/_custom_type_script = "uid://cgoqls6mehlqv"
-
-[node name="LineEdit2" type="LineEdit" parent="VBox/ReactiveTabContainer/Panel2"]
-layout_mode = 1
-anchors_preset = 14
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_top = 9.0
-offset_right = 28.5625
-offset_bottom = 40.0
 grow_horizontal = 2
 grow_vertical = 2
 placeholder_text = "Type here to update the label"

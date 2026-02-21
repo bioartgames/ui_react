@@ -4,5 +4,5 @@
 
 [resource]
 script = ExtResource("1_6vghf")
-value = ""
+value = null
 metadata/_custom_type_script = "uid://st55qiias3cb"

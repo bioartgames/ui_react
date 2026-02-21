@@ -26,11 +26,6 @@ signal cell_activated(index: int, item_data: Variant, cell: Control)
 ## If null, the grid falls back to defaults.
 @export var grid_config: GridContainerConfig
 
-## Animation reels attached to the grid itself.
-##
-## Supports grid-level animations like hover enter/exit and selection changes.
-@export var animations: Array[AnimationReel] = []
-
 ## Whether to update selection_state when a cell receives focus.
 ##
 ## If true, moving focus to a cell will also update selection_state.
@@ -42,24 +37,23 @@ signal cell_activated(index: int, item_data: Variant, cell: Control)
 ## If true, pressing submit/enter on a focused cell will update selection_state.
 @export var select_on_submit: bool = true
 
+@export_group("Navigation")
+## ENTERABLE: Parent links to first/last cell; grid is not focusable. FOCUSABLE_ENTER: Grid is one focusable; Enter to enter cells, Escape to exit.
+enum NavigationMode { ENTERABLE, FOCUSABLE_ENTER }
+@export var navigation_mode: NavigationMode = NavigationMode.ENTERABLE
+
 ## Holds references to instantiated cell controls for indexing and cleanup.
 var _current_cells: Array[Control] = []
 
-## Used to avoid firing certain reactions/animations during initial population.
-var _is_initializing: bool = true
-
-## Guards against feedback loops when updating selection_state from grid events.
-var _suppress_state_updates: bool = false
+## When true, focus is inside the grid (FOCUSABLE_ENTER mode only).
+var _entered: bool = false
 
 ## Initializes the reactive grid container.
 ##
-## In editor mode: Only validates animation reels to enable trigger filtering in the Inspector.
-## At runtime: Connects to state signals, performs initial sync, validates animation reels,
-## and schedules initialization completion to allow animations to trigger after setup.
+## In editor mode: no runtime behavior.
+## At runtime: connects to state signals and performs initial sync.
 func _ready() -> void:
 	if Engine.is_editor_hint():
-		# In the editor, only validate reels so trigger options are filtered.
-		_validate_animation_reels()
 		return
 
 	# Connect to items_state
@@ -72,64 +66,14 @@ func _ready() -> void:
 		selection_state.value_changed.connect(_on_selection_state_changed)
 		_on_selection_state_changed(selection_state.value, selection_state.value)
 
-	_validate_animation_reels()
-	# Finish initialization after all signals are processed
-	call_deferred("_finish_initialization")
+	if navigation_mode == NavigationMode.FOCUSABLE_ENTER:
+		focus_mode = Control.FOCUS_ALL
+	else:
+		focus_mode = Control.FOCUS_NONE
 
-## Validates animation reels and filters out invalid ones.
-##
-## Sets the control context on each reel for Inspector filtering and connects
-## hover signals based on which animation triggers are actually used.
-func _validate_animation_reels() -> void:
-	var trigger_map: Dictionary = ReactiveAnimationSetup.setup_reels(self, animations, _get_control_type_hint())
-	
-	# Connect trigger signals
-	# Note: SELECTION_CHANGED and VALUE_CHANGED are handled via state connections in _ready()
-	var bindings: Array = [
-		[AnimationReel.Trigger.HOVER_ENTER, mouse_entered, _on_trigger_hover_enter],
-		[AnimationReel.Trigger.HOVER_EXIT, mouse_exited, _on_trigger_hover_exit],
-	]
-	ReactiveAnimationSetup.connect_trigger_bindings(self, trigger_map, bindings)
-	
-	# Connect focus-driven hover animations
-	ReactiveAnimationSetup.connect_focus_driven_hover(self, animations, func(): return _is_initializing)
-
-## Handles SELECTION_CHANGED trigger animations.
-func _on_trigger_selection_changed() -> void:
-	# Skip animations during initialization
-	if _is_initializing:
-		return
-	_trigger_animations(AnimationReel.Trigger.SELECTION_CHANGED)
-
-## Handles HOVER_ENTER trigger animations.
-func _on_trigger_hover_enter() -> void:
-	_trigger_animations(AnimationReel.Trigger.HOVER_ENTER)
-
-## Handles HOVER_EXIT trigger animations.
-func _on_trigger_hover_exit() -> void:
-	_trigger_animations(AnimationReel.Trigger.HOVER_EXIT)
-
-## Handles VALUE_CHANGED trigger animations.
-func _on_trigger_value_changed() -> void:
-	# Skip animations during initialization
-	if _is_initializing:
-		return
-	_trigger_animations(AnimationReel.Trigger.VALUE_CHANGED)
-
-
-## Triggers animations for reels matching the specified trigger type.
-## [param trigger_type]: The trigger type to match.
-func _trigger_animations(trigger_type: AnimationReel.Trigger) -> void:
-	AnimationReel.trigger_matching(self, animations, trigger_type)
-
-## Finishes initialization, allowing animations to trigger on state changes.
-func _finish_initialization() -> void:
-	_is_initializing = false
-
-## Gets the control type hint for this reactive control.
-## Used to filter available triggers in the Inspector.
-func _get_control_type_hint() -> AnimationReel.ControlTypeHint:
-	return AnimationReel.ControlTypeHint.SELECTION
+## Returns true when the grid should be treated as enterable by parent containers.
+func is_enterable_navigation() -> bool:
+	return navigation_mode == NavigationMode.ENTERABLE
 
 ## Normalizes a value to an Array for grid items.
 ##
@@ -148,9 +92,6 @@ func _normalize_items(value: Variant) -> Array:
 ##
 ## Updates the visual selection state of cells when selection changes.
 func _on_selection_state_changed(new_value: Variant, _old_value: Variant) -> void:
-	if _suppress_state_updates:
-		return
-
 	var selected_index: int = -1
 	if new_value is int:
 		selected_index = int(new_value)
@@ -171,19 +112,12 @@ func _on_selection_state_changed(new_value: Variant, _old_value: Variant) -> voi
 			if cell.has_method("on_grid_selection_changed"):
 				cell.on_grid_selection_changed(is_selected)
 
-	# Trigger SELECTION_CHANGED animations if configured
-	if not _is_initializing:
-		_on_trigger_selection_changed()
-
 ## Handles changes to items_state.value.
 ##
 ## Normalizes the new value and rebuilds the grid contents accordingly.
 func _on_items_state_changed(new_value: Variant, _old_value: Variant) -> void:
 	var items := _normalize_items(new_value)
 	_rebuild_cells(items)
-	# Trigger VALUE_CHANGED animations if configured (after _is_initializing check)
-	if not _is_initializing:
-		_on_trigger_value_changed()
 
 ## Rebuilds the grid contents with the provided items array.
 ##
@@ -213,13 +147,16 @@ func _rebuild_cells(items: Array) -> void:
 		if cell:
 			add_child(cell)
 			_current_cells.append(cell)
+			_apply_cell_data(cell, item_data, i)
+
+	call_deferred("_setup_internal_focus")
 
 ## Creates a cell control for the given item data and index.
 ##
 ## [param item_data]: The item descriptor (Dictionary/Resource) or null for empty slots
 ## [param index]: The cell index in the grid
 ## [return]: The created cell control, or null if creation failed
-func _create_cell(item_data: Variant, index: int) -> Control:
+func _create_cell(_item_data: Variant, index: int) -> Control:
 	# Determine cell scene
 	var cell_scene: PackedScene
 	if grid_config and grid_config.cell_scene:
@@ -237,17 +174,6 @@ func _create_cell(item_data: Variant, index: int) -> Control:
 
 	var cell: Control = cell_instance as Control
 
-	# Set standard interface on the cell
-	if cell.has_method("set_item"):
-		cell.set_item(item_data, index)
-
-	if cell.has_method("set_selected"):
-		# Set initial selection state based on selection_state
-		var is_selected = false
-		if selection_state and selection_state.value is int:
-			is_selected = (selection_state.value as int) == index
-		cell.set_selected(is_selected)
-
 	# Make cells focusable for navigation
 	cell.focus_mode = Control.FOCUS_ALL
 
@@ -255,13 +181,26 @@ func _create_cell(item_data: Variant, index: int) -> Control:
 	if select_on_focus and not cell.focus_entered.is_connected(_on_cell_focus_entered):
 		cell.focus_entered.connect(_on_cell_focus_entered.bind(index))
 
-	if cell.has_signal("pressed") and not cell.pressed.is_connected(_on_cell_pressed):
+	var supports_pressed := cell.has_signal("pressed")
+	if supports_pressed and not cell.pressed.is_connected(_on_cell_pressed):
 		cell.pressed.connect(_on_cell_pressed.bind(index))
 
-	if cell.has_signal("gui_input") and not cell.gui_input.is_connected(_on_cell_gui_input):
+	# Prefer pressed when available to avoid duplicate activation handling on button-based cells.
+	if not supports_pressed and cell.has_signal("gui_input") and not cell.gui_input.is_connected(_on_cell_gui_input):
 		cell.gui_input.connect(_on_cell_gui_input.bind(index))
 
 	return cell
+
+## Applies item data and selection state to a cell already in the tree.
+## Call after add_child so the cell's @onready refs are valid.
+func _apply_cell_data(cell: Control, item_data: Variant, index: int) -> void:
+	if cell.has_method("set_item"):
+		cell.set_item(item_data, index)
+	if cell.has_method("set_selected"):
+		var is_selected := false
+		if selection_state and selection_state.value is int:
+			is_selected = (selection_state.value as int) == index
+		cell.set_selected(is_selected)
 
 ## Selects the cell at the given index and updates selection_state.
 ##
@@ -269,9 +208,7 @@ func _create_cell(item_data: Variant, index: int) -> Control:
 func _select_index(index: int) -> void:
 	if selection_state == null:
 		return
-	_suppress_state_updates = true
 	selection_state.set_value(index)
-	_suppress_state_updates = false
 
 ## Handles focus entering a cell.
 ##
@@ -315,5 +252,74 @@ func _on_cell_gui_input(event: InputEvent, index: int) -> void:
 		var cell: Control = _current_cells[index] if index >= 0 and index < _current_cells.size() else null
 		cell_activated.emit(index, item_data, cell)
 
-func _exit_tree() -> void:
-	FocusDrivenHover.cleanup(self)
+## Returns the control to focus when entering the grid (FOCUSABLE_ENTER mode).
+## Prefers selected cell if selection_state is a valid index, otherwise first cell.
+func _get_first_focusable_inside() -> Control:
+	if selection_state != null and selection_state.value is int:
+		var idx: int = int(selection_state.value)
+		if idx >= 0 and idx < _current_cells.size():
+			var cell: Control = _current_cells[idx]
+			if cell and cell.focus_mode != Control.FOCUS_NONE:
+				return cell
+	var focusables: Array[Control] = NavigationUtils.find_focusable_controls(self, true)
+	return focusables[0] if not focusables.is_empty() else null
+
+func _gui_input(event: InputEvent) -> void:
+	if Engine.is_editor_hint():
+		return
+	if navigation_mode != NavigationMode.FOCUSABLE_ENTER:
+		return
+	if NavigationUtils.is_accept_event(event) and has_focus() and not _entered:
+		var first_inside := _get_first_focusable_inside()
+		if first_inside:
+			_entered = true
+			first_inside.grab_focus()
+			accept_event()
+		return
+	if NavigationUtils.is_cancel_event(event) and _entered:
+		var focus_owner = get_viewport().gui_get_focus_owner()
+		if focus_owner and is_ancestor_of(focus_owner):
+			_entered = false
+			grab_focus()
+			accept_event()
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if Engine.is_editor_hint():
+		return
+	if navigation_mode != NavigationMode.FOCUSABLE_ENTER or not _entered:
+		return
+	if NavigationUtils.is_cancel_event(event):
+		var focus_owner = get_viewport().gui_get_focus_owner()
+		if focus_owner and is_ancestor_of(focus_owner):
+			_entered = false
+			grab_focus()
+			get_viewport().set_input_as_handled()
+
+## Sets up focus neighbor chain between cells for keyboard navigation.
+## Called deferred after _rebuild_cells so the chain matches current _current_cells.
+## Does not set first cell's top/left or last cell's bottom/right so the parent (e.g. VBox)
+## can keep "exit" links (first cell Up -> previous sibling, last cell Down -> next sibling).
+func _setup_internal_focus() -> void:
+	if Engine.is_editor_hint():
+		return
+	if _current_cells.is_empty():
+		return
+	var focus_chain: Array[Control] = []
+	for cell in _current_cells:
+		if cell and cell.focus_mode != Control.FOCUS_NONE:
+			focus_chain.append(cell)
+	if focus_chain.size() < 2:
+		return
+	var n := focus_chain.size()
+	for i in range(n):
+		var current: Control = focus_chain[i]
+		# Vertical: set bottom for all except last; set top for all except first (parent owns first.top / last.bottom)
+		if i < n - 1:
+			current.focus_neighbor_bottom = current.get_path_to(focus_chain[i + 1])
+		if i > 0:
+			current.focus_neighbor_top = current.get_path_to(focus_chain[i - 1])
+		# Horizontal: set right for all except last; set left for all except first
+		if i < n - 1:
+			current.focus_neighbor_right = current.get_path_to(focus_chain[i + 1])
+		if i > 0:
+			current.focus_neighbor_left = current.get_path_to(focus_chain[i - 1])

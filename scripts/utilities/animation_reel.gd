@@ -167,6 +167,7 @@ func _get_available_triggers_for_type(control_type: ControlTypeHint) -> Array[Tr
 			]
 		ControlTypeHint.SELECTION:
 			return [
+				Trigger.PRESSED,
 				Trigger.SELECTION_CHANGED,
 				Trigger.HOVER_ENTER,
 				Trigger.HOVER_EXIT

@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="GridContainerConfig" load_steps=3 format=3 uid="uid://c8kxqm2v7nwp4"]
+
+[ext_resource type="Script" uid="uid://bmdox3lifd7vl" path="res://scripts/reactive/grid_container_config.gd" id="1_config"]
+[ext_resource type="PackedScene" uid="uid://b2xq8kmd4ywrh" path="res://scenes/reactive_grid_cell.tscn" id="2_cell"]
+
+[resource]
+script = ExtResource("1_config")
+cell_scene = ExtResource("2_cell")

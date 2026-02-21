@@ -32,6 +32,8 @@ static func is_enterable_container(child: Control) -> bool:
 	# Check for known enterable containers
 	if child is ReactiveVBoxContainer or child is ReactiveHBoxContainer:
 		return true
+	if child is ReactiveGridContainer:
+		return child.is_enterable_navigation()
 	# Future: Check for interface/contract if we add one
 	# For now, this is extensible by overriding in subclasses
 	return false

@@ -27,6 +27,8 @@ func _ready() -> void:
 	if selected_state:
 		selected_state.value_changed.connect(_on_selected_state_changed)
 		_on_selected_state_changed(selected_state.value, selected_state.value)
+		if selected_state.value == null and item_count > 0 and selected >= 0 and selected < item_count:
+			_push_current_choice_to_state()
 	if disabled_state:
 		disabled_state.value_changed.connect(_on_disabled_state_changed)
 		_on_disabled_state_changed(disabled_state.value, disabled_state.value)
@@ -79,11 +81,18 @@ func _trigger_animations(trigger_type) -> void:
 func _on_item_selected(index: int) -> void:
 	if not selected_state or _helper.is_updating():
 		return
-	var new_value: Variant = get_item_text(index)
-	if selected_state.value == new_value:
+	var current: Variant = selected_state.value
+	if current is int and current == index:
+		return
+	if current is String and current == get_item_text(index):
+		return
+	_push_current_choice_to_state()
+
+func _push_current_choice_to_state() -> void:
+	if not selected_state or item_count == 0 or selected < 0 or selected >= item_count:
 		return
 	_helper.set_updating(true)
-	selected_state.set_value(new_value)
+	selected_state.set_value(get_item_text(selected))
 	_helper.set_updating(false)
 
 func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void:
@@ -92,8 +101,11 @@ func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void
 	var index := -1
 	if new_value is String:
 		index = _find_item_by_text(new_value)
-	else:
+	elif new_value is int:
+		index = new_value
+	elif new_value is float:
 		index = int(new_value)
+	# Else: Resource, Array, null, etc. — not a valid selection; leave index = -1
 	if index < 0 or index >= item_count:
 		return
 	if get_selected_id() == index or selected == index:
