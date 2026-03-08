@@ -13,7 +13,7 @@
 ## instantiated directly. Use one of its subclasses: PanelActionConfig for show/hide/toggle panels,
 ## ButtonActionConfig for enable/disable/toggle buttons, LabelActionConfig for show/hide labels,
 ## InputActionConfig for enable/disable inputs, ToggleActionConfig for toggle switches, ListActionConfig
-## for selecting items in lists, AnimationActionConfig for triggering animations, and ReactiveValueActionConfig
+## for selecting items in lists, and ReactiveValueActionConfig
 ## for modifying reactive values.
 @abstract
 class_name ActionConfig

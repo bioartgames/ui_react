@@ -1947,11 +1947,11 @@ static func stop_stagger_animations(source_node: Node, targets: Array[Control]) 
 ## [param source_node]: The node to create tweens from (usually self).
 ## [param targets]: Array of controls to animate.
 ## [param delay_between]: Delay between each item in seconds (default: 0.1).
-## [param animation_config]: AnimationActionConfig that defines the animation to apply to each target.
+## [param animation_config]: AnimationTarget that defines the animation to apply to each target.
 ## The config's reverse property determines if items are revealed (false) or hidden (true).
 ## All customization options (flash_color, pop_overshoot, etc.) are supported.
 ## [return]: Signal that emits when all animations complete.
-static func animate_stagger(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_config: AnimationActionConfig = null) -> Signal:
+static func animate_stagger(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_config: AnimationTarget = null) -> Signal:
 	if not source_node or targets.size() == 0:
 		push_warning("UIAnimationUtils: Invalid source_node or empty targets for animate_stagger")
 		return Signal()
@@ -1989,12 +1989,12 @@ static func animate_stagger(source_node: Node, targets: Array[Control], delay_be
 ## [param source_node]: The node to create tweens from (usually self).
 ## [param targets]: Array of controls to animate.
 ## [param delay_between]: Delay between each item in seconds (default: 0.1).
-## [param animation_configs]: Array of AnimationActionConfig, one per target.
+## [param animation_configs]: Array of AnimationTarget, one per target.
 ## Each config's reverse property determines if items are revealed (false) or hidden (true).
 ## All customization options (flash_color, pop_overshoot, etc.) are supported per target.
 ## If configs array is smaller than targets, the last config is reused for remaining targets.
 ## [return]: Signal that emits when all animations complete.
-static func animate_stagger_multi(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_configs: Array[AnimationActionConfig] = []) -> Signal:
+static func animate_stagger_multi(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_configs: Array[AnimationTarget] = []) -> Signal:
 	if not source_node or targets.size() == 0:
 		push_warning("UIAnimationUtils: Invalid source_node or empty targets for animate_stagger_multi")
 		return Signal()
@@ -2065,7 +2065,7 @@ class _StaggerHelper extends Node:
 				target.position = current_position
 		queue_free()
 
-	func execute_stagger(source_node: Node, targets: Array[Control], delay_between: float, animation_config: AnimationActionConfig, is_reveal: bool) -> void:
+	func execute_stagger(source_node: Node, targets: Array[Control], delay_between: float, animation_config: AnimationTarget, is_reveal: bool) -> void:
 		_source_node = source_node
 		_targets = targets
 		_is_running = true
@@ -2095,7 +2095,7 @@ class _StaggerHelper extends Node:
 				if not _is_running:
 					return
 
-			# Apply animation using the config's apply_to_control method
+			# Apply animation using AnimationTarget configuration
 			var animation_signal = animation_config.apply_to_control(source_node, target)
 			if animation_signal:
 				await animation_signal
@@ -2109,7 +2109,7 @@ class _StaggerHelper extends Node:
 			all_finished.emit()
 		queue_free()
 
-	func execute_stagger_multi(source_node: Node, targets: Array[Control], delay_between: float, animation_configs: Array[AnimationActionConfig]) -> void:
+	func execute_stagger_multi(source_node: Node, targets: Array[Control], delay_between: float, animation_configs: Array[AnimationTarget]) -> void:
 		_source_node = source_node
 		_targets = targets
 		_is_running = true

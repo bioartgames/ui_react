@@ -46,51 +46,22 @@ func _ready() -> void:
 ## Validates animation targets and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_targets() -> void:
-	var valid_targets: Array[AnimationTarget] = []
-	var has_selection_changed_targets = false
-	var has_hover_enter_targets = false
-	var has_hover_exit_targets = false
-	
-	for anim_target in animation_targets:
-		if anim_target == null:
-			continue
-		
-		# Check if target is set
-		if anim_target.target.is_empty():
-			push_warning("ReactiveTabContainer '%s': AnimationTarget has no target. Set target (NodePath) in the Inspector. Tip: Drag a node to target." % name)
-			continue
-		
-		# Verify the target resolves to a valid Control
-		var target_node = get_node_or_null(anim_target.target)
-		if target_node == null:
-			push_warning("ReactiveTabContainer '%s': AnimationTarget target '%s' not found. Check the NodePath." % [name, anim_target.target])
-			continue
-		
-		if not (target_node is Control):
-			push_warning("ReactiveTabContainer '%s': AnimationTarget target '%s' is not a Control node." % [name, anim_target.target])
-			continue
-		
-		valid_targets.append(anim_target)
-		
-		# Track which triggers we need to connect
-		match anim_target.trigger:
-			AnimationTarget.Trigger.SELECTION_CHANGED:
-				has_selection_changed_targets = true
-			AnimationTarget.Trigger.HOVER_ENTER:
-				has_hover_enter_targets = true
-			AnimationTarget.Trigger.HOVER_EXIT:
-				has_hover_exit_targets = true
-	
-	animation_targets = valid_targets
+	animation_targets = ReactiveAnimationTargetHelper.validate_animation_targets(
+		self,
+		"ReactiveTabContainer",
+		animation_targets,
+		[AnimationTarget.Trigger.SELECTION_CHANGED]
+	)
+	var trigger_map = ReactiveAnimationTargetHelper.collect_triggers(animation_targets)
 	
 	# Connect signals based on which triggers are used
-	if has_selection_changed_targets:
+	if trigger_map.has(AnimationTarget.Trigger.SELECTION_CHANGED):
 		if not tab_selected.is_connected(_on_trigger_selection_changed):
 			tab_selected.connect(_on_trigger_selection_changed)
-	if has_hover_enter_targets:
+	if trigger_map.has(AnimationTarget.Trigger.HOVER_ENTER):
 		if not mouse_entered.is_connected(_on_trigger_hover_enter):
 			mouse_entered.connect(_on_trigger_hover_enter)
-	if has_hover_exit_targets:
+	if trigger_map.has(AnimationTarget.Trigger.HOVER_EXIT):
 		if not mouse_exited.is_connected(_on_trigger_hover_exit):
 			mouse_exited.connect(_on_trigger_hover_exit)
 
@@ -117,20 +88,7 @@ func _on_trigger_hover_exit() -> void:
 ## Triggers animations for targets matching the specified trigger type.
 ## [param trigger_type]: The trigger type to match.
 func _trigger_animations(trigger_type: AnimationTarget.Trigger) -> void:
-	if animation_targets.size() == 0:
-		return
-	
-	# Apply animations for targets matching this trigger
-	for anim_target in animation_targets:
-		if anim_target == null:
-			continue
-		
-		if anim_target.trigger != trigger_type:
-			continue
-		
-		# Note: TabContainer doesn't expose disabled property, so respect_disabled is not supported
-		
-		anim_target.apply(self)
+	ReactiveAnimationTargetHelper.trigger_animations(self, animation_targets, trigger_type)
 
 func _on_tab_selected(tab_index: int) -> void:
 	# Handle tab switching animations (animate old tab out, new tab in)
@@ -374,29 +332,31 @@ func _animate_tab_switch(old_index: int, new_index: int) -> void:
 			continue
 		if anim_target.trigger != AnimationTarget.Trigger.SELECTION_CHANGED:
 			continue
-		
-		var old_path = get_path_to(old_child)
-		var new_path = get_path_to(new_child)
-		var targets_old = anim_target.target == old_path or anim_target.target.is_empty()
-		var targets_new = anim_target.target == new_path or anim_target.target.is_empty()
+
+		var targets_old = false
+		var targets_new = false
+		if anim_target.target.is_empty():
+			targets_old = true
+			targets_new = true
+		else:
+			var configured_target = get_node_or_null(anim_target.target)
+			targets_old = configured_target == old_child
+			targets_new = configured_target == new_child
 		
 		# Animate old tab out (fade out or slide out)
 		if targets_old:
 			var fade_out = anim_target.duplicate()
 			fade_out.reverse = true
-			# If it's a fade_in animation, reverse it for fade out
-			if fade_out.animation == AnimationTarget.AnimationAction.FADE_IN:
-				fade_out.apply(old_child)
-			else:
-				fade_out.apply(old_child)
+			fade_out.target = NodePath(".")
+			fade_out.apply(old_child)
 		
 		# Animate new tab in (fade in or slide in)
 		if targets_new:
 			var fade_in = anim_target.duplicate()
 			fade_in.reverse = false
+			fade_in.target = NodePath(".")
 			fade_in.apply(new_child)
 		
 		# If target is empty, we've handled both, so break
 		if anim_target.target.is_empty():
 			break
-

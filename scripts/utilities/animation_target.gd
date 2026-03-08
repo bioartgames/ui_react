@@ -138,13 +138,21 @@ enum Easing {
 func apply(owner: Node) -> Signal:
 	if target.is_empty():
 		return Signal()
-	
+
 	var target_node = owner.get_node_or_null(target)
 	if not target_node or not (target_node is Control):
 		return Signal()
-	
-	var control_target = target_node as Control
-	
+
+	return apply_to_control(owner, target_node as Control)
+
+## Applies this animation to a specific control target.
+## [param owner]: The node that owns the animation (for creating tweens).
+## [param control_target]: The already-resolved control to animate.
+## [return]: Signal that emits when animation completes (or empty Signal if not applicable).
+func apply_to_control(owner: Node, control_target: Control) -> Signal:
+	if not owner or not control_target:
+		return Signal()
+
 	# Convert Easing enum to Tween.EASE_* constant
 	var tween_easing: int
 	match easing:
@@ -156,7 +164,7 @@ func apply(owner: Node) -> Signal:
 			tween_easing = Tween.EASE_IN_OUT
 		Easing.EASE_OUT_IN:
 			tween_easing = Tween.EASE_OUT_IN
-	
+
 	match animation:
 		AnimationAction.EXPAND:
 			if reverse:
@@ -257,4 +265,3 @@ func apply(owner: Node) -> Signal:
 		_:
 			push_warning("AnimationTarget: Unsupported animation type %d" % animation)
 			return Signal()
-
