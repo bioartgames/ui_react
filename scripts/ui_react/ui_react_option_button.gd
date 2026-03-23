@@ -81,11 +81,7 @@ func _on_item_selected(index: int) -> void:
 func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void:
 	if _updating:
 		return
-	var index := -1
-	if new_value is String:
-		index = _find_item_by_text(new_value)
-	else:
-		index = int(new_value)
+	var index := _resolve_option_index(new_value)
 	if index < 0 or index >= item_count:
 		return
 	if get_selected_id() == index or selected == index:
@@ -97,6 +93,13 @@ func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void
 
 func _on_disabled_state_changed(new_value: Variant, _old_value: Variant) -> void:
 	disabled = bool(new_value)
+
+
+func _resolve_option_index(new_value: Variant) -> int:
+	if new_value is String:
+		return _find_item_by_text(new_value)
+	return int(new_value)
+
 
 func _find_item_by_text(text_value: String) -> int:
 	for i in item_count:

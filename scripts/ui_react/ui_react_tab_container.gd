@@ -120,11 +120,10 @@ func _on_tabs_state_changed(new_value: Variant, _old_value: Variant) -> void:
 	if _updating:
 		return
 
-	if not (new_value is Array):
-		push_warning("UiReactTabContainer '%s': tabs_state.value must be an Array. Got: %s" % [name, typeof(new_value)])
+	var coerced_tabs: Variant = _expect_array_state(new_value, "tabs_state")
+	if coerced_tabs == null:
 		return
-
-	var tabs_array: Array = new_value
+	var tabs_array: Array = coerced_tabs
 
 	_updating = true
 
@@ -141,11 +140,11 @@ func _on_disabled_tabs_state_changed(new_value: Variant, _old_value: Variant) ->
 	if _updating:
 		return
 
-	if not (new_value is Array):
-		push_warning("UiReactTabContainer '%s': disabled_tabs_state.value must be an Array. Got: %s" % [name, typeof(new_value)])
+	var coerced_disabled: Variant = _expect_array_state(new_value, "disabled_tabs_state")
+	if coerced_disabled == null:
 		return
+	var disabled_array: Array = coerced_disabled
 
-	var disabled_array: Array = new_value
 	var tab_count = get_tab_count()
 
 	_updating = true
@@ -160,11 +159,11 @@ func _on_visible_tabs_state_changed(new_value: Variant, _old_value: Variant) -> 
 	if _updating:
 		return
 
-	if not (new_value is Array):
-		push_warning("UiReactTabContainer '%s': visible_tabs_state.value must be an Array. Got: %s" % [name, typeof(new_value)])
+	var coerced_visible: Variant = _expect_array_state(new_value, "visible_tabs_state")
+	if coerced_visible == null:
 		return
+	var visible_array: Array = coerced_visible
 
-	var visible_array: Array = new_value
 	var tab_count = get_tab_count()
 
 	_updating = true
@@ -174,3 +173,10 @@ func _on_visible_tabs_state_changed(new_value: Variant, _old_value: Variant) -> 
 		set_tab_hidden(i, not tab_visible)
 
 	_updating = false
+
+
+func _expect_array_state(value: Variant, field_name: String) -> Variant:
+	if value is Array:
+		return value
+	push_warning("UiReactTabContainer '%s': %s.value must be an Array. Got: %s" % [name, field_name, typeof(value)])
+	return null

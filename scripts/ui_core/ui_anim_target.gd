@@ -159,94 +159,128 @@ func apply_to_control(owner: Node, control_target: Control) -> Signal:
 	if not owner or not control_target:
 		return Signal()
 
-	# Convert Easing enum to Tween.EASE_* constant
-	var tween_easing: int
+	var tween_easing: int = _tween_easing_from_enum()
+
+	match animation:
+		AnimationAction.EXPAND, AnimationAction.EXPAND_X, AnimationAction.EXPAND_Y:
+			return _apply_expand_family(owner, control_target, tween_easing)
+		AnimationAction.FADE_IN:
+			return _apply_fade_family(owner, control_target, tween_easing)
+		AnimationAction.SLIDE_FROM_LEFT, AnimationAction.SLIDE_FROM_RIGHT, AnimationAction.SLIDE_FROM_TOP, AnimationAction.SLIDE_FROM_BOTTOM:
+			return _apply_slide_family(owner, control_target, tween_easing)
+		AnimationAction.FROM_LEFT_TO_CENTER, AnimationAction.FROM_RIGHT_TO_CENTER, AnimationAction.FROM_TOP_TO_CENTER, AnimationAction.FROM_BOTTOM_TO_CENTER:
+			return _apply_center_slide_family(owner, control_target, tween_easing)
+		AnimationAction.BOUNCE_IN, AnimationAction.ELASTIC_IN, AnimationAction.ROTATE_IN:
+			return _apply_elastic_bounce_rotate_family(owner, control_target, tween_easing)
+		AnimationAction.POP, AnimationAction.PULSE, AnimationAction.SHAKE, AnimationAction.BREATHING, AnimationAction.WOBBLE, AnimationAction.FLOAT, AnimationAction.GLOW_PULSE, AnimationAction.COLOR_FLASH:
+			return _apply_effect_family(owner, control_target, tween_easing)
+		AnimationAction.RESET:
+			return _apply_reset(owner, control_target, tween_easing)
+		_:
+			push_warning("UiAnimTarget: Unsupported animation type %d" % animation)
+			return Signal()
+
+
+func _tween_easing_from_enum() -> int:
 	match easing:
 		Easing.EASE_IN:
-			tween_easing = Tween.EASE_IN
+			return Tween.EASE_IN
 		Easing.EASE_OUT:
-			tween_easing = Tween.EASE_OUT
+			return Tween.EASE_OUT
 		Easing.EASE_IN_OUT:
-			tween_easing = Tween.EASE_IN_OUT
+			return Tween.EASE_IN_OUT
 		Easing.EASE_OUT_IN:
-			tween_easing = Tween.EASE_OUT_IN
+			return Tween.EASE_OUT_IN
+	return Tween.EASE_OUT
 
+
+func _apply_expand_family(owner: Node, control_target: Control, tween_easing: int) -> Signal:
 	match animation:
 		AnimationAction.EXPAND:
 			if reverse:
 				return UiAnimUtils.animate_shrink(owner, control_target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
-			else:
-				return UiAnimUtils.animate_expand(owner, control_target, duration, pivot_offset, true, false, false, repeat_count, tween_easing)
+			return UiAnimUtils.animate_expand(owner, control_target, duration, pivot_offset, true, false, false, repeat_count, tween_easing)
 		AnimationAction.EXPAND_X:
 			if reverse:
 				return UiAnimUtils.animate_shrink_x(owner, control_target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
-			else:
-				return UiAnimUtils.animate_expand_x(owner, control_target, duration, pivot_offset, true, repeat_count, tween_easing)
+			return UiAnimUtils.animate_expand_x(owner, control_target, duration, pivot_offset, true, repeat_count, tween_easing)
 		AnimationAction.EXPAND_Y:
 			if reverse:
 				return UiAnimUtils.animate_shrink_y(owner, control_target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
-			else:
-				return UiAnimUtils.animate_expand_y(owner, control_target, duration, pivot_offset, true, repeat_count, tween_easing)
+			return UiAnimUtils.animate_expand_y(owner, control_target, duration, pivot_offset, true, repeat_count, tween_easing)
+	return Signal()
+
+
+func _apply_fade_family(owner: Node, control_target: Control, tween_easing: int) -> Signal:
+	match animation:
 		AnimationAction.FADE_IN:
 			if reverse:
 				return UiAnimUtils.animate_fade_out(owner, control_target, duration, true, true, repeat_count, tween_easing)
-			else:
-				return UiAnimUtils.animate_fade_in(owner, control_target, duration, true, repeat_count, tween_easing)
+			return UiAnimUtils.animate_fade_in(owner, control_target, duration, true, repeat_count, tween_easing)
+	return Signal()
+
+
+func _apply_slide_family(owner: Node, control_target: Control, tween_easing: int) -> Signal:
+	match animation:
 		AnimationAction.SLIDE_FROM_LEFT:
 			if reverse:
 				return UiAnimUtils.animate_slide_to_left(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
-			else:
-				return UiAnimUtils.animate_slide_from_left(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
+			return UiAnimUtils.animate_slide_from_left(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
 		AnimationAction.SLIDE_FROM_RIGHT:
 			if reverse:
 				return UiAnimUtils.animate_slide_to_right(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
-			else:
-				return UiAnimUtils.animate_slide_from_right(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
+			return UiAnimUtils.animate_slide_from_right(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
 		AnimationAction.SLIDE_FROM_TOP:
 			if reverse:
 				return UiAnimUtils.animate_slide_to_top(owner, control_target, duration, true, tween_easing)
-			else:
-				return UiAnimUtils.animate_slide_from_top(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
+			return UiAnimUtils.animate_slide_from_top(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
 		AnimationAction.SLIDE_FROM_BOTTOM:
 			if reverse:
 				return UiAnimUtils.animate_slide_to_bottom(owner, control_target, duration, true, tween_easing)
-			else:
-				return UiAnimUtils.animate_slide_from_bottom(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
+			return UiAnimUtils.animate_slide_from_bottom(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
+	return Signal()
+
+
+func _apply_center_slide_family(owner: Node, control_target: Control, tween_easing: int) -> Signal:
+	match animation:
 		AnimationAction.FROM_LEFT_TO_CENTER:
 			if reverse:
 				return UiAnimUtils.animate_from_center_to_left(owner, control_target, duration, true, tween_easing)
-			else:
-				return UiAnimUtils.animate_from_left_to_center(owner, control_target, duration, true, tween_easing)
+			return UiAnimUtils.animate_from_left_to_center(owner, control_target, duration, true, tween_easing)
 		AnimationAction.FROM_RIGHT_TO_CENTER:
 			if reverse:
 				return UiAnimUtils.animate_from_center_to_right(owner, control_target, duration, true, tween_easing)
-			else:
-				return UiAnimUtils.animate_from_right_to_center(owner, control_target, duration, true, tween_easing)
+			return UiAnimUtils.animate_from_right_to_center(owner, control_target, duration, true, tween_easing)
 		AnimationAction.FROM_TOP_TO_CENTER:
 			if reverse:
 				return UiAnimUtils.animate_from_center_to_top(owner, control_target, duration, true, tween_easing)
-			else:
-				return UiAnimUtils.animate_from_top_to_center(owner, control_target, duration, true, tween_easing)
+			return UiAnimUtils.animate_from_top_to_center(owner, control_target, duration, true, tween_easing)
 		AnimationAction.FROM_BOTTOM_TO_CENTER:
 			if reverse:
 				return UiAnimUtils.animate_from_center_to_bottom(owner, control_target, duration, true, tween_easing)
-			else:
-				return UiAnimUtils.animate_from_bottom_to_center(owner, control_target, duration, true, tween_easing)
+			return UiAnimUtils.animate_from_bottom_to_center(owner, control_target, duration, true, tween_easing)
+	return Signal()
+
+
+func _apply_elastic_bounce_rotate_family(owner: Node, control_target: Control, tween_easing: int) -> Signal:
+	match animation:
 		AnimationAction.BOUNCE_IN:
 			if reverse:
 				return UiAnimUtils.animate_bounce_out(owner, control_target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
-			else:
-				return UiAnimUtils.animate_bounce_in(owner, control_target, duration, pivot_offset, true, tween_easing)
+			return UiAnimUtils.animate_bounce_in(owner, control_target, duration, pivot_offset, true, tween_easing)
 		AnimationAction.ELASTIC_IN:
 			if reverse:
 				return UiAnimUtils.animate_elastic_out(owner, control_target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
-			else:
-				return UiAnimUtils.animate_elastic_in(owner, control_target, duration, pivot_offset, true, tween_easing)
+			return UiAnimUtils.animate_elastic_in(owner, control_target, duration, pivot_offset, true, tween_easing)
 		AnimationAction.ROTATE_IN:
 			if reverse:
 				return UiAnimUtils.animate_rotate_out(owner, control_target, duration, ROTATE_OUT_END_DEGREES, true, true, true, tween_easing)
-			else:
-				return UiAnimUtils.animate_rotate_in(owner, control_target, duration, rotate_start_angle, pivot_offset, true, repeat_count, tween_easing)
+			return UiAnimUtils.animate_rotate_in(owner, control_target, duration, rotate_start_angle, pivot_offset, true, repeat_count, tween_easing)
+	return Signal()
+
+
+func _apply_effect_family(owner: Node, control_target: Control, tween_easing: int) -> Signal:
+	match animation:
 		AnimationAction.POP:
 			return UiAnimUtils.animate_pop(owner, control_target, duration, pop_overshoot, pivot_offset, true, repeat_count, tween_easing)
 		AnimationAction.PULSE:
@@ -263,11 +297,8 @@ func apply_to_control(owner: Node, control_target: Control) -> Signal:
 			return UiAnimUtils.animate_glow_pulse(owner, control_target, duration, repeat_count, tween_easing)
 		AnimationAction.COLOR_FLASH:
 			return UiAnimUtils.animate_color_flash(owner, control_target, flash_color, duration, flash_intensity, true, tween_easing)
-		AnimationAction.RESET:
-			# Use comprehensive reset with duration=0 for instant reset
-			# This resets all properties (position, scale, modulate, rotation, pivot_offset, visible)
-			# using the unified snapshot system
-			return UiAnimUtils.animate_reset_all(owner, control_target, RESET_INSTANT_DURATION_SECONDS, tween_easing, true)
-		_:
-			push_warning("UiAnimTarget: Unsupported animation type %d" % animation)
-			return Signal()
+	return Signal()
+
+
+func _apply_reset(owner: Node, control_target: Control, tween_easing: int) -> Signal:
+	return UiAnimUtils.animate_reset_all(owner, control_target, RESET_INSTANT_DURATION_SECONDS, tween_easing, true)

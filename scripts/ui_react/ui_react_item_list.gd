@@ -112,12 +112,7 @@ func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void
 		_updating = false
 	elif new_value is Array:
 		# Multi selection mode
-		var indices: Array[int] = []
-		for item in new_value:
-			if item is int:
-				var idx = int(item)
-				if idx >= 0 and idx < item_count:
-					indices.append(idx)
+		var indices: Array[int] = _indices_from_variant_array(new_value)
 		
 		_updating = true
 		deselect_all()
@@ -128,3 +123,13 @@ func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void
 func _on_disabled_state_changed(_new_value: Variant, _old_value: Variant) -> void:
 	# Note: ItemList doesn't expose disabled property in Godot 4.5, so this is a no-op
 	pass
+
+
+func _indices_from_variant_array(raw: Array) -> Array[int]:
+	var indices: Array[int] = []
+	for item in raw:
+		if item is int:
+			var idx = int(item)
+			if idx >= 0 and idx < item_count:
+				indices.append(idx)
+	return indices

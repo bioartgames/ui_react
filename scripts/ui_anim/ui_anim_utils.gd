@@ -180,7 +180,7 @@ static func animate_slide_from_left(source_node: Node, target: Control, offset :
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -206,7 +206,7 @@ static func animate_slide_to_left(source_node: Node, target: Control, _offset :=
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -245,7 +245,7 @@ static func animate_slide_from_right(source_node: Node, target: Control, offset 
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -271,7 +271,7 @@ static func animate_slide_to_right(source_node: Node, target: Control, _offset :
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -296,7 +296,7 @@ static func animate_slide_from_top(source_node: Node, target: Control, offset: f
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -321,7 +321,7 @@ static func animate_slide_to_top(source_node: Node, target: Control, speed := DE
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -371,7 +371,7 @@ static func animate_expand(source_node: Node, target: Control, speed := DEFAULT_
 	
 	var result_signal: Signal
 	if repeat_count != 0:
-		result_signal = _loop_animation(source_node, target, animation_callable, repeat_count)
+		result_signal = UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		result_signal = animation_callable.call()
 
@@ -421,7 +421,7 @@ static func animate_expand_x(source_node: Node, target: Control, speed := SHRINK
 	
 	var result_signal: Signal
 	if repeat_count != 0:
-		result_signal = _loop_animation(source_node, target, animation_callable, repeat_count)
+		result_signal = UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		result_signal = animation_callable.call()
 
@@ -471,7 +471,7 @@ static func animate_expand_y(source_node: Node, target: Control, speed := SHRINK
 	
 	var result_signal: Signal
 	if repeat_count != 0:
-		result_signal = _loop_animation(source_node, target, animation_callable, repeat_count)
+		result_signal = UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		result_signal = animation_callable.call()
 
@@ -525,7 +525,7 @@ static func animate_shrink(source_node: Node, target: Control, speed := DEFAULT_
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -572,7 +572,7 @@ static func animate_shrink_x(source_node: Node, target: Control, speed := SHRINK
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -619,7 +619,7 @@ static func animate_shrink_y(source_node: Node, target: Control, speed := SHRINK
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -651,7 +651,7 @@ static func animate_fade_in(source_node: Node, target: Control, speed := DEFAULT
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -688,7 +688,7 @@ static func animate_fade_out(source_node: Node, target: Control, speed := DEFAUL
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -712,7 +712,7 @@ static func animate_from_left_to_center(source_node: Node, target: Control, spee
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -737,7 +737,7 @@ static func animate_from_center_to_left(source_node: Node, target: Control, spee
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -774,7 +774,7 @@ static func animate_from_right_to_center(source_node: Node, target: Control, spe
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -799,7 +799,7 @@ static func animate_from_center_to_right(source_node: Node, target: Control, spe
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -838,7 +838,7 @@ static func animate_slide_from_bottom(source_node: Node, target: Control, offset
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -876,7 +876,7 @@ static func animate_slide_to_bottom(source_node: Node, target: Control, speed :=
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -915,7 +915,7 @@ static func animate_from_top_to_center(source_node: Node, target: Control, speed
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -948,7 +948,7 @@ static func animate_from_center_to_top(source_node: Node, target: Control, speed
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -985,7 +985,7 @@ static func animate_from_bottom_to_center(source_node: Node, target: Control, sp
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -1023,7 +1023,7 @@ static func animate_from_center_to_bottom(source_node: Node, target: Control, sp
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -1061,7 +1061,7 @@ static func animate_bounce_in(source_node: Node, target: Control, speed := DEFAU
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -1108,7 +1108,7 @@ static func animate_bounce_out(source_node: Node, target: Control, speed := DEFA
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -1146,7 +1146,7 @@ static func animate_elastic_in(source_node: Node, target: Control, speed := DEFA
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -1193,7 +1193,7 @@ static func animate_elastic_out(source_node: Node, target: Control, speed := DEF
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -1232,7 +1232,7 @@ static func animate_rotate_in(source_node: Node, target: Control, speed := DEFAU
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -1274,7 +1274,7 @@ static func animate_rotate_out(source_node: Node, target: Control, speed := DEFA
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -1316,7 +1316,7 @@ static func animate_pop(source_node: Node, target: Control, speed := DEFAULT_SPE
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -1358,7 +1358,7 @@ static func animate_pulse(source_node: Node, target: Control, speed := 0.5, puls
 		return tween.finished
 	
 	if repeat_count != 0:
-		return _loop_animation(source_node, target, animation_callable, repeat_count)
+		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		return animation_callable.call()
 
@@ -1411,7 +1411,7 @@ static func animate_shake(source_node: Node, target: Control, speed := 0.5, inte
 	
 	var result_signal: Signal
 	if repeat_count != 0:
-		result_signal = _loop_animation(source_node, target, animation_callable, repeat_count)
+		result_signal = UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 	else:
 		result_signal = animation_callable.call()
 
@@ -1537,14 +1537,7 @@ static func animate_breathing(source_node: Node, target: Control, duration: floa
 	var original_scale = target.scale
 
 	var animation_callable = func() -> Signal:
-		# Get helper from source_node metadata if available
-		var helper: _AnimationLoopHelper = null
-		if source_node.has_meta("_animation_helper_ref"):
-			var helper_ref = source_node.get_meta("_animation_helper_ref") as WeakRef
-			if helper_ref and helper_ref.get_ref():
-				helper = helper_ref.get_ref() as _AnimationLoopHelper
-		
-		var tween = _AnimationLoopHelper.create_tracked_tween(source_node, helper)
+		var tween = UiAnimLoopRunner.create_tracked_tween(source_node)
 		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
@@ -1556,7 +1549,7 @@ static func animate_breathing(source_node: Node, target: Control, duration: floa
 		
 		return tween.finished
 	
-	return _loop_animation(source_node, target, animation_callable, repeat_count)
+	return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 
 ## Animates a control with a continuous wobble effect (subtle rotation oscillation).
 ## [param source_node]: The node to create the tween from (usually self).
@@ -1582,7 +1575,7 @@ static func animate_wobble(source_node: Node, target: Control, duration: float =
 	var original_rotation = target.rotation_degrees
 
 	var animation_callable = func() -> Signal:
-		var tween = source_node.create_tween()
+		var tween = UiAnimLoopRunner.create_tracked_tween(source_node)
 		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
@@ -1596,7 +1589,7 @@ static func animate_wobble(source_node: Node, target: Control, duration: float =
 		
 		return tween.finished
 	
-	return _loop_animation(source_node, target, animation_callable, repeat_count)
+	return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 
 ## Animates a control with a continuous float effect (gentle up/down movement).
 ## [param source_node]: The node to create the tween from (usually self).
@@ -1626,7 +1619,7 @@ static func animate_float(source_node: Node, target: Control, duration: float = 
 		saved_position = target.position
 	
 	var animation_callable = func() -> Signal:
-		var tween = source_node.create_tween()
+		var tween = UiAnimLoopRunner.create_tracked_tween(source_node)
 		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
@@ -1641,7 +1634,7 @@ static func animate_float(source_node: Node, target: Control, duration: float = 
 		
 		return tween.finished
 
-	var result_signal = _loop_animation(source_node, target, animation_callable, repeat_count)
+	var result_signal = UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 
 	# Connect to final completion to release unified snapshot
 	result_signal.connect(func():
@@ -1669,14 +1662,7 @@ static func animate_glow_pulse(source_node: Node, target: Control, duration: flo
 	var original_alpha = target.modulate.a
 	
 	var animation_callable = func() -> Signal:
-		# Get helper from source_node metadata if available
-		var helper: _AnimationLoopHelper = null
-		if source_node.has_meta("_animation_helper_ref"):
-			var helper_ref = source_node.get_meta("_animation_helper_ref") as WeakRef
-			if helper_ref and helper_ref.get_ref():
-				helper = helper_ref.get_ref() as _AnimationLoopHelper
-		
-		var tween = _AnimationLoopHelper.create_tracked_tween(source_node, helper)
+		var tween = UiAnimLoopRunner.create_tracked_tween(source_node)
 		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
@@ -1688,7 +1674,7 @@ static func animate_glow_pulse(source_node: Node, target: Control, duration: flo
 		
 		return tween.finished
 	
-	return _loop_animation(source_node, target, animation_callable, repeat_count)
+	return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 
 ## Animates a control with a color flash effect (quick color change and back).
 ## [param source_node]: The node to create the tween from (usually self).
@@ -1764,137 +1750,6 @@ static func animate_stagger_multi(source_node: Node, targets: Array[Control], de
 static func delay(source_node: Node, duration: float) -> Signal:
 	return UiAnimDelayHelpers.delay(source_node, duration)
 
-## Helper function to loop a tween animation.
-## [param source_node]: The node to create tweens from (captured by animation_callable, not used directly here).
-## [param target]: The control being animated (where loop helpers will be attached).
-## [param animation_callable]: A callable that creates and returns a tween's finished signal.
-## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop).
-## [return]: Signal that emits when animation finishes.
-static func _loop_animation(_source_node: Node, target: Control, animation_callable: Callable, repeat_count: int) -> Signal:
-	if repeat_count == 0:
-		# No repeats, just execute once
-		return animation_callable.call()
-
-	if repeat_count == -1:
-		# Infinite loop - attach helper to target control
-		var infinite_helper = _AnimationLoopHelper.new()
-		infinite_helper._target_control = target  # Store target reference to interrupt animations
-		target.add_child(infinite_helper)
-		# Wrap the callable to capture tween references and pass helper directly
-		var wrapped_callable = infinite_helper._wrap_animation_callable(animation_callable, _source_node)
-		infinite_helper.start_infinite_loop(wrapped_callable)
-
-		# Always return the signal to maintain type contract
-		# The helper node is accessible as a child of target if manual control is needed
-		return infinite_helper.loop_finished
-
-	# Finite repeats - use UiAnimSequence, attach helper to target control
-	var sequence = UiAnimSequence.create()
-	# repeat_count represents number of repeats, so total plays = repeat_count + 1
-	var total_plays = repeat_count + 1
-	for i in range(total_plays):
-		sequence.add(animation_callable)
-
-	# Execute sequence asynchronously using existing helper from animation_sequence_action_config
-	var finite_helper = _FiniteLoopHelper.new()
-	target.add_child(finite_helper)
-	finite_helper.execute_sequence(sequence)
-	return finite_helper.sequence_finished
-
-## Helper node for executing finite animation loops.
-class _FiniteLoopHelper extends Node:
-	var sequence_finished = Signal()
-
-	func execute_sequence(sequence: UiAnimSequence) -> void:
-		await sequence.play()
-		sequence_finished.emit()
-		queue_free()
-
-## Helper node for managing infinite animation loops.
-class _AnimationLoopHelper extends Node:
-	const HELPER_TYPE = "_AnimationLoopHelper"  # Identifier for helper detection
-	var loop_finished = Signal()
-	var _is_running = false
-	var _target_control: Control = null  # Store target to interrupt animations
-	var _active_tweens: Array[Tween] = []  # Track all active tweens
-
-	func _init():
-		# Set a metadata flag to identify this as a loop helper
-		set_meta("_is_animation_loop_helper", true)
-
-	## Static helper function to create a tween and store it in the helper if available
-	## This should be called from animation callables instead of source_node.create_tween()
-	## [param source_node]: The node to create the tween from
-	## [param helper]: Optional helper to track the tween in
-	static func create_tracked_tween(source_node: Node, helper: _AnimationLoopHelper = null) -> Tween:
-		var tween = source_node.create_tween()
-		if tween and helper:
-			helper._active_tweens.append(tween)
-		return tween
-
-	## Wraps an animation callable to capture tween references
-	## [param original_callable]: The original animation callable
-	## [param callable_source_node]: The source_node that the callable uses (from its closure)
-	func _wrap_animation_callable(original_callable: Callable, callable_source_node: Node) -> Callable:
-		var helper_ref = weakref(self)
-		return func() -> Signal:
-			# Store helper reference in the source_node's metadata so create_tracked_tween can find it
-			callable_source_node.set_meta("_animation_helper_ref", helper_ref)
-
-			# Call the original callable - it will store tweens via metadata if it uses create_tracked_tween
-			var signal_result = original_callable.call()
-
-			# Keep metadata until tween completes (don't remove immediately)
-			# The tween will be cleaned up when stop() is called
-			return signal_result
-
-	func start_infinite_loop(animation_callable: Callable) -> void:
-		_is_running = true
-		_continue_loop(animation_callable)
-
-	func _continue_loop(animation_callable: Callable) -> void:
-		if not _is_running:
-			return
-
-		# Before calling the callable, clear old completed tweens
-		_active_tweens = _active_tweens.filter(func(t: Tween) -> bool:
-			return is_instance_valid(t) and t.is_valid() and t.is_running()
-		)
-
-		var signal_result = animation_callable.call()
-		if signal_result is Signal:
-			# Try to extract tween from the signal's source if possible
-			# Since we can't easily do that, we'll track tweens differently
-			await signal_result
-			if _is_running:
-				_continue_loop(animation_callable)
-
-	func stop() -> void:
-		_is_running = false
-
-		# Kill all tracked active tweens
-		for tween in _active_tweens:
-			if is_instance_valid(tween) and tween.is_valid():
-				tween.kill()
-		_active_tweens.clear()
-
-		# Also interrupt by directly setting properties to stop any untracked tweens
-		if _target_control:
-			var current_pos = _target_control.position
-			var current_scale = _target_control.scale
-			var current_modulate = _target_control.modulate
-			var current_rotation = _target_control.rotation_degrees
-
-			# Directly set properties - this interrupts tweens in Godot 4
-			_target_control.position = current_pos
-			_target_control.scale = current_scale
-			_target_control.modulate = current_modulate
-			_target_control.rotation_degrees = current_rotation
-
-		loop_finished.emit()
-		queue_free()
-
-
 ## Shows a control with an animation. Sets visible to true and plays the specified animation.
 ## [param source_node]: The node to create the tween from (usually self).
 ## [param target]: The control node to show and animate.
@@ -1906,19 +1761,7 @@ static func show_animated(
 	animation_type: String,
 	speed: float = DEFAULT_SPEED
 ) -> void:
-	target.visible = true
-	if animation_type != "":
-		match animation_type:
-			"pop", "expand":
-				await animate_expand(source_node, target, speed)
-			"slide_from_left":
-				await animate_slide_from_left(source_node, target, DEFAULT_OFFSET, speed)
-			"slide_from_right":
-				await animate_slide_from_right(source_node, target, DEFAULT_OFFSET, speed)
-			"slide_from_top":
-				await animate_slide_from_top(source_node, target, DEFAULT_OFFSET, speed)
-			"fade_in":
-				await animate_fade_in(source_node, target, speed)
+	await UiAnimPresetRunner.show_animated(source_node, target, animation_type, speed)
 
 ## Hides a control with an animation. Plays the specified animation then sets visible to false.
 ## [param source_node]: The node to create the tween from (usually self).
@@ -1931,19 +1774,7 @@ static func hide_animated(
 	animation_type: String,
 	speed: float = DEFAULT_SPEED
 ) -> void:
-	if animation_type != "":
-		match animation_type:
-			"shrink":
-				await animate_shrink(source_node, target, speed)
-			"slide_to_left":
-				await animate_slide_to_left(source_node, target, DEFAULT_OFFSET, speed)
-			"slide_to_right":
-				await animate_slide_to_right(source_node, target, DEFAULT_OFFSET, speed)
-			"slide_to_top":
-				await animate_slide_to_top(source_node, target, speed)
-			"fade_out":
-				await animate_fade_out(source_node, target, speed)
-	target.visible = false
+	await UiAnimPresetRunner.hide_animated(source_node, target, animation_type, speed)
 
 ## Animation preset types for use with [method preset].
 enum Preset {
@@ -1980,26 +1811,4 @@ enum Preset {
 ## [param speed]: Animation duration in seconds (default: 0.3).
 ## [return]: Signal that emits when animation finishes.
 static func preset(preset_type: Preset, source_node: Node, target: Control, speed := DEFAULT_SPEED) -> Signal:
-	match preset_type:
-		Preset.EXPAND_IN, Preset.POP_IN:
-			return animate_expand(source_node, target, speed)
-		Preset.EXPAND_OUT, Preset.POP_OUT:
-			return animate_shrink(source_node, target, speed)
-		Preset.SLIDE_IN_LEFT:
-			return animate_slide_from_left(source_node, target, DEFAULT_OFFSET, speed)
-		Preset.SLIDE_IN_RIGHT:
-			return animate_slide_from_right(source_node, target, DEFAULT_OFFSET, speed)
-		Preset.SLIDE_IN_TOP:
-			return animate_slide_from_top(source_node, target, DEFAULT_OFFSET, speed)
-		Preset.SLIDE_OUT_LEFT:
-			return animate_slide_to_left(source_node, target, DEFAULT_OFFSET, speed)
-		Preset.SLIDE_OUT_RIGHT:
-			return animate_slide_to_right(source_node, target, DEFAULT_OFFSET, speed)
-		Preset.SLIDE_OUT_TOP:
-			return animate_slide_to_top(source_node, target, speed)
-		Preset.FADE_IN:
-			return animate_fade_in(source_node, target, speed)
-		Preset.FADE_OUT:
-			return animate_fade_out(source_node, target, speed)
-		_:
-			return Signal()
+	return UiAnimPresetRunner.preset(preset_type, source_node, target, speed)
