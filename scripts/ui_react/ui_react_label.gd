@@ -1,17 +1,17 @@
 extends Label
-class_name ReactiveLabel
+class_name UiReactLabel
 
-@export var text_state: State
+@export var text_state: UiState
 
 ## Targets to animate based on label events.
 ##
 ## Drag nodes here and configure each target's animation properties directly in the Inspector.
 ## Each target can specify its own trigger (text changed, hover enter/exit), animation type,
 ## duration, and settings - no resource files needed! Leave empty to use manual signal connections.
-@export var animation_targets: Array[AnimationTarget] = []
+@export var animation_targets: Array[UiAnimTarget] = []
 
 var _updating: bool = false
-var _nested_states: Array[State] = []
+var _nested_states: Array[UiState] = []
 var _is_initializing: bool = true
 
 func _ready() -> void:
@@ -19,20 +19,20 @@ func _ready() -> void:
 		text_state.value_changed.connect(_on_text_state_changed)
 		_on_text_state_changed(text_state.value, text_state.value)
 	_validate_animation_targets()
-	ReactiveStateBindingHelper.deferred_finish_initialization(self)
+	UiReactStateBindingHelper.deferred_finish_initialization(self)
 
 ## Validates animation targets and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_targets() -> void:
-	var r = ReactiveAnimationTargetHelper.validate_and_map_triggers(self, "ReactiveLabel", animation_targets)
+	var r = UiReactAnimTargetHelper.validate_and_map_triggers(self, "UiReactLabel", animation_targets)
 	animation_targets = r["animation_targets"]
 	var trigger_map = r["trigger_map"]
 	
 	# Connect signals based on which triggers are used
-	if trigger_map.has(AnimationTarget.Trigger.HOVER_ENTER):
+	if trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER):
 		if not mouse_entered.is_connected(_on_trigger_hover_enter):
 			mouse_entered.connect(_on_trigger_hover_enter)
-	if trigger_map.has(AnimationTarget.Trigger.HOVER_EXIT):
+	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
 		if not mouse_exited.is_connected(_on_trigger_hover_exit):
 			mouse_exited.connect(_on_trigger_hover_exit)
 
@@ -46,20 +46,20 @@ func _on_trigger_text_changed(_new_value: Variant, _old_value: Variant) -> void:
 	if _is_initializing:
 		return
 	
-	_trigger_animations(AnimationTarget.Trigger.TEXT_CHANGED)
+	_trigger_animations(UiAnimTarget.Trigger.TEXT_CHANGED)
 
 ## Handles HOVER_ENTER trigger animations.
 func _on_trigger_hover_enter() -> void:
-	_trigger_animations(AnimationTarget.Trigger.HOVER_ENTER)
+	_trigger_animations(UiAnimTarget.Trigger.HOVER_ENTER)
 
 ## Handles HOVER_EXIT trigger animations.
 func _on_trigger_hover_exit() -> void:
-	_trigger_animations(AnimationTarget.Trigger.HOVER_EXIT)
+	_trigger_animations(UiAnimTarget.Trigger.HOVER_EXIT)
 
 ## Triggers animations for targets matching the specified trigger type.
 ## [param trigger_type]: The trigger type to match.
-func _trigger_animations(trigger_type: AnimationTarget.Trigger) -> void:
-	ReactiveAnimationTargetHelper.trigger_animations(self, animation_targets, trigger_type)
+func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
+	UiReactAnimTargetHelper.trigger_animations(self, animation_targets, trigger_type)
 
 func _on_text_state_changed(new_value: Variant, old_value: Variant) -> void:
 	if _updating:
@@ -85,8 +85,8 @@ func _rebind_nested_states(value: Variant) -> void:
 	_nested_states.clear()
 	if value is Array:
 		for v in value:
-			if v is State:
-				var st: State = v
+			if v is UiState:
+				var st: UiState = v
 				if not st.value_changed.is_connected(_on_nested_changed):
 					st.value_changed.connect(_on_nested_changed)
 				_nested_states.append(st)
@@ -96,7 +96,7 @@ func _on_nested_changed(_new_value: Variant, _old_value: Variant) -> void:
 		_on_text_state_changed(text_state.value, text_state.value)
 
 func _to_text(value: Variant) -> String:
-	if value is State:
+	if value is UiState:
 		return _to_text(value.value)
 	if value is Array:
 		var parts: Array[String] = []

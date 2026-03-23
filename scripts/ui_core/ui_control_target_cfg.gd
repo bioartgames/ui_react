@@ -1,10 +1,10 @@
 ## Configuration for targeting UI Controls (nodes in the scene tree) with actions.
 ##
-## ControlTargetConfig enables buttons or toggles to control UI components and trigger animations
+## UiControlTargetCfg enables buttons or toggles to control UI components and trigger animations
 ## without writing code, providing designer-friendly UI control through the Inspector. This makes it
 ## ideal for buttons that control multiple UI components, toggle switches that show or hide panels
 ## or labels, buttons that enable or disable other buttons, and any button or toggle that needs
-## to control UI components or trigger animations. Unlike manual signal connections, ControlTargetConfig
+## to control UI components or trigger animations. Unlike manual signal connections, UiControlTargetCfg
 ## requires no code and can be configured in the Inspector, provides fine-grained control where each
 ## target component gets its own action setting, and supports drag-and-drop target selection.
 ##
@@ -15,16 +15,16 @@
 ## Usage:
 ## [codeblock]
 ## # Create config for animating a panel
-## var config = ControlTargetConfig.new()
+## var config = UiControlTargetCfg.new()
 ## config.target = NodePath("../MyPanel")  # Drag-and-drop or manual path
-## config.animation.animation = AnimationTarget.AnimationAction.EXPAND
+## config.animation.animation = UiAnimTarget.AnimationAction.EXPAND
 ## config.animation.duration = 0.3
 ## 
 ## # Add to button's targets array
 ## button.targets.append(config)
 ## [/codeblock]
-class_name ControlTargetConfig
-extends TargetConfig
+class_name UiControlTargetCfg
+extends UiTargetCfg
 
 
 ## The target control component.
@@ -35,8 +35,8 @@ extends TargetConfig
 @export var target: NodePath = NodePath()
 
 ## Inline animation configuration (no resource file needed).
-## Uses [AnimationTarget] as the single animation model (trigger is ignored when applying from ControlTargetConfig).
-@export var animation: AnimationTarget = AnimationTarget.new()
+## Uses [UiAnimTarget] as the single animation model (trigger is ignored when applying from UiControlTargetCfg).
+@export var animation: UiAnimTarget = UiAnimTarget.new()
 
 ## Resolves the target Control node.
 ##
@@ -62,7 +62,7 @@ func apply(owner: Node, _is_on: bool = true) -> bool:
 		var owner_name: String = "null"
 		if owner != null:
 			owner_name = owner.name
-		push_warning("ControlTargetConfig: Could not resolve target for owner '%s'. Checked: target='%s'. Tip: Ensure the target node exists in the scene tree. Drag a node to target in the Inspector." % [owner_name, target])
+		push_warning("UiControlTargetCfg: Could not resolve target for owner '%s'. Checked: target='%s'. Tip: Ensure the target node exists in the scene tree. Drag a node to target in the Inspector." % [owner_name, target])
 		return false
 	
 	# Apply animation using the inline config

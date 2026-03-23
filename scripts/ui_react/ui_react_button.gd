@@ -1,15 +1,15 @@
 extends Button
-class_name ReactiveButton
+class_name UiReactButton
 
-@export var pressed_state: State
-@export var disabled_state: State
+@export var pressed_state: UiState
+@export var disabled_state: UiState
 
 ## Targets to animate based on button events.
 ##
 ## Drag nodes here and configure each target's animation properties directly in the Inspector.
 ## Each target can specify its own trigger (pressed, hover enter/exit, toggled on/off), animation type,
 ## duration, and settings - no resource files needed! Leave empty to use manual signal connections.
-@export var animation_targets: Array[AnimationTarget] = []
+@export var animation_targets: Array[UiAnimTarget] = []
 
 var _updating: bool = false
 var _is_initializing: bool = true
@@ -24,40 +24,40 @@ func _ready() -> void:
 		disabled_state.value_changed.connect(_on_disabled_state_changed)
 		_on_disabled_state_changed(disabled_state.value, disabled_state.value)
 	_validate_animation_targets()
-	ReactiveStateBindingHelper.deferred_finish_initialization(self)
+	UiReactStateBindingHelper.deferred_finish_initialization(self)
 
 ## Validates animation targets and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_targets() -> void:
-	var r = ReactiveAnimationTargetHelper.validate_and_map_triggers(self, "ReactiveButton", animation_targets)
+	var r = UiReactAnimTargetHelper.validate_and_map_triggers(self, "UiReactButton", animation_targets)
 	animation_targets = r["animation_targets"]
 	var trigger_map = r["trigger_map"]
 	
 	# Connect signals based on which triggers are used
-	if trigger_map.has(AnimationTarget.Trigger.PRESSED):
+	if trigger_map.has(UiAnimTarget.Trigger.PRESSED):
 		if not pressed.is_connected(_on_trigger_pressed):
 			pressed.connect(_on_trigger_pressed)
-	if trigger_map.has(AnimationTarget.Trigger.HOVER_ENTER):
+	if trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER):
 		if not mouse_entered.is_connected(_on_trigger_hover_enter):
 			mouse_entered.connect(_on_trigger_hover_enter)
-	if trigger_map.has(AnimationTarget.Trigger.HOVER_EXIT):
+	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
 		if not mouse_exited.is_connected(_on_trigger_hover_exit):
 			mouse_exited.connect(_on_trigger_hover_exit)
-	if trigger_map.has(AnimationTarget.Trigger.TOGGLED_ON) or trigger_map.has(AnimationTarget.Trigger.TOGGLED_OFF):
+	if trigger_map.has(UiAnimTarget.Trigger.TOGGLED_ON) or trigger_map.has(UiAnimTarget.Trigger.TOGGLED_OFF):
 		if not toggled.is_connected(_on_trigger_toggled):
 			toggled.connect(_on_trigger_toggled)
 
 ## Handles PRESSED trigger animations.
 func _on_trigger_pressed() -> void:
-	_trigger_animations(AnimationTarget.Trigger.PRESSED)
+	_trigger_animations(UiAnimTarget.Trigger.PRESSED)
 
 ## Handles HOVER_ENTER trigger animations.
 func _on_trigger_hover_enter() -> void:
-	_trigger_animations(AnimationTarget.Trigger.HOVER_ENTER)
+	_trigger_animations(UiAnimTarget.Trigger.HOVER_ENTER)
 
 ## Handles HOVER_EXIT trigger animations.
 func _on_trigger_hover_exit() -> void:
-	_trigger_animations(AnimationTarget.Trigger.HOVER_EXIT)
+	_trigger_animations(UiAnimTarget.Trigger.HOVER_EXIT)
 
 ## Finishes initialization, allowing animations to trigger on toggle changes.
 func _finish_initialization() -> void:
@@ -70,14 +70,14 @@ func _on_trigger_toggled(active: bool) -> void:
 		return
 	
 	if active:
-		_trigger_animations(AnimationTarget.Trigger.TOGGLED_ON)
+		_trigger_animations(UiAnimTarget.Trigger.TOGGLED_ON)
 	else:
-		_trigger_animations(AnimationTarget.Trigger.TOGGLED_OFF)
+		_trigger_animations(UiAnimTarget.Trigger.TOGGLED_OFF)
 
 ## Triggers animations for targets matching the specified trigger type.
 ## [param trigger_type]: The trigger type to match.
-func _trigger_animations(trigger_type: AnimationTarget.Trigger) -> void:
-	ReactiveAnimationTargetHelper.trigger_animations(self, animation_targets, trigger_type, true, disabled)
+func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
+	UiReactAnimTargetHelper.trigger_animations(self, animation_targets, trigger_type, true, disabled)
 
 func _on_pressed() -> void:
 	if not pressed_state or toggle_mode:

@@ -1,9 +1,9 @@
-## Shared helpers for reactive [State] ↔ control synchronization.
-class_name ReactiveStateBindingHelper
+## Shared helpers for reactive [UiState] ↔ control synchronization.
+class_name UiReactStateBindingHelper
 extends RefCounted
 
 ## Invokes [param sync_fn] with current and previous value equal (typical init path).
-static func initial_sync(state: State, sync_fn: Callable) -> void:
+static func initial_sync(state: UiState, sync_fn: Callable) -> void:
 	if state:
 		sync_fn.call(state.value, state.value)
 

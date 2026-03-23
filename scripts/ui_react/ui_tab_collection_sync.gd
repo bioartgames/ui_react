@@ -1,9 +1,9 @@
-## Dynamic tab list sync from a [State] holding an [Array] of tab descriptors.
-class_name TabCollectionSync
+## Dynamic tab list sync from a [UiState] holding an [Array] of tab descriptors.
+class_name UiTabCollectionSync
 extends RefCounted
 
 ## Applies tab data from [param tabs_array]. Returns a new [param _previous_tab_index] value when it must be synced, else [code]null[/code].
-static func apply_tabs_from_array(tab_container: TabContainer, tabs_array: Array, tab_config: TabContainerConfig) -> Variant:
+static func apply_tabs_from_array(tab_container: TabContainer, tabs_array: Array, tab_config: UiTabContainerCfg) -> Variant:
 	var current_count = tab_container.get_tab_count()
 	var new_count = tabs_array.size()
 

@@ -1,5 +1,5 @@
-## Stagger animation orchestration (extracted from UIAnimationUtils).
-class_name AnimationStaggerRunner
+## Stagger animation orchestration (extracted from UiAnimUtils).
+class_name UiAnimStaggerRunner
 extends RefCounted
 
 ## Stops all active stagger animations for the given targets.
@@ -31,13 +31,13 @@ static func stop_stagger_animations(source_node: Node, targets: Array[Control]) 
 			target.position = current_position
 
 ## Animates multiple controls with a stagger effect.
-static func animate_stagger(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_config: AnimationTarget = null) -> Signal:
+static func animate_stagger(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_config: UiAnimTarget = null) -> Signal:
 	if not source_node or targets.size() == 0:
-		push_warning("AnimationStaggerRunner: Invalid source_node or empty targets for animate_stagger")
+		push_warning("UiAnimStaggerRunner: Invalid source_node or empty targets for animate_stagger")
 		return Signal()
 
 	if not animation_config:
-		push_warning("AnimationStaggerRunner: animate_stagger requires animation_config")
+		push_warning("UiAnimStaggerRunner: animate_stagger requires animation_config")
 		return Signal()
 
 	stop_stagger_animations(source_node, targets)
@@ -59,13 +59,13 @@ static func animate_stagger(source_node: Node, targets: Array[Control], delay_be
 	return helper.all_finished
 
 ## Animates multiple controls with per-target configs.
-static func animate_stagger_multi(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_configs: Array[AnimationTarget] = []) -> Signal:
+static func animate_stagger_multi(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_configs: Array[UiAnimTarget] = []) -> Signal:
 	if not source_node or targets.size() == 0:
-		push_warning("AnimationStaggerRunner: Invalid source_node or empty targets for animate_stagger_multi")
+		push_warning("UiAnimStaggerRunner: Invalid source_node or empty targets for animate_stagger_multi")
 		return Signal()
 
 	if animation_configs.size() == 0:
-		push_warning("AnimationStaggerRunner: animate_stagger_multi requires at least one animation_config")
+		push_warning("UiAnimStaggerRunner: animate_stagger_multi requires at least one animation_config")
 		return Signal()
 
 	stop_stagger_animations(source_node, targets)
@@ -120,7 +120,7 @@ class _StaggerHelper extends Node:
 				target.position = current_position
 		queue_free()
 
-	func execute_stagger(source_node: Node, targets: Array[Control], delay_between: float, animation_config: AnimationTarget, is_reveal: bool) -> void:
+	func execute_stagger(source_node: Node, targets: Array[Control], delay_between: float, animation_config: UiAnimTarget, is_reveal: bool) -> void:
 		_source_node = source_node
 		_targets = targets
 		_is_running = true
@@ -144,7 +144,7 @@ class _StaggerHelper extends Node:
 				continue
 
 			if i != start_idx:
-				await AnimationDelayHelpers.delay(source_node, delay_between)
+				await UiAnimDelayHelpers.delay(source_node, delay_between)
 				if not _is_running:
 					return
 
@@ -161,7 +161,7 @@ class _StaggerHelper extends Node:
 			all_finished.emit()
 		queue_free()
 
-	func execute_stagger_multi(source_node: Node, targets: Array[Control], delay_between: float, animation_configs: Array[AnimationTarget]) -> void:
+	func execute_stagger_multi(source_node: Node, targets: Array[Control], delay_between: float, animation_configs: Array[UiAnimTarget]) -> void:
 		_source_node = source_node
 		_targets = targets
 		_is_running = true
@@ -189,7 +189,7 @@ class _StaggerHelper extends Node:
 				continue
 
 			if i != start_idx:
-				await AnimationDelayHelpers.delay(source_node, delay_between)
+				await UiAnimDelayHelpers.delay(source_node, delay_between)
 				if not _is_running:
 					return
 

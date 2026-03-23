@@ -1,5 +1,5 @@
-## Resolves external [State] values to tab indices for [TabContainer].
-class_name TabSelectionBinding
+## Resolves external [UiState] values to tab indices for [TabContainer].
+class_name UiTabSelectionBinding
 extends RefCounted
 
 static func resolve_tab_index(tab_container: TabContainer, new_value: Variant) -> int:

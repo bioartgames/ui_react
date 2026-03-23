@@ -1,31 +1,31 @@
 ## Static animation functions for UI element transitions.
 ##
-## UIAnimationUtils provides a comprehensive set of common UI animations for animating UI elements
+## UiAnimUtils provides a comprehensive set of common UI animations for animating UI elements
 ## with transitions like slides, fades, pops, and shrinks. All animation functions return a Signal
 ## that can be awaited for sequencing multiple animations. This makes it ideal for animating panel
 ## show and hide transitions, creating smooth UI transitions, sequencing multiple animations together,
 ## and custom animation needs beyond what reactive components provide. Unlike writing custom animation
-## code, UIAnimationUtils provides a comprehensive set of common UI animations, consistent animation
+## code, UiAnimUtils provides a comprehensive set of common UI animations, consistent animation
 ## timing and easing, awaitable signals for sequencing, safe handling of edge cases like null nodes
 ## and viewport issues, and utility functions for animation setup like pivot calculation and tween
-## creation. Reactive components like ReactivePanel and ReactiveButton use these functions internally,
+## creation. Reactive controls such as [UiReactButton] use these functions internally,
 ## but you can also call them directly for custom animations.
 ##
 ## Example:
 ## [codeblock]
 ## # Animate panel expansion
-## await UIAnimationUtils.animate_expand(self, panel).finished
+## await UiAnimUtils.animate_expand(self, panel).finished
 ##
 ## # Fade in a label
-## await UIAnimationUtils.animate_fade_in(self, label).finished
+## await UiAnimUtils.animate_fade_in(self, label).finished
 ##
 ## # Sequence multiple animations
-## var sequence = AnimationSequence.create()
-## sequence.add(func(): return UIAnimationUtils.animate_expand(self, panel))
-## sequence.add(func(): return UIAnimationUtils.animate_fade_in(self, label))
+## var sequence = UiAnimSequence.create()
+## sequence.add(func(): return UiAnimUtils.animate_expand(self, panel))
+## sequence.add(func(): return UiAnimUtils.animate_fade_in(self, label))
 ## await sequence.play()
 ## [/codeblock]
-class_name UIAnimationUtils
+class_name UiAnimUtils
 extends RefCounted
 
 ## Default offset for slide animations in pixels.
@@ -43,45 +43,45 @@ const SCALE_MIN := Vector2.ZERO
 ## Maximum scale value for pop/shrink animations.
 const SCALE_MAX := Vector2.ONE
 
-## Delegates snapshot storage to [AnimationSnapshotStore].
-static func _acquire_unified_snapshot(source_node: Node, target: Control) -> AnimationSnapshotStore.ControlStateSnapshot:
-	return AnimationSnapshotStore.acquire_unified_snapshot(source_node, target)
+## Delegates snapshot storage to [UiAnimSnapshotStore].
+static func _acquire_unified_snapshot(source_node: Node, target: Control) -> UiAnimSnapshotStore.ControlStateSnapshot:
+	return UiAnimSnapshotStore.acquire_unified_snapshot(source_node, target)
 
 static func _release_unified_snapshot(target: Control, restore_immediately: bool = true) -> bool:
-	return AnimationSnapshotStore.release_unified_snapshot(target, restore_immediately)
+	return UiAnimSnapshotStore.release_unified_snapshot(target, restore_immediately)
 
-static func _get_unified_snapshot(target: Control) -> AnimationSnapshotStore.ControlStateSnapshot:
-	return AnimationSnapshotStore.get_unified_snapshot(target)
+static func _get_unified_snapshot(target: Control) -> UiAnimSnapshotStore.ControlStateSnapshot:
+	return UiAnimSnapshotStore.get_unified_snapshot(target)
 
 static func _clear_unified_snapshot(target: Control) -> void:
-	AnimationSnapshotStore.clear_unified_snapshot(target)
+	UiAnimSnapshotStore.clear_unified_snapshot(target)
 
 ## Calculates the center X position of a node relative to the viewport.
 ## [param source_node]: The node to get viewport from.
 ## [param target]: The control to calculate center for.
 ## [return]: The center X position, or 0.0 if calculation fails.
 static func get_node_center(source_node: Node, target: Control) -> float:
-	return AnimationTweenFactory.get_node_center(source_node, target)
+	return UiAnimTweenFactory.get_node_center(source_node, target)
 
 ## Calculates the pivot offset to center a control for scale animations.
 ## [param target]: The control to calculate pivot for.
 ## [return]: The pivot offset Vector2, or Vector2.ZERO if target is null.
 static func get_center_pivot_offset(target: Control) -> Vector2:
-	return AnimationTweenFactory.get_center_pivot_offset(target)
+	return UiAnimTweenFactory.get_center_pivot_offset(target)
 
 ## Creates a tween with null checking and error handling.
 ## [param node]: The node to create tween for.
 ## [return]: The created Tween, or null if creation failed.
 static func create_safe_tween(node: Node) -> Tween:
-	return AnimationTweenFactory.create_safe_tween(node)
+	return UiAnimTweenFactory.create_safe_tween(node)
 
-## Creates a snapshot of a control's current state (delegates to [AnimationSnapshotStore]).
-static func snapshot_control_state(target: Control) -> AnimationSnapshotStore.ControlStateSnapshot:
-	return AnimationSnapshotStore.snapshot_control_state(target)
+## Creates a snapshot of a control's current state (delegates to [UiAnimSnapshotStore]).
+static func snapshot_control_state(target: Control) -> UiAnimSnapshotStore.ControlStateSnapshot:
+	return UiAnimSnapshotStore.snapshot_control_state(target)
 
-## Restores a control from a snapshot (delegates to [AnimationSnapshotStore]).
-static func restore_control_state(target: Control, snapshot: AnimationSnapshotStore.ControlStateSnapshot) -> void:
-	AnimationSnapshotStore.restore_control_state(target, snapshot)
+## Restores a control from a snapshot (delegates to [UiAnimSnapshotStore]).
+static func restore_control_state(target: Control, snapshot: UiAnimSnapshotStore.ControlStateSnapshot) -> void:
+	UiAnimSnapshotStore.restore_control_state(target, snapshot)
 
 ## Resets a control to "normal" state (scale=1, modulate.a=1, rotation=0).
 ## Does not reset position as that is usually intentional.
@@ -215,7 +215,7 @@ static func animate_slide_to_left(source_node: Node, target: Control, _offset :=
 static func animate_slide_from_right(source_node: Node, target: Control, offset := DEFAULT_OFFSET, speed := DEFAULT_SPEED, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	var animation_callable = func() -> Signal:
 		if not source_node or not target:
-			push_warning("UIAnimationUtils: Invalid source_node or target for animate_slide_from_right")
+			push_warning("UiAnimUtils: Invalid source_node or target for animate_slide_from_right")
 			return Signal()
 		
 		if auto_visible:
@@ -223,7 +223,7 @@ static func animate_slide_from_right(source_node: Node, target: Control, offset 
 		
 		var viewport = source_node.get_viewport()
 		if not viewport:
-			push_warning("UIAnimationUtils: source_node has no viewport")
+			push_warning("UiAnimUtils: source_node has no viewport")
 			return Signal()
 		
 		var viewport_size = viewport.get_visible_rect().size.x
@@ -231,7 +231,7 @@ static func animate_slide_from_right(source_node: Node, target: Control, offset 
 		
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, "position:x", (viewport_size - target.size.x) - offset, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -331,7 +331,7 @@ static func animate_slide_to_top(source_node: Node, target: Control, speed := DE
 ## [return]: Signal that emits when animation finishes.
 static func animate_expand(source_node: Node, target: Control, speed := DEFAULT_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_expand")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_expand")
 		return Signal()
 
 	# Acquire baseline snapshot for universal reset support
@@ -353,7 +353,7 @@ static func animate_expand(source_node: Node, target: Control, speed := DEFAULT_
 		
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'scale', SCALE_MAX, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -386,7 +386,7 @@ static func animate_expand(source_node: Node, target: Control, speed := DEFAULT_
 ## [return]: Signal that emits when animation finishes.
 static func animate_expand_x(source_node: Node, target: Control, speed := SHRINK_ANIMATION_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_expand_x")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_expand_x")
 		return Signal()
 
 	# Acquire baseline snapshot for universal reset support
@@ -406,7 +406,7 @@ static func animate_expand_x(source_node: Node, target: Control, speed := SHRINK
 		
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'scale:x', SCALE_MAX.x, speed).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
@@ -436,7 +436,7 @@ static func animate_expand_x(source_node: Node, target: Control, speed := SHRINK
 ## [return]: Signal that emits when animation finishes.
 static func animate_expand_y(source_node: Node, target: Control, speed := SHRINK_ANIMATION_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_expand_y")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_expand_y")
 		return Signal()
 
 	# Acquire baseline snapshot for universal reset support
@@ -456,7 +456,7 @@ static func animate_expand_y(source_node: Node, target: Control, speed := SHRINK
 		
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'scale:y', SCALE_MAX.y, speed).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
@@ -488,7 +488,7 @@ static func animate_expand_y(source_node: Node, target: Control, speed := SHRINK
 ## [return]: Signal that emits when animation finishes.
 static func animate_shrink(source_node: Node, target: Control, speed := DEFAULT_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_shrink")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_shrink")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -505,7 +505,7 @@ static func animate_shrink(source_node: Node, target: Control, speed := DEFAULT_
 
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'scale', SCALE_MIN, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -535,7 +535,7 @@ static func animate_shrink(source_node: Node, target: Control, speed := DEFAULT_
 ## [return]: Signal that emits when animation finishes.
 static func animate_shrink_x(source_node: Node, target: Control, speed := SHRINK_ANIMATION_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_shrink_x")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_shrink_x")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -552,7 +552,7 @@ static func animate_shrink_x(source_node: Node, target: Control, speed := SHRINK
 
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'scale:x', ALPHA_MIN, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -582,7 +582,7 @@ static func animate_shrink_x(source_node: Node, target: Control, speed := SHRINK
 ## [return]: Signal that emits when animation finishes.
 static func animate_shrink_y(source_node: Node, target: Control, speed := SHRINK_ANIMATION_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_shrink_y")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_shrink_y")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -599,7 +599,7 @@ static func animate_shrink_y(source_node: Node, target: Control, speed := SHRINK
 
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'scale:y', ALPHA_MIN, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -626,7 +626,7 @@ static func animate_shrink_y(source_node: Node, target: Control, speed := SHRINK
 ## [return]: Signal that emits when animation finishes.
 static func animate_fade_in(source_node: Node, target: Control, speed := DEFAULT_SPEED, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_fade_in")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_fade_in")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -637,7 +637,7 @@ static func animate_fade_in(source_node: Node, target: Control, speed := DEFAULT
 		
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'modulate:a', ALPHA_MAX, speed).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
@@ -659,7 +659,7 @@ static func animate_fade_in(source_node: Node, target: Control, speed := DEFAULT
 ## [return]: Signal that emits when animation finishes.
 static func animate_fade_out(source_node: Node, target: Control, speed := DEFAULT_SPEED, auto_visible: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_fade_out")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_fade_out")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -668,7 +668,7 @@ static func animate_fade_out(source_node: Node, target: Control, speed := DEFAUL
 		
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'modulate:a', ALPHA_MIN, speed).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
@@ -744,7 +744,7 @@ static func animate_from_center_to_left(source_node: Node, target: Control, spee
 ## [return]: Signal that emits when animation finishes.
 static func animate_from_right_to_center(source_node: Node, target: Control, speed := DEFAULT_SPEED, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_from_right_to_center")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_from_right_to_center")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -753,14 +753,14 @@ static func animate_from_right_to_center(source_node: Node, target: Control, spe
 		
 		var viewport = source_node.get_viewport()
 		if not viewport:
-			push_warning("UIAnimationUtils: source_node has no viewport")
+			push_warning("UiAnimUtils: source_node has no viewport")
 			return Signal()
 		
 		target.position.x = viewport.get_visible_rect().size.x
 		
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'position:x', get_node_center(source_node, target), speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -807,7 +807,7 @@ static func animate_from_center_to_right(source_node: Node, target: Control, spe
 ## [return]: Signal that emits when animation finishes.
 static func animate_slide_from_bottom(source_node: Node, target: Control, offset: float = DEFAULT_OFFSET, speed := DEFAULT_SPEED, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_slide_from_bottom")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_slide_from_bottom")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -816,7 +816,7 @@ static func animate_slide_from_bottom(source_node: Node, target: Control, offset
 		
 		var viewport = source_node.get_viewport()
 		if not viewport:
-			push_warning("UIAnimationUtils: source_node has no viewport")
+			push_warning("UiAnimUtils: source_node has no viewport")
 			return Signal()
 		
 		var viewport_size = viewport.get_visible_rect().size.y
@@ -824,7 +824,7 @@ static func animate_slide_from_bottom(source_node: Node, target: Control, offset
 		
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'position:y', (viewport_size - target.size.y) - offset, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -845,7 +845,7 @@ static func animate_slide_from_bottom(source_node: Node, target: Control, offset
 ## [return]: Signal that emits when animation finishes.
 static func animate_slide_to_bottom(source_node: Node, target: Control, speed := DEFAULT_SPEED, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_slide_to_bottom")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_slide_to_bottom")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -854,12 +854,12 @@ static func animate_slide_to_bottom(source_node: Node, target: Control, speed :=
 		
 		var viewport = source_node.get_viewport()
 		if not viewport:
-			push_warning("UIAnimationUtils: source_node has no viewport")
+			push_warning("UiAnimUtils: source_node has no viewport")
 			return Signal()
 		
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'position:y', viewport.get_visible_rect().size.y, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -879,7 +879,7 @@ static func animate_slide_to_bottom(source_node: Node, target: Control, speed :=
 ## [param target]: The control to calculate center for.
 ## [return]: The center Y position, or 0.0 if calculation fails.
 static func get_node_center_y(source_node: Node, target: Control) -> float:
-	return AnimationTweenFactory.get_node_center_y(source_node, target)
+	return UiAnimTweenFactory.get_node_center_y(source_node, target)
 
 ## Animates a control sliding from the top edge to the center of the screen.
 ## [param source_node]: The node to create the tween from (usually self).
@@ -890,7 +890,7 @@ static func get_node_center_y(source_node: Node, target: Control) -> float:
 ## [return]: Signal that emits when animation finishes.
 static func animate_from_top_to_center(source_node: Node, target: Control, speed := DEFAULT_SPEED, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_from_top_to_center")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_from_top_to_center")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -901,7 +901,7 @@ static func animate_from_top_to_center(source_node: Node, target: Control, speed
 		
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'position:y', get_node_center_y(source_node, target), speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -922,7 +922,7 @@ static func animate_from_top_to_center(source_node: Node, target: Control, speed
 ## [return]: Signal that emits when animation finishes.
 static func animate_from_center_to_top(source_node: Node, target: Control, speed := DEFAULT_SPEED, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_from_center_to_top")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_from_center_to_top")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -931,7 +931,7 @@ static func animate_from_center_to_top(source_node: Node, target: Control, speed
 		
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'position:y', -target.size.y, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -955,7 +955,7 @@ static func animate_from_center_to_top(source_node: Node, target: Control, speed
 ## [return]: Signal that emits when animation finishes.
 static func animate_from_bottom_to_center(source_node: Node, target: Control, speed := DEFAULT_SPEED, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_from_bottom_to_center")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_from_bottom_to_center")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -964,14 +964,14 @@ static func animate_from_bottom_to_center(source_node: Node, target: Control, sp
 		
 		var viewport = source_node.get_viewport()
 		if not viewport:
-			push_warning("UIAnimationUtils: source_node has no viewport")
+			push_warning("UiAnimUtils: source_node has no viewport")
 			return Signal()
 		
 		target.position.y = viewport.get_visible_rect().size.y
 		
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'position:y', get_node_center_y(source_node, target), speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -992,7 +992,7 @@ static func animate_from_bottom_to_center(source_node: Node, target: Control, sp
 ## [return]: Signal that emits when animation finishes.
 static func animate_from_center_to_bottom(source_node: Node, target: Control, speed := DEFAULT_SPEED, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_from_center_to_bottom")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_from_center_to_bottom")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -1001,12 +1001,12 @@ static func animate_from_center_to_bottom(source_node: Node, target: Control, sp
 		
 		var viewport = source_node.get_viewport()
 		if not viewport:
-			push_warning("UIAnimationUtils: source_node has no viewport")
+			push_warning("UiAnimUtils: source_node has no viewport")
 			return Signal()
 		
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'position:y', viewport.get_visible_rect().size.y, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -1031,7 +1031,7 @@ static func animate_from_center_to_bottom(source_node: Node, target: Control, sp
 ## [return]: Signal that emits when animation finishes.
 static func animate_bounce_in(source_node: Node, target: Control, speed := DEFAULT_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_bounce_in")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_bounce_in")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -1047,7 +1047,7 @@ static func animate_bounce_in(source_node: Node, target: Control, speed := DEFAU
 		
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'scale', SCALE_MAX, speed).set_trans(Tween.TRANS_BOUNCE).set_ease(easing)
@@ -1071,7 +1071,7 @@ static func animate_bounce_in(source_node: Node, target: Control, speed := DEFAU
 ## [return]: Signal that emits when animation finishes.
 static func animate_bounce_out(source_node: Node, target: Control, speed := DEFAULT_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_bounce_out")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_bounce_out")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -1088,7 +1088,7 @@ static func animate_bounce_out(source_node: Node, target: Control, speed := DEFA
 
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'scale', SCALE_MIN, speed).set_trans(Tween.TRANS_BOUNCE).set_ease(easing)
@@ -1116,7 +1116,7 @@ static func animate_bounce_out(source_node: Node, target: Control, speed := DEFA
 ## [return]: Signal that emits when animation finishes.
 static func animate_elastic_in(source_node: Node, target: Control, speed := DEFAULT_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_elastic_in")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_elastic_in")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -1132,7 +1132,7 @@ static func animate_elastic_in(source_node: Node, target: Control, speed := DEFA
 		
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'scale', SCALE_MAX, speed).set_trans(Tween.TRANS_ELASTIC).set_ease(easing)
@@ -1156,7 +1156,7 @@ static func animate_elastic_in(source_node: Node, target: Control, speed := DEFA
 ## [return]: Signal that emits when animation finishes.
 static func animate_elastic_out(source_node: Node, target: Control, speed := DEFAULT_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_elastic_out")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_elastic_out")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -1173,7 +1173,7 @@ static func animate_elastic_out(source_node: Node, target: Control, speed := DEF
 
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'scale', SCALE_MIN, speed).set_trans(Tween.TRANS_ELASTIC).set_ease(easing)
@@ -1201,7 +1201,7 @@ static func animate_elastic_out(source_node: Node, target: Control, speed := DEF
 ## [return]: Signal that emits when animation finishes.
 static func animate_rotate_in(source_node: Node, target: Control, speed := DEFAULT_SPEED, start_angle: float = -360.0, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_rotate_in")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_rotate_in")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -1218,7 +1218,7 @@ static func animate_rotate_in(source_node: Node, target: Control, speed := DEFAU
 		
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'rotation_degrees', 0.0, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -1242,7 +1242,7 @@ static func animate_rotate_in(source_node: Node, target: Control, speed := DEFAU
 ## [return]: Signal that emits when animation finishes.
 static func animate_rotate_out(source_node: Node, target: Control, speed := DEFAULT_SPEED, end_angle: float = 360.0, auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_rotate_out")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_rotate_out")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -1254,7 +1254,7 @@ static func animate_rotate_out(source_node: Node, target: Control, speed := DEFA
 		
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		t.tween_property(target, 'rotation_degrees', end_angle, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -1283,7 +1283,7 @@ static func animate_rotate_out(source_node: Node, target: Control, speed := DEFA
 ## [return]: Signal that emits when animation finishes.
 static func animate_pop(source_node: Node, target: Control, speed := DEFAULT_SPEED, overshoot: float = 1.2, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_pop")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_pop")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -1299,7 +1299,7 @@ static func animate_pop(source_node: Node, target: Control, speed := DEFAULT_SPE
 		
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		# First tween: scale to overshoot
@@ -1326,7 +1326,7 @@ static func animate_pop(source_node: Node, target: Control, speed := DEFAULT_SPE
 ## [return]: Signal that emits when animation finishes.
 static func animate_pulse(source_node: Node, target: Control, speed := 0.5, pulse_amount: float = 1.1, pulse_count: int = 2, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_pulse")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_pulse")
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -1341,7 +1341,7 @@ static func animate_pulse(source_node: Node, target: Control, speed := 0.5, puls
 		var original_scale = target.scale
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		# Create pulse cycles
@@ -1368,7 +1368,7 @@ static func animate_pulse(source_node: Node, target: Control, speed := 0.5, puls
 ## [return]: Signal that emits when animation finishes.
 static func animate_shake(source_node: Node, target: Control, speed := 0.5, intensity: float = 10.0, shake_count: int = 5, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_shake")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_shake")
 		return Signal()
 
 	# Acquire baseline snapshot (automatic state preservation)
@@ -1377,7 +1377,7 @@ static func animate_shake(source_node: Node, target: Control, speed := 0.5, inte
 	if snapshot:
 		saved_position = snapshot.position
 	else:
-		push_warning("UIAnimationUtils.animate_shake(): Failed to acquire baseline snapshot, using current position")
+		push_warning("UiAnimUtils.animate_shake(): Failed to acquire baseline snapshot, using current position")
 		saved_position = target.position
 	
 	var animation_callable = func() -> Signal:
@@ -1388,7 +1388,7 @@ static func animate_shake(source_node: Node, target: Control, speed := 0.5, inte
 		var original_position = saved_position
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		var shake_duration = speed / shake_count
@@ -1429,20 +1429,20 @@ static func animate_shake(source_node: Node, target: Control, speed := 0.5, inte
 ## [return]: Signal that emits when animation finishes (or immediately if duration=0).
 static func animate_reset_all(source_node: Node, target: Control, duration: float = 0.3, easing: int = Tween.EASE_OUT, clear_unified_after: bool = true) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_reset_all")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_reset_all")
 		return Signal()
 
 	# Get the unified original snapshot (or current state if not set)
-	var snapshot: AnimationSnapshotStore.ControlStateSnapshot
-	if AnimationSnapshotStore.has_unified_snapshot(target):
-		snapshot = AnimationSnapshotStore.get_unified_snapshot(target)
+	var snapshot: UiAnimSnapshotStore.ControlStateSnapshot
+	if UiAnimSnapshotStore.has_unified_snapshot(target):
+		snapshot = UiAnimSnapshotStore.get_unified_snapshot(target)
 	else:
 		# No unified snapshot, use current state (no animation needed)
 		return Signal()
 
 	# Validate snapshot exists and is valid
 	if not snapshot:
-		push_warning("UIAnimationUtils.animate_reset_all(): Unified snapshot exists but is null for target '%s'" % target.name)
+		push_warning("UiAnimUtils.animate_reset_all(): Unified snapshot exists but is null for target '%s'" % target.name)
 		return Signal()
 
 	# If duration is 0, perform instant reset
@@ -1463,7 +1463,7 @@ static func animate_reset_all(source_node: Node, target: Control, duration: floa
 
 	# Validate all tweens were created successfully
 	if not tween_position or not tween_scale or not tween_modulate or not tween_rotation:
-		push_warning("UIAnimationUtils.animate_reset_all(): Failed to create one or more tweens for target '%s'" % target.name)
+		push_warning("UiAnimUtils.animate_reset_all(): Failed to create one or more tweens for target '%s'" % target.name)
 		# Clean up any successfully created tweens
 		if tween_position:
 			tween_position.kill()
@@ -1517,7 +1517,7 @@ static func clear_unified_snapshot_for_target(target: Control) -> void:
 ## [return]: Signal that emits when animation finishes (or can be used to track infinite loops).
 static func animate_breathing(source_node: Node, target: Control, duration: float = 2.0, repeat_count: int = -1, easing: int = Tween.EASE_OUT, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_breathing")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_breathing")
 		return Signal()
 	
 	if auto_visible:
@@ -1541,7 +1541,7 @@ static func animate_breathing(source_node: Node, target: Control, duration: floa
 		
 		var t = _AnimationLoopHelper.create_tracked_tween(source_node, helper)
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		# Scale up
@@ -1563,7 +1563,7 @@ static func animate_breathing(source_node: Node, target: Control, duration: floa
 ## [return]: Signal that emits when animation finishes (or can be used to track infinite loops).
 static func animate_wobble(source_node: Node, target: Control, duration: float = 1.5, repeat_count: int = -1, easing: int = Tween.EASE_OUT, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_wobble")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_wobble")
 		return Signal()
 	
 	if auto_visible:
@@ -1580,7 +1580,7 @@ static func animate_wobble(source_node: Node, target: Control, duration: float =
 	var animation_callable = func() -> Signal:
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		# Rotate left
@@ -1606,7 +1606,7 @@ static func animate_wobble(source_node: Node, target: Control, duration: float =
 ## [return]: Signal that emits when animation finishes (or can be used to track infinite loops).
 static func animate_float(source_node: Node, target: Control, duration: float = 2.0, repeat_count: int = -1, easing: int = Tween.EASE_OUT, float_distance: float = 10.0, auto_visible: bool = false) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_float")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_float")
 		return Signal()
 
 	if auto_visible:
@@ -1618,13 +1618,13 @@ static func animate_float(source_node: Node, target: Control, duration: float = 
 	if snapshot:
 		saved_position = snapshot.position
 	else:
-		push_warning("UIAnimationUtils.animate_float(): Failed to acquire baseline snapshot, using current position")
+		push_warning("UiAnimUtils.animate_float(): Failed to acquire baseline snapshot, using current position")
 		saved_position = target.position
 	
 	var animation_callable = func() -> Signal:
 		var t = source_node.create_tween()
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		# Use saved position from baseline snapshot
@@ -1656,7 +1656,7 @@ static func animate_float(source_node: Node, target: Control, duration: float = 
 ## [return]: Signal that emits when animation finishes (or can be used to track infinite loops).
 static func animate_glow_pulse(source_node: Node, target: Control, duration: float = 1.5, repeat_count: int = -1, easing: int = Tween.EASE_OUT, glow_min_alpha: float = 0.7, auto_visible: bool = false) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_glow_pulse")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_glow_pulse")
 		return Signal()
 	
 	if auto_visible:
@@ -1674,7 +1674,7 @@ static func animate_glow_pulse(source_node: Node, target: Control, duration: flo
 		
 		var t = _AnimationLoopHelper.create_tracked_tween(source_node, helper)
 		if not t:
-			push_warning("UIAnimationUtils: Failed to create tween")
+			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		# Fade to min
@@ -1696,7 +1696,7 @@ static func animate_glow_pulse(source_node: Node, target: Control, duration: flo
 ## [return]: Signal that emits when animation finishes.
 static func animate_color_flash(source_node: Node, target: Control, flash_color: Color = Color.YELLOW, duration: float = 0.2, flash_intensity: float = 1.5, auto_visible: bool = false, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for animate_color_flash")
+		push_warning("UiAnimUtils: Invalid source_node or target for animate_color_flash")
 		return Signal()
 	
 	if auto_visible:
@@ -1709,7 +1709,7 @@ static func animate_color_flash(source_node: Node, target: Control, flash_color:
 		original_modulate = snapshot.modulate
 	else:
 		# Fallback to current modulate if snapshot failed (null snapshot or acquisition failed)
-		push_warning("UIAnimationUtils.animate_color_flash(): Failed to acquire unified snapshot for target '%s', using current modulate" % target.name)
+		push_warning("UiAnimUtils.animate_color_flash(): Failed to acquire unified snapshot for target '%s', using current modulate" % target.name)
 		original_modulate = target.modulate
 	
 	# Kill any existing tweens on modulate by creating a zero-duration tween
@@ -1728,7 +1728,7 @@ static func animate_color_flash(source_node: Node, target: Control, flash_color:
 	
 	var t = source_node.create_tween()
 	if not t:
-		push_warning("UIAnimationUtils: Failed to create tween")
+		push_warning("UiAnimUtils: Failed to create tween")
 		return Signal()
 	
 	# Flash to color
@@ -1743,22 +1743,22 @@ static func animate_color_flash(source_node: Node, target: Control, flash_color:
 
 	return t.finished
 
-## Stagger animations (delegates to [AnimationStaggerRunner]).
+## Stagger animations (delegates to [UiAnimStaggerRunner]).
 static func stop_stagger_animations(source_node: Node, targets: Array[Control]) -> void:
-	AnimationStaggerRunner.stop_stagger_animations(source_node, targets)
+	UiAnimStaggerRunner.stop_stagger_animations(source_node, targets)
 
-static func animate_stagger(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_config: AnimationTarget = null) -> Signal:
-	return AnimationStaggerRunner.animate_stagger(source_node, targets, delay_between, animation_config)
+static func animate_stagger(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_config: UiAnimTarget = null) -> Signal:
+	return UiAnimStaggerRunner.animate_stagger(source_node, targets, delay_between, animation_config)
 
-static func animate_stagger_multi(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_configs: Array[AnimationTarget] = []) -> Signal:
-	return AnimationStaggerRunner.animate_stagger_multi(source_node, targets, delay_between, animation_configs)
+static func animate_stagger_multi(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_configs: Array[UiAnimTarget] = []) -> Signal:
+	return UiAnimStaggerRunner.animate_stagger_multi(source_node, targets, delay_between, animation_configs)
 
 ## Creates a delay signal that can be used in animation sequences.
 ## [param source_node]: The node to get the scene tree from.
 ## [param duration]: Delay duration in seconds.
 ## [return]: Signal that emits when delay finishes.
 static func delay(source_node: Node, duration: float) -> Signal:
-	return AnimationDelayHelpers.delay(source_node, duration)
+	return UiAnimDelayHelpers.delay(source_node, duration)
 
 ## Helper function to loop a tween animation.
 ## [param source_node]: The node to create tweens from (captured by animation_callable, not used directly here).
@@ -1784,8 +1784,8 @@ static func _loop_animation(_source_node: Node, target: Control, animation_calla
 		# The helper node is accessible as a child of target if manual control is needed
 		return infinite_helper.loop_finished
 
-	# Finite repeats - use AnimationSequence, attach helper to target control
-	var sequence = AnimationSequence.create()
+	# Finite repeats - use UiAnimSequence, attach helper to target control
+	var sequence = UiAnimSequence.create()
 	# repeat_count represents number of repeats, so total plays = repeat_count + 1
 	var total_plays = repeat_count + 1
 	for i in range(total_plays):
@@ -1801,7 +1801,7 @@ static func _loop_animation(_source_node: Node, target: Control, animation_calla
 class _FiniteLoopHelper extends Node:
 	var sequence_finished = Signal()
 
-	func execute_sequence(sequence: AnimationSequence) -> void:
+	func execute_sequence(sequence: UiAnimSequence) -> void:
 		await sequence.play()
 		sequence_finished.emit()
 		queue_free()

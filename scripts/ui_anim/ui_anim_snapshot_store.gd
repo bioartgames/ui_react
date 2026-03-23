@@ -1,6 +1,6 @@
-## Unified snapshot storage for UI animations (extracted from UIAnimationUtils).
+## Unified snapshot storage for UI animations (extracted from UiAnimUtils).
 ## Owns baseline Control snapshots and reference counts per animated Control.
-class_name AnimationSnapshotStore
+class_name UiAnimSnapshotStore
 extends RefCounted
 
 ## Tracks unified original state snapshots per target control.
@@ -34,7 +34,7 @@ static func acquire_unified_snapshot(source_node: Node, target: Control) -> Cont
 
 		var baseline_snapshot = snapshot_control_state(target)
 		if not baseline_snapshot:
-			push_warning("AnimationSnapshotStore.acquire_unified_snapshot(): Failed to create baseline snapshot for target '%s'" % target.name)
+			push_warning("UiAnimSnapshotStore.acquire_unified_snapshot(): Failed to create baseline snapshot for target '%s'" % target.name)
 			return null
 		_unified_original_snapshots[target] = baseline_snapshot
 		_active_animation_count[target] = 0
@@ -84,7 +84,7 @@ static func has_unified_snapshot(target: Control) -> bool:
 
 static func snapshot_control_state(target: Control) -> ControlStateSnapshot:
 	if not target:
-		push_warning("AnimationSnapshotStore.snapshot_control_state(): Cannot snapshot state of null control.")
+		push_warning("UiAnimSnapshotStore.snapshot_control_state(): Cannot snapshot state of null control.")
 		return null
 
 	var snapshot = ControlStateSnapshot.new()
@@ -98,10 +98,10 @@ static func snapshot_control_state(target: Control) -> ControlStateSnapshot:
 
 static func restore_control_state(target: Control, snapshot: ControlStateSnapshot) -> void:
 	if not target:
-		push_warning("AnimationSnapshotStore.restore_control_state(): Cannot restore state of null control.")
+		push_warning("UiAnimSnapshotStore.restore_control_state(): Cannot restore state of null control.")
 		return
 	if not snapshot:
-		push_warning("AnimationSnapshotStore.restore_control_state(): Cannot restore from null snapshot.")
+		push_warning("UiAnimSnapshotStore.restore_control_state(): Cannot restore from null snapshot.")
 		return
 
 	target.position = snapshot.position

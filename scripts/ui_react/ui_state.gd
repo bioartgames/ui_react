@@ -1,5 +1,5 @@
+class_name UiState
 extends Resource
-class_name State
 
 signal value_changed(new_value, old_value)
 

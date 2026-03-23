@@ -1,14 +1,14 @@
 extends LineEdit
-class_name ReactiveLineEdit
+class_name UiReactLineEdit
 
-@export var text_state: State
+@export var text_state: UiState
 
 ## Targets to animate based on line edit events.
 ##
 ## Drag nodes here and configure each target's animation properties directly in the Inspector.
 ## Each target can specify its own trigger (text changed, text entered, focus entered/exited, hover),
 ## animation type, duration, and settings - no resource files needed!
-@export var animation_targets: Array[AnimationTarget] = []
+@export var animation_targets: Array[UiAnimTarget] = []
 
 var _updating: bool = false
 var _is_initializing: bool = true
@@ -21,23 +21,23 @@ func _ready() -> void:
 	focus_entered.connect(_on_focus_entered)
 	focus_exited.connect(_on_focus_exited)
 	_validate_animation_targets()
-	ReactiveStateBindingHelper.deferred_finish_initialization(self)
+	UiReactStateBindingHelper.deferred_finish_initialization(self)
 
 ## Validates animation targets and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_targets() -> void:
-	var r = ReactiveAnimationTargetHelper.validate_and_map_triggers(self, "ReactiveLineEdit", animation_targets)
+	var r = UiReactAnimTargetHelper.validate_and_map_triggers(self, "UiReactLineEdit", animation_targets)
 	animation_targets = r["animation_targets"]
 	var trigger_map = r["trigger_map"]
 	
 	# Connect signals based on which triggers are used
-	if trigger_map.has(AnimationTarget.Trigger.TEXT_ENTERED):
+	if trigger_map.has(UiAnimTarget.Trigger.TEXT_ENTERED):
 		if not text_submitted.is_connected(_on_trigger_text_entered):
 			text_submitted.connect(_on_trigger_text_entered)
-	if trigger_map.has(AnimationTarget.Trigger.HOVER_ENTER):
+	if trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER):
 		if not mouse_entered.is_connected(_on_trigger_hover_enter):
 			mouse_entered.connect(_on_trigger_hover_enter)
-	if trigger_map.has(AnimationTarget.Trigger.HOVER_EXIT):
+	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
 		if not mouse_exited.is_connected(_on_trigger_hover_exit):
 			mouse_exited.connect(_on_trigger_hover_exit)
 
@@ -51,32 +51,32 @@ func _on_trigger_text_changed(_new_text: String) -> void:
 	if _is_initializing:
 		return
 	
-	_trigger_animations(AnimationTarget.Trigger.TEXT_CHANGED)
+	_trigger_animations(UiAnimTarget.Trigger.TEXT_CHANGED)
 
 ## Handles TEXT_ENTERED trigger animations.
 func _on_trigger_text_entered(_text: String) -> void:
-	_trigger_animations(AnimationTarget.Trigger.TEXT_ENTERED)
+	_trigger_animations(UiAnimTarget.Trigger.TEXT_ENTERED)
 
 ## Handles FOCUS_ENTERED trigger animations.
 func _on_focus_entered() -> void:
-	_trigger_animations(AnimationTarget.Trigger.FOCUS_ENTERED)
+	_trigger_animations(UiAnimTarget.Trigger.FOCUS_ENTERED)
 
 ## Handles FOCUS_EXITED trigger animations.
 func _on_focus_exited() -> void:
-	_trigger_animations(AnimationTarget.Trigger.FOCUS_EXITED)
+	_trigger_animations(UiAnimTarget.Trigger.FOCUS_EXITED)
 
 ## Handles HOVER_ENTER trigger animations.
 func _on_trigger_hover_enter() -> void:
-	_trigger_animations(AnimationTarget.Trigger.HOVER_ENTER)
+	_trigger_animations(UiAnimTarget.Trigger.HOVER_ENTER)
 
 ## Handles HOVER_EXIT trigger animations.
 func _on_trigger_hover_exit() -> void:
-	_trigger_animations(AnimationTarget.Trigger.HOVER_EXIT)
+	_trigger_animations(UiAnimTarget.Trigger.HOVER_EXIT)
 
 ## Triggers animations for targets matching the specified trigger type.
 ## [param trigger_type]: The trigger type to match.
-func _trigger_animations(trigger_type: AnimationTarget.Trigger) -> void:
-	ReactiveAnimationTargetHelper.trigger_animations(self, animation_targets, trigger_type)
+func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
+	UiReactAnimTargetHelper.trigger_animations(self, animation_targets, trigger_type)
 
 func _on_text_changed(new_text: String) -> void:
 	# Trigger animations if configured
