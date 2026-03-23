@@ -24,14 +24,14 @@ func _ready() -> void:
 		disabled_state.value_changed.connect(_on_disabled_state_changed)
 		_on_disabled_state_changed(disabled_state.value, disabled_state.value)
 	_validate_animation_targets()
-	# Finish initialization after all signals are processed
-	call_deferred("_finish_initialization")
+	ReactiveStateBindingHelper.deferred_finish_initialization(self)
 
 ## Validates animation targets and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_targets() -> void:
-	animation_targets = ReactiveAnimationTargetHelper.validate_animation_targets(self, "ReactiveButton", animation_targets)
-	var trigger_map = ReactiveAnimationTargetHelper.collect_triggers(animation_targets)
+	var r = ReactiveAnimationTargetHelper.validate_and_map_triggers(self, "ReactiveButton", animation_targets)
+	animation_targets = r["animation_targets"]
+	var trigger_map = r["trigger_map"]
 	
 	# Connect signals based on which triggers are used
 	if trigger_map.has(AnimationTarget.Trigger.PRESSED):

@@ -8,7 +8,7 @@
 ## and can be configured in the Inspector, provides reusable action configurations, offers type-safe
 ## action selection, and supports both Control targets (UI components) and Resource targets (reactive
 ## values). Create a specific action config resource like PanelActionConfig or ButtonActionConfig and
-## assign it to ControlTargetConfig.action or ValueTargetConfig.action. When the button or toggle
+## assign it to ControlTargetConfig.animation (AnimationTarget) or ValueTargetConfig.action. When the button or toggle
 ## is pressed, the action config's apply() method is called automatically. This class should not be
 ## instantiated directly. Use one of its subclasses: PanelActionConfig for show/hide/toggle panels,
 ## ButtonActionConfig for enable/disable/toggle buttons, LabelActionConfig for show/hide labels,

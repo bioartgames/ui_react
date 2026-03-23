@@ -36,6 +36,11 @@ static func collect_triggers(animation_targets: Array[AnimationTarget]) -> Dicti
 		trigger_map[anim_target.trigger] = true
 	return trigger_map
 
+## Validates targets and returns both the filtered array and trigger map (reduces boilerplate).
+static func validate_and_map_triggers(owner: Control, component_name: String, animation_targets: Array[AnimationTarget], allow_empty_for: Array[int] = []) -> Dictionary:
+	var valid = validate_animation_targets(owner, component_name, animation_targets, allow_empty_for)
+	return {"animation_targets": valid, "trigger_map": collect_triggers(valid)}
+
 static func trigger_animations(owner: Node, animation_targets: Array[AnimationTarget], trigger_type: AnimationTarget.Trigger, respects_disabled: bool = false, is_disabled: bool = false) -> void:
 	if animation_targets.is_empty():
 		return

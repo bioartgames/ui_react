@@ -25,8 +25,7 @@ func _ready() -> void:
 		_last_value = value
 	gui_input.connect(_on_gui_input)
 	_validate_animation_targets()
-	# Finish initialization after all signals are processed
-	call_deferred("_finish_initialization")
+	ReactiveStateBindingHelper.deferred_finish_initialization(self)
 
 ## Handles GUI input to detect drag start/end.
 func _on_gui_input(event: InputEvent) -> void:
@@ -45,8 +44,9 @@ func _on_gui_input(event: InputEvent) -> void:
 ## Validates animation targets and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_targets() -> void:
-	animation_targets = ReactiveAnimationTargetHelper.validate_animation_targets(self, "ReactiveSlider", animation_targets)
-	var trigger_map = ReactiveAnimationTargetHelper.collect_triggers(animation_targets)
+	var r = ReactiveAnimationTargetHelper.validate_and_map_triggers(self, "ReactiveSlider", animation_targets)
+	animation_targets = r["animation_targets"]
+	var trigger_map = r["trigger_map"]
 	
 	# Connect signals based on which triggers are used
 	if trigger_map.has(AnimationTarget.Trigger.HOVER_ENTER):

@@ -42,199 +42,46 @@ const ALPHA_MAX := 1.0
 const SCALE_MIN := Vector2.ZERO
 ## Maximum scale value for pop/shrink animations.
 const SCALE_MAX := Vector2.ONE
-## Multiplier for calculating center pivot offset (0.5 = center).
-const PIVOT_CENTER_MULTIPLIER := 0.5
 
-## Tracks unified original state snapshots per target control.
-## This snapshot is locked when the first animation starts and only unlocked
-## when all animations complete. Contains position, scale, modulate, rotation, pivot_offset, and visible.
-## Key: Control node (object ID), Value: ControlStateSnapshot
-static var _unified_original_snapshots: Dictionary = {}
+## Delegates snapshot storage to [AnimationSnapshotStore].
+static func _acquire_unified_snapshot(source_node: Node, target: Control) -> AnimationSnapshotStore.ControlStateSnapshot:
+	return AnimationSnapshotStore.acquire_unified_snapshot(source_node, target)
 
-## Tracks active animation count per target control.
-## When count reaches 0, the unified snapshot is restored and unlocked.
-## Key: Control node (object ID), Value: int (active animation count)
-static var _active_animation_count: Dictionary = {}
-
-## Acquires the unified baseline snapshot for a target control.
-## If no baseline snapshot exists, captures the current state as baseline and locks it.
-## All animations on this control will share this same baseline snapshot.
-## Increments the active animation counter.
-## Interrupts all active tweens on animatable properties before snapshotting.
-## [param source_node]: The node to create interrupt tweens from.
-## [param target]: The control to acquire baseline snapshot for.
-## [return]: The baseline snapshot (ControlStateSnapshot).
-static func _acquire_unified_snapshot(source_node: Node, target: Control) -> ControlStateSnapshot:
-	if not target:
-		return null
-
-	# If baseline snapshot doesn't exist, save current state as baseline and initialize counter
-	if not _unified_original_snapshots.has(target):
-		# Interrupt all active tweens on animatable properties to get accurate baseline state
-		var interrupt_tween = source_node.create_tween()
-		if interrupt_tween:
-			# Interrupt position tweens
-			interrupt_tween.tween_property(target, "position", target.position, 0.0)
-			# Interrupt scale tweens
-			interrupt_tween.tween_property(target, "scale", target.scale, 0.0)
-			# Interrupt modulate/color tweens
-			interrupt_tween.tween_property(target, "modulate", target.modulate, 0.0)
-			# Interrupt rotation tweens
-			interrupt_tween.tween_property(target, "rotation_degrees", target.rotation_degrees, 0.0)
-			interrupt_tween.kill()
-
-		# Create baseline snapshot of current state
-		var baseline_snapshot = snapshot_control_state(target)
-		if not baseline_snapshot:
-			push_warning("UIAnimationUtils._acquire_unified_snapshot(): Failed to create baseline snapshot for target '%s'" % target.name)
-			return null
-		_unified_original_snapshots[target] = baseline_snapshot
-		_active_animation_count[target] = 0
-
-	# Increment active animation counter (shared across all animations on this control)
-	_active_animation_count[target] = _active_animation_count[target] + 1
-
-	return _unified_original_snapshots[target]
-
-## Releases the unified original snapshot for a target control.
-## Decrements the active animation counter.
-## If counter reaches 0, restores all properties from snapshot and unlocks it.
-## [param target]: The control to release unified snapshot for.
-## [param restore_immediately]: If true, immediately restores state when counter reaches 0 (default: true).
-## [return]: true if state was restored, false otherwise.
 static func _release_unified_snapshot(target: Control, restore_immediately: bool = true) -> bool:
-	if not target:
-		return false
+	return AnimationSnapshotStore.release_unified_snapshot(target, restore_immediately)
 
-	if not _active_animation_count.has(target):
-		return false
+static func _get_unified_snapshot(target: Control) -> AnimationSnapshotStore.ControlStateSnapshot:
+	return AnimationSnapshotStore.get_unified_snapshot(target)
 
-	# Decrement counter
-	_active_animation_count[target] = _active_animation_count[target] - 1
-
-	# If counter reached 0, restore state and unlock
-	if _active_animation_count[target] <= 0:
-		if _unified_original_snapshots.has(target):
-			var snapshot = _unified_original_snapshots[target]
-			if snapshot and restore_immediately:
-				restore_control_state(target, snapshot)
-			# Clean up tracking dictionaries
-			_unified_original_snapshots.erase(target)
-			_active_animation_count.erase(target)
-			return true
-
-	return false
-
-## Gets the unified original snapshot for a target without acquiring it.
-## Returns null if no unified snapshot exists.
-## [param target]: The control to get unified snapshot for.
-## [return]: The unified original snapshot, or null if not set.
-static func _get_unified_snapshot(target: Control) -> ControlStateSnapshot:
-	if not target:
-		return null
-
-	if _unified_original_snapshots.has(target):
-		return _unified_original_snapshots[target]
-
-	return null
-
-## Manually clears the unified snapshot system for a target.
-## Useful for edge cases or manual cleanup.
-## [param target]: The control to clear unified snapshot for.
 static func _clear_unified_snapshot(target: Control) -> void:
-	if not target:
-		return
-
-	_unified_original_snapshots.erase(target)
-	_active_animation_count.erase(target)
+	AnimationSnapshotStore.clear_unified_snapshot(target)
 
 ## Calculates the center X position of a node relative to the viewport.
 ## [param source_node]: The node to get viewport from.
 ## [param target]: The control to calculate center for.
 ## [return]: The center X position, or 0.0 if calculation fails.
 static func get_node_center(source_node: Node, target: Control) -> float:
-	if not source_node or not target:
-		var source_name: String = "null"
-		var target_name: String = "null"
-		if source_node != null:
-			source_name = source_node.name
-		if target != null:
-			target_name = target.name
-		push_warning("UIAnimationUtils.get_node_center(): Invalid source_node (%s) or target (%s). Tip: Ensure both nodes are valid and in the scene tree before calling this function." % [source_name, target_name])
-		return 0.0
-	
-	var viewport = source_node.get_viewport()
-	if not viewport:
-		push_warning("UIAnimationUtils.get_node_center(): source_node '%s' has no viewport. Tip: Ensure the node is added to the scene tree and has a viewport (usually happens after _ready())." % source_node.name)
-		return 0.0
-	
-	return (viewport.get_visible_rect().size.x * PIVOT_CENTER_MULTIPLIER) - (target.size.x * PIVOT_CENTER_MULTIPLIER)
+	return AnimationTweenFactory.get_node_center(source_node, target)
 
 ## Calculates the pivot offset to center a control for scale animations.
 ## [param target]: The control to calculate pivot for.
 ## [return]: The pivot offset Vector2, or Vector2.ZERO if target is null.
 static func get_center_pivot_offset(target: Control) -> Vector2:
-	if not target:
-		return Vector2.ZERO
-	return Vector2(target.size.x * PIVOT_CENTER_MULTIPLIER, target.size.y * PIVOT_CENTER_MULTIPLIER)
+	return AnimationTweenFactory.get_center_pivot_offset(target)
 
 ## Creates a tween with null checking and error handling.
 ## [param node]: The node to create tween for.
 ## [return]: The created Tween, or null if creation failed.
 static func create_safe_tween(node: Node) -> Tween:
-	if not node:
-		push_warning("UIAnimationUtils.create_safe_tween(): Cannot create tween - node is null. Tip: Ensure the node is valid and in the scene tree before creating tweens.")
-		return null
-	var t = node.create_tween()
-	if not t:
-		push_warning("UIAnimationUtils.create_safe_tween(): Failed to create tween on node '%s'. Tip: Check if the node is in the scene tree and not already processing (e.g., during _ready())." % node.name)
-	return t
+	return AnimationTweenFactory.create_safe_tween(node)
 
-## Snapshot of a control's state for restoration.
-## Contains position, scale, modulate, rotation, pivot_offset, and visible properties.
-class ControlStateSnapshot:
-	var position: Vector2
-	var scale: Vector2
-	var modulate: Color
-	var rotation_degrees: float
-	var pivot_offset: Vector2
-	var visible: bool
+## Creates a snapshot of a control's current state (delegates to [AnimationSnapshotStore]).
+static func snapshot_control_state(target: Control) -> AnimationSnapshotStore.ControlStateSnapshot:
+	return AnimationSnapshotStore.snapshot_control_state(target)
 
-## Creates a snapshot of a control's current state.
-## [param target]: The control to snapshot.
-## [return]: A ControlStateSnapshot containing the current state, or null if target is null.
-static func snapshot_control_state(target: Control) -> ControlStateSnapshot:
-	if not target:
-		push_warning("UIAnimationUtils.snapshot_control_state(): Cannot snapshot state of null control. Tip: Ensure the target Control is valid and in the scene tree before calling this function.")
-		return null
-	
-	var snapshot = ControlStateSnapshot.new()
-	snapshot.position = target.position
-	snapshot.scale = target.scale
-	snapshot.modulate = target.modulate
-	snapshot.rotation_degrees = target.rotation_degrees
-	snapshot.pivot_offset = target.pivot_offset
-	snapshot.visible = target.visible
-	return snapshot
-
-## Restores a control to a previously snapshotted state.
-## [param target]: The control to restore.
-## [param snapshot]: The ControlStateSnapshot to restore from.
-static func restore_control_state(target: Control, snapshot: ControlStateSnapshot) -> void:
-	if not target:
-		push_warning("UIAnimationUtils.restore_control_state(): Cannot restore state of null control. Tip: Ensure the target Control is valid and in the scene tree before calling this function.")
-		return
-	
-	if not snapshot:
-		push_warning("UIAnimationUtils.restore_control_state(): Cannot restore from null snapshot. Tip: Ensure you have a valid ControlStateSnapshot from snapshot_control_state() before calling restore.")
-		return
-	
-	target.position = snapshot.position
-	target.scale = snapshot.scale
-	target.modulate = snapshot.modulate
-	target.rotation_degrees = snapshot.rotation_degrees
-	target.pivot_offset = snapshot.pivot_offset
-	target.visible = snapshot.visible
+## Restores a control from a snapshot (delegates to [AnimationSnapshotStore]).
+static func restore_control_state(target: Control, snapshot: AnimationSnapshotStore.ControlStateSnapshot) -> void:
+	AnimationSnapshotStore.restore_control_state(target, snapshot)
 
 ## Resets a control to "normal" state (scale=1, modulate.a=1, rotation=0).
 ## Does not reset position as that is usually intentional.
@@ -1032,16 +879,7 @@ static func animate_slide_to_bottom(source_node: Node, target: Control, speed :=
 ## [param target]: The control to calculate center for.
 ## [return]: The center Y position, or 0.0 if calculation fails.
 static func get_node_center_y(source_node: Node, target: Control) -> float:
-	if not source_node or not target:
-		push_warning("UIAnimationUtils: Invalid source_node or target for get_node_center_y")
-		return 0.0
-	
-	var viewport = source_node.get_viewport()
-	if not viewport:
-		push_warning("UIAnimationUtils: source_node has no viewport")
-		return 0.0
-	
-	return (viewport.get_visible_rect().size.y * PIVOT_CENTER_MULTIPLIER) - (target.size.y * PIVOT_CENTER_MULTIPLIER)
+	return AnimationTweenFactory.get_node_center_y(source_node, target)
 
 ## Animates a control sliding from the top edge to the center of the screen.
 ## [param source_node]: The node to create the tween from (usually self).
@@ -1595,9 +1433,9 @@ static func animate_reset_all(source_node: Node, target: Control, duration: floa
 		return Signal()
 
 	# Get the unified original snapshot (or current state if not set)
-	var snapshot: ControlStateSnapshot
-	if _unified_original_snapshots.has(target):
-		snapshot = _unified_original_snapshots[target]
+	var snapshot: AnimationSnapshotStore.ControlStateSnapshot
+	if AnimationSnapshotStore.has_unified_snapshot(target):
+		snapshot = AnimationSnapshotStore.get_unified_snapshot(target)
 	else:
 		# No unified snapshot, use current state (no animation needed)
 		return Signal()
@@ -1905,281 +1743,22 @@ static func animate_color_flash(source_node: Node, target: Control, flash_color:
 
 	return t.finished
 
-## Stops all active stagger animations (reveal and hide) for the given targets.
-## Kills all tweens and stops helper nodes to prevent animation conflicts.
-## [param source_node]: The node that owns the stagger helpers (usually self).
-## [param targets]: Array of controls that may have active stagger animations.
+## Stagger animations (delegates to [AnimationStaggerRunner]).
 static func stop_stagger_animations(source_node: Node, targets: Array[Control]) -> void:
-	if not source_node:
-		return
-	
-	# Find and stop all stagger helpers
-	for child in source_node.get_children():
-		if child.has_meta("_is_stagger_helper"):
-			if child.has_method("stop"):
-				child.stop()
-			else:
-				child.queue_free()
-	
-	# Kill all tweens on all targets by interrupting them
-	for target in targets:
-		if target and is_instance_valid(target):
-			# Create and immediately kill a tween to interrupt any active tweens
-			# This is the Godot 4 way to stop tweens
-			var interrupt_tween = source_node.create_tween()
-			if interrupt_tween:
-				# Interrupt common animated properties
-				interrupt_tween.tween_property(target, "modulate", target.modulate, 0.0)
-				interrupt_tween.tween_property(target, "scale", target.scale, 0.0)
-				interrupt_tween.tween_property(target, "position", target.position, 0.0)
-				interrupt_tween.kill()
-			
-			# Also directly set properties to ensure tweens are interrupted
-			var current_modulate = target.modulate
-			var current_scale = target.scale
-			var current_position = target.position
-			target.modulate = current_modulate
-			target.scale = current_scale
-			target.position = current_position
+	AnimationStaggerRunner.stop_stagger_animations(source_node, targets)
 
-## Animates multiple controls with a stagger effect (each animates with a delay).
-## Automatically interrupts any existing stagger animations before starting.
-## [param source_node]: The node to create tweens from (usually self).
-## [param targets]: Array of controls to animate.
-## [param delay_between]: Delay between each item in seconds (default: 0.1).
-## [param animation_config]: AnimationTarget that defines the animation to apply to each target.
-## The config's reverse property determines if items are revealed (false) or hidden (true).
-## All customization options (flash_color, pop_overshoot, etc.) are supported.
-## [return]: Signal that emits when all animations complete.
 static func animate_stagger(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_config: AnimationTarget = null) -> Signal:
-	if not source_node or targets.size() == 0:
-		push_warning("UIAnimationUtils: Invalid source_node or empty targets for animate_stagger")
-		return Signal()
-	
-	if not animation_config:
-		push_warning("UIAnimationUtils: animate_stagger requires animation_config")
-		return Signal()
-	
-	# Stop any existing stagger animations first
-	stop_stagger_animations(source_node, targets)
-	
-	# Reset targets based on whether we're revealing or hiding
-	var is_reveal = not animation_config.reverse
+	return AnimationStaggerRunner.animate_stagger(source_node, targets, delay_between, animation_config)
 
-	for target in targets:
-		if target and is_instance_valid(target):
-			if is_reveal:
-				# For reveal: ensure target is visible (animation will handle its own initial state via auto_visible)
-				# Don't pre-set scale/alpha - let each animation handle what it needs
-				target.visible = true
-			else:
-				# For hide: ensure target is visible so hide animation can work
-				target.visible = true
-				# Reset to normal state so hide animations start from visible state
-				target.modulate.a = 1.0
-				target.scale = Vector2.ONE
-	
-	var helper = _StaggerHelper.new()
-	source_node.add_child(helper)
-	helper.execute_stagger(source_node, targets, delay_between, animation_config, is_reveal)
-	return helper.all_finished
-
-## Animates multiple controls with a stagger effect using per-target configs.
-## Automatically interrupts any existing stagger animations before starting.
-## [param source_node]: The node to create tweens from (usually self).
-## [param targets]: Array of controls to animate.
-## [param delay_between]: Delay between each item in seconds (default: 0.1).
-## [param animation_configs]: Array of AnimationTarget, one per target.
-## Each config's reverse property determines if items are revealed (false) or hidden (true).
-## All customization options (flash_color, pop_overshoot, etc.) are supported per target.
-## If configs array is smaller than targets, the last config is reused for remaining targets.
-## [return]: Signal that emits when all animations complete.
 static func animate_stagger_multi(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_configs: Array[AnimationTarget] = []) -> Signal:
-	if not source_node or targets.size() == 0:
-		push_warning("UIAnimationUtils: Invalid source_node or empty targets for animate_stagger_multi")
-		return Signal()
-	
-	if animation_configs.size() == 0:
-		push_warning("UIAnimationUtils: animate_stagger_multi requires at least one animation_config")
-		return Signal()
-	
-	# Stop any existing stagger animations first
-	stop_stagger_animations(source_node, targets)
-	
-	# Reset targets based on their individual configs
-	for i in range(targets.size()):
-		var target = targets[i]
-		if not target or not is_instance_valid(target):
-			continue
-		
-		# Get config for this target (use last config if not enough provided)
-		var config_idx = min(i, animation_configs.size() - 1)
-		var config = animation_configs[config_idx]
-		if not config:
-			continue
-		
-		var is_reveal = not config.reverse
-		
-		if is_reveal:
-			# For reveal: ensure target is visible (animation will handle its own initial state)
-			target.visible = true
-		else:
-			# For hide: ensure target is visible so hide animation can work
-			target.visible = true
-			# Reset to normal state so hide animations start from visible state
-			target.modulate.a = 1.0
-			target.scale = Vector2.ONE
-	
-	var helper = _StaggerHelper.new()
-	source_node.add_child(helper)
-	helper.execute_stagger_multi(source_node, targets, delay_between, animation_configs)
-	return helper.all_finished
-
-## Helper node for stagger animations.
-class _StaggerHelper extends Node:
-	var all_finished = Signal()
-	var _is_running = false
-	var _source_node: Node = null
-	var _targets: Array[Control] = []
-
-	func _init():
-		set_meta("_is_stagger_helper", true)
-		set_meta("_stagger_type", "stagger")
-
-	## Stops the stagger animation and cleans up.
-	func stop() -> void:
-		_is_running = false
-		# Kill all tweens on all targets
-		for target in _targets:
-			if target and is_instance_valid(target):
-				# Create and kill a tween to interrupt any active tweens
-				var interrupt_tween = _source_node.create_tween()
-				if interrupt_tween:
-					interrupt_tween.kill()
-				# Directly set properties to interrupt tweens
-				var current_modulate = target.modulate
-				var current_scale = target.scale
-				var current_position = target.position
-				target.modulate = current_modulate
-				target.scale = current_scale
-				target.position = current_position
-		queue_free()
-
-	func execute_stagger(source_node: Node, targets: Array[Control], delay_between: float, animation_config: AnimationTarget, is_reveal: bool) -> void:
-		_source_node = source_node
-		_targets = targets
-		_is_running = true
-
-		# Determine iteration order: forward for reveal, reverse for hide
-		var start_idx = 0
-		var end_idx = targets.size()
-		var step = 1
-		if not is_reveal:
-			start_idx = targets.size() - 1
-			end_idx = -1
-			step = -1
-
-		var i = start_idx
-		while i != end_idx:
-			if not _is_running:
-				return
-
-			var target = targets[i]
-			if target == null or not is_instance_valid(target):
-				i += step
-				continue
-
-			# Wait for delay (skip delay for first item)
-			if i != start_idx:
-				await UIAnimationUtils.delay(source_node, delay_between)
-				if not _is_running:
-					return
-
-			# Apply animation using AnimationTarget configuration
-			var animation_signal = animation_config.apply_to_control(source_node, target)
-			if animation_signal:
-				await animation_signal
-
-			if not _is_running:
-				return
-
-			i += step
-
-		if _is_running:
-			all_finished.emit()
-		queue_free()
-
-	func execute_stagger_multi(source_node: Node, targets: Array[Control], delay_between: float, animation_configs: Array[AnimationTarget]) -> void:
-		_source_node = source_node
-		_targets = targets
-		_is_running = true
-
-		# Determine iteration order based on first config (all should have same reverse state)
-		var is_reveal = true
-		if animation_configs.size() > 0 and animation_configs[0]:
-			is_reveal = not animation_configs[0].reverse
-
-		var start_idx = 0
-		var end_idx = targets.size()
-		var step = 1
-		if not is_reveal:
-			start_idx = targets.size() - 1
-			end_idx = -1
-			step = -1
-
-		var i = start_idx
-		while i != end_idx:
-			if not _is_running:
-				return
-
-			var target = targets[i]
-			if target == null or not is_instance_valid(target):
-				i += step
-				continue
-
-			# Wait for delay (skip delay for first item)
-			if i != start_idx:
-				await UIAnimationUtils.delay(source_node, delay_between)
-				if not _is_running:
-					return
-
-			# Get config for this target (use last config if not enough provided)
-			var config_idx = min(i if is_reveal else (targets.size() - 1 - i), animation_configs.size() - 1)
-			var config = animation_configs[config_idx]
-			if not config:
-				i += step
-				continue
-
-			# Apply animation using the config's apply_to_control method
-			# This reuses the single source of truth for animation logic
-			var animation_signal = config.apply_to_control(source_node, target)
-			if animation_signal:
-				await animation_signal
-
-			if not _is_running:
-				return
-
-			i += step
-
-		if _is_running:
-			all_finished.emit()
-		queue_free()
+	return AnimationStaggerRunner.animate_stagger_multi(source_node, targets, delay_between, animation_configs)
 
 ## Creates a delay signal that can be used in animation sequences.
 ## [param source_node]: The node to get the scene tree from.
 ## [param duration]: Delay duration in seconds.
 ## [return]: Signal that emits when delay finishes.
 static func delay(source_node: Node, duration: float) -> Signal:
-	if not source_node:
-		push_warning("UIAnimationUtils: Invalid source_node for delay")
-		return Signal()
-
-	var tree = source_node.get_tree()
-	if not tree:
-		push_warning("UIAnimationUtils: source_node has no tree")
-		return Signal()
-
-	return tree.create_timer(duration).timeout
+	return AnimationDelayHelpers.delay(source_node, duration)
 
 ## Helper function to loop a tween animation.
 ## [param source_node]: The node to create tweens from (captured by animation_callable, not used directly here).

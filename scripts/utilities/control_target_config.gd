@@ -17,7 +17,7 @@
 ## # Create config for animating a panel
 ## var config = ControlTargetConfig.new()
 ## config.target = NodePath("../MyPanel")  # Drag-and-drop or manual path
-## config.animation.action = AnimationConfig.AnimationAction.EXPAND
+## config.animation.animation = AnimationTarget.AnimationAction.EXPAND
 ## config.animation.duration = 0.3
 ## 
 ## # Add to button's targets array
@@ -35,9 +35,8 @@ extends TargetConfig
 @export var target: NodePath = NodePath()
 
 ## Inline animation configuration (no resource file needed).
-## Configure animation properties directly in the Inspector with a dropdown menu.
-## All animation settings are available here - no need to create separate resource files!
-@export var animation: AnimationConfig = AnimationConfig.new()
+## Uses [AnimationTarget] as the single animation model (trigger is ignored when applying from ControlTargetConfig).
+@export var animation: AnimationTarget = AnimationTarget.new()
 
 ## Resolves the target Control node.
 ##

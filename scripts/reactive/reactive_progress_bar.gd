@@ -24,8 +24,7 @@ func _ready() -> void:
 		_last_value = value
 	_was_completed = _is_completed()
 	_validate_animation_targets()
-	# Finish initialization after all signals are processed
-	call_deferred("_finish_initialization")
+	ReactiveStateBindingHelper.deferred_finish_initialization(self)
 
 ## Checks if progress bar is at completion (100%).
 func _is_completed() -> bool:
@@ -34,8 +33,9 @@ func _is_completed() -> bool:
 ## Validates animation targets and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_targets() -> void:
-	animation_targets = ReactiveAnimationTargetHelper.validate_animation_targets(self, "ReactiveProgressBar", animation_targets)
-	var trigger_map = ReactiveAnimationTargetHelper.collect_triggers(animation_targets)
+	var r = ReactiveAnimationTargetHelper.validate_and_map_triggers(self, "ReactiveProgressBar", animation_targets)
+	animation_targets = r["animation_targets"]
+	var trigger_map = r["trigger_map"]
 	
 	# Connect signals based on which triggers are used
 	if trigger_map.has(AnimationTarget.Trigger.HOVER_ENTER):
