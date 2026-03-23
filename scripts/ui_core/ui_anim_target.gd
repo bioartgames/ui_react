@@ -49,6 +49,12 @@ enum Easing {
 	EASE_OUT_IN,    # Fast start and end, slow middle
 }
 
+## Dispatch defaults aligned with [UiAnimUtils] slide/float/reset behavior.
+const DEFAULT_SLIDE_OFFSET_PX := 8.0
+const ROTATE_OUT_END_DEGREES := 360.0
+const FLOAT_DEFAULT_AMPLITUDE_PX := 10.0
+const RESET_INSTANT_DURATION_SECONDS := 0.0
+
 ## ============================================
 ## CORE SETTINGS
 ## ============================================
@@ -188,24 +194,24 @@ func apply_to_control(owner: Node, control_target: Control) -> Signal:
 				return UiAnimUtils.animate_fade_in(owner, control_target, duration, true, repeat_count, tween_easing)
 		AnimationAction.SLIDE_FROM_LEFT:
 			if reverse:
-				return UiAnimUtils.animate_slide_to_left(owner, control_target, 8.0, duration, true, tween_easing)
+				return UiAnimUtils.animate_slide_to_left(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
 			else:
-				return UiAnimUtils.animate_slide_from_left(owner, control_target, 8.0, duration, true, tween_easing)
+				return UiAnimUtils.animate_slide_from_left(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
 		AnimationAction.SLIDE_FROM_RIGHT:
 			if reverse:
-				return UiAnimUtils.animate_slide_to_right(owner, control_target, 8.0, duration, true, tween_easing)
+				return UiAnimUtils.animate_slide_to_right(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
 			else:
-				return UiAnimUtils.animate_slide_from_right(owner, control_target, 8.0, duration, true, tween_easing)
+				return UiAnimUtils.animate_slide_from_right(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
 		AnimationAction.SLIDE_FROM_TOP:
 			if reverse:
 				return UiAnimUtils.animate_slide_to_top(owner, control_target, duration, true, tween_easing)
 			else:
-				return UiAnimUtils.animate_slide_from_top(owner, control_target, 8.0, duration, true, tween_easing)
+				return UiAnimUtils.animate_slide_from_top(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
 		AnimationAction.SLIDE_FROM_BOTTOM:
 			if reverse:
 				return UiAnimUtils.animate_slide_to_bottom(owner, control_target, duration, true, tween_easing)
 			else:
-				return UiAnimUtils.animate_slide_from_bottom(owner, control_target, 8.0, duration, true, tween_easing)
+				return UiAnimUtils.animate_slide_from_bottom(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
 		AnimationAction.FROM_LEFT_TO_CENTER:
 			if reverse:
 				return UiAnimUtils.animate_from_center_to_left(owner, control_target, duration, true, tween_easing)
@@ -238,7 +244,7 @@ func apply_to_control(owner: Node, control_target: Control) -> Signal:
 				return UiAnimUtils.animate_elastic_in(owner, control_target, duration, pivot_offset, true, tween_easing)
 		AnimationAction.ROTATE_IN:
 			if reverse:
-				return UiAnimUtils.animate_rotate_out(owner, control_target, duration, 360.0, true, true, true, tween_easing)
+				return UiAnimUtils.animate_rotate_out(owner, control_target, duration, ROTATE_OUT_END_DEGREES, true, true, true, tween_easing)
 			else:
 				return UiAnimUtils.animate_rotate_in(owner, control_target, duration, rotate_start_angle, pivot_offset, true, repeat_count, tween_easing)
 		AnimationAction.POP:
@@ -252,7 +258,7 @@ func apply_to_control(owner: Node, control_target: Control) -> Signal:
 		AnimationAction.WOBBLE:
 			return UiAnimUtils.animate_wobble(owner, control_target, duration, repeat_count, tween_easing, pivot_offset)
 		AnimationAction.FLOAT:
-			return UiAnimUtils.animate_float(owner, control_target, duration, repeat_count, tween_easing, 10.0, false)
+			return UiAnimUtils.animate_float(owner, control_target, duration, repeat_count, tween_easing, FLOAT_DEFAULT_AMPLITUDE_PX, false)
 		AnimationAction.GLOW_PULSE:
 			return UiAnimUtils.animate_glow_pulse(owner, control_target, duration, repeat_count, tween_easing)
 		AnimationAction.COLOR_FLASH:
@@ -261,7 +267,7 @@ func apply_to_control(owner: Node, control_target: Control) -> Signal:
 			# Use comprehensive reset with duration=0 for instant reset
 			# This resets all properties (position, scale, modulate, rotation, pivot_offset, visible)
 			# using the unified snapshot system
-			return UiAnimUtils.animate_reset_all(owner, control_target, 0.0, tween_easing, true)
+			return UiAnimUtils.animate_reset_all(owner, control_target, RESET_INSTANT_DURATION_SECONDS, tween_easing, true)
 		_:
 			push_warning("UiAnimTarget: Unsupported animation type %d" % animation)
 			return Signal()

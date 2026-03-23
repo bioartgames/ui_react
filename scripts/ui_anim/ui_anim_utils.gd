@@ -42,6 +42,12 @@ const ALPHA_MAX := 1.0
 const SCALE_MIN := Vector2.ZERO
 ## Maximum scale value for pop/shrink animations.
 const SCALE_MAX := Vector2.ONE
+## Subtle scale pulse for breathing animation (5% increase).
+const BREATHING_SCALE_MULTIPLIER := 1.05
+## Subtle rotation amplitude for wobble animation (degrees).
+const WOBBLE_ROTATION_DEGREES := 3.0
+## Default vertical float distance for [method animate_float] (pixels).
+const DEFAULT_FLOAT_DISTANCE_PX := 10.0
 
 ## Delegates snapshot storage to [UiAnimSnapshotStore].
 static func _acquire_unified_snapshot(source_node: Node, target: Control) -> UiAnimSnapshotStore.ControlStateSnapshot:
@@ -168,10 +174,10 @@ static func animate_slide_from_left(source_node: Node, target: Control, offset :
 		
 		target.position.x = -target.size.x
 		
-		var t = source_node.create_tween()
-		t.tween_property(target, 'position:x', offset, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		var tween = source_node.create_tween()
+		tween.tween_property(target, 'position:x', offset, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -191,13 +197,13 @@ static func animate_slide_to_left(source_node: Node, target: Control, _offset :=
 		if auto_visible:
 			target.visible = true
 		
-		var t = source_node.create_tween()
-		t.tween_property(target, 'position:x', -target.size.x, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		var tween = source_node.create_tween()
+		tween.tween_property(target, 'position:x', -target.size.x, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
 		if auto_visible:
-			t.finished.connect(func(): target.visible = false)
+			tween.finished.connect(func(): target.visible = false)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -229,14 +235,14 @@ static func animate_slide_from_right(source_node: Node, target: Control, offset 
 		var viewport_size = viewport.get_visible_rect().size.x
 		target.position.x = viewport_size
 		
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, "position:x", (viewport_size - target.size.x) - offset, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		tween.tween_property(target, "position:x", (viewport_size - target.size.x) - offset, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -256,13 +262,13 @@ static func animate_slide_to_right(source_node: Node, target: Control, _offset :
 		if auto_visible:
 			target.visible = true
 		
-		var t = source_node.create_tween()
-		t.tween_property(target, 'position:x', source_node.get_viewport().size.x, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		var tween = source_node.create_tween()
+		tween.tween_property(target, 'position:x', source_node.get_viewport().size.x, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
 		if auto_visible:
-			t.finished.connect(func(): target.visible = false)
+			tween.finished.connect(func(): target.visible = false)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -284,10 +290,10 @@ static func animate_slide_from_top(source_node: Node, target: Control, offset: f
 		
 		target.position.y = -target.size.y
 		
-		var t = source_node.create_tween()
-		t.tween_property(target, 'position:y', offset, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		var tween = source_node.create_tween()
+		tween.tween_property(target, 'position:y', offset, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -306,13 +312,13 @@ static func animate_slide_to_top(source_node: Node, target: Control, speed := DE
 		if auto_visible:
 			target.visible = true
 		
-		var t = source_node.create_tween()
-		t.tween_property(target, 'position:y', -target.size.y, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		var tween = source_node.create_tween()
+		tween.tween_property(target, 'position:y', -target.size.y, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
 		if auto_visible:
-			t.finished.connect(func(): target.visible = false)
+			tween.finished.connect(func(): target.visible = false)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -351,17 +357,17 @@ static func animate_expand(source_node: Node, target: Control, speed := DEFAULT_
 		else:
 			target.scale = SCALE_MIN  # Always set internally for consistency
 		
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'scale', SCALE_MAX, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		tween.tween_property(target, 'scale', SCALE_MAX, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
 		if auto_reset:
-			t.finished.connect(func(): target.scale = SCALE_MAX)
+			tween.finished.connect(func(): target.scale = SCALE_MAX)
 		
-		return t.finished
+		return tween.finished
 	
 	var result_signal: Signal
 	if repeat_count != 0:
@@ -404,14 +410,14 @@ static func animate_expand_x(source_node: Node, target: Control, speed := SHRINK
 		# Always start from 0 on x-axis, preserve y-axis
 		target.scale.x = ALPHA_MIN
 		
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'scale:x', SCALE_MAX.x, speed).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
+		tween.tween_property(target, 'scale:x', SCALE_MAX.x, speed).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	var result_signal: Signal
 	if repeat_count != 0:
@@ -454,14 +460,14 @@ static func animate_expand_y(source_node: Node, target: Control, speed := SHRINK
 		# Always start from 0 on y-axis, preserve x-axis
 		target.scale.y = ALPHA_MIN
 		
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'scale:y', SCALE_MAX.y, speed).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
+		tween.tween_property(target, 'scale:y', SCALE_MAX.y, speed).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	var result_signal: Signal
 	if repeat_count != 0:
@@ -503,20 +509,20 @@ static func animate_shrink(source_node: Node, target: Control, speed := DEFAULT_
 		if auto_setup:
 			target.scale = SCALE_MAX
 
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'scale', SCALE_MIN, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		tween.tween_property(target, 'scale', SCALE_MIN, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
 		if auto_visible:
-			t.finished.connect(func(): target.visible = false)
+			tween.finished.connect(func(): target.visible = false)
 		
 		if auto_reset:
-			t.finished.connect(func(): target.scale = SCALE_MAX)
+			tween.finished.connect(func(): target.scale = SCALE_MAX)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -550,20 +556,20 @@ static func animate_shrink_x(source_node: Node, target: Control, speed := SHRINK
 		if auto_setup:
 			target.scale.x = SCALE_MAX.x
 
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'scale:x', ALPHA_MIN, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		tween.tween_property(target, 'scale:x', ALPHA_MIN, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
 		if auto_visible:
-			t.finished.connect(func(): target.visible = false)
+			tween.finished.connect(func(): target.visible = false)
 		
 		if auto_reset:
-			t.finished.connect(func(): target.scale.x = SCALE_MAX.x)
+			tween.finished.connect(func(): target.scale.x = SCALE_MAX.x)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -597,20 +603,20 @@ static func animate_shrink_y(source_node: Node, target: Control, speed := SHRINK
 		if auto_setup:
 			target.scale.y = SCALE_MAX.y
 
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'scale:y', ALPHA_MIN, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		tween.tween_property(target, 'scale:y', ALPHA_MIN, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
 		if auto_visible:
-			t.finished.connect(func(): target.visible = false)
+			tween.finished.connect(func(): target.visible = false)
 		
 		if auto_reset:
-			t.finished.connect(func(): target.scale.y = SCALE_MAX.y)
+			tween.finished.connect(func(): target.scale.y = SCALE_MAX.y)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -635,14 +641,14 @@ static func animate_fade_in(source_node: Node, target: Control, speed := DEFAULT
 		
 		target.modulate.a = ALPHA_MIN
 		
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'modulate:a', ALPHA_MAX, speed).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
+		tween.tween_property(target, 'modulate:a', ALPHA_MAX, speed).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -666,20 +672,20 @@ static func animate_fade_out(source_node: Node, target: Control, speed := DEFAUL
 		if auto_visible:
 			target.visible = true
 		
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'modulate:a', ALPHA_MIN, speed).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
+		tween.tween_property(target, 'modulate:a', ALPHA_MIN, speed).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
 		
 		if auto_visible:
-			t.finished.connect(func(): target.visible = false)
+			tween.finished.connect(func(): target.visible = false)
 		
 		if auto_reset:
-			t.finished.connect(func(): target.modulate.a = ALPHA_MAX)
+			tween.finished.connect(func(): target.modulate.a = ALPHA_MAX)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -700,10 +706,10 @@ static func animate_from_left_to_center(source_node: Node, target: Control, spee
 		
 		target.position.x = -target.size.x
 		
-		var t = source_node.create_tween()
-		t.tween_property(target, 'position:x', get_node_center(source_node, target), speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		var tween = source_node.create_tween()
+		tween.tween_property(target, 'position:x', get_node_center(source_node, target), speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -722,13 +728,13 @@ static func animate_from_center_to_left(source_node: Node, target: Control, spee
 		if auto_visible:
 			target.visible = true
 		
-		var t = source_node.create_tween()
-		t.tween_property(target, 'position:x', -target.size.x, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		var tween = source_node.create_tween()
+		tween.tween_property(target, 'position:x', -target.size.x, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
 		if auto_visible:
-			t.finished.connect(func(): target.visible = false)
+			tween.finished.connect(func(): target.visible = false)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -758,14 +764,14 @@ static func animate_from_right_to_center(source_node: Node, target: Control, spe
 		
 		target.position.x = viewport.get_visible_rect().size.x
 		
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'position:x', get_node_center(source_node, target), speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		tween.tween_property(target, 'position:x', get_node_center(source_node, target), speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -784,13 +790,13 @@ static func animate_from_center_to_right(source_node: Node, target: Control, spe
 		if auto_visible:
 			target.visible = true
 		
-		var t = source_node.create_tween()
-		t.tween_property(target, 'position:x', target.size.x, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		var tween = source_node.create_tween()
+		tween.tween_property(target, 'position:x', target.size.x, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
 		if auto_visible:
-			t.finished.connect(func(): target.visible = false)
+			tween.finished.connect(func(): target.visible = false)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -822,14 +828,14 @@ static func animate_slide_from_bottom(source_node: Node, target: Control, offset
 		var viewport_size = viewport.get_visible_rect().size.y
 		target.position.y = viewport_size
 		
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'position:y', (viewport_size - target.size.y) - offset, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		tween.tween_property(target, 'position:y', (viewport_size - target.size.y) - offset, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -857,17 +863,17 @@ static func animate_slide_to_bottom(source_node: Node, target: Control, speed :=
 			push_warning("UiAnimUtils: source_node has no viewport")
 			return Signal()
 		
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'position:y', viewport.get_visible_rect().size.y, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		tween.tween_property(target, 'position:y', viewport.get_visible_rect().size.y, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
 		if auto_visible:
-			t.finished.connect(func(): target.visible = false)
+			tween.finished.connect(func(): target.visible = false)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -899,14 +905,14 @@ static func animate_from_top_to_center(source_node: Node, target: Control, speed
 		
 		target.position.y = -target.size.y
 		
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'position:y', get_node_center_y(source_node, target), speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		tween.tween_property(target, 'position:y', get_node_center_y(source_node, target), speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -929,17 +935,17 @@ static func animate_from_center_to_top(source_node: Node, target: Control, speed
 		if auto_visible:
 			target.visible = true
 		
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'position:y', -target.size.y, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		tween.tween_property(target, 'position:y', -target.size.y, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
 		if auto_visible:
-			t.finished.connect(func(): target.visible = false)
+			tween.finished.connect(func(): target.visible = false)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -969,14 +975,14 @@ static func animate_from_bottom_to_center(source_node: Node, target: Control, sp
 		
 		target.position.y = viewport.get_visible_rect().size.y
 		
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'position:y', get_node_center_y(source_node, target), speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		tween.tween_property(target, 'position:y', get_node_center_y(source_node, target), speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -1004,17 +1010,17 @@ static func animate_from_center_to_bottom(source_node: Node, target: Control, sp
 			push_warning("UiAnimUtils: source_node has no viewport")
 			return Signal()
 		
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'position:y', viewport.get_visible_rect().size.y, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		tween.tween_property(target, 'position:y', viewport.get_visible_rect().size.y, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
 		if auto_visible:
-			t.finished.connect(func(): target.visible = false)
+			tween.finished.connect(func(): target.visible = false)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -1045,14 +1051,14 @@ static func animate_bounce_in(source_node: Node, target: Control, speed := DEFAU
 		
 		target.scale = SCALE_MIN
 		
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'scale', SCALE_MAX, speed).set_trans(Tween.TRANS_BOUNCE).set_ease(easing)
+		tween.tween_property(target, 'scale', SCALE_MAX, speed).set_trans(Tween.TRANS_BOUNCE).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -1086,20 +1092,20 @@ static func animate_bounce_out(source_node: Node, target: Control, speed := DEFA
 		if auto_setup:
 			target.scale = SCALE_MAX
 
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'scale', SCALE_MIN, speed).set_trans(Tween.TRANS_BOUNCE).set_ease(easing)
+		tween.tween_property(target, 'scale', SCALE_MIN, speed).set_trans(Tween.TRANS_BOUNCE).set_ease(easing)
 		
 		if auto_visible:
-			t.finished.connect(func(): target.visible = false)
+			tween.finished.connect(func(): target.visible = false)
 		
 		if auto_reset:
-			t.finished.connect(func(): target.scale = SCALE_MAX)
+			tween.finished.connect(func(): target.scale = SCALE_MAX)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -1130,14 +1136,14 @@ static func animate_elastic_in(source_node: Node, target: Control, speed := DEFA
 		
 		target.scale = SCALE_MIN
 		
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'scale', SCALE_MAX, speed).set_trans(Tween.TRANS_ELASTIC).set_ease(easing)
+		tween.tween_property(target, 'scale', SCALE_MAX, speed).set_trans(Tween.TRANS_ELASTIC).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -1171,20 +1177,20 @@ static func animate_elastic_out(source_node: Node, target: Control, speed := DEF
 		if auto_setup:
 			target.scale = SCALE_MAX
 
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'scale', SCALE_MIN, speed).set_trans(Tween.TRANS_ELASTIC).set_ease(easing)
+		tween.tween_property(target, 'scale', SCALE_MIN, speed).set_trans(Tween.TRANS_ELASTIC).set_ease(easing)
 		
 		if auto_visible:
-			t.finished.connect(func(): target.visible = false)
+			tween.finished.connect(func(): target.visible = false)
 		
 		if auto_reset:
-			t.finished.connect(func(): target.scale = SCALE_MAX)
+			tween.finished.connect(func(): target.scale = SCALE_MAX)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -1216,14 +1222,14 @@ static func animate_rotate_in(source_node: Node, target: Control, speed := DEFAU
 		
 		target.rotation_degrees = start_angle
 		
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'rotation_degrees', 0.0, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		tween.tween_property(target, 'rotation_degrees', 0.0, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -1252,20 +1258,20 @@ static func animate_rotate_out(source_node: Node, target: Control, speed := DEFA
 		if auto_setup:
 			target.rotation_degrees = 0.0
 		
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
-		t.tween_property(target, 'rotation_degrees', end_angle, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		tween.tween_property(target, 'rotation_degrees', end_angle, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
 		if auto_visible:
-			t.finished.connect(func(): target.visible = false)
+			tween.finished.connect(func(): target.visible = false)
 		
 		if auto_reset:
-			t.finished.connect(func(): target.rotation_degrees = 0.0)
+			tween.finished.connect(func(): target.rotation_degrees = 0.0)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -1297,17 +1303,17 @@ static func animate_pop(source_node: Node, target: Control, speed := DEFAULT_SPE
 		
 		target.scale = SCALE_MIN
 		
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		# First tween: scale to overshoot
-		t.tween_property(target, 'scale', Vector2(overshoot, overshoot) * SCALE_MAX, speed * 0.6).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		tween.tween_property(target, 'scale', Vector2(overshoot, overshoot) * SCALE_MAX, speed * 0.6).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		# Second tween: settle back to 1.0
-		t.tween_property(target, 'scale', SCALE_MAX, speed * 0.4).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		tween.tween_property(target, 'scale', SCALE_MAX, speed * 0.4).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -1339,17 +1345,17 @@ static func animate_pulse(source_node: Node, target: Control, speed := 0.5, puls
 			target.pivot_offset = pivot_offset
 		
 		var original_scale = target.scale
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		# Create pulse cycles
 		for i in range(pulse_count):
-			t.tween_property(target, 'scale', Vector2(pulse_amount, pulse_amount) * original_scale, speed * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
-			t.tween_property(target, 'scale', original_scale, speed * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
+			tween.tween_property(target, 'scale', Vector2(pulse_amount, pulse_amount) * original_scale, speed * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
+			tween.tween_property(target, 'scale', original_scale, speed * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	if repeat_count != 0:
 		return _loop_animation(source_node, target, animation_callable, repeat_count)
@@ -1386,8 +1392,8 @@ static func animate_shake(source_node: Node, target: Control, speed := 0.5, inte
 		
 		# Use saved position from baseline snapshot
 		var original_position = saved_position
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
@@ -1398,10 +1404,10 @@ static func animate_shake(source_node: Node, target: Control, speed := 0.5, inte
 			var offset_x = intensity * (1.0 if i % 2 == 0 else -1.0)
 			var y_index = int(i * 0.5)
 			var offset_y = intensity * 0.5 * (1.0 if y_index % 2 == 0 else -1.0)
-			t.tween_property(target, 'position', original_position + Vector2(offset_x, offset_y), shake_duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
-			t.tween_property(target, 'position', original_position, shake_duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
+			tween.tween_property(target, 'position', original_position + Vector2(offset_x, offset_y), shake_duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
+			tween.tween_property(target, 'position', original_position, shake_duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	var result_signal: Signal
 	if repeat_count != 0:
@@ -1483,7 +1489,7 @@ static func animate_reset_all(source_node: Node, target: Control, duration: floa
 
 	# Use position tween's finished signal as the primary completion signal
 	# All tweens will complete at the same time since they have the same duration
-	var t = tween_position
+	var tween = tween_position
 
 	# Set non-animated properties immediately (pivot_offset and visible don't animate smoothly)
 	target.pivot_offset = snapshot.pivot_offset
@@ -1491,11 +1497,11 @@ static func animate_reset_all(source_node: Node, target: Control, duration: floa
 
 	# Connect to completion to optionally clear unified snapshot
 	if clear_unified_after:
-		t.finished.connect(func():
+		tween.finished.connect(func():
 			_clear_unified_snapshot(target)
 		, CONNECT_ONE_SHOT)
 
-	return t.finished
+	return tween.finished
 
 ## Manually clears the unified snapshot system for a target control.
 ## Useful for edge cases where animations are stopped manually or nodes are freed.
@@ -1529,8 +1535,7 @@ static func animate_breathing(source_node: Node, target: Control, duration: floa
 		target.pivot_offset = pivot_offset
 	
 	var original_scale = target.scale
-	var breath_amount = 1.05  # Subtle 5% scale increase
-	
+
 	var animation_callable = func() -> Signal:
 		# Get helper from source_node metadata if available
 		var helper: _AnimationLoopHelper = null
@@ -1539,17 +1544,17 @@ static func animate_breathing(source_node: Node, target: Control, duration: floa
 			if helper_ref and helper_ref.get_ref():
 				helper = helper_ref.get_ref() as _AnimationLoopHelper
 		
-		var t = _AnimationLoopHelper.create_tracked_tween(source_node, helper)
-		if not t:
+		var tween = _AnimationLoopHelper.create_tracked_tween(source_node, helper)
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		# Scale up
-		t.tween_property(target, 'scale', original_scale * breath_amount, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
+		tween.tween_property(target, 'scale', original_scale * BREATHING_SCALE_MULTIPLIER, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
 		# Scale down
-		t.tween_property(target, 'scale', original_scale, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
+		tween.tween_property(target, 'scale', original_scale, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	return _loop_animation(source_node, target, animation_callable, repeat_count)
 
@@ -1575,22 +1580,21 @@ static func animate_wobble(source_node: Node, target: Control, duration: float =
 		target.pivot_offset = pivot_offset
 	
 	var original_rotation = target.rotation_degrees
-	var wobble_amount = 3.0  # Subtle 3 degree rotation
-	
+
 	var animation_callable = func() -> Signal:
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		# Rotate left
-		t.tween_property(target, 'rotation_degrees', original_rotation - wobble_amount, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
+		tween.tween_property(target, 'rotation_degrees', original_rotation - WOBBLE_ROTATION_DEGREES, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
 		# Rotate right
-		t.tween_property(target, 'rotation_degrees', original_rotation + wobble_amount, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
+		tween.tween_property(target, 'rotation_degrees', original_rotation + WOBBLE_ROTATION_DEGREES, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
 		# Back to center
-		t.tween_property(target, 'rotation_degrees', original_rotation, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
+		tween.tween_property(target, 'rotation_degrees', original_rotation, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	return _loop_animation(source_node, target, animation_callable, repeat_count)
 
@@ -1604,7 +1608,7 @@ static func animate_wobble(source_node: Node, target: Control, duration: float =
 ## [param auto_visible]: If true, automatically sets visible=true before animation (default: false).
 ## Note: Position is automatically preserved using the unified baseline snapshot system.
 ## [return]: Signal that emits when animation finishes (or can be used to track infinite loops).
-static func animate_float(source_node: Node, target: Control, duration: float = 2.0, repeat_count: int = -1, easing: int = Tween.EASE_OUT, float_distance: float = 10.0, auto_visible: bool = false) -> Signal:
+static func animate_float(source_node: Node, target: Control, duration: float = 2.0, repeat_count: int = -1, easing: int = Tween.EASE_OUT, float_distance: float = DEFAULT_FLOAT_DISTANCE_PX, auto_visible: bool = false) -> Signal:
 	if not source_node or not target:
 		push_warning("UiAnimUtils: Invalid source_node or target for animate_float")
 		return Signal()
@@ -1622,8 +1626,8 @@ static func animate_float(source_node: Node, target: Control, duration: float = 
 		saved_position = target.position
 	
 	var animation_callable = func() -> Signal:
-		var t = source_node.create_tween()
-		if not t:
+		var tween = source_node.create_tween()
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
@@ -1631,11 +1635,11 @@ static func animate_float(source_node: Node, target: Control, duration: float = 
 		var original_position = saved_position
 		
 		# Move up
-		t.tween_property(target, 'position:y', original_position.y - float_distance, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
+		tween.tween_property(target, 'position:y', original_position.y - float_distance, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
 		# Move down
-		t.tween_property(target, 'position:y', original_position.y, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
+		tween.tween_property(target, 'position:y', original_position.y, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 
 	var result_signal = _loop_animation(source_node, target, animation_callable, repeat_count)
 
@@ -1672,17 +1676,17 @@ static func animate_glow_pulse(source_node: Node, target: Control, duration: flo
 			if helper_ref and helper_ref.get_ref():
 				helper = helper_ref.get_ref() as _AnimationLoopHelper
 		
-		var t = _AnimationLoopHelper.create_tracked_tween(source_node, helper)
-		if not t:
+		var tween = _AnimationLoopHelper.create_tracked_tween(source_node, helper)
+		if not tween:
 			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		# Fade to min
-		t.tween_property(target, 'modulate:a', glow_min_alpha, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
+		tween.tween_property(target, 'modulate:a', glow_min_alpha, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
 		# Fade back to original
-		t.tween_property(target, 'modulate:a', original_alpha, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
+		tween.tween_property(target, 'modulate:a', original_alpha, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(easing)
 		
-		return t.finished
+		return tween.finished
 	
 	return _loop_animation(source_node, target, animation_callable, repeat_count)
 
@@ -1726,22 +1730,22 @@ static func animate_color_flash(source_node: Node, target: Control, flash_color:
 		original_modulate.a
 	)
 	
-	var t = source_node.create_tween()
-	if not t:
+	var tween = source_node.create_tween()
+	if not tween:
 		push_warning("UiAnimUtils: Failed to create tween")
 		return Signal()
 	
 	# Flash to color
-	t.tween_property(target, 'modulate', flash_modulate, duration * 0.5).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
+	tween.tween_property(target, 'modulate', flash_modulate, duration * 0.5).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
 	# Flash back to original (using the stored original from snapshot)
-	t.tween_property(target, 'modulate', original_modulate, duration * 0.5).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
+	tween.tween_property(target, 'modulate', original_modulate, duration * 0.5).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
 
 	# Connect to completion to release unified snapshot
-	t.finished.connect(func():
+	tween.finished.connect(func():
 		_release_unified_snapshot(target, true)
 	, CONNECT_ONE_SHOT)
 
-	return t.finished
+	return tween.finished
 
 ## Stagger animations (delegates to [UiAnimStaggerRunner]).
 static func stop_stagger_animations(source_node: Node, targets: Array[Control]) -> void:

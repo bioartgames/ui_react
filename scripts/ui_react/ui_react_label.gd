@@ -24,9 +24,9 @@ func _ready() -> void:
 ## Validates animation targets and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_targets() -> void:
-	var r = UiReactAnimTargetHelper.validate_and_map_triggers(self, "UiReactLabel", animation_targets)
-	animation_targets = r["animation_targets"]
-	var trigger_map = r["trigger_map"]
+	var validation_result := UiReactAnimTargetHelper.validate_and_map_triggers(self, "UiReactLabel", animation_targets)
+	animation_targets = validation_result.animation_targets
+	var trigger_map: Dictionary = validation_result.trigger_map
 	
 	# Connect signals based on which triggers are used
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER):
@@ -86,10 +86,10 @@ func _rebind_nested_states(value: Variant) -> void:
 	if value is Array:
 		for v in value:
 			if v is UiState:
-				var st: UiState = v
-				if not st.value_changed.is_connected(_on_nested_changed):
-					st.value_changed.connect(_on_nested_changed)
-				_nested_states.append(st)
+				var nested_state: UiState = v
+				if not nested_state.value_changed.is_connected(_on_nested_changed):
+					nested_state.value_changed.connect(_on_nested_changed)
+				_nested_states.append(nested_state)
 
 func _on_nested_changed(_new_value: Variant, _old_value: Variant) -> void:
 	if text_state:

@@ -9,10 +9,10 @@ static func create_safe_tween(node: Node) -> Tween:
 	if not node:
 		push_warning("UiAnimTweenFactory.create_safe_tween(): Cannot create tween - node is null.")
 		return null
-	var t = node.create_tween()
-	if not t:
+	var tween = node.create_tween()
+	if not tween:
 		push_warning("UiAnimTweenFactory.create_safe_tween(): Failed to create tween on node '%s'." % node.name)
-	return t
+	return tween
 
 ## Calculates the center X position of a node relative to the viewport.
 static func get_node_center(source_node: Node, target: Control) -> float:

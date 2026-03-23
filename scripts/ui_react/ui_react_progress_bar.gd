@@ -33,9 +33,9 @@ func _is_completed() -> bool:
 ## Validates animation targets and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_targets() -> void:
-	var r = UiReactAnimTargetHelper.validate_and_map_triggers(self, "UiReactProgressBar", animation_targets)
-	animation_targets = r["animation_targets"]
-	var trigger_map = r["trigger_map"]
+	var validation_result := UiReactAnimTargetHelper.validate_and_map_triggers(self, "UiReactProgressBar", animation_targets)
+	animation_targets = validation_result.animation_targets
+	var trigger_map: Dictionary = validation_result.trigger_map
 	
 	# Connect signals based on which triggers are used
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER):
@@ -89,14 +89,14 @@ func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 func _on_value_state_changed(new_value: Variant, _old_value: Variant) -> void:
 	if _updating:
 		return
-	var target := float(new_value)
-	if is_equal_approx(value, target):
+	var target_value := float(new_value)
+	if is_equal_approx(value, target_value):
 		return
 	_updating = true
-	value = target
+	value = target_value
 	
 	# Trigger animations if configured
 	if animation_targets.size() > 0:
-		_on_trigger_value_changed(target)
+		_on_trigger_value_changed(target_value)
 	
 	_updating = false

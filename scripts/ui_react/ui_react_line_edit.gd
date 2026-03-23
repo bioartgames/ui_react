@@ -26,9 +26,9 @@ func _ready() -> void:
 ## Validates animation targets and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_targets() -> void:
-	var r = UiReactAnimTargetHelper.validate_and_map_triggers(self, "UiReactLineEdit", animation_targets)
-	animation_targets = r["animation_targets"]
-	var trigger_map = r["trigger_map"]
+	var validation_result := UiReactAnimTargetHelper.validate_and_map_triggers(self, "UiReactLineEdit", animation_targets)
+	animation_targets = validation_result.animation_targets
+	var trigger_map: Dictionary = validation_result.trigger_map
 	
 	# Connect signals based on which triggers are used
 	if trigger_map.has(UiAnimTarget.Trigger.TEXT_ENTERED):

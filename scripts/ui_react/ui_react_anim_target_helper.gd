@@ -1,6 +1,12 @@
 class_name UiReactAnimTargetHelper
 extends RefCounted
 
+## Result of [method validate_and_map_triggers] (typed container; avoids stringly dictionary keys).
+class AnimTargetValidationResult:
+	extends RefCounted
+	var animation_targets: Array[UiAnimTarget] = []
+	var trigger_map: Dictionary = {}
+
 static func validate_animation_targets(owner: Control, component_name: String, animation_targets: Array[UiAnimTarget], allow_empty_for: Array[int] = []) -> Array[UiAnimTarget]:
 	var valid_targets: Array[UiAnimTarget] = []
 
@@ -37,9 +43,11 @@ static func collect_triggers(animation_targets: Array[UiAnimTarget]) -> Dictiona
 	return trigger_map
 
 ## Validates targets and returns both the filtered array and trigger map (reduces boilerplate).
-static func validate_and_map_triggers(owner: Control, component_name: String, animation_targets: Array[UiAnimTarget], allow_empty_for: Array[int] = []) -> Dictionary:
-	var valid = validate_animation_targets(owner, component_name, animation_targets, allow_empty_for)
-	return {"animation_targets": valid, "trigger_map": collect_triggers(valid)}
+static func validate_and_map_triggers(owner: Control, component_name: String, animation_targets: Array[UiAnimTarget], allow_empty_for: Array[int] = []) -> AnimTargetValidationResult:
+	var result := AnimTargetValidationResult.new()
+	result.animation_targets = validate_animation_targets(owner, component_name, animation_targets, allow_empty_for)
+	result.trigger_map = collect_triggers(result.animation_targets)
+	return result
 
 static func trigger_animations(owner: Node, animation_targets: Array[UiAnimTarget], trigger_type: UiAnimTarget.Trigger, respects_disabled: bool = false, is_disabled: bool = false) -> void:
 	if animation_targets.is_empty():
