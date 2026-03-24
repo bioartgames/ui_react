@@ -1,4 +1,10 @@
 ## Show/hide string presets and [enum UiAnimUtils.Preset] dispatch for [UiAnimUtils].
+##
+## [code]show_animated[/code] / [code]hide_animated[/code] [param animation_type] strings:
+## [code]pop[/code], [code]expand[/code], [code]shrink[/code], [code]fade_in[/code], [code]fade_out[/code],
+## [code]slide_from_left[/code], [code]slide_from_right[/code], [code]slide_from_top[/code],
+## [code]slide_to_left[/code], [code]slide_to_right[/code], [code]slide_to_top[/code].
+## Unknown or empty strings skip the tween but still toggle visibility where applicable.
 class_name UiAnimPresetRunner
 extends RefCounted
 

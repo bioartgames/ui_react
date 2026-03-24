@@ -1,18 +1,13 @@
 extends TabContainer
 class_name UiReactTabContainer
 
-## Binds the selected tab index to a UiState resource for two-way data binding.
+## Two-way binding for current tab index ([int]). **Optional** — assign for external control of selection.
 @export var selected_state: UiState
 
-## Configuration resource for dynamic tab management, content binding, and tab states.
-## Create a UiTabContainerCfg resource and assign it here to enable advanced tab features.
+## **Optional** — Advanced tabs: dynamic tab list, per-tab content [UiState]s, disabled/visible arrays ([UiTabContainerCfg]).
 @export var tab_config: UiTabContainerCfg
 
-## Targets to animate based on tab container events.
-##
-## Drag nodes here and configure each target's animation properties directly in the Inspector.
-## Each target can specify its own trigger (selection changed, hover enter/exit), animation type,
-## duration, and settings - no resource files needed!
+## **Optional** — Inspector-driven tweens (selection changed, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
 var _updating: bool = false
@@ -130,7 +125,7 @@ func _on_tabs_state_changed(new_value: Variant, _old_value: Variant) -> void:
 
 	_updating = false
 
-func _on_tab_content_state_changed(tab_index: int, property: String, new_value: Variant, _old_value: Variant) -> void:
+func _on_tab_content_state_changed(tab_index: int, property: StringName, new_value: Variant, _old_value: Variant) -> void:
 	UiTabContentStateBinder.propagate_content_change(self, tab_index, property, new_value)
 
 func _on_disabled_tabs_state_changed(new_value: Variant, _old_value: Variant) -> void:
@@ -173,4 +168,4 @@ func _on_visible_tabs_state_changed(new_value: Variant, _old_value: Variant) -> 
 
 
 func _expect_array_state(value: Variant, field_name: String) -> Variant:
-	return UiReactStateBindingHelper.expect_array_state(name, field_name, value)
+	return UiReactStateBindingHelper.expect_array_state("UiReactTabContainer", name, field_name, value)

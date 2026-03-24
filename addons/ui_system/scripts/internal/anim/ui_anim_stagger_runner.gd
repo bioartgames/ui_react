@@ -2,15 +2,19 @@
 class_name UiAnimStaggerRunner
 extends RefCounted
 
+const META_STAGGER_HELPER: StringName = &"_is_stagger_helper"
+const META_STAGGER_TYPE: StringName = &"_stagger_type"
+const METHOD_STOP: StringName = &"stop"
+
 ## Stops all active stagger animations for the given targets.
 static func stop_stagger_animations(source_node: Node, targets: Array[Control]) -> void:
 	if not source_node:
 		return
 
 	for child in source_node.get_children():
-		if child.has_meta("_is_stagger_helper"):
-			if child.has_method("stop"):
-				child.stop()
+		if child.has_meta(META_STAGGER_HELPER):
+			if child.has_method(METHOD_STOP):
+				child.call(METHOD_STOP)
 			else:
 				child.queue_free()
 
@@ -33,11 +37,11 @@ static func stop_stagger_animations(source_node: Node, targets: Array[Control]) 
 ## Animates multiple controls with a stagger effect.
 static func animate_stagger(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_config: UiAnimTarget = null) -> Signal:
 	if not source_node or targets.size() == 0:
-		push_warning("UiAnimStaggerRunner: Invalid source_node or empty targets for animate_stagger")
+		push_warning("UiAnimStaggerRunner: Invalid source_node or empty targets. Fix: Pass a valid node and a non-empty Array of controls.")
 		return Signal()
 
 	if not animation_config:
-		push_warning("UiAnimStaggerRunner: animate_stagger requires animation_config")
+		push_warning("UiAnimStaggerRunner: animate_stagger called without animation_config. Fix: Pass a UiAnimTarget resource describing the animation.")
 		return Signal()
 
 	stop_stagger_animations(source_node, targets)
@@ -61,11 +65,11 @@ static func animate_stagger(source_node: Node, targets: Array[Control], delay_be
 ## Animates multiple controls with per-target configs.
 static func animate_stagger_multi(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_configs: Array[UiAnimTarget] = []) -> Signal:
 	if not source_node or targets.size() == 0:
-		push_warning("UiAnimStaggerRunner: Invalid source_node or empty targets for animate_stagger_multi")
+		push_warning("UiAnimStaggerRunner: Invalid source_node or empty targets for animate_stagger_multi. Fix: Pass a valid node and a non-empty Array of controls.")
 		return Signal()
 
 	if animation_configs.size() == 0:
-		push_warning("UiAnimStaggerRunner: animate_stagger_multi requires at least one animation_config")
+		push_warning("UiAnimStaggerRunner: animate_stagger_multi requires at least one UiAnimTarget in animation_configs. Fix: Add at least one entry to the array.")
 		return Signal()
 
 	stop_stagger_animations(source_node, targets)
@@ -102,8 +106,8 @@ class _StaggerHelper extends Node:
 	var _targets: Array[Control] = []
 
 	func _init() -> void:
-		set_meta("_is_stagger_helper", true)
-		set_meta("_stagger_type", "stagger")
+		set_meta(META_STAGGER_HELPER, true)
+		set_meta(META_STAGGER_TYPE, &"stagger")
 
 	func stop() -> void:
 		_is_running = false

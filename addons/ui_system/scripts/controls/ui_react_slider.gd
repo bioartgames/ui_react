@@ -1,13 +1,10 @@
 extends HSlider
 class_name UiReactSlider
 
+## Two-way binding for the slider value ([float]). **Assign** for reactive sync; omit for a local-only slider.
 @export var value_state: UiState
 
-## Targets to animate based on slider events.
-##
-## Drag nodes here and configure each target's animation properties directly in the Inspector.
-## Each target can specify its own trigger (value changed, increased, decreased, drag started/ended, hover),
-## animation type, duration, and settings - no resource files needed!
+## **Optional** — Inspector-driven tweens (value changed, drag, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
 var _updating: bool = false

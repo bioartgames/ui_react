@@ -1,7 +1,7 @@
 class_name UiState
 extends Resource
 
-signal value_changed(new_value, old_value)
+signal value_changed(new_value: Variant, old_value: Variant)
 
 @export var value: Variant
 
@@ -13,7 +13,7 @@ func set_value(new_value: Variant) -> void:
 		return
 	var old_value: Variant = value
 	value = new_value
-	emit_signal("value_changed", new_value, old_value)
+	value_changed.emit(new_value, old_value)
 	emit_changed()
 
 func set_silent(new_value: Variant) -> void:

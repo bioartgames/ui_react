@@ -1,14 +1,12 @@
 extends CheckBox
 class_name UiReactCheckBox
 
+## Two-way binding for checked state ([bool]). **Optional** — omit for a plain CheckBox.
 @export var checked_state: UiState
+## Two-way binding for disabled state ([bool]). **Optional**.
 @export var disabled_state: UiState
 
-## Targets to animate based on checkbox events.
-##
-## Drag nodes here and configure each target's animation properties directly in the Inspector.
-## Each target can specify its own trigger (toggled on/off, hover enter/exit), animation type,
-## duration, and settings - no resource files needed! Leave empty to use manual signal connections.
+## **Optional** — Inspector-driven tweens (toggled, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
 var _updating: bool = false

@@ -2,6 +2,11 @@
 class_name UiReactStateBindingHelper
 extends RefCounted
 
+## Standard setup warning: [code]ComponentClass 'NodeName': issue. Fix: hint[/code].
+static func warn_setup(component_class: String, owner: Node, issue: String, fix: String) -> void:
+	var node_name := "?" if owner == null else str(owner.name)
+	push_warning("%s '%s': %s Fix: %s" % [component_class, node_name, issue, fix])
+
 ## Invokes [param sync_fn] with current and previous value equal (typical init path).
 static func initial_sync(state: UiState, sync_fn: Callable) -> void:
 	if state:
@@ -28,10 +33,13 @@ static func approx_equal_float(a: float, b: float, epsilon: float = -1.0) -> boo
 	return abs(a - b) <= epsilon
 
 ## Returns [param value] if it is an [Array], else warns and returns [code]null[/code].
-static func expect_array_state(owner_name: String, field_name: String, value: Variant) -> Variant:
+static func expect_array_state(component_class: String, owner_name: String, field_name: String, value: Variant) -> Variant:
 	if value is Array:
 		return value
-	push_warning("UiReactTabContainer '%s': %s.value must be an Array. Got: %s" % [owner_name, field_name, typeof(value)])
+	var issue := "%s must be an Array (got type %s)." % [field_name, typeof(value)]
+	var fix := "Set this UiState's value to an Array in the Inspector or from code (e.g. [\"Tab A\", \"Tab B\"])."
+	# Owner may be unavailable; use name for context.
+	push_warning("%s '%s': %s Fix: %s" % [component_class, owner_name, issue, fix])
 	return null
 
 ## Flat text: [Array] elements use [method @GlobalScope.str] (no nested [UiState] expansion).

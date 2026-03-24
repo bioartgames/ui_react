@@ -1,13 +1,10 @@
 extends LineEdit
 class_name UiReactLineEdit
 
+## Two-way binding for text ([String]). **Assign** for reactive sync.
 @export var text_state: UiState
 
-## Targets to animate based on line edit events.
-##
-## Drag nodes here and configure each target's animation properties directly in the Inspector.
-## Each target can specify its own trigger (text changed, text entered, focus entered/exited, hover),
-## animation type, duration, and settings - no resource files needed!
+## **Optional** — Inspector-driven tweens (text, focus, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
 var _updating: bool = false

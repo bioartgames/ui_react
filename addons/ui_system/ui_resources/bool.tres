@@ -1,8 +1,7 @@
-[gd_resource type="Resource" script_class="UiState" load_steps=2 format=3 uid="uid://cxl14gsie0wgq"]
+[gd_resource type="Resource" script_class="UiBoolState" load_steps=2 format=3 uid="uid://cxl14gsie0wgq"]
 
-[ext_resource type="Script" uid="uid://st55qiias3cb" path="res://addons/ui_system/scripts/api/models/ui_state.gd" id="1_y1td4"]
+[ext_resource type="Script" path="res://addons/ui_system/scripts/api/models/ui_bool_state.gd" id="1_y1td4"]
 
 [resource]
 script = ExtResource("1_y1td4")
 value = false
-metadata/_custom_type_script = "uid://st55qiias3cb"

@@ -4,6 +4,9 @@
 class_name UiAnimLoopRunner
 extends RefCounted
 
+## Must match [member UiAnimRuntimeControl.META_ANIMATION_LOOP_HELPER].
+const META_ANIMATION_LOOP_HELPER: StringName = &"_is_animation_loop_helper"
+
 static var _helper_stack: Array = []
 
 static func push_loop_helper(helper: Node) -> void:
@@ -78,7 +81,7 @@ class _AnimationLoopHelper extends Node:
 	var _active_tweens: Array[Tween] = []
 
 	func _init() -> void:
-		set_meta("_is_animation_loop_helper", true)
+		set_meta(META_ANIMATION_LOOP_HELPER, true)
 
 	func _track_tween(tween: Tween) -> void:
 		_active_tweens.append(tween)

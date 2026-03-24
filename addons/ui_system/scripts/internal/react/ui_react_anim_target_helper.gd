@@ -18,16 +18,31 @@ static func validate_animation_targets(owner: Control, component_name: String, a
 			if allow_empty_for.has(anim_target.trigger):
 				valid_targets.append(anim_target)
 				continue
-			push_warning("%s '%s': UiAnimTarget has no target. Set target (NodePath) in the Inspector. Tip: Drag a node to target." % [component_name, owner.name])
+			UiReactStateBindingHelper.warn_setup(
+				component_name,
+				owner,
+				"UiAnimTarget has no Target NodePath.",
+				"Assign Target in the Inspector (drag a Control), or remove the empty animation target entry."
+			)
 			continue
 
 		var target_node = owner.get_node_or_null(anim_target.target)
 		if target_node == null:
-			push_warning("%s '%s': UiAnimTarget target '%s' not found. Check the NodePath." % [component_name, owner.name, anim_target.target])
+			UiReactStateBindingHelper.warn_setup(
+				component_name,
+				owner,
+				"UiAnimTarget NodePath '%s' could not be resolved from this node." % anim_target.target,
+				"Fix the path or pick a node that exists under this control."
+			)
 			continue
 
 		if not (target_node is Control):
-			push_warning("%s '%s': UiAnimTarget target '%s' is not a Control node." % [component_name, owner.name, anim_target.target])
+			UiReactStateBindingHelper.warn_setup(
+				component_name,
+				owner,
+				"UiAnimTarget NodePath '%s' does not reference a Control." % anim_target.target,
+				"Point Target at a Control node."
+			)
 			continue
 
 		valid_targets.append(anim_target)

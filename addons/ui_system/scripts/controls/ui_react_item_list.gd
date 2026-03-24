@@ -1,14 +1,12 @@
 extends ItemList
 class_name UiReactItemList
 
+## Two-way binding for selection (see script for value shape). **Assign** for reactive sync.
 @export var selected_state: UiState
+## **Optional** — wired for API consistency; ItemList has no disabled property in Godot 4.5, so changes are currently ignored.
 @export var disabled_state: UiState
 
-## Targets to animate based on item list events.
-##
-## Drag nodes here and configure each target's animation properties directly in the Inspector.
-## Each target can specify its own trigger (selection changed, hover enter/exit), animation type,
-## duration, and settings - no resource files needed!
+## **Optional** — Inspector-driven tweens (selection, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
 var _updating: bool = false

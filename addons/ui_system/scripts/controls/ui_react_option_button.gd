@@ -1,14 +1,12 @@
 extends OptionButton
 class_name UiReactOptionButton
 
+## Two-way binding for the selected item (typically [String] item text). **Assign** for reactive sync.
 @export var selected_state: UiState
+## Two-way binding for disabled state ([bool]). **Optional**.
 @export var disabled_state: UiState
 
-## Targets to animate based on option button events.
-##
-## Drag nodes here and configure each target's animation properties directly in the Inspector.
-## Each target can specify its own trigger (selection changed, hover enter/exit), animation type,
-## duration, and settings - no resource files needed! Leave empty to use manual signal connections.
+## **Optional** — Inspector-driven tweens (selection, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
 var _updating: bool = false

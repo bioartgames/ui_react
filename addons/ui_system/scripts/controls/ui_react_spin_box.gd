@@ -1,14 +1,12 @@
 extends SpinBox
 class_name UiReactSpinBox
 
+## Two-way binding for numeric value ([float]). **Assign** for reactive sync with [UiState].
 @export var value_state: UiState
+## Two-way binding for editable/disabled ([bool]). **Optional**.
 @export var disabled_state: UiState
 
-## Targets to animate based on spin box events.
-##
-## Drag nodes here and configure each target's animation properties directly in the Inspector.
-## Each target can specify its own trigger (value changed, increased, decreased, text entered, focus entered/exited, hover),
-## animation type, duration, and settings - no resource files needed!
+## **Optional** — Inspector-driven tweens (value, focus, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
 var _updating: bool = false

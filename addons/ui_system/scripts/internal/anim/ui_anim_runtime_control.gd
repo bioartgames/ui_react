@@ -2,6 +2,10 @@
 class_name UiAnimRuntimeControl
 extends RefCounted
 
+const META_ANIMATION_LOOP_HELPER: StringName = &"_is_animation_loop_helper"
+const METHOD_STOP: StringName = &"stop"
+const METHOD_EXECUTE_SEQUENCE: StringName = &"execute_sequence"
+
 
 static func stop_all_animations(source_node: Node, target: Control) -> void:
 	if not source_node or not target:
@@ -17,10 +21,10 @@ static func stop_all_animations(source_node: Node, target: Control) -> void:
 		checked_nodes[current_node] = true
 
 		for child in current_node.get_children():
-			if child.has_meta("_is_animation_loop_helper"):
-				if child.has_method("stop"):
-					child.call("stop")
-			elif child.has_method("execute_sequence"):
+			if child.has_meta(META_ANIMATION_LOOP_HELPER):
+				if child.has_method(METHOD_STOP):
+					child.call(METHOD_STOP)
+			elif child.has_method(METHOD_EXECUTE_SEQUENCE):
 				child.queue_free()
 
 			nodes_to_check.append(child)

@@ -1,13 +1,10 @@
 extends Label
 class_name UiReactLabel
 
+## Two-way binding for displayed text ([String] or nested structures — see [method _as_text]). **Assign** for reactive sync.
 @export var text_state: UiState
 
-## Targets to animate based on label events.
-##
-## Drag nodes here and configure each target's animation properties directly in the Inspector.
-## Each target can specify its own trigger (text changed, hover enter/exit), animation type,
-## duration, and settings - no resource files needed! Leave empty to use manual signal connections.
+## **Optional** — Inspector-driven tweens (text, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
 var _updating: bool = false
@@ -30,11 +27,9 @@ func _validate_animation_targets() -> void:
 	
 	# Connect signals based on which triggers are used
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER):
-		if not mouse_entered.is_connected(_on_trigger_hover_enter):
-			mouse_entered.connect(_on_trigger_hover_enter)
+		UiReactAnimTargetHelper.connect_if_absent(mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
-		if not mouse_exited.is_connected(_on_trigger_hover_exit):
-			mouse_exited.connect(_on_trigger_hover_exit)
+		UiReactAnimTargetHelper.connect_if_absent(mouse_exited, _on_trigger_hover_exit)
 
 ## Finishes initialization, allowing animations to trigger on text changes.
 func _finish_initialization() -> void:

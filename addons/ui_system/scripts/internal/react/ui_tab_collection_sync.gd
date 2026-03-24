@@ -2,6 +2,10 @@
 class_name UiTabCollectionSync
 extends RefCounted
 
+## Dictionary keys for tab descriptor entries (string keys; matches user-facing docs).
+const TAB_DATA_KEY_TITLE := "title"
+const TAB_DATA_KEY_ICON := "icon"
+
 ## Applies tab data from [param tabs_array]. Returns a new [param _previous_tab_index] value when it must be synced, else [code]null[/code].
 static func apply_tabs_from_array(tab_container: TabContainer, tabs_array: Array, tab_config: UiTabContainerCfg) -> Variant:
 	var current_count = tab_container.get_tab_count()
@@ -20,8 +24,8 @@ static func apply_tabs_from_array(tab_container: TabContainer, tabs_array: Array
 		var tab_icon: Texture2D = null
 
 		if tab_data is Dictionary:
-			tab_title = tab_data.get("title", "")
-			tab_icon = tab_data.get("icon", null)
+			tab_title = tab_data.get(TAB_DATA_KEY_TITLE, "")
+			tab_icon = tab_data.get(TAB_DATA_KEY_ICON, null)
 		elif tab_data is String:
 			tab_title = tab_data
 		else:

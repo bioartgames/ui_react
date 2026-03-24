@@ -1,11 +1,10 @@
-[gd_scene load_steps=29 format=3 uid="uid://1ctyp6anyhbh"]
+[gd_scene load_steps=30 format=3 uid="uid://1ctyp6anyhbh"]
 
 [ext_resource type="Script" uid="uid://3m8buhv674ja" path="res://addons/ui_system/scripts/controls/ui_react_check_box.gd" id="1_575s6"]
 [ext_resource type="Resource" uid="uid://cxl14gsie0wgq" path="res://addons/ui_system/ui_resources/bool.tres" id="2_qyhnf"]
 [ext_resource type="Script" uid="uid://lv5ixpw5hlvp" path="res://addons/ui_system/scripts/controls/ui_react_button.gd" id="3_12j7n"]
 [ext_resource type="Script" uid="uid://diigywt0dm170" path="res://addons/ui_system/scripts/api/models/ui_anim_target.gd" id="4_1o4e8"]
 [ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://addons/ui_system/scripts/controls/ui_react_slider.gd" id="5_52c3u"]
-[ext_resource type="Script" uid="uid://st55qiias3cb" path="res://addons/ui_system/scripts/api/models/ui_state.gd" id="6_qp046"]
 [ext_resource type="Script" uid="uid://s6xiov8r6bil" path="res://addons/ui_system/scripts/controls/ui_react_progress_bar.gd" id="7_rgfjq"]
 [ext_resource type="Script" uid="uid://bw7gojuop1hic" path="res://addons/ui_system/scripts/controls/ui_react_label.gd" id="8_ytw4g"]
 [ext_resource type="Resource" uid="uid://dp3cawtta2kbd" path="res://addons/ui_system/ui_resources/items.tres" id="9_5qj8y"]
@@ -15,6 +14,8 @@
 [ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://addons/ui_system/scripts/controls/ui_react_line_edit.gd" id="13_v64hs"]
 [ext_resource type="Script" uid="uid://duphbaan8pk5f" path="res://addons/ui_system/scripts/controls/ui_react_item_list.gd" id="14_jnjh5"]
 [ext_resource type="Script" uid="uid://diihw85b5p4bd" path="res://addons/ui_system/scripts/controls/ui_react_spin_box.gd" id="15_fsikj"]
+[ext_resource type="Script" uid="uid://cy1vsor6ek3xr" path="res://addons/ui_system/scripts/api/models/ui_float_state.gd" id="16_float"]
+[ext_resource type="Script" uid="uid://dwwa3tekslkjw" path="res://addons/ui_system/scripts/api/models/ui_array_state.gd" id="17_array"]
 
 [sub_resource type="Resource" id="Resource_p7nh0"]
 script = ExtResource("4_1o4e8")
@@ -22,7 +23,7 @@ target = NodePath(".")
 metadata/_custom_type_script = "uid://diigywt0dm170"
 
 [sub_resource type="Resource" id="3"]
-script = ExtResource("6_qp046")
+script = ExtResource("16_float")
 value = 25.0
 
 [sub_resource type="Resource" id="Resource_mbr4o"]
@@ -54,7 +55,7 @@ animation = 23
 metadata/_custom_type_script = "uid://diigywt0dm170"
 
 [sub_resource type="Resource" id="Resource_preset_label"]
-script = ExtResource("6_qp046")
+script = ExtResource("17_array")
 value = ["Preset: ", ExtResource("9_5qj8y")]
 
 [sub_resource type="Resource" id="Resource_mbe61"]
@@ -63,6 +64,7 @@ target = NodePath(".")
 trigger = 5
 animation = 22
 flash_color = Color(0.8705595, 1.00111965e-05, 0.5636636, 1)
+flash_intensity = 2.0
 metadata/_custom_type_script = "uid://diigywt0dm170"
 
 [sub_resource type="Resource" id="Resource_pf7w8"]
@@ -73,9 +75,8 @@ animation = 16
 metadata/_custom_type_script = "uid://diigywt0dm170"
 
 [sub_resource type="Resource" id="Resource_iwetj"]
-script = ExtResource("6_qp046")
+script = ExtResource("17_array")
 value = ["Player: ", ExtResource("12_ysw5a")]
-metadata/_custom_type_script = "uid://st55qiias3cb"
 
 [sub_resource type="Resource" id="Resource_52s1b"]
 script = ExtResource("4_1o4e8")

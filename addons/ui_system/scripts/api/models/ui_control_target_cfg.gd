@@ -30,9 +30,9 @@ extends UiTargetCfg
 ## The target control component.
 ##
 ## **How to set:**
-## - **Drag and drop** (recommended): Drag a node from the scene tree to this field
+## - **Drag and drop** (recommended): Drag a [Control] from the scene tree to this field
 ## - **Manual path**: Type a NodePath (e.g., "../MyPanel", "$Container/MyButton")
-@export var target: NodePath = NodePath()
+@export_node_path("Control") var target: NodePath = NodePath()
 
 ## Inline animation configuration (no resource file needed).
 ## Uses [UiAnimTarget] as the single animation model (trigger is ignored when applying from UiControlTargetCfg).

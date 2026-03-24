@@ -60,8 +60,8 @@ const RESET_INSTANT_DURATION_SECONDS := 0.0
 ## ============================================
 
 ## The target control to animate.
-## Drag and drop a node from the scene tree to this field.
-@export var target: NodePath = NodePath()
+## Drag and drop a node from the scene tree to this field (only [Control] nodes are accepted).
+@export_node_path("Control") var target: NodePath = NodePath()
 
 ## When to trigger this animation (dropdown selection in Inspector).
 @export var trigger: Trigger = Trigger.PRESSED
@@ -111,32 +111,32 @@ const RESET_INSTANT_DURATION_SECONDS := 0.0
 
 @export_group("Rotate (for ROTATE_IN animation)")
 ## Starting angle in degrees for ROTATE_IN animation (default: -360.0).
-@export var rotate_start_angle: float = -360.0
+@export_range(-720.0, 720.0, 0.1, "or_greater", "or_less") var rotate_start_angle: float = -360.0
 
 @export_group("Pop (for POP animation)")
 ## Overshoot amount for POP animation (default: 1.2, meaning 20% overshoot).
-@export var pop_overshoot: float = 1.2
+@export_range(0.0, 5.0, 0.01, "or_greater") var pop_overshoot: float = 1.2
 
 @export_group("Pulse (for PULSE animation)")
 ## Pulse scale amount for PULSE animation (default: 1.1, meaning 10% scale increase).
-@export var pulse_amount: float = 1.1
+@export_range(0.0, 5.0, 0.01, "or_greater") var pulse_amount: float = 1.1
 
 ## Number of pulses for PULSE animation (default: 2).
-@export var pulse_count: int = 2
+@export_range(0, 999) var pulse_count: int = 2
 
 @export_group("Shake (for SHAKE animation)")
 ## Shake intensity in pixels for SHAKE animation (default: 10.0).
-@export var shake_intensity: float = 10.0
+@export_range(0.0, 500.0, 0.1, "or_greater") var shake_intensity: float = 10.0
 
 ## Number of shakes for SHAKE animation (default: 5).
-@export var shake_count: int = 5
+@export_range(0, 999) var shake_count: int = 5
 
 @export_group("Color Flash (for COLOR_FLASH animation)")
 ## Flash color for COLOR_FLASH animation.
 @export var flash_color: Color = Color.YELLOW
 
 ## Flash intensity multiplier for COLOR_FLASH animation.
-@export var flash_intensity: float = 1.5
+@export_range(0.0, 10.0, 0.01, "or_greater") var flash_intensity: float = 1.5
 
 ## Applies this animation to the target control.
 ## [param owner]: The node that owns the animation (for creating tweens).

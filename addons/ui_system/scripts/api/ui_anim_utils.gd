@@ -194,6 +194,8 @@ static func animate_stagger_multi(source_node: Node, targets: Array[Control], de
 static func delay(source_node: Node, duration: float) -> Signal:
 	return UiAnimDelayHelpers.delay(source_node, duration)
 
+## Shows [param target] using a **string** preset name routed through [UiAnimPresetRunner].
+## Prefer [method preset] with [enum Preset] for enum-based, typo-resistant calls. This entry point remains for older projects.
 static func show_animated(
 	source_node: Node,
 	target: Control,
@@ -202,6 +204,8 @@ static func show_animated(
 ) -> void:
 	await UiAnimPresetRunner.show_animated(source_node, target, animation_type, speed)
 
+## Hides [param target] using a **string** preset name routed through [UiAnimPresetRunner].
+## Prefer [method preset] with [enum Preset] for enum-based, typo-resistant calls. This entry point remains for older projects.
 static func hide_animated(
 	source_node: Node,
 	target: Control,
@@ -225,5 +229,6 @@ enum Preset {
 	FADE_OUT,
 }
 
+## Preferred code path for named show/hide presets: uses [enum Preset] instead of stringly-typed [method show_animated] / [method hide_animated].
 static func preset(preset_type: Preset, source_node: Node, target: Control, speed: float = DEFAULT_SPEED) -> Signal:
 	return UiAnimPresetRunner.preset(preset_type, source_node, target, speed)

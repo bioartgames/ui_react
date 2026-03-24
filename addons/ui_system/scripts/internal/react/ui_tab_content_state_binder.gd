@@ -2,7 +2,20 @@
 class_name UiTabContentStateBinder
 extends RefCounted
 
-const STATE_PROPERTIES: Array[String] = ["text_state", "value_state", "selected_state", "checked_state", "pressed_state"]
+const PROP_TEXT_STATE: StringName = &"text_state"
+const PROP_VALUE_STATE: StringName = &"value_state"
+const PROP_SELECTED_STATE: StringName = &"selected_state"
+const PROP_CHECKED_STATE: StringName = &"checked_state"
+const PROP_PRESSED_STATE: StringName = &"pressed_state"
+const CHILD_PROPERTY_PREFIX: StringName = &"child_"
+
+const STATE_PROPERTIES: Array[StringName] = [
+	PROP_TEXT_STATE,
+	PROP_VALUE_STATE,
+	PROP_SELECTED_STATE,
+	PROP_CHECKED_STATE,
+	PROP_PRESSED_STATE,
+]
 
 static func bind_tab_content(tab_container: TabContainer, tab_config: UiTabContainerCfg, tab_index: int, on_content_changed: Callable) -> void:
 	if not tab_config:
@@ -36,22 +49,24 @@ static func bind_tab_content(tab_container: TabContainer, tab_config: UiTabConta
 				var child_state = first_child.get(prop)
 				if child_state is UiState:
 					child_state.set_silent(content_state.value)
-					var callable = on_content_changed.bind(tab_index, "child_" + prop)
+					var child_prop_key: StringName = StringName(String(CHILD_PROPERTY_PREFIX) + String(prop))
+					var callable = on_content_changed.bind(tab_index, child_prop_key)
 					if content_state.value_changed.is_connected(callable):
 						content_state.value_changed.disconnect(callable)
 					content_state.value_changed.connect(callable)
 					return
 
-static func propagate_content_change(tab_container: TabContainer, tab_index: int, property: String, new_value: Variant) -> void:
+static func propagate_content_change(tab_container: TabContainer, tab_index: int, property: StringName, new_value: Variant) -> void:
 	var tab_child = tab_container.get_tab_control(tab_index)
 	if tab_child == null:
 		return
 
-	if property.begins_with("child_"):
-		var actual_prop = property.substr(6)
+	var prop_str: String = String(property)
+	if prop_str.begins_with(String(CHILD_PROPERTY_PREFIX)):
+		var actual_prop = prop_str.substr(String(CHILD_PROPERTY_PREFIX).length())
 		var first_child = tab_child.get_child(0) if tab_child.get_child_count() > 0 else null
-		if first_child != null and first_child.has(actual_prop):
-			var child_state = first_child.get(actual_prop)
+		if first_child != null and first_child.has(StringName(actual_prop)):
+			var child_state = first_child.get(StringName(actual_prop))
 			if child_state is UiState:
 				child_state.set_silent(new_value)
 	else:
