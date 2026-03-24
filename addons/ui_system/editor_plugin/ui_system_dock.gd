@@ -4,6 +4,10 @@ extends Control
 const _SCAN_SELECTION := 0
 const _SCAN_SCENE := 1
 
+const _GROUP_FLAT := 0
+const _GROUP_BY_NODE := 1
+const _GROUP_BY_SEVERITY := 2
+
 const _KEY_SCAN_MODE := "ui_system/plugin_scan_mode"
 const _KEY_SHOW_ERRORS := "ui_system/plugin_show_errors"
 const _KEY_SHOW_WARNINGS := "ui_system/plugin_show_warnings"
@@ -30,19 +34,33 @@ var _actions: UiSystemActionController
 var _issues_all: Array = []
 var _issues_shown: Array = []
 
+## Session-only: hidden until next [method refresh] (fingerprint keys).
+var _ignored_issue_keys: Dictionary = {}
+
+var _selected_flat_index: int = -1
+
+var _search_timer: Timer
+
 var _mode_option: OptionButton
+var _group_option: OptionButton
 var _filter_err: CheckBox
 var _filter_warn: CheckBox
 var _filter_info: CheckBox
 var _auto_refresh: CheckBox
 var _path_edit: LineEdit
-var _item_list: ItemList
+var _search_edit: LineEdit
+var _issues_scroll: ScrollContainer
+var _issues_container: VBoxContainer
 var _details_scroll: ScrollContainer
 var _details_label: RichTextLabel
 var _btn_refresh: Button
 var _btn_copy: Button
 var _btn_focus: Button
 var _btn_create: Button
+var _btn_create_all: Button
+
+## group_key -> expanded (for grouped view)
+var _group_expanded: Dictionary = {}
 
 
 func setup(plugin: EditorPlugin) -> void:
@@ -139,7 +157,6 @@ func _load_persisted_ui_preferences() -> void:
 
 
 func _build_ui() -> void:
-	# Match built-in bottom tabs: prevent collapsing to an unusably tiny height.
 	custom_minimum_size = Vector2(0, 180)
 
 	var margin := MarginContainer.new()
@@ -170,6 +187,17 @@ func _build_ui() -> void:
 	_auto_refresh.toggled.connect(_on_auto_refresh_toggled)
 	mode_row.add_child(_auto_refresh)
 
+	var group_row := HBoxContainer.new()
+	vbox.add_child(group_row)
+	group_row.add_child(Label.new())
+	group_row.get_child(0).text = "Group:"
+	_group_option = OptionButton.new()
+	_group_option.add_item("Flat list", _GROUP_FLAT)
+	_group_option.add_item("By node", _GROUP_BY_NODE)
+	_group_option.add_item("By severity", _GROUP_BY_SEVERITY)
+	_group_option.item_selected.connect(_on_group_mode_selected)
+	group_row.add_child(_group_option)
+
 	var filt_row := HBoxContainer.new()
 	vbox.add_child(filt_row)
 	filt_row.add_child(Label.new())
@@ -190,6 +218,22 @@ func _build_ui() -> void:
 	_filter_info.toggled.connect(_on_filter_info_toggled)
 	filt_row.add_child(_filter_info)
 
+	var search_row := HBoxContainer.new()
+	vbox.add_child(search_row)
+	search_row.add_child(Label.new())
+	search_row.get_child(0).text = "Filter:"
+	_search_edit = LineEdit.new()
+	_search_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_search_edit.placeholder_text = "Node, path, property, message…"
+	_search_edit.text_changed.connect(_on_search_text_changed)
+	search_row.add_child(_search_edit)
+
+	_search_timer = Timer.new()
+	_search_timer.one_shot = true
+	_search_timer.wait_time = 0.12
+	_search_timer.timeout.connect(_apply_filters)
+	vbox.add_child(_search_timer)
+
 	var path_row := HBoxContainer.new()
 	vbox.add_child(path_row)
 	path_row.add_child(Label.new())
@@ -200,11 +244,14 @@ func _build_ui() -> void:
 	_path_edit.text_submitted.connect(func(p): _on_path_changed(p))
 	path_row.add_child(_path_edit)
 
-	_item_list = ItemList.new()
-	_item_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_item_list.custom_minimum_size = Vector2(0, 140)
-	_item_list.item_selected.connect(_on_item_selected)
-	vbox.add_child(_item_list)
+	_issues_scroll = ScrollContainer.new()
+	_issues_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_issues_scroll.custom_minimum_size = Vector2(0, 140)
+	vbox.add_child(_issues_scroll)
+
+	_issues_container = VBoxContainer.new()
+	_issues_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_issues_scroll.add_child(_issues_container)
 
 	_details_scroll = ScrollContainer.new()
 	_details_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -240,6 +287,11 @@ func _build_ui() -> void:
 	_btn_create.disabled = true
 	_btn_create.pressed.connect(_on_create_assign)
 	btn_row.add_child(_btn_create)
+	_btn_create_all = Button.new()
+	_btn_create_all.text = "Create all missing"
+	_btn_create_all.disabled = true
+	_btn_create_all.pressed.connect(_on_create_assign_all)
+	btn_row.add_child(_btn_create_all)
 
 	_update_details_pane(null)
 	_update_action_buttons(null)
@@ -260,6 +312,10 @@ func _on_scan_mode_selected(idx: int) -> void:
 		return
 	_save_ui_preference(_KEY_SCAN_MODE, _mode_option.get_item_id(idx))
 	request_refresh(&"scan_mode_changed")
+
+
+func _on_group_mode_selected(_idx: int) -> void:
+	_rebuild_issue_list_ui()
 
 
 func _on_auto_refresh_toggled(_pressed: bool) -> void:
@@ -290,6 +346,11 @@ func _on_filter_info_toggled(_pressed: bool) -> void:
 	_apply_filters()
 
 
+func _on_search_text_changed(_new_text: String) -> void:
+	if _search_timer:
+		_search_timer.start()
+
+
 func _on_path_changed(new_text: String) -> void:
 	var p := new_text.strip_edges()
 	if p.is_empty():
@@ -299,20 +360,17 @@ func _on_path_changed(new_text: String) -> void:
 	_save_ui_preference(_KEY_STATE_OUTPUT_PATH, p)
 
 
-func _on_item_selected(_idx: int) -> void:
+func _select_issue_at_index(idx: int) -> void:
+	_selected_flat_index = idx
 	var issue: Variant = _get_selected_issue()
 	_update_details_pane(issue)
 	_update_action_buttons(issue)
 
 
 func _get_selected_issue() -> Variant:
-	var sel := _item_list.get_selected_items()
-	if sel.is_empty():
+	if _selected_flat_index < 0 or _selected_flat_index >= _issues_shown.size():
 		return null
-	var i := int(sel[0])
-	if i < 0 or i >= _issues_shown.size():
-		return null
-	return _issues_shown[i]
+	return _issues_shown[_selected_flat_index]
 
 
 func _update_details_pane(issue: Variant) -> void:
@@ -349,22 +407,36 @@ func _severity_display_name(sev: int) -> String:
 			return "Info"
 
 
+func _can_create_state_for_issue(issue: Variant) -> bool:
+	if issue == null:
+		return false
+	if issue.property_name == &"" or issue.suggested_state_class == &"":
+		return false
+	# Unassigned binding rows (optional INFO or required WARNING) carry a suggested class.
+	return issue.severity == UiSystemDiagnosticModel.Severity.INFO or issue.severity == UiSystemDiagnosticModel.Severity.WARNING
+
+
 func _update_action_buttons(issue: Variant) -> void:
 	if issue == null:
 		_btn_focus.disabled = true
 		_btn_create.disabled = true
 		return
 	_btn_focus.disabled = issue.node_path.is_empty()
-	var can_create: bool = (
-		issue.severity == UiSystemDiagnosticModel.Severity.INFO
-		and issue.property_name != &""
-		and issue.suggested_state_class != &""
-	)
-	_btn_create.disabled = not can_create
+	_btn_create.disabled = not _can_create_state_for_issue(issue)
+
+
+func _update_create_all_button() -> void:
+	var any := false
+	for issue in _issues_shown:
+		if _can_create_state_for_issue(issue):
+			any = true
+			break
+	_btn_create_all.disabled = not any
 
 
 func refresh() -> void:
 	_issues_all.clear()
+	_ignored_issue_keys.clear()
 	var ei := _plugin.get_editor_interface()
 	var root := ei.get_edited_scene_root()
 	if root == null:
@@ -389,7 +461,7 @@ func refresh() -> void:
 	_expect_startup_scene_retry = false
 
 	var nodes: Array[Node] = []
-	if _mode_option.selected == _SCAN_SCENE:
+	if _mode_option.get_item_id(_mode_option.selected) == _SCAN_SCENE:
 		for n in UiSystemScannerService.collect_react_nodes(root):
 			nodes.append(n)
 	else:
@@ -419,9 +491,33 @@ func refresh() -> void:
 	_apply_filters()
 
 
+func _issue_fingerprint(issue: Variant) -> String:
+	return "%s|%s|%s" % [str(issue.node_path), str(issue.property_name), str(issue.issue_text)]
+
+
+func _issue_matches_search(issue: Variant, q: String) -> bool:
+	if q.is_empty():
+		return true
+	var needle := q.to_lower()
+	var parts: Array[String] = []
+	parts.append(String(issue.summary_text).to_lower())
+	parts.append(String(issue.message).to_lower())
+	parts.append(String(issue.issue_text).to_lower())
+	parts.append(String(issue.fix_hint).to_lower())
+	parts.append(String(issue.node_name).to_lower())
+	parts.append(str(issue.node_path).to_lower())
+	parts.append(str(issue.property_name).to_lower())
+	parts.append(String(issue.component_name).to_lower())
+	var blob := " ".join(parts)
+	return needle in blob
+
+
 func _apply_filters() -> void:
 	_issues_shown.clear()
-	_item_list.clear()
+	var q := ""
+	if _search_edit:
+		q = _search_edit.text.strip_edges()
+
 	for issue in _issues_all:
 		if issue.severity == UiSystemDiagnosticModel.Severity.ERROR and not _filter_err.button_pressed:
 			continue
@@ -429,19 +525,23 @@ func _apply_filters() -> void:
 			continue
 		if issue.severity == UiSystemDiagnosticModel.Severity.INFO and not _filter_info.button_pressed:
 			continue
+		if not _issue_matches_search(issue, q):
+			continue
+		if _ignored_issue_keys.has(_issue_fingerprint(issue)):
+			continue
 		_issues_shown.append(issue)
-		var prefix := _severity_prefix(issue.severity)
-		var summary: String = issue.summary_text if not String(issue.summary_text).is_empty() else issue.message
-		_item_list.add_item("%s %s" % [prefix, summary])
 
+	_selected_flat_index = -1
 	if _issues_shown.is_empty():
-		_item_list.deselect_all()
 		_update_details_pane(null)
 		_update_action_buttons(null)
 	else:
-		_item_list.select(0)
+		_selected_flat_index = 0
 		_update_details_pane(_issues_shown[0])
 		_update_action_buttons(_issues_shown[0])
+
+	_update_create_all_button()
+	_rebuild_issue_list_ui()
 
 
 func _severity_prefix(sev: int) -> String:
@@ -452,6 +552,167 @@ func _severity_prefix(sev: int) -> String:
 			return "[W]"
 		_:
 			return "[I]"
+
+
+func _group_key_for_issue(issue: Variant) -> String:
+	var mode := _GROUP_FLAT
+	if _group_option:
+		mode = _group_option.get_item_id(_group_option.selected)
+	match mode:
+		_GROUP_BY_NODE:
+			if not issue.node_name.is_empty():
+				return issue.node_name
+			return str(issue.node_path) if not issue.node_path.is_empty() else "(scene)"
+		_GROUP_BY_SEVERITY:
+			match issue.severity:
+				UiSystemDiagnosticModel.Severity.ERROR:
+					return "Errors"
+				UiSystemDiagnosticModel.Severity.WARNING:
+					return "Warnings"
+				_:
+					return "Info"
+		_:
+			return ""
+
+
+func _sort_group_keys(keys: Array[String]) -> void:
+	var mode := _GROUP_FLAT
+	if _group_option:
+		mode = _group_option.get_item_id(_group_option.selected)
+	if mode == _GROUP_BY_SEVERITY:
+		# Fixed order: Errors, Warnings, Info
+		var order := {"Errors": 0, "Warnings": 1, "Info": 2}
+		keys.sort_custom(func(a: String, b: String) -> bool:
+			var ia: int = order.get(a, 99)
+			var ib: int = order.get(b, 99)
+			if ia != ib:
+				return ia < ib
+			return a < b
+		)
+	else:
+		keys.sort()
+
+
+func _rebuild_issue_list_ui() -> void:
+	for i in range(_issues_container.get_child_count() - 1, -1, -1):
+		_issues_container.get_child(i).queue_free()
+
+	var mode := _GROUP_FLAT
+	if _group_option:
+		mode = _group_option.get_item_id(_group_option.selected)
+
+	if mode == _GROUP_FLAT or _issues_shown.is_empty():
+		for i in range(_issues_shown.size()):
+			_issues_container.add_child(_make_issue_row(_issues_shown[i], i))
+		return
+
+	# Grouped
+	var buckets: Dictionary = {}
+	for i in range(_issues_shown.size()):
+		var issue: Variant = _issues_shown[i]
+		var gk := _group_key_for_issue(issue)
+		if not buckets.has(gk):
+			buckets[gk] = []
+		(buckets[gk] as Array).append(i)
+
+	var keys: Array[String] = []
+	for k in buckets.keys():
+		keys.append(String(k))
+	_sort_group_keys(keys)
+
+	for gk in keys:
+		var indices: Array = buckets[gk]
+		if not _group_expanded.has(gk):
+			_group_expanded[gk] = true
+		var expanded: bool = bool(_group_expanded[gk])
+
+		var header := HBoxContainer.new()
+		var toggle := Button.new()
+		toggle.text = ("▼ " if expanded else "▶ ") + "%s (%d)" % [gk, indices.size()]
+		toggle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		toggle.flat = true
+		toggle.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		var gk_cap: String = gk
+		toggle.pressed.connect(func(): _toggle_group(gk_cap))
+		header.add_child(toggle)
+		_issues_container.add_child(header)
+
+		var inner := VBoxContainer.new()
+		inner.visible = expanded
+		inner.add_theme_constant_override("separation", 2)
+		for idx in indices:
+			inner.add_child(_make_issue_row(_issues_shown[idx], int(idx)))
+		_issues_container.add_child(inner)
+
+
+func _toggle_group(group_key: String) -> void:
+	var cur: bool = bool(_group_expanded.get(group_key, true))
+	_group_expanded[group_key] = not cur
+	_rebuild_issue_list_ui()
+
+
+func _make_issue_row(issue: Variant, flat_index: int) -> Control:
+	var row := HBoxContainer.new()
+	var summary: String = issue.summary_text if not String(issue.summary_text).is_empty() else issue.message
+	var sel_btn := Button.new()
+	sel_btn.text = "%s %s" % [_severity_prefix(issue.severity), summary]
+	sel_btn.flat = true
+	sel_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	sel_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var fi := flat_index
+	sel_btn.pressed.connect(func(): _select_issue_at_index(fi))
+	row.add_child(sel_btn)
+
+	var btn_fix := Button.new()
+	btn_fix.text = "Fix"
+	btn_fix.disabled = not _can_create_state_for_issue(issue)
+	btn_fix.pressed.connect(func(): _on_row_fix(fi))
+	row.add_child(btn_fix)
+
+	var btn_focus := Button.new()
+	btn_focus.text = "Focus"
+	btn_focus.disabled = issue.node_path.is_empty()
+	btn_focus.pressed.connect(func(): _on_row_focus(fi))
+	row.add_child(btn_focus)
+
+	var btn_ignore := Button.new()
+	btn_ignore.text = "Ignore"
+	btn_ignore.pressed.connect(func(): _on_row_ignore(fi))
+	row.add_child(btn_ignore)
+
+	return row
+
+
+func _on_row_fix(flat_index: int) -> void:
+	if flat_index < 0 or flat_index >= _issues_shown.size():
+		return
+	var issue: Variant = _issues_shown[flat_index]
+	if not _can_create_state_for_issue(issue):
+		return
+	_create_and_assign_for_issue(issue)
+
+
+func _on_row_focus(flat_index: int) -> void:
+	if flat_index < 0 or flat_index >= _issues_shown.size():
+		return
+	var issue: Variant = _issues_shown[flat_index]
+	if issue.node_path.is_empty():
+		return
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return
+	var node := root.get_node_or_null(issue.node_path)
+	if node:
+		ei.edit_node(node)
+
+
+func _on_row_ignore(flat_index: int) -> void:
+	if flat_index < 0 or flat_index >= _issues_shown.size():
+		return
+	var issue: Variant = _issues_shown[flat_index]
+	_ignored_issue_keys[_issue_fingerprint(issue)] = true
+	_apply_filters()
 
 
 func _on_copy_report() -> void:
@@ -477,38 +738,72 @@ func _on_focus_node() -> void:
 		ei.edit_node(node)
 
 
-func _on_create_assign() -> void:
-	var issue: Variant = _get_selected_issue()
-	if issue == null or issue.property_name == &"" or issue.suggested_state_class == &"":
-		return
-	var ei := _plugin.get_editor_interface()
-	var root := ei.get_edited_scene_root()
-	if root == null:
-		return
-	var node := root.get_node_or_null(issue.node_path)
-	if node == null or not (node is Node):
-		push_warning("UiSystemDock: node not found for path %s" % issue.node_path)
-		return
-
+func _resolve_output_dir() -> String:
 	var out_dir := _path_edit.text.strip_edges()
 	if out_dir.is_empty():
 		out_dir = UiSystemStateFactoryService.default_output_dir()
 	if not out_dir.ends_with("/"):
 		out_dir += "/"
+	return out_dir
+
+
+func _create_and_assign_for_issue(issue: Variant) -> bool:
+	if issue == null or issue.property_name == &"" or issue.suggested_state_class == &"":
+		return false
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return false
+	var node := root.get_node_or_null(issue.node_path)
+	if node == null or not (node is Node):
+		push_warning("UiSystemDock: node not found for path %s" % issue.node_path)
+		return false
+
+	var out_dir := _resolve_output_dir()
 	_save_ui_preference(_KEY_STATE_OUTPUT_PATH, out_dir)
 	var err := UiSystemStateFactoryService.ensure_output_dir(out_dir)
 	if err != OK:
 		push_error("UiSystemDock: could not create output folder: %s" % out_dir)
-		return
+		return false
 
 	var res := UiSystemStateFactoryService.instantiate_state(issue.suggested_state_class)
-	var path := UiSystemStateFactoryService.build_file_path(out_dir, str(node.name), str(issue.property_name))
+	var path: String = UiSystemStateFactoryService.build_unique_file_path(out_dir, str(node.name), str(issue.property_name))
 	var loaded := UiSystemStateFactoryService.save_and_reload(res, path)
 	if loaded == null:
-		return
+		return false
 	_actions.assign_resource_property(node, issue.property_name, loaded)
+	return true
+
+
+func _on_create_assign() -> void:
+	var issue: Variant = _get_selected_issue()
+	if issue == null:
+		return
+	if not _create_and_assign_for_issue(issue):
+		return
 	_plugin.get_editor_interface().get_resource_filesystem().scan()
 	request_refresh(&"after_create_assign")
+
+
+func _on_create_assign_all() -> void:
+	var to_fix: Array = []
+	for issue in _issues_shown:
+		if _can_create_state_for_issue(issue):
+			to_fix.append(issue)
+	if to_fix.is_empty():
+		return
+
+	var created := 0
+	var failed := 0
+	for issue in to_fix:
+		if _create_and_assign_for_issue(issue):
+			created += 1
+		else:
+			failed += 1
+
+	_plugin.get_editor_interface().get_resource_filesystem().scan()
+	request_refresh(&"after_create_assign_all")
+	print("UiSystemDock: Create all missing — created: %d, failed: %d" % [created, failed])
 
 
 func _collect_react_under(n: Node) -> Array[Node]:

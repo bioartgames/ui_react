@@ -42,6 +42,29 @@ static func build_file_path(output_dir: String, node_name: String, property_name
 	return "%s%s.tres" % [output_dir, base]
 
 
+## First free path matching [code]build_file_path[/code], then [code]<base>_2.tres[/code], [code]<base>_3.tres[/code], … if files already exist (no overwrites).
+static func build_unique_file_path(output_dir: String, node_name: String, property_name: String) -> String:
+	var base := _sanitize("%s_%s" % [node_name, property_name])
+	var first := "%s%s.tres" % [output_dir, base]
+	if not _resource_file_exists(first):
+		return first
+	var i := 2
+	while i < 10000:
+		var candidate := "%s%s_%d.tres" % [output_dir, base, i]
+		if not _resource_file_exists(candidate):
+			return candidate
+		i += 1
+	push_error("UiSystemStateFactoryService: could not find free filename for base %s" % base)
+	return first
+
+
+static func _resource_file_exists(path: String) -> bool:
+	if path.is_empty():
+		return false
+	var abs_path := ProjectSettings.globalize_path(path)
+	return FileAccess.file_exists(abs_path)
+
+
 static func _sanitize(s: String) -> String:
 	var out := s.replace(" ", "_").replace("/", "_").replace(":", "_").replace("\\", "_")
 	if out.is_empty():

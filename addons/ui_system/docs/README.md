@@ -65,8 +65,8 @@ await UiAnimUtils.animate_expand(self, some_control).finished
 1. Open **Project → Project Settings → Plugins** and enable **UI System Tools** (bundled at `editor_plugin/plugin.cfg`).
 2. Open the **UI System Tools** panel in the **bottom editor dock** (tab bar).
 3. Choose **Scan: Selection** or **Entire scene**, press **Refresh**, and review diagnostics. Dock choices (scan mode, filters, auto-refresh, output folder) are **remembered per project** when you reopen it. The tool also **refreshes when you switch the active edited scene** (so you do not need to toggle scan mode to see results).
-4. The issue list shows **short summary rows only**; **select a row** to see full issue text, fix hints, and **issue-scoped actions** (focus, quick-create state) in the details area below.
-5. For empty `*_state` slots, select an **[I]** info row and use **Create & assign typed state** (saves a `.tres` under the configured folder, default `res://addons/ui_system/ui_resources/plugin_generated/`). Override with project setting **`ui_system/plugin_state_output_path`**.
+4. Use **Group** (flat / by node / by severity), **Filter** (text search across node, path, property, messages), and severity toggles to narrow the list. Each row has **Fix**, **Focus**, and **Ignore** (hide until next **Refresh**). Click the summary button on a row to select it and show full details below.
+5. For unassigned `*_state` slots, use **Create & assign typed state** on the selected row, **Create all missing** for every eligible row in the filtered list, or **Fix** on a row. New `.tres` files are saved under the configured folder (default `res://addons/ui_system/ui_resources/plugin_generated/`); if a filename already exists, the plugin saves as `<name>_2.tres`, `<name>_3.tres`, … instead of overwriting. Override the folder with **`ui_system/plugin_state_output_path`**.
 
 All plugin usage details are documented in this README.
 
@@ -178,9 +178,9 @@ If you copy `addons/ui_system/` into another project, re-enable the plugin there
 
 ## Diagnostics layout
 
-- The **list** at the top shows **compact summary lines** per issue (severity prefix + short text). Rows do **not** include full “Fix:” prose so narrow panels stay readable.
-- **Select a row** to load the **details pane** below: full issue text, fix hint, component/node/path, and property metadata when applicable.
-- **Actions** (**Focus node**, **Create & assign typed state**) apply to the **selected** issue. Use **Copy report** to copy the entire filtered list (same as before).
+- The **list** at the top shows **compact summary lines** per issue (severity prefix + short text). Full “Fix:” prose stays in the **details pane** so narrow panels stay readable.
+- **Select a row** (summary button) to load the **details pane** below: full issue text, fix hint, component/node/path, and property metadata when applicable.
+- **Toolbar actions** (**Focus node**, **Create & assign typed state**, **Create all missing**) apply to the **selected** row / filtered list. Each row also has **Fix**, **Focus**, and **Ignore**. Use **Copy report** to copy the entire filtered list.
 
 **Persisted per project:** scan mode, severity filters, auto-refresh, and state output folder are saved in **Project Settings** and restored when you reopen the project (no need to reconfigure each session).
 
@@ -191,12 +191,15 @@ If you copy `addons/ui_system/` into another project, re-enable the plugin there
 | Control | Purpose |
 |--------|---------|
 | **Scan** | **Selection** — selected nodes and their subtree `UiReact*` controls. **Entire scene** — all `UiReact*` nodes under the edited scene root. |
+| **Group** | **Flat list**, **By node**, or **By severity** (collapsible groups). |
 | **Show** | Filter diagnostics by severity (Errors / Warnings / Info). |
-| **State output folder** | Where **Create & assign typed state** saves new `.tres` files. Default: `res://addons/ui_system/ui_resources/plugin_generated/`. |
-| **Refresh** | Re-run validation. |
+| **Filter** | Text filter across node name, path, property, component, and issue text (debounced). |
+| **State output folder** | Where quick-create saves new `.tres` files. Default: `res://addons/ui_system/ui_resources/plugin_generated/`. Collision-safe names: `<NodeName>_<property>_2.tres`, `_3.tres`, … |
+| **Refresh** | Re-run validation (clears **Ignore** hides). |
 | **Copy report** | Copy the **filtered** summary list (and full text for export) to the clipboard. |
 | **Focus node** | Select the scene node for the **selected** issue (enabled when the issue has a `node_path`). |
-| **Create & assign typed state** | For a **selected** **[I]** row about **unassigned** `*_state` exports, creates a typed `UiBoolState` / `UiFloatState` / `UiStringState` (etc.), saves it, and assigns the property with **undo/redo** support. |
+| **Create & assign typed state** | For the **selected** row with an unassigned `*_state` and a suggested type (**Info** optional slots or **Warning** required slots), creates the typed state, saves it, assigns with **undo/redo**. |
+| **Create all missing** | Same as above for **every** eligible issue in the **current filtered** list (skips rows without a suggested type). |
 
 ## Project settings
 
@@ -240,7 +243,7 @@ Runtime addon code under `scripts/internal/*` remains **unstable** for direct ga
 |--------|-----|
 | Plugin not listed | Confirm `addons/ui_system/editor_plugin/plugin.cfg` exists and the project was reimported. |
 | Dock empty / “No edited scene” | Open a scene in the editor (set as active edited scene). |
-| Create & assign does nothing | **Select** an **[I]** row that mentions an unassigned `*_state` with a suggested type; check folder permissions for the output path. |
+| Create & assign does nothing | **Select** a row that mentions an unassigned `*_state` with a suggested type (optional **Info** or required **Warning**); check folder permissions for the output path. |
 | Too many **[I]** rows | Turn off **Info** in **Show** filters. |
 
 ## Limitations
