@@ -96,11 +96,4 @@ func _on_nested_changed(_new_value: Variant, _old_value: Variant) -> void:
 		_on_text_state_changed(text_state.value, text_state.value)
 
 func _as_text(value: Variant) -> String:
-	if value is UiState:
-		return _as_text(value.value)
-	if value is Array:
-		var parts: Array[String] = []
-		for v in value:
-			parts.append(_as_text(v))
-		return "".join(parts)
-	return str(value)
+	return UiReactStateBindingHelper.as_text_recursive(value)

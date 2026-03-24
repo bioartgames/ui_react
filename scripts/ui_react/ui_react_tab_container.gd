@@ -52,14 +52,11 @@ func _validate_animation_targets() -> void:
 	var trigger_map: Dictionary = validation_result.trigger_map
 
 	if trigger_map.has(UiAnimTarget.Trigger.SELECTION_CHANGED):
-		if not tab_selected.is_connected(_on_trigger_selection_changed):
-			tab_selected.connect(_on_trigger_selection_changed)
+		UiReactAnimTargetHelper.connect_if_absent(tab_selected, _on_trigger_selection_changed)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER):
-		if not mouse_entered.is_connected(_on_trigger_hover_enter):
-			mouse_entered.connect(_on_trigger_hover_enter)
+		UiReactAnimTargetHelper.connect_if_absent(mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
-		if not mouse_exited.is_connected(_on_trigger_hover_exit):
-			mouse_exited.connect(_on_trigger_hover_exit)
+		UiReactAnimTargetHelper.connect_if_absent(mouse_exited, _on_trigger_hover_exit)
 
 func _finish_initialization() -> void:
 	_is_initializing = false
@@ -150,7 +147,7 @@ func _on_disabled_tabs_state_changed(new_value: Variant, _old_value: Variant) ->
 	_updating = true
 
 	for i in range(min(disabled_array.size(), tab_count)):
-		var is_disabled = bool(disabled_array[i])
+		var is_disabled = UiReactStateBindingHelper.coerce_bool(disabled_array[i])
 		set_tab_disabled(i, is_disabled)
 
 	_updating = false
@@ -169,14 +166,11 @@ func _on_visible_tabs_state_changed(new_value: Variant, _old_value: Variant) -> 
 	_updating = true
 
 	for i in range(min(visible_array.size(), tab_count)):
-		var tab_visible = bool(visible_array[i])
+		var tab_visible = UiReactStateBindingHelper.coerce_bool(visible_array[i])
 		set_tab_hidden(i, not tab_visible)
 
 	_updating = false
 
 
 func _expect_array_state(value: Variant, field_name: String) -> Variant:
-	if value is Array:
-		return value
-	push_warning("UiReactTabContainer '%s': %s.value must be an Array. Got: %s" % [name, field_name, typeof(value)])
-	return null
+	return UiReactStateBindingHelper.expect_array_state(name, field_name, value)

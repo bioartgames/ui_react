@@ -32,14 +32,11 @@ func _validate_animation_targets() -> void:
 	
 	# Connect signals based on which triggers are used
 	if trigger_map.has(UiAnimTarget.Trigger.TEXT_ENTERED):
-		if not text_submitted.is_connected(_on_trigger_text_entered):
-			text_submitted.connect(_on_trigger_text_entered)
+		UiReactAnimTargetHelper.connect_if_absent(text_submitted, _on_trigger_text_entered)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER):
-		if not mouse_entered.is_connected(_on_trigger_hover_enter):
-			mouse_entered.connect(_on_trigger_hover_enter)
+		UiReactAnimTargetHelper.connect_if_absent(mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
-		if not mouse_exited.is_connected(_on_trigger_hover_exit):
-			mouse_exited.connect(_on_trigger_hover_exit)
+		UiReactAnimTargetHelper.connect_if_absent(mouse_exited, _on_trigger_hover_exit)
 
 ## Finishes initialization, allowing animations to trigger on text changes.
 func _finish_initialization() -> void:
@@ -102,9 +99,4 @@ func _on_text_state_changed(new_value: Variant, _old_value: Variant) -> void:
 	_updating = false
 
 func _to_text(value: Variant) -> String:
-	if value is Array:
-		var parts: Array[String] = []
-		for v in value:
-			parts.append(str(v))
-		return "".join(parts)
-	return str(value)
+	return UiReactStateBindingHelper.as_text_flat(value)

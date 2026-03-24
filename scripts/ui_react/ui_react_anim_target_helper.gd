@@ -49,6 +49,11 @@ static func validate_and_map_triggers(owner: Control, component_name: String, an
 	result.trigger_map = collect_triggers(result.animation_targets)
 	return result
 
+## Connects [param callable] to [param sig] only if not already connected (shared trigger wiring).
+static func connect_if_absent(sig: Signal, callable: Callable) -> void:
+	if not sig.is_connected(callable):
+		sig.connect(callable)
+
 static func trigger_animations(owner: Node, animation_targets: Array[UiAnimTarget], trigger_type: UiAnimTarget.Trigger, respects_disabled: bool = false, is_disabled: bool = false) -> void:
 	if animation_targets.is_empty():
 		return

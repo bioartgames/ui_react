@@ -34,14 +34,11 @@ func _validate_animation_targets() -> void:
 	
 	# Connect signals based on which triggers are used
 	if trigger_map.has(UiAnimTarget.Trigger.TOGGLED_ON) or trigger_map.has(UiAnimTarget.Trigger.TOGGLED_OFF):
-		if not toggled.is_connected(_on_trigger_toggled):
-			toggled.connect(_on_trigger_toggled)
+		UiReactAnimTargetHelper.connect_if_absent(toggled, _on_trigger_toggled)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER):
-		if not mouse_entered.is_connected(_on_trigger_hover_enter):
-			mouse_entered.connect(_on_trigger_hover_enter)
+		UiReactAnimTargetHelper.connect_if_absent(mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
-		if not mouse_exited.is_connected(_on_trigger_hover_exit):
-			mouse_exited.connect(_on_trigger_hover_exit)
+		UiReactAnimTargetHelper.connect_if_absent(mouse_exited, _on_trigger_hover_exit)
 
 ## Finishes initialization, allowing animations to trigger on toggle changes.
 func _finish_initialization() -> void:
@@ -91,7 +88,7 @@ func _on_checked_state_changed(new_value: Variant, _old_value: Variant) -> void:
 	_updating = false
 
 func _on_disabled_state_changed(new_value: Variant, _old_value: Variant) -> void:
-	var desired := bool(new_value)
+	var desired := UiReactStateBindingHelper.coerce_bool(new_value)
 	if disabled == desired:
 		return
 	disabled = desired

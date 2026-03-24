@@ -19,7 +19,7 @@ func _ready() -> void:
 	if value_state:
 		value_state.value_changed.connect(_on_value_state_changed)
 		_on_value_state_changed(value_state.value, value_state.value)
-		_last_value = float(value_state.value)
+		_last_value = UiReactStateBindingHelper.coerce_float(value_state.value)
 	else:
 		_last_value = value
 	_was_completed = _is_completed()
@@ -39,11 +39,9 @@ func _validate_animation_targets() -> void:
 	
 	# Connect signals based on which triggers are used
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER):
-		if not mouse_entered.is_connected(_on_trigger_hover_enter):
-			mouse_entered.connect(_on_trigger_hover_enter)
+		UiReactAnimTargetHelper.connect_if_absent(mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
-		if not mouse_exited.is_connected(_on_trigger_hover_exit):
-			mouse_exited.connect(_on_trigger_hover_exit)
+		UiReactAnimTargetHelper.connect_if_absent(mouse_exited, _on_trigger_hover_exit)
 
 ## Finishes initialization, allowing animations to trigger on value changes.
 func _finish_initialization() -> void:
@@ -89,7 +87,7 @@ func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 func _on_value_state_changed(new_value: Variant, _old_value: Variant) -> void:
 	if _updating:
 		return
-	var target_value := float(new_value)
+	var target_value: float = UiReactStateBindingHelper.coerce_float(new_value)
 	if is_equal_approx(value, target_value):
 		return
 	_updating = true
