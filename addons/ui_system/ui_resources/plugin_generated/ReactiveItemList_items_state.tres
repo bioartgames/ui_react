@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="UiArrayState" load_steps=2 format=3 uid="uid://b1pcj3277xqps"]
+
+[ext_resource type="Script" uid="uid://dwwa3tekslkjw" path="res://addons/ui_system/scripts/api/models/ui_array_state.gd" id="1_items"]
+
+[resource]
+script = ExtResource("1_items")
+value = ["Apple", "Banana", "Cherry", 42]

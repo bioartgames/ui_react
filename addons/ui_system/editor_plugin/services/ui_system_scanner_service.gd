@@ -49,7 +49,8 @@ const BINDINGS_BY_COMPONENT: Dictionary = {
 		{"property": &"disabled_state", "kind": "bool", "optional": true},
 	],
 	"UiReactItemList": [
-		{"property": &"selected_state", "kind": "string", "optional": true},
+		{"property": &"items_state", "kind": "array", "optional": true},
+		{"property": &"selected_state", "kind": "float", "optional": true},
 		{"property": &"disabled_state", "kind": "bool", "optional": true},
 	],
 	"UiReactTabContainer": [

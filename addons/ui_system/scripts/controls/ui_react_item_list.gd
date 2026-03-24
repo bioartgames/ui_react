@@ -3,6 +3,8 @@ class_name UiReactItemList
 
 ## Two-way binding for selection (see script for value shape). **Assign** for reactive sync.
 @export var selected_state: UiState
+## **Optional** — list row contents from a [UiState] whose [member UiState.value] is an [Array]. Each element is shown via [method @GlobalScope.str].
+@export var items_state: UiState
 ## **Optional** — wired for API consistency; ItemList has no disabled property in Godot 4.5, so changes are currently ignored.
 @export var disabled_state: UiState
 
@@ -15,6 +17,9 @@ var _is_initializing: bool = true
 func _ready() -> void:
 	item_selected.connect(_on_item_selected)
 	item_activated.connect(_on_item_activated)
+	if items_state:
+		items_state.value_changed.connect(_on_items_state_changed)
+		_on_items_state_changed(items_state.value, items_state.value)
 	if selected_state:
 		selected_state.value_changed.connect(_on_selected_state_changed)
 		_on_selected_state_changed(selected_state.value, selected_state.value)
@@ -64,12 +69,71 @@ func _on_trigger_hover_exit() -> void:
 func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 	UiReactAnimTargetHelper.trigger_animations(self, animation_targets, trigger_type)
 
+func _on_items_state_changed(new_value: Variant, _old_value: Variant) -> void:
+	if _updating:
+		return
+	if not items_state:
+		return
+	if new_value == null:
+		return
+	if not (new_value is Array):
+		UiReactStateBindingHelper.warn_setup(
+			"UiReactItemList",
+			self,
+			"items_state must use an Array value.",
+			"Set UiState.value to an Array (e.g. [\"A\", \"B\"]) or use UiArrayState.",
+		)
+		return
+	_updating = true
+	clear()
+	for entry in new_value as Array:
+		add_item(str(entry))
+	_sync_selection_ui_to_state()
+	_updating = false
+	_clamp_selection_state_if_needed()
+
+
+func _sync_selection_ui_to_state() -> void:
+	if not selected_state:
+		return
+	var v := selected_state.value
+	deselect_all()
+	if v is int or v is float:
+		var idx := int(v)
+		if idx >= 0 and idx < item_count:
+			select(idx)
+	elif v is Array:
+		for idx in _indices_from_variant_array(v):
+			select(idx)
+
+
+func _clamp_selection_state_if_needed() -> void:
+	if not selected_state:
+		return
+	var v := selected_state.value
+	if v is int or v is float:
+		var idx := int(v)
+		if idx == -1:
+			return
+		if item_count == 0 or idx < 0 or idx >= item_count:
+			selected_state.set_value(-1)
+	elif v is Array and select_mode != ItemList.SELECT_SINGLE:
+		var filtered: Array = []
+		for item in v:
+			if item is int or item is float:
+				var i := int(item)
+				if i >= 0 and i < item_count:
+					filtered.append(i)
+		if filtered != v:
+			selected_state.set_value(filtered)
+
+
 func _on_item_selected(_index: int) -> void:
 	if not selected_state or _updating:
 		return
 	
-	# Get selected items array
-	var selected_items: Array[int] = get_selected_items()
+	# ItemList returns PackedInt32Array; keep native type to avoid conversion overhead.
+	var selected_items: PackedInt32Array = get_selected_items()
 	var new_value: Variant
 	
 	if select_mode == ItemList.SELECT_SINGLE:
@@ -94,10 +158,15 @@ func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void
 	if _updating:
 		return
 	
-	if new_value is int:
-		# Single selection mode
+	if new_value is int or new_value is float:
+		# Single selection mode (int index or float from UiFloatState)
 		var index = int(new_value)
-		if index < 0 or index >= item_count:
+		if index < 0:
+			_updating = true
+			deselect_all()
+			_updating = false
+			return
+		if index >= item_count:
 			return
 		
 		_updating = true
@@ -123,7 +192,7 @@ func _on_disabled_state_changed(_new_value: Variant, _old_value: Variant) -> voi
 func _indices_from_variant_array(raw: Array) -> Array[int]:
 	var indices: Array[int] = []
 	for item in raw:
-		if item is int:
+		if item is int or item is float:
 			var idx = int(item)
 			if idx >= 0 and idx < item_count:
 				indices.append(idx)

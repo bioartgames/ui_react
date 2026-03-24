@@ -68,7 +68,7 @@ await UiAnimUtils.animate_expand(self, some_control).finished
 4. The issue list shows **short summary rows only**; **select a row** to see full issue text, fix hints, and **issue-scoped actions** (focus, quick-create state) in the details area below.
 5. For empty `*_state` slots, select an **[I]** info row and use **Create & assign typed state** (saves a `.tres` under the configured folder, default `res://addons/ui_system/ui_resources/plugin_generated/`). Override with project setting **`ui_system/plugin_state_output_path`**.
 
-Details: **[docs/editor_plugin.md](docs/editor_plugin.md)**.
+All plugin usage details are documented in this README.
 
 ---
 
@@ -84,7 +84,7 @@ Details: **[docs/editor_plugin.md](docs/editor_plugin.md)**.
 | **UiReactLineEdit** | `text_state` | `text_state` for sync. |
 | **UiReactLabel** | `text_state` | `text_state` for sync. |
 | **UiReactOptionButton** | `selected_state`, `disabled_state` | `selected_state` for sync (usually string item text). |
-| **UiReactItemList** | `selected_state`, `disabled_state` | `selected_state` for selection sync. |
+| **UiReactItemList** | `items_state`, `selected_state`, `disabled_state` | `items_state` (optional) populates rows from an **Array** (`str()` per entry). `selected_state` is **index-based** selection sync. |
 | **UiReactTabContainer** | `selected_state`, `tab_config` | `selected_state` for index sync; `tab_config` optional (dynamic tabs / per-tab states). |
 
 **`animation_targets`** is always **optional**: leave empty if you don’t want automatic tweens.
@@ -128,6 +128,7 @@ These may change between template versions; **do not rely on them from game code
 | State doesn’t sync | `UiState` not assigned, or wrong type | Assign the exported `*_state` field; ensure `UiState.value` type matches (bool/float/String/Array as documented). |
 | “Target not found” warning | NodePath not under this node | Use a path relative to the control, or drag the node into the Target field. |
 | Tab arrays don’t apply | `tabs_state` / `disabled_tabs_state` / `visible_tabs_state` not an **Array** | Those `UiState` values must be `Array` (see Output warning). |
+| Item list rows don’t update | `items_state` missing or not an **Array** | Assign `items_state` to a `UiState` / `UiArrayState` whose `value` is an `Array` (e.g. `["A", "B", 1]` — each entry is stringified for display). |
 
 ---
 
@@ -207,6 +208,20 @@ If you copy `addons/ui_system/` into another project, re-enable the plugin there
 | `ui_system/plugin_show_warnings` | `true` | Show **Warnings** in the list. |
 | `ui_system/plugin_show_info` | `true` | Show **Info** in the list. |
 | `ui_system/plugin_auto_refresh` | `true` | Auto-refresh when selection changes (Selection scan only). |
+
+## Binding metadata & validation
+
+The scanner (`ui_system_scanner_service.gd`) records which `UiState` exports each `UiReact*` control expects, including a **kind** hint (`bool`, `float`, `string`, `array`, ...). The validator (`ui_system_validator_service.gd`) turns those hints into **warnings** when the assigned `UiState.value` shape is unlikely to match typical usage.
+
+### `UiReactItemList` bindings
+
+| Export | Kind | Notes |
+|--------|------|--------|
+| `items_state` | `array` | Optional. When set, `value` should be an **Array**; each element is displayed with `str()`. Non-array values are ignored at runtime (with a warning) and produce a **Warning** in the dock. |
+| `selected_state` | `float` | Index-based selection (single: numeric index; multi: `Array` of indices). |
+| `disabled_state` | `bool` | Optional; reserved for API consistency. |
+
+Use **`UiArrayState`** (or a generic `UiState` holding an `Array`) for `items_state` so inspector intent and diagnostics line up.
 
 ## Architecture (for contributors)
 

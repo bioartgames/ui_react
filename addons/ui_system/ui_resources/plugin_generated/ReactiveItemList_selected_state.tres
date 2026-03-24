@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UiStringState" load_steps=2 format=3 uid="uid://d383uqp48us27"]
+[gd_resource type="Resource" script_class="UiFloatState" load_steps=2 format=3 uid="uid://d383uqp48us27"]
 
-[ext_resource type="Script" uid="uid://3a3144h5usfc" path="res://addons/ui_system/scripts/api/models/ui_string_state.gd" id="1_67h7n"]
+[ext_resource type="Script" uid="uid://cy1vsor6ek3xr" path="res://addons/ui_system/scripts/api/models/ui_float_state.gd" id="1_sel"]
 
 [resource]
-script = ExtResource("1_67h7n")
-value = ["Key", 3]
+script = ExtResource("1_sel")
+value = 0.0

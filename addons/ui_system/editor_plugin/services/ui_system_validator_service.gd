@@ -118,6 +118,20 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 							&"",
 						)
 					)
+			"array":
+				if u.value != null and not (u.value is Array):
+					out.append(
+						UiSystemDiagnosticModel.DiagnosticIssue.make_structured(
+							UiSystemDiagnosticModel.Severity.WARNING,
+							component,
+							str(owner.name),
+							"%s expects an Array value." % prop,
+							"Set UiState.value to an Array or use UiArrayState.",
+							node_path,
+							&"",
+							&"",
+						)
+					)
 	return out
 
 

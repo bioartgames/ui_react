@@ -1,4 +1,4 @@
-[gd_scene load_steps=37 format=3 uid="uid://1ctyp6anyhbh"]
+[gd_scene load_steps=38 format=3 uid="uid://1ctyp6anyhbh"]
 
 [ext_resource type="Script" uid="uid://3m8buhv674ja" path="res://addons/ui_system/scripts/controls/ui_react_check_box.gd" id="1_575s6"]
 [ext_resource type="Resource" uid="uid://cxl14gsie0wgq" path="res://addons/ui_system/ui_resources/bool.tres" id="2_qyhnf"]
@@ -23,6 +23,7 @@
 [ext_resource type="Resource" uid="uid://dnbocewy457dt" path="res://addons/ui_system/ui_resources/plugin_generated/ReactiveItemList_disabled_state.tres" id="20_v64hs"]
 [ext_resource type="Resource" uid="uid://lgi4p02hftfx" path="res://addons/ui_system/ui_resources/plugin_generated/ReactiveSpinBox_value_state.tres" id="22_jnjh5"]
 [ext_resource type="Resource" uid="uid://bhflx6tho5wwt" path="res://addons/ui_system/ui_resources/plugin_generated/ReactiveSpinBox_disabled_state.tres" id="23_fsikj"]
+[ext_resource type="Resource" uid="uid://b1pcj3277xqps" path="res://addons/ui_system/ui_resources/plugin_generated/ReactiveItemList_items_state.tres" id="24_items"]
 
 [sub_resource type="Resource" id="Resource_p7nh0"]
 script = ExtResource("4_1o4e8")
@@ -241,6 +242,7 @@ auto_width = true
 auto_height = true
 script = ExtResource("14_jnjh5")
 selected_state = ExtResource("19_ysw5a")
+items_state = ExtResource("24_items")
 disabled_state = ExtResource("20_v64hs")
 metadata/_custom_type_script = "uid://duphbaan8pk5f"
 
