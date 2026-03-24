@@ -31,6 +31,12 @@ class DiagnosticIssue:
 	var issue_text: String = ""
 	## Short single-line summary for [ItemList] rows (no fix text).
 	var summary_text: String = ""
+	## Truncated scan-time preview of [code]UiState.value[/code] (details pane only; optional).
+	var value_preview: String = ""
+	## Human-readable type label for [member value_preview] (e.g. [code]bool[/code], [code]String[/code]).
+	var value_type: String = ""
+	## True when [member value_preview] was shortened for display.
+	var value_truncated: bool = false
 
 	## Row text for [ItemList]: uses [member summary_text] when set, else [member message].
 	func get_summary_line() -> String:

@@ -142,7 +142,7 @@ These may change between template versions; **do not rely on them from game code
 | `scripts/internal/anim/` | Animation implementation (unstable for direct use). |
 | `scripts/internal/react/` | Reactive helpers (unstable for direct use). |
 | `examples/` | `reactive_ui.tscn` smoke demo. |
-| `docs/` | Extra notes (e.g. migration, editor plugin). |
+| `docs/` | Extra notes (e.g. migration, editor plugin, [Plugin UX roadmap](plugin_ux_roadmap.md)). |
 | `editor_plugin/` | Optional Godot editor plugin (dock, validation, quick state creation). |
 | `ui_resources/` | Sample `.tres` for the example scene; `plugin_generated/` holds plugin-created states (optional). |
 
@@ -179,7 +179,7 @@ If you copy `addons/ui_system/` into another project, re-enable the plugin there
 ## Diagnostics layout
 
 - The **list** at the top shows **compact summary lines** per issue (severity prefix + short text). Full “Fix:” prose stays in the **details pane** so narrow panels stay readable.
-- **Select a row** (summary button) to load the **details pane** below: full issue text, fix hint, component/node/path, and property metadata when applicable.
+- **Select a row** (summary button) to load the **details pane** below: full issue text, fix hint, component/node/path, and property metadata when applicable. For **binding type warnings** (e.g. value shape mismatch), the details pane also shows a scan-time **Value type** and **Effective value** snippet (truncated for long strings), reflecting `UiState.value` at the time of the scan.
 - **Toolbar:** **Focus node** (selected row) and **Fix All** (bulk quick-fix for eligible filtered issues). Each row also has **Fix**, **Focus**, and **Ignore**. Use **Copy report** to copy the entire filtered list.
 
 **Persisted per project:** scan mode, severity filters, auto-refresh, and state output folder are saved in **Project Settings** and restored when you reopen the project (no need to reconfigure each session).
@@ -193,7 +193,7 @@ If you copy `addons/ui_system/` into another project, re-enable the plugin there
 | **Scan** | **Selection** — selected nodes and their subtree `UiReact*` controls. **Entire scene** — all `UiReact*` nodes under the edited scene root. |
 | **Group** | **Flat list**, **By node**, or **By severity** (collapsible groups). |
 | **Show** | Filter diagnostics by severity (Errors / Warnings / Info). |
-| **Filter** | Text filter across node name, path, property, component, and issue text (debounced). |
+| **Filter** | Text filter across node name, path, property, component, and issue text (debounced). When an issue includes a value preview, the **Value type** label is also matched (not the full value text). |
 | **State output folder** | Where quick-create saves new `.tres` files. Default: `res://addons/ui_system/ui_resources/plugin_generated/`. Collision-safe names: `<NodeName>_<property>_2.tres`, `_3.tres`, … |
 | **Rescan** | Run diagnostics now using the current **Scan** mode and filters (clears **Ignore** hides). |
 | **Copy report** | Copy the **filtered** summary list (and full text for export) to the clipboard. |
@@ -234,6 +234,20 @@ Use **`UiArrayState`** (or a generic `UiState` holding an `Array`) for `items_st
 - `services/ui_system_validator_service.gd` — Emits `UiSystemDiagnosticModel.DiagnosticIssue` rows (mirrors runtime validation rules where practical).
 - `services/ui_system_state_factory_service.gd` — Creates typed states and saves them to disk.
 - `controllers/ui_system_action_controller.gd` — Wraps `EditorUndoRedoManager` property changes.
+
+### Plugin UX roadmap (planned work)
+
+Canonical **master roadmap** (feature order, dependencies, shared constraints, **acceptance gates**, rollback strategy, **milestone review cadence**): **[plugin_ux_roadmap.md](plugin_ux_roadmap.md)**.
+
+Per-feature implementation plans (objective, files, steps, validation, rollout):
+
+| Feature | Plan |
+|--------|------|
+| Preview `UiState.value` in issue details | [feature_value_preview.md](plugin_ux_plans/feature_value_preview.md) |
+| Type-aware autofix (safe conversions) | [feature_type_autofix.md](plugin_ux_plans/feature_type_autofix.md) |
+| Real-time binding health card | [feature_binding_health_card.md](plugin_ux_plans/feature_binding_health_card.md) |
+| Guided setup wizard (defaults only, v1) | [feature_setup_wizard.md](plugin_ux_plans/feature_setup_wizard.md) |
+| Runtime play-mode bridge / live stream (v1) | [feature_runtime_bridge.md](plugin_ux_plans/feature_runtime_bridge.md) |
 
 Runtime addon code under `scripts/internal/*` remains **unstable** for direct game use; the plugin may depend on it only for parity with future refactors—prefer mirroring rules inside `services/` if drift becomes a problem.
 

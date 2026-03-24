@@ -274,7 +274,7 @@ func _build_ui() -> void:
 	_details_label.fit_content = true
 	_details_label.scroll_active = false
 	_details_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_details_label.tooltip_text = "Full message, fix hint, and metadata for the selected issue."
+	_details_label.tooltip_text = "Full message, fix hint, metadata, and for binding warnings a scan-time Value type / Effective value preview."
 	_details_scroll.add_child(_details_label)
 
 	var btn_row := HBoxContainer.new()
@@ -382,6 +382,11 @@ func _get_selected_issue() -> Variant:
 	return _issues_shown[_selected_flat_index]
 
 
+## Prevents user/state text from breaking [RichTextLabel] BBCode (e.g. values containing "[").
+func _escape_bbcode_literal(s: String) -> String:
+	return s.replace("[", "[lb]")
+
+
 func _update_details_pane(issue: Variant) -> void:
 	if issue == null:
 		_details_label.text = "[i]Select an issue in the list above to see the full message, fix, and metadata.[/i]"
@@ -403,6 +408,14 @@ func _update_details_pane(issue: Variant) -> void:
 		body += "[b]Property[/b]: %s\n" % str(issue.property_name)
 	if issue.suggested_state_class != &"":
 		body += "[b]Suggested type[/b]: %s\n" % str(issue.suggested_state_class)
+	# Value preview: scan-time UiState.value snippet (binding warnings only). Omit from text search (see _issue_matches_search).
+	if not String(issue.value_preview).is_empty():
+		if not String(issue.value_type).is_empty():
+			body += "[b]Value type[/b]: %s\n" % _escape_bbcode_literal(String(issue.value_type))
+		body += "[b]Effective value[/b]: %s" % _escape_bbcode_literal(String(issue.value_preview))
+		if issue.value_truncated:
+			body += " [i](truncated)[/i]"
+		body += "\n"
 	_details_label.text = body
 
 
@@ -515,6 +528,9 @@ func _issue_matches_search(issue: Variant, q: String) -> bool:
 	parts.append(str(issue.node_path).to_lower())
 	parts.append(str(issue.property_name).to_lower())
 	parts.append(String(issue.component_name).to_lower())
+	# Do not index full value_preview (noisy / huge); optional: allow filtering by short value_type label only.
+	if not String(issue.value_type).is_empty():
+		parts.append(String(issue.value_type).to_lower())
 	var blob := " ".join(parts)
 	return needle in blob
 

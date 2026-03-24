@@ -22,7 +22,7 @@ enabled=PackedStringArray("res://addons/ui_system/editor_plugin/plugin.cfg")
 [ui_system]
 
 plugin_state_output_path="res://addons/ui_system/ui_resources/plugin_generated/"
-plugin_scan_mode=1
+plugin_scan_mode=0
 plugin_show_errors=true
 plugin_show_warnings=true
 plugin_show_info=true
