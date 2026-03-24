@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="UiBoolState" load_steps=2 format=3 uid="uid://deg676w7fm0qb"]
+
+[ext_resource type="Script" uid="uid://cxg5hj6ihqtue" path="res://addons/ui_system/scripts/api/models/ui_bool_state.gd" id="1_0q52e"]
+
+[resource]
+script = ExtResource("1_0q52e")
+value = false

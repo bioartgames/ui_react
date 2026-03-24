@@ -60,6 +60,16 @@ await UiAnimUtils.animate_expand(self, some_control).finished
 
 `UiAnimUtils` is **`res://addons/ui_system/scripts/api/ui_anim_utils.gd`** (global class `UiAnimUtils`).
 
+### 5) Optional: **UI System Tools** editor plugin
+
+1. Open **Project → Project Settings → Plugins** and enable **UI System Tools** (bundled at `editor_plugin/plugin.cfg`).
+2. Open the **UI System Tools** panel in the **bottom editor dock** (tab bar).
+3. Choose **Scan: Selection** or **Entire scene**, press **Refresh**, and review diagnostics.
+4. The issue list shows **short summary rows only**; **select a row** to see full issue text, fix hints, and **issue-scoped actions** (focus, quick-create state) in the details area below.
+5. For empty `*_state` slots, select an **[I]** info row and use **Create & assign typed state** (saves a `.tres` under the configured folder, default `res://addons/ui_system/ui_resources/plugin_generated/`). Override with project setting **`ui_system/plugin_state_output_path`**.
+
+Details: **[docs/editor_plugin.md](docs/editor_plugin.md)**.
+
 ---
 
 ## Required vs optional (by control)
@@ -131,8 +141,9 @@ These may change between template versions; **do not rely on them from game code
 | `scripts/internal/anim/` | Animation implementation (unstable for direct use). |
 | `scripts/internal/react/` | Reactive helpers (unstable for direct use). |
 | `examples/` | `reactive_ui.tscn` smoke demo. |
-| `docs/` | Extra notes (e.g. migration). |
-| `ui_resources/` | Sample `.tres` for the example scene. |
+| `docs/` | Extra notes (e.g. migration, editor plugin). |
+| `editor_plugin/` | Optional Godot editor plugin (dock, validation, quick state creation). |
+| `ui_resources/` | Sample `.tres` for the example scene; `plugin_generated/` holds plugin-created states (optional). |
 
 ---
 
