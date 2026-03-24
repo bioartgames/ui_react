@@ -4,6 +4,26 @@ extends Control
 const _SCAN_SELECTION := 0
 const _SCAN_SCENE := 1
 
+const _KEY_SCAN_MODE := "ui_system/plugin_scan_mode"
+const _KEY_SHOW_ERRORS := "ui_system/plugin_show_errors"
+const _KEY_SHOW_WARNINGS := "ui_system/plugin_show_warnings"
+const _KEY_SHOW_INFO := "ui_system/plugin_show_info"
+const _KEY_AUTO_REFRESH := "ui_system/plugin_auto_refresh"
+const _KEY_STATE_OUTPUT_PATH := "ui_system/plugin_state_output_path"
+
+const _DEF_SHOW_ERRORS := true
+const _DEF_SHOW_WARNINGS := true
+const _DEF_SHOW_INFO := true
+const _DEF_AUTO_REFRESH := true
+
+## Blocks save callbacks while applying persisted values (avoids duplicate writes / refresh loops).
+var _suppress_pref_save: bool = false
+
+## Coalesces multiple refresh requests into one deferred [method refresh] call per frame.
+var _coalesced_refresh_pending: bool = false
+## Set by [method _run_startup_refresh]; cleared after first successful root or one no-scene retry.
+var _expect_startup_scene_retry: bool = false
+
 var _plugin: EditorPlugin
 var _actions: UiSystemActionController
 
@@ -29,16 +49,93 @@ func setup(plugin: EditorPlugin) -> void:
 	_plugin = plugin
 	_actions = UiSystemActionController.new(plugin.get_undo_redo())
 	_build_ui()
-	_connect_editor_signals()
 	_register_default_project_settings()
-	call_deferred(&"refresh")
+	_load_persisted_ui_preferences()
+	_connect_editor_signals()
+	call_deferred(&"_run_startup_refresh")
+
+
+func request_refresh(_reason: StringName = &"manual") -> void:
+	if _coalesced_refresh_pending:
+		return
+	_coalesced_refresh_pending = true
+	call_deferred(&"_execute_pending_refresh")
+
+
+func _execute_pending_refresh() -> void:
+	_coalesced_refresh_pending = false
+	refresh()
+
+
+func _run_startup_refresh() -> void:
+	_expect_startup_scene_retry = true
+	request_refresh(&"startup")
+
+
+## Called from [EditorPlugin] when the edited scene tab changes (open/switch/empty).
+func notify_edited_scene_changed() -> void:
+	request_refresh(&"scene_changed")
+
+
+func _save_ui_preference(key: String, value: Variant) -> void:
+	ProjectSettings.set_setting(key, value)
+	var err := ProjectSettings.save()
+	if err != OK:
+		push_warning("UiSystemDock: could not save project settings (%s)" % key)
 
 
 func _register_default_project_settings() -> void:
-	if not ProjectSettings.has_setting("ui_system/plugin_state_output_path"):
-		ProjectSettings.set_setting("ui_system/plugin_state_output_path", UiSystemStateFactoryService.DEFAULT_OUTPUT_DIR)
+	var added_defaults := false
+	if not ProjectSettings.has_setting(_KEY_STATE_OUTPUT_PATH):
+		ProjectSettings.set_setting(_KEY_STATE_OUTPUT_PATH, UiSystemStateFactoryService.DEFAULT_OUTPUT_DIR)
+		added_defaults = true
+	if not ProjectSettings.has_setting(_KEY_SCAN_MODE):
+		ProjectSettings.set_setting(_KEY_SCAN_MODE, _SCAN_SELECTION)
+		added_defaults = true
+	if not ProjectSettings.has_setting(_KEY_SHOW_ERRORS):
+		ProjectSettings.set_setting(_KEY_SHOW_ERRORS, _DEF_SHOW_ERRORS)
+		added_defaults = true
+	if not ProjectSettings.has_setting(_KEY_SHOW_WARNINGS):
+		ProjectSettings.set_setting(_KEY_SHOW_WARNINGS, _DEF_SHOW_WARNINGS)
+		added_defaults = true
+	if not ProjectSettings.has_setting(_KEY_SHOW_INFO):
+		ProjectSettings.set_setting(_KEY_SHOW_INFO, _DEF_SHOW_INFO)
+		added_defaults = true
+	if not ProjectSettings.has_setting(_KEY_AUTO_REFRESH):
+		ProjectSettings.set_setting(_KEY_AUTO_REFRESH, _DEF_AUTO_REFRESH)
+		added_defaults = true
+	if added_defaults:
+		var err := ProjectSettings.save()
+		if err != OK:
+			push_warning("UiSystemDock: could not save default project settings")
+
+
+func _load_persisted_ui_preferences() -> void:
+	_suppress_pref_save = true
+
+	var mode_raw: Variant = ProjectSettings.get_setting(_KEY_SCAN_MODE, _SCAN_SELECTION)
+	var mode_id: int = int(mode_raw) if typeof(mode_raw) in [TYPE_INT, TYPE_FLOAT] else _SCAN_SELECTION
+	if mode_id != _SCAN_SELECTION and mode_id != _SCAN_SCENE:
+		mode_id = _SCAN_SELECTION
+	if _mode_option:
+		var idx := _mode_option.get_item_index(mode_id)
+		if idx >= 0:
+			_mode_option.select(idx)
+		else:
+			_mode_option.select(_mode_option.get_item_index(_SCAN_SELECTION))
+
+	if _filter_err:
+		_filter_err.button_pressed = bool(ProjectSettings.get_setting(_KEY_SHOW_ERRORS, _DEF_SHOW_ERRORS))
+	if _filter_warn:
+		_filter_warn.button_pressed = bool(ProjectSettings.get_setting(_KEY_SHOW_WARNINGS, _DEF_SHOW_WARNINGS))
+	if _filter_info:
+		_filter_info.button_pressed = bool(ProjectSettings.get_setting(_KEY_SHOW_INFO, _DEF_SHOW_INFO))
+	if _auto_refresh:
+		_auto_refresh.button_pressed = bool(ProjectSettings.get_setting(_KEY_AUTO_REFRESH, _DEF_AUTO_REFRESH))
 	if _path_edit:
 		_path_edit.text = UiSystemStateFactoryService.default_output_dir()
+
+	_suppress_pref_save = false
 
 
 func _build_ui() -> void:
@@ -64,13 +161,13 @@ func _build_ui() -> void:
 	_mode_option = OptionButton.new()
 	_mode_option.add_item("Selection", _SCAN_SELECTION)
 	_mode_option.add_item("Entire scene", _SCAN_SCENE)
-	_mode_option.item_selected.connect(func(_i): refresh())
+	_mode_option.item_selected.connect(_on_scan_mode_selected)
 	mode_row.add_child(_mode_option)
 
 	_auto_refresh = CheckBox.new()
 	_auto_refresh.text = "Auto-refresh on selection"
 	_auto_refresh.button_pressed = true
-	_auto_refresh.toggled.connect(func(_on): refresh())
+	_auto_refresh.toggled.connect(_on_auto_refresh_toggled)
 	mode_row.add_child(_auto_refresh)
 
 	var filt_row := HBoxContainer.new()
@@ -80,17 +177,17 @@ func _build_ui() -> void:
 	_filter_err = CheckBox.new()
 	_filter_err.text = "Errors"
 	_filter_err.button_pressed = true
-	_filter_err.toggled.connect(func(_on): _apply_filters())
+	_filter_err.toggled.connect(_on_filter_errors_toggled)
 	filt_row.add_child(_filter_err)
 	_filter_warn = CheckBox.new()
 	_filter_warn.text = "Warnings"
 	_filter_warn.button_pressed = true
-	_filter_warn.toggled.connect(func(_on): _apply_filters())
+	_filter_warn.toggled.connect(_on_filter_warnings_toggled)
 	filt_row.add_child(_filter_warn)
 	_filter_info = CheckBox.new()
 	_filter_info.text = "Info"
 	_filter_info.button_pressed = true
-	_filter_info.toggled.connect(func(_on): _apply_filters())
+	_filter_info.toggled.connect(_on_filter_info_toggled)
 	filt_row.add_child(_filter_info)
 
 	var path_row := HBoxContainer.new()
@@ -127,7 +224,7 @@ func _build_ui() -> void:
 	vbox.add_child(btn_row)
 	_btn_refresh = Button.new()
 	_btn_refresh.text = "Refresh"
-	_btn_refresh.pressed.connect(refresh)
+	_btn_refresh.pressed.connect(func(): request_refresh(&"manual"))
 	btn_row.add_child(_btn_refresh)
 	_btn_copy = Button.new()
 	_btn_copy.text = "Copy report"
@@ -154,8 +251,43 @@ func _connect_editor_signals() -> void:
 
 
 func _on_selection_changed() -> void:
-	if _auto_refresh and _auto_refresh.button_pressed and _mode_option.selected == _SCAN_SELECTION:
-		refresh()
+	if _auto_refresh and _auto_refresh.button_pressed and _mode_option.get_item_id(_mode_option.selected) == _SCAN_SELECTION:
+		request_refresh(&"selection_changed")
+
+
+func _on_scan_mode_selected(idx: int) -> void:
+	if _suppress_pref_save:
+		return
+	_save_ui_preference(_KEY_SCAN_MODE, _mode_option.get_item_id(idx))
+	request_refresh(&"scan_mode_changed")
+
+
+func _on_auto_refresh_toggled(_pressed: bool) -> void:
+	if _suppress_pref_save:
+		return
+	_save_ui_preference(_KEY_AUTO_REFRESH, _auto_refresh.button_pressed)
+	request_refresh(&"auto_refresh_toggled")
+
+
+func _on_filter_errors_toggled(_pressed: bool) -> void:
+	if _suppress_pref_save:
+		return
+	_save_ui_preference(_KEY_SHOW_ERRORS, _filter_err.button_pressed)
+	_apply_filters()
+
+
+func _on_filter_warnings_toggled(_pressed: bool) -> void:
+	if _suppress_pref_save:
+		return
+	_save_ui_preference(_KEY_SHOW_WARNINGS, _filter_warn.button_pressed)
+	_apply_filters()
+
+
+func _on_filter_info_toggled(_pressed: bool) -> void:
+	if _suppress_pref_save:
+		return
+	_save_ui_preference(_KEY_SHOW_INFO, _filter_info.button_pressed)
+	_apply_filters()
 
 
 func _on_path_changed(new_text: String) -> void:
@@ -164,7 +296,7 @@ func _on_path_changed(new_text: String) -> void:
 		return
 	if not p.ends_with("/"):
 		p += "/"
-	ProjectSettings.set_setting("ui_system/plugin_state_output_path", p)
+	_save_ui_preference(_KEY_STATE_OUTPUT_PATH, p)
 
 
 func _on_item_selected(_idx: int) -> void:
@@ -249,7 +381,12 @@ func refresh() -> void:
 			)
 		)
 		_apply_filters()
+		if _expect_startup_scene_retry:
+			_expect_startup_scene_retry = false
+			request_refresh(&"startup_no_scene")
 		return
+
+	_expect_startup_scene_retry = false
 
 	var nodes: Array[Node] = []
 	if _mode_option.selected == _SCAN_SCENE:
@@ -358,7 +495,7 @@ func _on_create_assign() -> void:
 		out_dir = UiSystemStateFactoryService.default_output_dir()
 	if not out_dir.ends_with("/"):
 		out_dir += "/"
-	ProjectSettings.set_setting("ui_system/plugin_state_output_path", out_dir)
+	_save_ui_preference(_KEY_STATE_OUTPUT_PATH, out_dir)
 	var err := UiSystemStateFactoryService.ensure_output_dir(out_dir)
 	if err != OK:
 		push_error("UiSystemDock: could not create output folder: %s" % out_dir)
@@ -371,7 +508,7 @@ func _on_create_assign() -> void:
 		return
 	_actions.assign_resource_property(node, issue.property_name, loaded)
 	_plugin.get_editor_interface().get_resource_filesystem().scan()
-	refresh()
+	request_refresh(&"after_create_assign")
 
 
 func _collect_react_under(n: Node) -> Array[Node]:

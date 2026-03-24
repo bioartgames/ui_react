@@ -15,11 +15,19 @@ func _enter_tree() -> void:
 	_dock = dock_scene.instantiate() as Control
 	_dock.setup(self)
 	_bottom_panel_button = add_control_to_bottom_panel(_dock, "UI System Tools")
+	scene_changed.connect(_on_editor_scene_changed)
 
 
 func _exit_tree() -> void:
+	if scene_changed.is_connected(_on_editor_scene_changed):
+		scene_changed.disconnect(_on_editor_scene_changed)
 	if _dock:
 		remove_control_from_bottom_panel(_dock)
 		_dock.queue_free()
 		_dock = null
 		_bottom_panel_button = null
+
+
+func _on_editor_scene_changed(_scene_root: Node) -> void:
+	if _dock and _dock.has_method(&"notify_edited_scene_changed"):
+		_dock.notify_edited_scene_changed()

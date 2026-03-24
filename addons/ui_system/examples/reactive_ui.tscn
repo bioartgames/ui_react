@@ -1,9 +1,11 @@
-[gd_scene load_steps=30 format=3 uid="uid://1ctyp6anyhbh"]
+[gd_scene load_steps=37 format=3 uid="uid://1ctyp6anyhbh"]
 
 [ext_resource type="Script" uid="uid://3m8buhv674ja" path="res://addons/ui_system/scripts/controls/ui_react_check_box.gd" id="1_575s6"]
 [ext_resource type="Resource" uid="uid://cxl14gsie0wgq" path="res://addons/ui_system/ui_resources/bool.tres" id="2_qyhnf"]
+[ext_resource type="Resource" uid="uid://xlji6hnpjhpy" path="res://addons/ui_system/ui_resources/plugin_generated/DisableActionsToggle_disabled_state.tres" id="3_5qj8y"]
 [ext_resource type="Script" uid="uid://lv5ixpw5hlvp" path="res://addons/ui_system/scripts/controls/ui_react_button.gd" id="3_12j7n"]
 [ext_resource type="Script" uid="uid://diigywt0dm170" path="res://addons/ui_system/scripts/api/models/ui_anim_target.gd" id="4_1o4e8"]
+[ext_resource type="Resource" uid="uid://deg676w7fm0qb" path="res://addons/ui_system/ui_resources/plugin_generated/ReactiveButton_pressed_state.tres" id="5_6rggb"]
 [ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://addons/ui_system/scripts/controls/ui_react_slider.gd" id="5_52c3u"]
 [ext_resource type="Script" uid="uid://s6xiov8r6bil" path="res://addons/ui_system/scripts/controls/ui_react_progress_bar.gd" id="7_rgfjq"]
 [ext_resource type="Script" uid="uid://bw7gojuop1hic" path="res://addons/ui_system/scripts/controls/ui_react_label.gd" id="8_ytw4g"]
@@ -14,8 +16,13 @@
 [ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://addons/ui_system/scripts/controls/ui_react_line_edit.gd" id="13_v64hs"]
 [ext_resource type="Script" uid="uid://duphbaan8pk5f" path="res://addons/ui_system/scripts/controls/ui_react_item_list.gd" id="14_jnjh5"]
 [ext_resource type="Script" uid="uid://diihw85b5p4bd" path="res://addons/ui_system/scripts/controls/ui_react_spin_box.gd" id="15_fsikj"]
+[ext_resource type="Resource" uid="uid://br6sld2ydronl" path="res://addons/ui_system/ui_resources/plugin_generated/ReactiveTabContainer_selected_state.tres" id="15_jt54o"]
 [ext_resource type="Script" uid="uid://cy1vsor6ek3xr" path="res://addons/ui_system/scripts/api/models/ui_float_state.gd" id="16_float"]
 [ext_resource type="Script" uid="uid://dwwa3tekslkjw" path="res://addons/ui_system/scripts/api/models/ui_array_state.gd" id="17_array"]
+[ext_resource type="Resource" uid="uid://d383uqp48us27" path="res://addons/ui_system/ui_resources/plugin_generated/ReactiveItemList_selected_state.tres" id="19_ysw5a"]
+[ext_resource type="Resource" uid="uid://dnbocewy457dt" path="res://addons/ui_system/ui_resources/plugin_generated/ReactiveItemList_disabled_state.tres" id="20_v64hs"]
+[ext_resource type="Resource" uid="uid://lgi4p02hftfx" path="res://addons/ui_system/ui_resources/plugin_generated/ReactiveSpinBox_value_state.tres" id="22_jnjh5"]
+[ext_resource type="Resource" uid="uid://bhflx6tho5wwt" path="res://addons/ui_system/ui_resources/plugin_generated/ReactiveSpinBox_disabled_state.tres" id="23_fsikj"]
 
 [sub_resource type="Resource" id="Resource_p7nh0"]
 script = ExtResource("4_1o4e8")
@@ -127,6 +134,7 @@ size_flags_horizontal = 4
 text = "Disable actions"
 script = ExtResource("1_575s6")
 checked_state = ExtResource("2_qyhnf")
+disabled_state = ExtResource("3_5qj8y")
 metadata/_custom_type_script = "uid://3m8buhv674ja"
 
 [node name="ReactiveButton" type="Button" parent="VBox"]
@@ -135,6 +143,7 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 text = "Press this thing."
 script = ExtResource("3_12j7n")
+pressed_state = ExtResource("5_6rggb")
 disabled_state = ExtResource("2_qyhnf")
 animation_targets = Array[ExtResource("4_1o4e8")]([SubResource("Resource_p7nh0")])
 metadata/_custom_type_script = "uid://lv5ixpw5hlvp"
@@ -182,6 +191,7 @@ layout_mode = 2
 size_flags_vertical = 3
 current_tab = 0
 script = ExtResource("11_jt54o")
+selected_state = ExtResource("15_jt54o")
 metadata/_custom_type_script = "uid://dohh71knb8vid"
 
 [node name="Panel" type="Panel" parent="VBox/ReactiveTabContainer"]
@@ -226,11 +236,18 @@ metadata/_tab_index = 1
 
 [node name="ReactiveItemList" type="ItemList" parent="VBox"]
 layout_mode = 2
+allow_reselect = true
+auto_width = true
+auto_height = true
 script = ExtResource("14_jnjh5")
+selected_state = ExtResource("19_ysw5a")
+disabled_state = ExtResource("20_v64hs")
 metadata/_custom_type_script = "uid://duphbaan8pk5f"
 
 [node name="ReactiveSpinBox" type="SpinBox" parent="VBox"]
 layout_mode = 2
 script = ExtResource("15_fsikj")
+value_state = ExtResource("22_jnjh5")
+disabled_state = ExtResource("23_fsikj")
 animation_targets = Array[ExtResource("4_1o4e8")]([SubResource("Resource_ljngm")])
 metadata/_custom_type_script = "uid://diihw85b5p4bd"

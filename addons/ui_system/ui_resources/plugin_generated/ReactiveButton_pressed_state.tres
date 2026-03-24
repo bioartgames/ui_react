@@ -4,4 +4,4 @@
 
 [resource]
 script = ExtResource("1_0q52e")
-value = false
+value = true

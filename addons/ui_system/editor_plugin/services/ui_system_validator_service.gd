@@ -105,7 +105,7 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 						)
 					)
 			"string":
-				if u.value != null and typeof(u.value) not in [TYPE_STRING, TYPE_STRING_NAME]:
+				if u.value != null and not _is_valid_string_binding_value(component, prop, u.value):
 					out.append(
 						UiSystemDiagnosticModel.DiagnosticIssue.make_structured(
 							UiSystemDiagnosticModel.Severity.WARNING,
@@ -129,6 +129,13 @@ static func _variant_type_name(v: Variant) -> String:
 
 static func _value_is_bool_like(v: Variant) -> bool:
 	return typeof(v) == TYPE_BOOL
+
+
+static func _is_valid_string_binding_value(component: String, prop: StringName, value: Variant) -> bool:
+	# UiReactLabel intentionally supports recursive text rendering from arrays/nested UiState.
+	if component == "UiReactLabel" and prop == &"text_state":
+		return true
+	return typeof(value) in [TYPE_STRING, TYPE_STRING_NAME]
 
 
 static func _validate_anim_targets(component: String, owner: Control, node_path: NodePath) -> Array:
