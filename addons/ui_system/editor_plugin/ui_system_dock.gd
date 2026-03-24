@@ -56,8 +56,7 @@ var _details_label: RichTextLabel
 var _btn_refresh: Button
 var _btn_copy: Button
 var _btn_focus: Button
-var _btn_create: Button
-var _btn_create_all: Button
+var _btn_fix_all: Button
 
 ## group_key -> expanded (for grouped view)
 var _group_expanded: Dictionary = {}
@@ -157,6 +156,7 @@ func _load_persisted_ui_preferences() -> void:
 
 
 func _build_ui() -> void:
+	# Tooltip copy: verb-first, one short sentence; scope (Selection vs scene, filtered list) where it matters.
 	custom_minimum_size = Vector2(0, 180)
 
 	var margin := MarginContainer.new()
@@ -179,12 +179,14 @@ func _build_ui() -> void:
 	_mode_option.add_item("Selection", _SCAN_SELECTION)
 	_mode_option.add_item("Entire scene", _SCAN_SCENE)
 	_mode_option.item_selected.connect(_on_scan_mode_selected)
+	_mode_option.tooltip_text = "Choose scan scope: Selection scans selected nodes and their subtrees; Entire scene scans all UiReact* nodes in the edited scene."
 	mode_row.add_child(_mode_option)
 
 	_auto_refresh = CheckBox.new()
 	_auto_refresh.text = "Auto-refresh on selection"
 	_auto_refresh.button_pressed = true
 	_auto_refresh.toggled.connect(_on_auto_refresh_toggled)
+	_auto_refresh.tooltip_text = "When enabled in Selection mode, rescan diagnostics automatically when the editor selection changes."
 	mode_row.add_child(_auto_refresh)
 
 	var group_row := HBoxContainer.new()
@@ -196,6 +198,7 @@ func _build_ui() -> void:
 	_group_option.add_item("By node", _GROUP_BY_NODE)
 	_group_option.add_item("By severity", _GROUP_BY_SEVERITY)
 	_group_option.item_selected.connect(_on_group_mode_selected)
+	_group_option.tooltip_text = "Organize the issue list as a flat list, grouped by node, or grouped by severity."
 	group_row.add_child(_group_option)
 
 	var filt_row := HBoxContainer.new()
@@ -206,16 +209,19 @@ func _build_ui() -> void:
 	_filter_err.text = "Errors"
 	_filter_err.button_pressed = true
 	_filter_err.toggled.connect(_on_filter_errors_toggled)
+	_filter_err.tooltip_text = "Show or hide error diagnostics."
 	filt_row.add_child(_filter_err)
 	_filter_warn = CheckBox.new()
 	_filter_warn.text = "Warnings"
 	_filter_warn.button_pressed = true
 	_filter_warn.toggled.connect(_on_filter_warnings_toggled)
+	_filter_warn.tooltip_text = "Show or hide warning diagnostics."
 	filt_row.add_child(_filter_warn)
 	_filter_info = CheckBox.new()
 	_filter_info.text = "Info"
 	_filter_info.button_pressed = true
 	_filter_info.toggled.connect(_on_filter_info_toggled)
+	_filter_info.tooltip_text = "Show or hide informational diagnostics."
 	filt_row.add_child(_filter_info)
 
 	var search_row := HBoxContainer.new()
@@ -226,6 +232,7 @@ func _build_ui() -> void:
 	_search_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_search_edit.placeholder_text = "Node, path, property, message…"
 	_search_edit.text_changed.connect(_on_search_text_changed)
+	_search_edit.tooltip_text = "Filter issues by node name, path, property, component, message text, or fix hint."
 	search_row.add_child(_search_edit)
 
 	_search_timer = Timer.new()
@@ -242,11 +249,13 @@ func _build_ui() -> void:
 	_path_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_path_edit.text = UiSystemStateFactoryService.default_output_dir()
 	_path_edit.text_submitted.connect(func(p): _on_path_changed(p))
+	_path_edit.tooltip_text = "Folder where Fix and Fix All save new .tres state files. If a filename already exists, the plugin uses _2, _3, … suffixes instead of overwriting."
 	path_row.add_child(_path_edit)
 
 	_issues_scroll = ScrollContainer.new()
 	_issues_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_issues_scroll.custom_minimum_size = Vector2(0, 140)
+	_issues_scroll.tooltip_text = "Scroll the diagnostics list."
 	vbox.add_child(_issues_scroll)
 
 	_issues_container = VBoxContainer.new()
@@ -265,33 +274,33 @@ func _build_ui() -> void:
 	_details_label.fit_content = true
 	_details_label.scroll_active = false
 	_details_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_details_label.tooltip_text = "Full message, fix hint, and metadata for the selected issue."
 	_details_scroll.add_child(_details_label)
 
 	var btn_row := HBoxContainer.new()
 	vbox.add_child(btn_row)
 	_btn_refresh = Button.new()
-	_btn_refresh.text = "Refresh"
+	_btn_refresh.text = "Rescan"
+	_btn_refresh.tooltip_text = "Run diagnostics now using the current Scan mode and filters. Clears Ignore hides."
 	_btn_refresh.pressed.connect(func(): request_refresh(&"manual"))
 	btn_row.add_child(_btn_refresh)
 	_btn_copy = Button.new()
 	_btn_copy.text = "Copy report"
 	_btn_copy.pressed.connect(_on_copy_report)
+	_btn_copy.tooltip_text = "Copy the filtered diagnostics report to the clipboard."
 	btn_row.add_child(_btn_copy)
 	_btn_focus = Button.new()
 	_btn_focus.text = "Focus node"
 	_btn_focus.disabled = true
 	_btn_focus.pressed.connect(_on_focus_node)
+	_btn_focus.tooltip_text = "Select and focus the scene node for the currently selected issue."
 	btn_row.add_child(_btn_focus)
-	_btn_create = Button.new()
-	_btn_create.text = "Create & assign typed state"
-	_btn_create.disabled = true
-	_btn_create.pressed.connect(_on_create_assign)
-	btn_row.add_child(_btn_create)
-	_btn_create_all = Button.new()
-	_btn_create_all.text = "Create all missing"
-	_btn_create_all.disabled = true
-	_btn_create_all.pressed.connect(_on_create_assign_all)
-	btn_row.add_child(_btn_create_all)
+	_btn_fix_all = Button.new()
+	_btn_fix_all.text = "Fix All"
+	_btn_fix_all.tooltip_text = "Apply available quick fixes to all eligible issues in the filtered list."
+	_btn_fix_all.disabled = true
+	_btn_fix_all.pressed.connect(_on_fix_all)
+	btn_row.add_child(_btn_fix_all)
 
 	_update_details_pane(null)
 	_update_action_buttons(null)
@@ -419,19 +428,17 @@ func _can_create_state_for_issue(issue: Variant) -> bool:
 func _update_action_buttons(issue: Variant) -> void:
 	if issue == null:
 		_btn_focus.disabled = true
-		_btn_create.disabled = true
 		return
 	_btn_focus.disabled = issue.node_path.is_empty()
-	_btn_create.disabled = not _can_create_state_for_issue(issue)
 
 
-func _update_create_all_button() -> void:
+func _update_fix_all_button() -> void:
 	var any := false
 	for issue in _issues_shown:
 		if _can_create_state_for_issue(issue):
 			any = true
 			break
-	_btn_create_all.disabled = not any
+	_btn_fix_all.disabled = not any
 
 
 func refresh() -> void:
@@ -540,7 +547,7 @@ func _apply_filters() -> void:
 		_update_details_pane(_issues_shown[0])
 		_update_action_buttons(_issues_shown[0])
 
-	_update_create_all_button()
+	_update_fix_all_button()
 	_rebuild_issue_list_ui()
 
 
@@ -634,6 +641,7 @@ func _rebuild_issue_list_ui() -> void:
 		toggle.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		var gk_cap: String = gk
 		toggle.pressed.connect(func(): _toggle_group(gk_cap))
+		toggle.tooltip_text = "Expand or collapse this group."
 		header.add_child(toggle)
 		_issues_container.add_child(header)
 
@@ -661,23 +669,27 @@ func _make_issue_row(issue: Variant, flat_index: int) -> Control:
 	sel_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var fi := flat_index
 	sel_btn.pressed.connect(func(): _select_issue_at_index(fi))
+	sel_btn.tooltip_text = "Select this issue and show full details below."
 	row.add_child(sel_btn)
 
 	var btn_fix := Button.new()
 	btn_fix.text = "Fix"
 	btn_fix.disabled = not _can_create_state_for_issue(issue)
 	btn_fix.pressed.connect(func(): _on_row_fix(fi))
+	btn_fix.tooltip_text = "Apply the available quick fix for this issue when eligible (e.g. create and assign a typed UiState)."
 	row.add_child(btn_fix)
 
 	var btn_focus := Button.new()
 	btn_focus.text = "Focus"
 	btn_focus.disabled = issue.node_path.is_empty()
 	btn_focus.pressed.connect(func(): _on_row_focus(fi))
+	btn_focus.tooltip_text = "Focus the scene node referenced by this issue."
 	row.add_child(btn_focus)
 
 	var btn_ignore := Button.new()
 	btn_ignore.text = "Ignore"
 	btn_ignore.pressed.connect(func(): _on_row_ignore(fi))
+	btn_ignore.tooltip_text = "Hide this issue until the next Rescan."
 	row.add_child(btn_ignore)
 
 	return row
@@ -689,7 +701,10 @@ func _on_row_fix(flat_index: int) -> void:
 	var issue: Variant = _issues_shown[flat_index]
 	if not _can_create_state_for_issue(issue):
 		return
-	_create_and_assign_for_issue(issue)
+	if not _create_and_assign_for_issue(issue):
+		return
+	_plugin.get_editor_interface().get_resource_filesystem().scan()
+	request_refresh(&"after_row_fix")
 
 
 func _on_row_focus(flat_index: int) -> void:
@@ -775,17 +790,7 @@ func _create_and_assign_for_issue(issue: Variant) -> bool:
 	return true
 
 
-func _on_create_assign() -> void:
-	var issue: Variant = _get_selected_issue()
-	if issue == null:
-		return
-	if not _create_and_assign_for_issue(issue):
-		return
-	_plugin.get_editor_interface().get_resource_filesystem().scan()
-	request_refresh(&"after_create_assign")
-
-
-func _on_create_assign_all() -> void:
+func _on_fix_all() -> void:
 	var to_fix: Array = []
 	for issue in _issues_shown:
 		if _can_create_state_for_issue(issue):
@@ -802,8 +807,8 @@ func _on_create_assign_all() -> void:
 			failed += 1
 
 	_plugin.get_editor_interface().get_resource_filesystem().scan()
-	request_refresh(&"after_create_assign_all")
-	print("UiSystemDock: Create all missing — created: %d, failed: %d" % [created, failed])
+	request_refresh(&"after_fix_all")
+	print("UiSystemDock: Fix All — created: %d, failed: %d" % [created, failed])
 
 
 func _collect_react_under(n: Node) -> Array[Node]:
