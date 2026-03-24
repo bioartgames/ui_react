@@ -1,5 +1,7 @@
+@tool
 ## Simple animation target configuration (no resource file needed).
 ## All properties are configured directly in the Inspector with a dropdown menu.
+## Animation-specific fields are shown/hidden based on the selected [member animation] (editor only).
 class_name UiAnimTarget
 extends Resource
 
@@ -55,6 +57,16 @@ const ROTATE_OUT_END_DEGREES := 360.0
 const FLOAT_DEFAULT_AMPLITUDE_PX := 10.0
 const RESET_INSTANT_DURATION_SECONDS := 0.0
 
+## Animations that use [member pivot_offset] in [method apply_to_control].
+const _PIVOT_ANIMATIONS: Array[AnimationAction] = [
+	AnimationAction.EXPAND, AnimationAction.EXPAND_X, AnimationAction.EXPAND_Y,
+	AnimationAction.BOUNCE_IN, AnimationAction.ELASTIC_IN, AnimationAction.ROTATE_IN,
+	AnimationAction.POP, AnimationAction.PULSE, AnimationAction.BREATHING, AnimationAction.WOBBLE,
+]
+
+func _is_pivot_visible_for(action: AnimationAction) -> bool:
+	return _PIVOT_ANIMATIONS.has(action)
+
 ## ============================================
 ## CORE SETTINGS
 ## ============================================
@@ -67,7 +79,13 @@ const RESET_INSTANT_DURATION_SECONDS := 0.0
 @export var trigger: Trigger = Trigger.PRESSED
 
 ## Animation type to perform (dropdown selection in Inspector).
-@export var animation: AnimationAction = AnimationAction.EXPAND
+## Changing this refreshes which advanced fields are visible in the Inspector.
+@export var animation: AnimationAction = AnimationAction.EXPAND:
+	set(value):
+		if animation == value:
+			return
+		animation = value
+		notify_property_list_changed()
 
 ## ============================================
 ## TIMING & EASING
@@ -95,6 +113,7 @@ const RESET_INSTANT_DURATION_SECONDS := 0.0
 
 ## ============================================
 ## ADVANCED SETTINGS
+## (Editor: pivot and animation-specific groups below are shown only when relevant to [member animation].)
 ## ============================================
 
 ## Custom pivot offset for scaling/rotation animations.
@@ -137,6 +156,40 @@ const RESET_INSTANT_DURATION_SECONDS := 0.0
 
 ## Flash intensity multiplier for COLOR_FLASH animation.
 @export_range(0.0, 10.0, 0.01, "or_greater") var flash_intensity: float = 1.5
+
+
+func _validate_property(property: Dictionary) -> void:
+	var pname: StringName = property.name
+	if pname == &"animation":
+		return
+	# Core + timing + behavior: always visible in the Inspector.
+	var always_visible: Array[StringName] = [
+		&"target", &"trigger", &"duration", &"easing", &"repeat_count",
+		&"reverse", &"respect_disabled",
+	]
+	if pname in always_visible:
+		return
+	var show_in_editor: bool = false
+	match pname:
+		&"pivot_offset":
+			show_in_editor = _is_pivot_visible_for(animation)
+		&"rotate_start_angle":
+			show_in_editor = animation == AnimationAction.ROTATE_IN
+		&"pop_overshoot":
+			show_in_editor = animation == AnimationAction.POP
+		&"pulse_amount", &"pulse_count":
+			show_in_editor = animation == AnimationAction.PULSE
+		&"shake_intensity", &"shake_count":
+			show_in_editor = animation == AnimationAction.SHAKE
+		&"flash_color", &"flash_intensity":
+			show_in_editor = animation == AnimationAction.COLOR_FLASH
+		_:
+			return
+	if show_in_editor:
+		property.usage = PROPERTY_USAGE_DEFAULT
+	else:
+		property.usage = PROPERTY_USAGE_STORAGE
+
 
 ## Applies this animation to the target control.
 ## [param owner]: The node that owns the animation (for creating tweens).
