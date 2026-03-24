@@ -20,6 +20,7 @@
 [sub_resource type="Resource" id="Resource_p7nh0"]
 script = ExtResource("4_1o4e8")
 target = NodePath(".")
+pivot_offset = Vector2(-1, -1.375)
 metadata/_custom_type_script = "uid://diigywt0dm170"
 
 [sub_resource type="Resource" id="3"]

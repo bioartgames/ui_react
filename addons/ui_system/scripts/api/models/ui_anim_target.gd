@@ -7,48 +7,102 @@ extends Resource
 
 ## When to trigger this animation.
 enum Trigger {
-	PRESSED,           # When button is pressed (default)
-	HOVER_ENTER,       # When mouse enters control
-	HOVER_EXIT,        # When mouse exits control
-	TOGGLED_ON,        # When toggle is turned on
-	TOGGLED_OFF,       # When toggle is turned off
-	TEXT_CHANGED,      # When text value changes
-	SELECTION_CHANGED, # When selection changes
-	VALUE_CHANGED,     # When value changes
-	VALUE_INCREASED,   # When value increases
-	VALUE_DECREASED,   # When value decreases
-	DRAG_STARTED,      # When user starts dragging
-	DRAG_ENDED,        # When user stops dragging
-	COMPLETED,         # When progress reaches completion
-	TEXT_ENTERED,      # When user presses Enter in text input
-	FOCUS_ENTERED,     # When input gains focus
-	FOCUS_EXITED,      # When input loses focus
+	## When a button is pressed (default).
+	PRESSED,
+	## When the mouse enters the control.
+	HOVER_ENTER,
+	## When the mouse exits the control.
+	HOVER_EXIT,
+	## When a toggle is turned on.
+	TOGGLED_ON,
+	## When a toggle is turned off.
+	TOGGLED_OFF,
+	## When text value changes.
+	TEXT_CHANGED,
+	## When selection changes.
+	SELECTION_CHANGED,
+	## When a value changes.
+	VALUE_CHANGED,
+	## When a value increases.
+	VALUE_INCREASED,
+	## When a value decreases.
+	VALUE_DECREASED,
+	## When the user starts dragging.
+	DRAG_STARTED,
+	## When the user stops dragging.
+	DRAG_ENDED,
+	## When progress reaches completion.
+	COMPLETED,
+	## When the user presses Enter in a text input.
+	TEXT_ENTERED,
+	## When the control gains focus.
+	FOCUS_ENTERED,
+	## When the control loses focus.
+	FOCUS_EXITED,
 }
 
 ## Animation action types.
 enum AnimationAction {
-	EXPAND, EXPAND_X, EXPAND_Y,
+	## Uniform scale expand from pivot (or shrink when [member reverse]).
+	EXPAND,
+	## Horizontal scale expand only.
+	EXPAND_X,
+	## Vertical scale expand only.
+	EXPAND_Y,
+	## Fade opacity in (or out when [member reverse]).
 	FADE_IN,
-	SLIDE_FROM_LEFT, SLIDE_FROM_RIGHT, SLIDE_FROM_TOP, SLIDE_FROM_BOTTOM,
+	## Slide in from the left edge.
+	SLIDE_FROM_LEFT,
+	## Slide in from the right edge.
+	SLIDE_FROM_RIGHT,
+	## Slide in from the top edge.
+	SLIDE_FROM_TOP,
+	## Slide in from the bottom edge.
+	SLIDE_FROM_BOTTOM,
+	## Move from the left toward center.
 	FROM_LEFT_TO_CENTER,
+	## Move from the right toward center.
 	FROM_RIGHT_TO_CENTER,
+	## Move from the top toward center.
 	FROM_TOP_TO_CENTER,
+	## Move from the bottom toward center.
 	FROM_BOTTOM_TO_CENTER,
+	## Bouncy scale-in from pivot.
 	BOUNCE_IN,
+	## Elastic overshoot scale-in from pivot.
 	ELASTIC_IN,
+	## Rotate in from [member rotate_start_angle] (uses pivot).
 	ROTATE_IN,
-	POP, PULSE, SHAKE,
-	BREATHING, WOBBLE, FLOAT, GLOW_PULSE,
+	## Pop scale with overshoot ([member pop_overshoot]).
+	POP,
+	## Pulse scale ([member pulse_amount], [member pulse_count]).
+	PULSE,
+	## Shake position ([member shake_intensity], [member shake_count]).
+	SHAKE,
+	## Subtle breathing scale motion.
+	BREATHING,
+	## Wobble rotation.
+	WOBBLE,
+	## Vertical floating motion.
+	FLOAT,
+	## Pulsing glow/outline style effect.
+	GLOW_PULSE,
+	## Flash modulate toward [member flash_color] ([member flash_intensity]).
 	COLOR_FLASH,
-	RESET
+	## Restore baseline transform/modulate/state.
+	RESET,
 }
 
 ## Easing types for animations.
 enum Easing {
-	EASE_IN,        # Slow start, fast end
-	EASE_OUT,       # Fast start, slow end (default)
-	EASE_IN_OUT,    # Slow start and end, fast middle
-	EASE_OUT_IN,    # Fast start and end, slow middle
+	## Slow start, fast end.
+	EASE_IN,
+	## Fast start, slow end (default).
+	EASE_OUT,
+	## Slow start and end, fast middle.
+	EASE_IN_OUT,
+	## Fast start and end, slow middle.
+	EASE_OUT_IN,
 }
 
 ## Dispatch defaults aligned with [UiAnimUtils] slide/float/reset behavior.
@@ -113,7 +167,7 @@ func _is_pivot_visible_for(action: AnimationAction) -> bool:
 
 ## ============================================
 ## ADVANCED SETTINGS
-## (Editor: pivot and animation-specific groups below are shown only when relevant to [member animation].)
+## (Editor: pivot and animation-specific fields below are shown only when relevant to [member animation].)
 ## ============================================
 
 ## Custom pivot offset for scaling/rotation animations.
@@ -126,31 +180,27 @@ func _is_pivot_visible_for(action: AnimationAction) -> bool:
 
 ## ============================================
 ## ANIMATION-SPECIFIC SETTINGS
+## (Inspector: shown inline when relevant to [member animation]; no separate group headers.)
 ## ============================================
 
-@export_group("Rotate (for ROTATE_IN animation)")
 ## Starting angle in degrees for ROTATE_IN animation (default: -360.0).
 @export_range(-720.0, 720.0, 0.1, "or_greater", "or_less") var rotate_start_angle: float = -360.0
 
-@export_group("Pop (for POP animation)")
 ## Overshoot amount for POP animation (default: 1.2, meaning 20% overshoot).
 @export_range(0.0, 5.0, 0.01, "or_greater") var pop_overshoot: float = 1.2
 
-@export_group("Pulse (for PULSE animation)")
 ## Pulse scale amount for PULSE animation (default: 1.1, meaning 10% scale increase).
 @export_range(0.0, 5.0, 0.01, "or_greater") var pulse_amount: float = 1.1
 
 ## Number of pulses for PULSE animation (default: 2).
 @export_range(0, 999) var pulse_count: int = 2
 
-@export_group("Shake (for SHAKE animation)")
 ## Shake intensity in pixels for SHAKE animation (default: 10.0).
 @export_range(0.0, 500.0, 0.1, "or_greater") var shake_intensity: float = 10.0
 
 ## Number of shakes for SHAKE animation (default: 5).
 @export_range(0, 999) var shake_count: int = 5
 
-@export_group("Color Flash (for COLOR_FLASH animation)")
 ## Flash color for COLOR_FLASH animation.
 @export var flash_color: Color = Color.YELLOW
 
