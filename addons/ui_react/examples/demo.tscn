@@ -1,0 +1,242 @@
+[gd_scene load_steps=34 format=3 uid="uid://1ctyp6anyhbh"]
+
+[ext_resource type="Script" uid="uid://3m8buhv674ja" path="res://addons/ui_react/scripts/controls/ui_react_check_box.gd" id="1_732tq"]
+[ext_resource type="Script" uid="uid://lv5ixpw5hlvp" path="res://addons/ui_react/scripts/controls/ui_react_button.gd" id="2_mlp57"]
+[ext_resource type="Script" uid="uid://diigywt0dm170" path="res://addons/ui_react/scripts/api/models/ui_anim_target.gd" id="3_yauoy"]
+[ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://addons/ui_react/scripts/controls/ui_react_slider.gd" id="4_1gbb3"]
+[ext_resource type="Script" uid="uid://s6xiov8r6bil" path="res://addons/ui_react/scripts/controls/ui_react_progress_bar.gd" id="5_qrupd"]
+[ext_resource type="Script" uid="uid://bw7gojuop1hic" path="res://addons/ui_react/scripts/controls/ui_react_label.gd" id="6_e7mev"]
+[ext_resource type="Script" uid="uid://dwwa3tekslkjw" path="res://addons/ui_react/scripts/api/models/ui_array_state.gd" id="7_g6gj5"]
+[ext_resource type="Resource" uid="uid://dp3cawtta2kbd" path="res://addons/ui_react/ui_resources/items.tres" id="8_rt7ea"]
+[ext_resource type="Script" uid="uid://b75p2so2hr0wd" path="res://addons/ui_react/scripts/controls/ui_react_option_button.gd" id="9_dtwku"]
+[ext_resource type="Resource" uid="uid://cxl14gsie0wgq" path="res://addons/ui_react/ui_resources/bool.tres" id="10_mq8g6"]
+[ext_resource type="Script" uid="uid://dohh71knb8vid" path="res://addons/ui_react/scripts/controls/ui_react_tab_container.gd" id="11_f7u6l"]
+[ext_resource type="Resource" uid="uid://br6sld2ydronl" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveTabContainer_selected_state.tres" id="12_ym70l"]
+[ext_resource type="Resource" uid="uid://cvu2qm22ysl0y" path="res://addons/ui_react/ui_resources/text.tres" id="13_7xx27"]
+[ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://addons/ui_react/scripts/controls/ui_react_line_edit.gd" id="14_ioyot"]
+[ext_resource type="Script" uid="uid://duphbaan8pk5f" path="res://addons/ui_react/scripts/controls/ui_react_item_list.gd" id="15_mxh75"]
+[ext_resource type="Resource" uid="uid://d383uqp48us27" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveItemList_selected_state.tres" id="16_7tkpi"]
+[ext_resource type="Resource" uid="uid://b1pcj3277xqps" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveItemList_items_state.tres" id="17_tbmpo"]
+[ext_resource type="Resource" uid="uid://dnbocewy457dt" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveItemList_disabled_state.tres" id="18_rnrhn"]
+[ext_resource type="Script" uid="uid://diihw85b5p4bd" path="res://addons/ui_react/scripts/controls/ui_react_spin_box.gd" id="19_dbjnf"]
+[ext_resource type="Resource" uid="uid://lgi4p02hftfx" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveSpinBox_value_state.tres" id="20_8uop6"]
+[ext_resource type="Resource" uid="uid://bhflx6tho5wwt" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveSpinBox_disabled_state.tres" id="21_6ier6"]
+
+[sub_resource type="Resource" id="Resource_p7nh0"]
+script = ExtResource("3_yauoy")
+target = NodePath(".")
+pivot_offset = Vector2(-1, -1.375)
+metadata/_custom_type_script = "uid://diigywt0dm170"
+
+[sub_resource type="Resource" id="Resource_mbr4o"]
+script = ExtResource("3_yauoy")
+target = NodePath(".")
+trigger = 7
+animation = 20
+metadata/_custom_type_script = "uid://diigywt0dm170"
+
+[sub_resource type="Resource" id="Resource_yjg32"]
+script = ExtResource("3_yauoy")
+target = NodePath(".")
+trigger = 12
+animation = 23
+metadata/_custom_type_script = "uid://diigywt0dm170"
+
+[sub_resource type="Resource" id="Resource_dcre7"]
+script = ExtResource("3_yauoy")
+target = NodePath(".")
+trigger = 10
+animation = 20
+metadata/_custom_type_script = "uid://diigywt0dm170"
+
+[sub_resource type="Resource" id="Resource_8mpai"]
+script = ExtResource("3_yauoy")
+target = NodePath(".")
+trigger = 12
+animation = 23
+metadata/_custom_type_script = "uid://diigywt0dm170"
+
+[sub_resource type="Resource" id="Resource_preset_label"]
+script = ExtResource("7_g6gj5")
+value = ["Preset: ", ExtResource("8_rt7ea")]
+
+[sub_resource type="Resource" id="Resource_mbe61"]
+script = ExtResource("3_yauoy")
+target = NodePath(".")
+trigger = 5
+animation = 22
+flash_color = Color(0.8705595, 1.00111965e-05, 0.5636636, 1)
+flash_intensity = 2.0
+metadata/_custom_type_script = "uid://diigywt0dm170"
+
+[sub_resource type="Resource" id="Resource_pf7w8"]
+script = ExtResource("3_yauoy")
+target = NodePath(".")
+trigger = 6
+animation = 16
+metadata/_custom_type_script = "uid://diigywt0dm170"
+
+[sub_resource type="Resource" id="Resource_iwetj"]
+script = ExtResource("7_g6gj5")
+value = ["Player: ", ExtResource("13_7xx27")]
+
+[sub_resource type="Resource" id="Resource_52s1b"]
+script = ExtResource("3_yauoy")
+target = NodePath(".")
+trigger = 5
+animation = 17
+metadata/_custom_type_script = "uid://diigywt0dm170"
+
+[sub_resource type="Resource" id="Resource_f64u5"]
+script = ExtResource("3_yauoy")
+target = NodePath(".")
+trigger = 12
+animation = 23
+metadata/_custom_type_script = "uid://diigywt0dm170"
+
+[sub_resource type="Resource" id="Resource_ljngm"]
+script = ExtResource("3_yauoy")
+target = NodePath(".")
+trigger = 7
+animation = 22
+metadata/_custom_type_script = "uid://diigywt0dm170"
+
+[node name="ReactiveUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+
+[node name="DisableActionsToggle" type="CheckBox" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Disable actions"
+script = ExtResource("1_732tq")
+metadata/_custom_type_script = "uid://3m8buhv674ja"
+
+[node name="ReactiveButton" type="Button" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+text = "Press this thing."
+script = ExtResource("2_mlp57")
+animation_targets = Array[ExtResource("3_yauoy")]([SubResource("Resource_p7nh0")])
+metadata/_custom_type_script = "uid://lv5ixpw5hlvp"
+
+[node name="Slider" type="HSlider" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("4_1gbb3")
+animation_targets = Array[ExtResource("3_yauoy")]([SubResource("Resource_mbr4o"), SubResource("Resource_yjg32")])
+metadata/_custom_type_script = "uid://toxmw3una1r3"
+
+[node name="Progress" type="ProgressBar" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("5_qrupd")
+animation_targets = Array[ExtResource("3_yauoy")]([SubResource("Resource_dcre7"), SubResource("Resource_8mpai")])
+metadata/_custom_type_script = "uid://s6xiov8r6bil"
+
+[node name="OptionSelectionLabel" type="Label" parent="VBox"]
+layout_mode = 2
+script = ExtResource("6_e7mev")
+text_state = SubResource("Resource_preset_label")
+animation_targets = Array[ExtResource("3_yauoy")]([SubResource("Resource_mbe61")])
+metadata/_custom_type_script = "uid://bw7gojuop1hic"
+
+[node name="ReactiveOptionButton" type="OptionButton" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+item_count = 2
+popup/item_0/text = "Sword"
+popup/item_0/id = 0
+popup/item_1/text = "Shield"
+popup/item_1/id = 1
+script = ExtResource("9_dtwku")
+selected_state = ExtResource("8_rt7ea")
+disabled_state = ExtResource("10_mq8g6")
+animation_targets = Array[ExtResource("3_yauoy")]([SubResource("Resource_pf7w8")])
+metadata/_custom_type_script = "uid://b75p2so2hr0wd"
+
+[node name="ReactiveTabContainer" type="TabContainer" parent="VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+current_tab = 0
+script = ExtResource("11_f7u6l")
+selected_state = ExtResource("12_ym70l")
+metadata/_custom_type_script = "uid://dohh71knb8vid"
+
+[node name="Panel" type="Panel" parent="VBox/ReactiveTabContainer"]
+layout_mode = 2
+metadata/_tab_index = 0
+
+[node name="Label" type="Label" parent="VBox/ReactiveTabContainer/Panel"]
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -39.5
+offset_bottom = -16.5
+grow_horizontal = 2
+grow_vertical = 2
+text = "Player: "
+script = ExtResource("6_e7mev")
+text_state = SubResource("Resource_iwetj")
+metadata/_custom_type_script = "uid://bw7gojuop1hic"
+
+[node name="LineEdit" type="LineEdit" parent="VBox/ReactiveTabContainer/Panel"]
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -15.5
+offset_bottom = 15.5
+grow_horizontal = 2
+grow_vertical = 2
+placeholder_text = "Type here to update the label"
+script = ExtResource("14_ioyot")
+text_state = ExtResource("13_7xx27")
+animation_targets = Array[ExtResource("3_yauoy")]([SubResource("Resource_52s1b"), SubResource("Resource_f64u5")])
+metadata/_custom_type_script = "uid://cgoqls6mehlqv"
+
+[node name="Panel2" type="Panel" parent="VBox/ReactiveTabContainer"]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 1
+
+[node name="ReactiveItemList" type="ItemList" parent="VBox"]
+layout_mode = 2
+allow_reselect = true
+auto_width = true
+auto_height = true
+script = ExtResource("15_mxh75")
+selected_state = ExtResource("16_7tkpi")
+items_state = ExtResource("17_tbmpo")
+disabled_state = ExtResource("18_rnrhn")
+metadata/_custom_type_script = "uid://duphbaan8pk5f"
+
+[node name="ReactiveSpinBox" type="SpinBox" parent="VBox"]
+layout_mode = 2
+script = ExtResource("19_dbjnf")
+value_state = ExtResource("20_8uop6")
+disabled_state = ExtResource("21_6ier6")
+animation_targets = Array[ExtResource("3_yauoy")]([SubResource("Resource_ljngm")])
+metadata/_custom_type_script = "uid://diihw85b5p4bd"

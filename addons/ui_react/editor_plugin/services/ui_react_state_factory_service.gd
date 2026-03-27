@@ -1,12 +1,12 @@
 ## Creates typed [UiState] subclasses and saves them under the plugin output folder.
-class_name UiSystemStateFactoryService
+class_name UiReactStateFactoryService
 extends RefCounted
 
-const DEFAULT_OUTPUT_DIR := "res://addons/ui_system/ui_resources/plugin_generated/"
+const DEFAULT_OUTPUT_DIR := "res://addons/ui_react/ui_resources/plugin_generated/"
 
 
 static func default_output_dir() -> String:
-	var p := ProjectSettings.get_setting("ui_system/plugin_state_output_path", DEFAULT_OUTPUT_DIR) as String
+	var p := ProjectSettings.get_setting("ui_react/plugin_state_output_path", DEFAULT_OUTPUT_DIR) as String
 	if p.is_empty():
 		return DEFAULT_OUTPUT_DIR
 	if not p.ends_with("/"):
@@ -54,7 +54,7 @@ static func build_unique_file_path(output_dir: String, node_name: String, proper
 		if not _resource_file_exists(candidate):
 			return candidate
 		i += 1
-	push_error("UiSystemStateFactoryService: could not find free filename for base %s" % base)
+	push_error("UiReactStateFactoryService: could not find free filename for base %s" % base)
 	return first
 
 
@@ -76,6 +76,6 @@ static func _sanitize(s: String) -> String:
 static func save_and_reload(resource: Resource, path: String) -> Resource:
 	var err := ResourceSaver.save(resource, path)
 	if err != OK:
-		push_error("UiSystemStateFactoryService: failed to save %s (error %d)" % [path, err])
+		push_error("UiReactStateFactoryService: failed to save %s (error %d)" % [path, err])
 		return null
 	return ResourceLoader.load(path)

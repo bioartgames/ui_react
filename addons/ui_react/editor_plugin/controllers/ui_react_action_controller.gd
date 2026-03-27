@@ -1,5 +1,5 @@
 ## Undo/redo-safe assignments for editor plugin actions.
-class_name UiSystemActionController
+class_name UiReactActionController
 extends RefCounted
 
 var _undo_redo: EditorUndoRedoManager

@@ -1,5 +1,5 @@
 ## Finds [UiReact*] nodes and binding metadata for editor diagnostics.
-class_name UiSystemScannerService
+class_name UiReactScannerService
 extends RefCounted
 
 const _REACT_SCRIPT_SUFFIX := "/ui_react_"

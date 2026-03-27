@@ -1,4 +1,4 @@
-# Reactive UI System
+# Ui React
 
 Self-contained UI building blocks for Godot 4.x: attach **UiReact\*** scripts for two-way **UiState** binding, optional **inspector-driven animations** via **UiAnimTarget**, and a code-friendly **UiAnimUtils** tween facade—so you can build polished UI with little or no game code.
 
@@ -23,11 +23,11 @@ That’s it. Game logic can read/write the same `UiState` resources; controls st
 
 ### 1) Add the addon
 
-Copy `addons/ui_system/` into your Godot project at **`addons/ui_system/`**. Open the project and wait for import.
+Copy `addons/ui_react/` into your Godot project at **`addons/ui_react/`**. Open the project and wait for import.
 
 ### 2) Run the example
 
-Open **`res://addons/ui_system/examples/reactive_ui.tscn`** and press **Play** (or set it as **Main Scene** in **Project Settings → Application → Run**). Use the scene tree to see how states and targets are wired.
+Open **`res://addons/ui_react/examples/reactive_ui.tscn`** and press **Play** (or set it as **Main Scene** in **Project Settings → Application → Run**). Use the scene tree to see how states and targets are wired.
 
 ### 3) Minimal recipes (editor-first, no code required)
 
@@ -58,15 +58,15 @@ await UiAnimUtils.animate_expand(self, some_control).finished
 
 **Named show/hide presets (preferred):** use `UiAnimUtils.preset(UiAnimUtils.Preset.FADE_IN, self, panel)` (enum) instead of string-based `show_animated` / `hide_animated`, which remain for older projects.
 
-`UiAnimUtils` is **`res://addons/ui_system/scripts/api/ui_anim_utils.gd`** (global class `UiAnimUtils`).
+`UiAnimUtils` is **`res://addons/ui_react/scripts/api/ui_anim_utils.gd`** (global class `UiAnimUtils`).
 
-### 5) Optional: **UI System Tools** editor plugin
+### 5) Optional: **Ui React** editor plugin
 
-1. Open **Project → Project Settings → Plugins** and enable **UI System Tools** (bundled at `editor_plugin/plugin.cfg`).
-2. Open the **UI System Tools** panel in the **bottom editor dock** (tab bar).
+1. Open **Project → Project Settings → Plugins** and enable **Ui React** (bundled at `editor_plugin/plugin.cfg`).
+2. Open the **Ui React** panel in the **bottom editor dock** (tab bar).
 3. Choose **Scan: Selection** or **Entire scene**, press **Rescan** to run diagnostics on demand, and review results. Dock choices (scan mode, filters, auto-refresh, output folder) are **remembered per project** when you reopen it. The tool also **updates when you switch the active edited scene** (so you do not need to toggle scan mode to see results).
 4. Use **Group** (flat / by node / by severity), **Filter** (text search across node, path, property, messages), and severity toggles to narrow the list. Each row has **Fix**, **Focus**, and **Ignore** (hide until next **Rescan**). Click the issue summary in the **Issues** list to select it and show full details in the **Report** panel. **Hover** any control for a short tooltip (scope, filters, and actions).
-5. For unassigned `*_state` slots with a suggested type, use **Fix** on a row (single issue) or **Fix All** in the toolbar (every eligible issue in the **filtered** list). New `.tres` files are saved under the configured folder (default `res://addons/ui_system/ui_resources/plugin_generated/`); if a filename already exists, the plugin saves as `<name>_2.tres`, `<name>_3.tres`, … instead of overwriting. Override the folder with **`ui_system/plugin_state_output_path`**.
+5. For unassigned `*_state` slots with a suggested type, use **Fix** on a row (single issue) or **Fix All** in the toolbar (every eligible issue in the **filtered** list). New `.tres` files are saved under the configured folder (default `res://addons/ui_react/ui_resources/plugin_generated/`); if a filename already exists, the plugin saves as `<name>_2.tres`, `<name>_3.tres`, … instead of overwriting. Override the folder with **`ui_react/plugin_state_output_path`**.
 
 All plugin usage details are documented in this README.
 
@@ -93,7 +93,7 @@ All plugin usage details are documented in this README.
 
 ## Public API (use directly)
 
-Paths are under **`res://addons/ui_system/`**.
+Paths are under **`res://addons/ui_react/`**.
 
 | Kind | Global class / area | Path |
 |------|---------------------|------|
@@ -150,7 +150,7 @@ These may change between template versions; **do not rely on them from game code
 
 ## Importing into another project
 
-Copy the entire **`addons/ui_system/`** folder into the host project’s **`addons/`** directory, reimport, then attach scripts from **`scripts/controls/`** or call **`UiAnimUtils`** from your game code.
+Copy the entire **`addons/ui_react/`** folder into the host project’s **`addons/`** directory, reimport, then attach scripts from **`scripts/controls/`** or call **`UiAnimUtils`** from your game code.
 
 Extended path mapping (old tree → addon) lives in **`docs/migration.md`** if present.
 
@@ -164,17 +164,17 @@ Extended path mapping (old tree → addon) lives in **`docs/migration.md`** if p
 | `show_animated` / `hide_animated` with strings | Prefer `UiAnimUtils.preset(...)` with `UiAnimUtils.Preset` enums. |
 | Plain `NodePath` targets in mind | Inspector now restricts targets to **Control**; existing saved paths still load. |
 
-# UI System Tools (Editor Plugin)
+# Ui React (Editor Plugin)
 
-Optional editor tooling shipped under **`addons/ui_system/editor_plugin/`**. It does **not** change runtime gameplay; it only helps you wire and validate **UiReact\*** scenes faster.
+Optional editor tooling shipped under **`addons/ui_react/editor_plugin/`**. It does **not** change runtime gameplay; it only helps you wire and validate **UiReact\*** scenes faster.
 
 ## Enable
 
 1. **Project → Project Settings → Plugins**
-2. Enable **UI System Tools**
-3. Find the **UI System Tools** panel in the **bottom editor dock** (tab bar alongside Output, Debugger, etc.)
+2. Enable **Ui React**
+3. Find the **Ui React** panel in the **bottom editor dock** (tab bar alongside Output, Debugger, etc.)
 
-If you copy `addons/ui_system/` into another project, re-enable the plugin there after import.
+If you copy `addons/ui_react/` into another project, re-enable the plugin there after import.
 
 ## Diagnostics layout
 
@@ -194,7 +194,7 @@ If you copy `addons/ui_system/` into another project, re-enable the plugin there
 | **Group** | **Flat list**, **By node**, or **By severity** (collapsible groups). |
 | **Show** | Filter diagnostics by severity (Errors / Warnings / Info). |
 | **Filter** | Text filter across node name, path, property, component, and issue text (debounced). When an issue includes a value preview, the **Value type** label is also matched (not the full value text). |
-| **State output folder** | Where quick-create saves new `.tres` files. Default: `res://addons/ui_system/ui_resources/plugin_generated/`. Collision-safe names: `<NodeName>_<property>_2.tres`, `_3.tres`, … |
+| **State output folder** | Where quick-create saves new `.tres` files. Default: `res://addons/ui_react/ui_resources/plugin_generated/`. Collision-safe names: `<NodeName>_<property>_2.tres`, `_3.tres`, … |
 | **Rescan** | Run diagnostics now using the current **Scan** mode and filters (clears **Ignore** hides). |
 | **Copy report** | Copy the **filtered** summary list (and full text for export) to the clipboard. |
 | **Focus** | On each row: select the scene node for that issue (disabled when the row has no `node_path`). |
@@ -205,16 +205,16 @@ If you copy `addons/ui_system/` into another project, re-enable the plugin there
 
 | Key | Default | Meaning |
 |-----|---------|---------|
-| `ui_system/plugin_state_output_path` | `res://addons/ui_system/ui_resources/plugin_generated/` | Folder for plugin-generated `.tres` files (trailing `/` recommended). |
-| `ui_system/plugin_scan_mode` | `0` | `0` = Selection scan, `1` = Entire scene. |
-| `ui_system/plugin_show_errors` | `true` | Show **Errors** in the list. |
-| `ui_system/plugin_show_warnings` | `true` | Show **Warnings** in the list. |
-| `ui_system/plugin_show_info` | `true` | Show **Info** in the list. |
-| `ui_system/plugin_auto_refresh` | `true` | Auto-refresh when selection changes (Selection scan only). |
+| `ui_react/plugin_state_output_path` | `res://addons/ui_react/ui_resources/plugin_generated/` | Folder for plugin-generated `.tres` files (trailing `/` recommended). |
+| `ui_react/plugin_scan_mode` | `0` | `0` = Selection scan, `1` = Entire scene. |
+| `ui_react/plugin_show_errors` | `true` | Show **Errors** in the list. |
+| `ui_react/plugin_show_warnings` | `true` | Show **Warnings** in the list. |
+| `ui_react/plugin_show_info` | `true` | Show **Info** in the list. |
+| `ui_react/plugin_auto_refresh` | `true` | Auto-refresh when selection changes (Selection scan only). |
 
 ## Binding metadata & validation
 
-The scanner (`ui_system_scanner_service.gd`) records which `UiState` exports each `UiReact*` control expects, including a **kind** hint (`bool`, `float`, `string`, `array`, ...). The validator (`ui_system_validator_service.gd`) turns those hints into **warnings** when the assigned `UiState.value` shape is unlikely to match typical usage.
+The scanner (`ui_react_scanner_service.gd`) records which `UiState` exports each `UiReact*` control expects, including a **kind** hint (`bool`, `float`, `string`, `array`, ...). The validator (`ui_react_validator_service.gd`) turns those hints into **warnings** when the assigned `UiState.value` shape is unlikely to match typical usage.
 
 ### `UiReactItemList` bindings
 
@@ -228,12 +228,12 @@ Use **`UiArrayState`** (or a generic `UiState` holding an `Array`) for `items_st
 
 ## Architecture (for contributors)
 
-- `ui_system_editor_plugin.gd` — `EditorPlugin` entry; registers the dock.
-- `ui_system_dock.gd` — Dock UI only.
-- `services/ui_system_scanner_service.gd` — Finds `UiReact*` nodes and binding metadata.
-- `services/ui_system_validator_service.gd` — Emits `UiSystemDiagnosticModel.DiagnosticIssue` rows (mirrors runtime validation rules where practical).
-- `services/ui_system_state_factory_service.gd` — Creates typed states and saves them to disk.
-- `controllers/ui_system_action_controller.gd` — Wraps `EditorUndoRedoManager` property changes.
+- `ui_react_editor_plugin.gd` — `EditorPlugin` entry; registers the dock.
+- `ui_react_dock.gd` — Dock UI only.
+- `services/ui_react_scanner_service.gd` — Finds `UiReact*` nodes and binding metadata.
+- `services/ui_react_validator_service.gd` — Emits `UiReactDiagnosticModel.DiagnosticIssue` rows (mirrors runtime validation rules where practical).
+- `services/ui_react_state_factory_service.gd` — Creates typed states and saves them to disk.
+- `controllers/ui_react_action_controller.gd` — Wraps `EditorUndoRedoManager` property changes.
 
 ### Plugin UX roadmap (planned work)
 
@@ -255,7 +255,7 @@ Runtime addon code under `scripts/internal/*` remains **unstable** for direct ga
 
 | Symptom | Fix |
 |--------|-----|
-| Plugin not listed | Confirm `addons/ui_system/editor_plugin/plugin.cfg` exists and the project was reimported. |
+| Plugin not listed | Confirm `addons/ui_react/editor_plugin/plugin.cfg` exists and the project was reimported. |
 | Dock empty / “No edited scene” | Open a scene in the editor (set as active edited scene). |
 | **Fix** / **Fix All** does nothing | The issue may not be eligible (no suggested type), or the path/folder is invalid; check the **details** pane and folder permissions for the output path. |
 | Too many **[I]** rows | Turn off **Info** in **Show** filters. |

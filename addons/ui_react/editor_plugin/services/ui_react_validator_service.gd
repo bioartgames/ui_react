@@ -1,5 +1,5 @@
 ## Validates [UiReact*] bindings and [UiAnimTarget] rows (editor-only; mirrors runtime helpers).
-class_name UiSystemValidatorService
+class_name UiReactValidatorService
 extends RefCounted
 
 const _VALUE_PREVIEW_MAX_LEN := 120
@@ -12,7 +12,7 @@ static func validate_nodes(
 	for node in nodes:
 		if node == null or not (node is Control):
 			continue
-		var component := UiSystemScannerService.get_component_name_from_script(node.get_script() as Script)
+		var component := UiReactScannerService.get_component_name_from_script(node.get_script() as Script)
 		if component.is_empty():
 			continue
 		var np := root_for_paths.get_path_to(node) if root_for_paths and node.is_inside_tree() else NodePath(String(node.get_path()))
@@ -23,7 +23,7 @@ static func validate_nodes(
 
 static func _validate_bindings(component: String, owner: Control, node_path: NodePath) -> Array:
 	var out: Array = []
-	var bindings: Array = UiSystemScannerService.BINDINGS_BY_COMPONENT.get(component, [])
+	var bindings: Array = UiReactScannerService.BINDINGS_BY_COMPONENT.get(component, [])
 	for b in bindings:
 		var prop: StringName = b.get("property", &"")
 		var kind: String = str(b.get("kind", ""))
@@ -36,35 +36,35 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 		if st == null:
 			if optional:
 				out.append(
-					UiSystemDiagnosticModel.DiagnosticIssue.make_structured(
-						UiSystemDiagnosticModel.Severity.INFO,
+					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+						UiReactDiagnosticModel.Severity.INFO,
 						component,
 						str(owner.name),
 						"%s is not assigned." % prop,
 						"Create a UiState (or typed state) and assign it, or leave empty if you do not need external sync.",
 						node_path,
 						prop,
-						UiSystemScannerService.kind_to_suggested_class(kind),
+						UiReactScannerService.kind_to_suggested_class(kind),
 					)
 				)
 			else:
 				out.append(
-					UiSystemDiagnosticModel.DiagnosticIssue.make_structured(
-						UiSystemDiagnosticModel.Severity.WARNING,
+					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+						UiReactDiagnosticModel.Severity.WARNING,
 						component,
 						str(owner.name),
 						"%s is required but empty." % prop,
 						"Assign a UiState resource to this property.",
 						node_path,
 						prop,
-						UiSystemScannerService.kind_to_suggested_class(kind),
+						UiReactScannerService.kind_to_suggested_class(kind),
 					)
 				)
 			continue
 		if not (st is UiState):
 			out.append(
-				UiSystemDiagnosticModel.DiagnosticIssue.make_structured(
-					UiSystemDiagnosticModel.Severity.ERROR,
+				UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+					UiReactDiagnosticModel.Severity.ERROR,
 					component,
 					str(owner.name),
 					"%s must be a UiState (got %s)." % [prop, _variant_type_name(st)],
@@ -81,8 +81,8 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 			"bool":
 				if not _value_is_bool_like(u.value):
 					var vp_bool: Dictionary = _safe_value_preview(u.value)
-					var issue_bool := UiSystemDiagnosticModel.DiagnosticIssue.make_structured(
-						UiSystemDiagnosticModel.Severity.WARNING,
+					var issue_bool := UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+						UiReactDiagnosticModel.Severity.WARNING,
 						component,
 						str(owner.name),
 						"%s expects a bool-like value (got %s)." % [prop, type_string(typeof(u.value))],
@@ -98,8 +98,8 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 			"float":
 				if u.value != null and not (typeof(u.value) in [TYPE_FLOAT, TYPE_INT]):
 					var vp_float: Dictionary = _safe_value_preview(u.value)
-					var issue_float := UiSystemDiagnosticModel.DiagnosticIssue.make_structured(
-						UiSystemDiagnosticModel.Severity.WARNING,
+					var issue_float := UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+						UiReactDiagnosticModel.Severity.WARNING,
 						component,
 						str(owner.name),
 						"%s expects a numeric value." % prop,
@@ -115,8 +115,8 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 			"string":
 				if u.value != null and not _is_valid_string_binding_value(component, prop, u.value):
 					var vp_str: Dictionary = _safe_value_preview(u.value)
-					var issue_str := UiSystemDiagnosticModel.DiagnosticIssue.make_structured(
-						UiSystemDiagnosticModel.Severity.WARNING,
+					var issue_str := UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+						UiReactDiagnosticModel.Severity.WARNING,
 						component,
 						str(owner.name),
 						"%s expects string-like value for typical usage." % prop,
@@ -132,8 +132,8 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 			"array":
 				if u.value != null and not (u.value is Array):
 					var vp_arr: Dictionary = _safe_value_preview(u.value)
-					var issue_arr := UiSystemDiagnosticModel.DiagnosticIssue.make_structured(
-						UiSystemDiagnosticModel.Severity.WARNING,
+					var issue_arr := UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+						UiReactDiagnosticModel.Severity.WARNING,
 						component,
 						str(owner.name),
 						"%s expects an Array value." % prop,
@@ -283,8 +283,8 @@ static func _validate_anim_targets(component: String, owner: Control, node_path:
 		var anim_target: Variant = targets[i]
 		if anim_target == null:
 			out.append(
-				UiSystemDiagnosticModel.DiagnosticIssue.make_structured(
-					UiSystemDiagnosticModel.Severity.WARNING,
+				UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+					UiReactDiagnosticModel.Severity.WARNING,
 					component,
 					str(owner.name),
 					"animation_targets[%d] is null." % i,
@@ -300,8 +300,8 @@ static func _validate_anim_targets(component: String, owner: Control, node_path:
 		var at := anim_target as UiAnimTarget
 		if at.target.is_empty():
 			out.append(
-				UiSystemDiagnosticModel.DiagnosticIssue.make_structured(
-					UiSystemDiagnosticModel.Severity.WARNING,
+				UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+					UiReactDiagnosticModel.Severity.WARNING,
 					component,
 					str(owner.name),
 					"UiAnimTarget #%d has no Target NodePath." % i,
@@ -315,8 +315,8 @@ static func _validate_anim_targets(component: String, owner: Control, node_path:
 		var tn := owner.get_node_or_null(at.target)
 		if tn == null:
 			out.append(
-				UiSystemDiagnosticModel.DiagnosticIssue.make_structured(
-					UiSystemDiagnosticModel.Severity.ERROR,
+				UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+					UiReactDiagnosticModel.Severity.ERROR,
 					component,
 					str(owner.name),
 					"UiAnimTarget #%d Target '%s' could not be resolved." % [i, at.target],
@@ -329,8 +329,8 @@ static func _validate_anim_targets(component: String, owner: Control, node_path:
 			continue
 		if not (tn is Control):
 			out.append(
-				UiSystemDiagnosticModel.DiagnosticIssue.make_structured(
-					UiSystemDiagnosticModel.Severity.ERROR,
+				UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+					UiReactDiagnosticModel.Severity.ERROR,
 					component,
 					str(owner.name),
 					"UiAnimTarget #%d Target is not a Control." % i,

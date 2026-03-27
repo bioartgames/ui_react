@@ -8,12 +8,12 @@ const _GROUP_FLAT := 0
 const _GROUP_BY_NODE := 1
 const _GROUP_BY_SEVERITY := 2
 
-const _KEY_SCAN_MODE := "ui_system/plugin_scan_mode"
-const _KEY_SHOW_ERRORS := "ui_system/plugin_show_errors"
-const _KEY_SHOW_WARNINGS := "ui_system/plugin_show_warnings"
-const _KEY_SHOW_INFO := "ui_system/plugin_show_info"
-const _KEY_AUTO_REFRESH := "ui_system/plugin_auto_refresh"
-const _KEY_STATE_OUTPUT_PATH := "ui_system/plugin_state_output_path"
+const _KEY_SCAN_MODE := "ui_react/plugin_scan_mode"
+const _KEY_SHOW_ERRORS := "ui_react/plugin_show_errors"
+const _KEY_SHOW_WARNINGS := "ui_react/plugin_show_warnings"
+const _KEY_SHOW_INFO := "ui_react/plugin_show_info"
+const _KEY_AUTO_REFRESH := "ui_react/plugin_auto_refresh"
+const _KEY_STATE_OUTPUT_PATH := "ui_react/plugin_state_output_path"
 
 const _DEF_SHOW_ERRORS := true
 const _DEF_SHOW_WARNINGS := true
@@ -29,7 +29,7 @@ var _coalesced_refresh_pending: bool = false
 var _expect_startup_scene_retry: bool = false
 
 var _plugin: EditorPlugin
-var _actions: UiSystemActionController
+var _actions: UiReactActionController
 
 var _issues_all: Array = []
 var _issues_shown: Array = []
@@ -63,7 +63,7 @@ var _group_expanded: Dictionary = {}
 
 func setup(plugin: EditorPlugin) -> void:
 	_plugin = plugin
-	_actions = UiSystemActionController.new(plugin.get_undo_redo())
+	_actions = UiReactActionController.new(plugin.get_undo_redo())
 	_build_ui()
 	_register_default_project_settings()
 	_load_persisted_ui_preferences()
@@ -97,13 +97,13 @@ func _save_ui_preference(key: String, value: Variant) -> void:
 	ProjectSettings.set_setting(key, value)
 	var err := ProjectSettings.save()
 	if err != OK:
-		push_warning("UiSystemDock: could not save project settings (%s)" % key)
+		push_warning("UiReactDock: could not save project settings (%s)" % key)
 
 
 func _register_default_project_settings() -> void:
 	var added_defaults := false
 	if not ProjectSettings.has_setting(_KEY_STATE_OUTPUT_PATH):
-		ProjectSettings.set_setting(_KEY_STATE_OUTPUT_PATH, UiSystemStateFactoryService.DEFAULT_OUTPUT_DIR)
+		ProjectSettings.set_setting(_KEY_STATE_OUTPUT_PATH, UiReactStateFactoryService.DEFAULT_OUTPUT_DIR)
 		added_defaults = true
 	if not ProjectSettings.has_setting(_KEY_SCAN_MODE):
 		ProjectSettings.set_setting(_KEY_SCAN_MODE, _SCAN_SELECTION)
@@ -123,7 +123,7 @@ func _register_default_project_settings() -> void:
 	if added_defaults:
 		var err := ProjectSettings.save()
 		if err != OK:
-			push_warning("UiSystemDock: could not save default project settings")
+			push_warning("UiReactDock: could not save default project settings")
 
 
 func _load_persisted_ui_preferences() -> void:
@@ -149,7 +149,7 @@ func _load_persisted_ui_preferences() -> void:
 	if _auto_refresh:
 		_auto_refresh.button_pressed = bool(ProjectSettings.get_setting(_KEY_AUTO_REFRESH, _DEF_AUTO_REFRESH))
 	if _path_edit:
-		_path_edit.text = UiSystemStateFactoryService.default_output_dir()
+		_path_edit.text = UiReactStateFactoryService.default_output_dir()
 
 	_suppress_pref_save = false
 
@@ -251,7 +251,7 @@ func _build_ui() -> void:
 	path_row.get_child(0).text = "State output folder:"
 	_path_edit = LineEdit.new()
 	_path_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_path_edit.text = UiSystemStateFactoryService.default_output_dir()
+	_path_edit.text = UiReactStateFactoryService.default_output_dir()
 	_path_edit.text_submitted.connect(func(p): _on_path_changed(p))
 	_path_edit.tooltip_text = "Folder where Fix and Fix All save new .tres state files. If a filename already exists, the plugin uses _2, _3, … suffixes instead of overwriting."
 	path_row.add_child(_path_edit)
@@ -480,9 +480,9 @@ func _update_details_pane(issue: Variant) -> void:
 
 func _severity_display_name(sev: int) -> String:
 	match sev:
-		UiSystemDiagnosticModel.Severity.ERROR:
+		UiReactDiagnosticModel.Severity.ERROR:
 			return "Error"
-		UiSystemDiagnosticModel.Severity.WARNING:
+		UiReactDiagnosticModel.Severity.WARNING:
 			return "Warning"
 		_:
 			return "Info"
@@ -494,7 +494,7 @@ func _can_create_state_for_issue(issue: Variant) -> bool:
 	if issue.property_name == &"" or issue.suggested_state_class == &"":
 		return false
 	# Unassigned binding rows (optional INFO or required WARNING) carry a suggested class.
-	return issue.severity == UiSystemDiagnosticModel.Severity.INFO or issue.severity == UiSystemDiagnosticModel.Severity.WARNING
+	return issue.severity == UiReactDiagnosticModel.Severity.INFO or issue.severity == UiReactDiagnosticModel.Severity.WARNING
 
 
 func _update_fix_all_button() -> void:
@@ -513,8 +513,8 @@ func refresh() -> void:
 	var root := ei.get_edited_scene_root()
 	if root == null:
 		_issues_all.append(
-			UiSystemDiagnosticModel.DiagnosticIssue.make_structured(
-				UiSystemDiagnosticModel.Severity.INFO,
+			UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+				UiReactDiagnosticModel.Severity.INFO,
 				"",
 				"",
 				"No edited scene.",
@@ -534,7 +534,7 @@ func refresh() -> void:
 
 	var nodes: Array[Node] = []
 	if _mode_option.get_item_id(_mode_option.selected) == _SCAN_SCENE:
-		for n in UiSystemScannerService.collect_react_nodes(root):
+		for n in UiReactScannerService.collect_react_nodes(root):
 			nodes.append(n)
 	else:
 		var seen: Dictionary = {}
@@ -546,8 +546,8 @@ func refresh() -> void:
 
 	if nodes.is_empty():
 		_issues_all.append(
-			UiSystemDiagnosticModel.DiagnosticIssue.make_structured(
-				UiSystemDiagnosticModel.Severity.INFO,
+			UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+				UiReactDiagnosticModel.Severity.INFO,
 				"",
 				"",
 				"No UiReact* nodes in this scan scope.",
@@ -558,7 +558,7 @@ func refresh() -> void:
 			)
 		)
 	else:
-		_issues_all.append_array(UiSystemValidatorService.validate_nodes(nodes, root))
+		_issues_all.append_array(UiReactValidatorService.validate_nodes(nodes, root))
 
 	_apply_filters()
 
@@ -594,11 +594,11 @@ func _apply_filters() -> void:
 		q = _search_edit.text.strip_edges()
 
 	for issue in _issues_all:
-		if issue.severity == UiSystemDiagnosticModel.Severity.ERROR and not _filter_err.button_pressed:
+		if issue.severity == UiReactDiagnosticModel.Severity.ERROR and not _filter_err.button_pressed:
 			continue
-		if issue.severity == UiSystemDiagnosticModel.Severity.WARNING and not _filter_warn.button_pressed:
+		if issue.severity == UiReactDiagnosticModel.Severity.WARNING and not _filter_warn.button_pressed:
 			continue
-		if issue.severity == UiSystemDiagnosticModel.Severity.INFO and not _filter_info.button_pressed:
+		if issue.severity == UiReactDiagnosticModel.Severity.INFO and not _filter_info.button_pressed:
 			continue
 		if not _issue_matches_search(issue, q):
 			continue
@@ -619,9 +619,9 @@ func _apply_filters() -> void:
 
 func _severity_prefix(sev: int) -> String:
 	match sev:
-		UiSystemDiagnosticModel.Severity.ERROR:
+		UiReactDiagnosticModel.Severity.ERROR:
 			return "[E]"
-		UiSystemDiagnosticModel.Severity.WARNING:
+		UiReactDiagnosticModel.Severity.WARNING:
 			return "[W]"
 		_:
 			return "[I]"
@@ -638,9 +638,9 @@ func _group_key_for_issue(issue: Variant) -> String:
 			return str(issue.node_path) if not issue.node_path.is_empty() else "(scene)"
 		_GROUP_BY_SEVERITY:
 			match issue.severity:
-				UiSystemDiagnosticModel.Severity.ERROR:
+				UiReactDiagnosticModel.Severity.ERROR:
 					return "Errors"
-				UiSystemDiagnosticModel.Severity.WARNING:
+				UiReactDiagnosticModel.Severity.WARNING:
 					return "Warnings"
 				_:
 					return "Info"
@@ -827,7 +827,7 @@ func _on_copy_report() -> void:
 func _resolve_output_dir() -> String:
 	var out_dir := _path_edit.text.strip_edges()
 	if out_dir.is_empty():
-		out_dir = UiSystemStateFactoryService.default_output_dir()
+		out_dir = UiReactStateFactoryService.default_output_dir()
 	if not out_dir.ends_with("/"):
 		out_dir += "/"
 	return out_dir
@@ -842,19 +842,19 @@ func _create_and_assign_for_issue(issue: Variant) -> bool:
 		return false
 	var node := root.get_node_or_null(issue.node_path)
 	if node == null or not (node is Node):
-		push_warning("UiSystemDock: node not found for path %s" % issue.node_path)
+		push_warning("UiReactDock: node not found for path %s" % issue.node_path)
 		return false
 
 	var out_dir := _resolve_output_dir()
 	_save_ui_preference(_KEY_STATE_OUTPUT_PATH, out_dir)
-	var err := UiSystemStateFactoryService.ensure_output_dir(out_dir)
+	var err := UiReactStateFactoryService.ensure_output_dir(out_dir)
 	if err != OK:
-		push_error("UiSystemDock: could not create output folder: %s" % out_dir)
+		push_error("UiReactDock: could not create output folder: %s" % out_dir)
 		return false
 
-	var res := UiSystemStateFactoryService.instantiate_state(issue.suggested_state_class)
-	var path: String = UiSystemStateFactoryService.build_unique_file_path(out_dir, str(node.name), str(issue.property_name))
-	var loaded := UiSystemStateFactoryService.save_and_reload(res, path)
+	var res := UiReactStateFactoryService.instantiate_state(issue.suggested_state_class)
+	var path: String = UiReactStateFactoryService.build_unique_file_path(out_dir, str(node.name), str(issue.property_name))
+	var loaded := UiReactStateFactoryService.save_and_reload(res, path)
 	if loaded == null:
 		return false
 	_actions.assign_resource_property(node, issue.property_name, loaded)
@@ -879,12 +879,12 @@ func _on_fix_all() -> void:
 
 	_plugin.get_editor_interface().get_resource_filesystem().scan()
 	request_refresh(&"after_fix_all")
-	print("UiSystemDock: Fix All — created: %d, failed: %d" % [created, failed])
+	print("UiReactDock: Fix All — created: %d, failed: %d" % [created, failed])
 
 
 func _collect_react_under(n: Node) -> Array[Node]:
 	var out: Array[Node] = []
-	if UiSystemScannerService.is_react_node(n):
+	if UiReactScannerService.is_react_node(n):
 		out.append(n)
 	for c in n.get_children():
 		for r in _collect_react_under(c):

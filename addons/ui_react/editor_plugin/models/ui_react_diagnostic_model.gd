@@ -1,5 +1,5 @@
-## Structured diagnostics for the UI System editor plugin (inspector-only).
-class_name UiSystemDiagnosticModel
+## Structured diagnostics for the Ui React editor plugin (inspector-only).
+class_name UiReactDiagnosticModel
 extends RefCounted
 
 enum Severity {
@@ -20,7 +20,7 @@ class DiagnosticIssue:
 	var node_path: NodePath = NodePath()
 	## Property name on the node (e.g. [code]pressed_state[/code]) for quick-fix actions.
 	var property_name: StringName = &""
-	## Suggested typed resource class for [method UiSystemStateFactoryService.create_and_save], if any.
+	## Suggested typed resource class for [method UiReactStateFactoryService.create_and_save], if any.
 	var suggested_state_class: StringName = &""
 
 	## [code]UiReactButton[/code]-style class name when known.
