@@ -156,10 +156,12 @@ func _load_persisted_ui_preferences() -> void:
 
 func _build_ui() -> void:
 	# Tooltip copy: verb-first, one short sentence; scope (Selection vs scene, filtered list) where it matters.
-	custom_minimum_size = Vector2(0, 180)
+	custom_minimum_size = Vector2(0, 200)
+	clip_contents = true
 
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.clip_contents = true
 	margin.add_theme_constant_override("margin_left", 8)
 	margin.add_theme_constant_override("margin_right", 8)
 	margin.add_theme_constant_override("margin_top", 8)
@@ -168,6 +170,9 @@ func _build_ui() -> void:
 
 	var vbox := VBoxContainer.new()
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.clip_contents = true
 	margin.add_child(vbox)
 
 	var mode_row := HBoxContainer.new()
@@ -251,22 +256,32 @@ func _build_ui() -> void:
 	_path_edit.tooltip_text = "Folder where Fix and Fix All save new .tres state files. If a filename already exists, the plugin uses _2, _3, … suffixes instead of overwriting."
 	path_row.add_child(_path_edit)
 
+	var split_main := VSplitContainer.new()
+	split_main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	split_main.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(split_main)
+
 	var issues_section := VBoxContainer.new()
+	issues_section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	issues_section.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	issues_section.add_theme_constant_override(&"separation", 4)
-	vbox.add_child(issues_section)
+	split_main.add_child(issues_section)
 
 	var issues_title := Label.new()
 	issues_title.text = "Issues"
+	issues_title.tooltip_text = "Drag the splitter below this section to resize Issues vs Report."
 	issues_section.add_child(issues_title)
 
 	var issues_panel := PanelContainer.new()
+	issues_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	issues_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	issues_panel.custom_minimum_size = Vector2(0, 140)
+	issues_panel.custom_minimum_size = Vector2(0, 56)
 	issues_panel.tooltip_text = "Diagnostics list; click an issue summary to open the report below."
 	issues_section.add_child(issues_panel)
 
 	var issues_panel_margin := MarginContainer.new()
+	issues_panel_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	issues_panel_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	issues_panel_margin.add_theme_constant_override(&"margin_left", 6)
 	issues_panel_margin.add_theme_constant_override(&"margin_right", 6)
 	issues_panel_margin.add_theme_constant_override(&"margin_top", 6)
@@ -284,20 +299,25 @@ func _build_ui() -> void:
 	_issues_scroll.add_child(_issues_container)
 
 	var report_section := VBoxContainer.new()
+	report_section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	report_section.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	report_section.add_theme_constant_override(&"separation", 4)
-	vbox.add_child(report_section)
+	split_main.add_child(report_section)
 
 	var report_title := Label.new()
 	report_title.text = "Report"
+	report_title.tooltip_text = "Drag the splitter above this section to resize Issues vs Report."
 	report_section.add_child(report_title)
 
 	var report_panel := PanelContainer.new()
+	report_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	report_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	report_panel.custom_minimum_size = Vector2(0, 120)
+	report_panel.custom_minimum_size = Vector2(0, 56)
 	report_section.add_child(report_panel)
 
 	var report_panel_margin := MarginContainer.new()
+	report_panel_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	report_panel_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	report_panel_margin.add_theme_constant_override(&"margin_left", 6)
 	report_panel_margin.add_theme_constant_override(&"margin_right", 6)
 	report_panel_margin.add_theme_constant_override(&"margin_top", 6)
@@ -313,11 +333,15 @@ func _build_ui() -> void:
 	_details_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_details_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_details_label.bbcode_enabled = true
+	# Fit content height so ScrollContainer owns vertical overflow (stable inside VSplitContainer).
 	_details_label.fit_content = true
 	_details_label.scroll_active = false
 	_details_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_details_label.tooltip_text = "Full message, fix hint, metadata, and for binding warnings a scan-time Value type / Effective value preview."
 	_details_scroll.add_child(_details_label)
+
+	# Keep initial split neutral so Issues/Report start balanced by default.
+	split_main.split_offset = 0
 
 	var btn_row := HBoxContainer.new()
 	vbox.add_child(btn_row)
