@@ -65,7 +65,7 @@ await UiAnimUtils.animate_expand(self, some_control).finished
 1. Open **Project → Project Settings → Plugins** and enable **UI System Tools** (bundled at `editor_plugin/plugin.cfg`).
 2. Open the **UI System Tools** panel in the **bottom editor dock** (tab bar).
 3. Choose **Scan: Selection** or **Entire scene**, press **Rescan** to run diagnostics on demand, and review results. Dock choices (scan mode, filters, auto-refresh, output folder) are **remembered per project** when you reopen it. The tool also **updates when you switch the active edited scene** (so you do not need to toggle scan mode to see results).
-4. Use **Group** (flat / by node / by severity), **Filter** (text search across node, path, property, messages), and severity toggles to narrow the list. Each row has **Fix**, **Focus**, and **Ignore** (hide until next **Rescan**). Click the summary button on a row to select it and show full details below. **Hover** any control for a short tooltip (scope, filters, and actions).
+4. Use **Group** (flat / by node / by severity), **Filter** (text search across node, path, property, messages), and severity toggles to narrow the list. Each row has **Fix**, **Focus**, and **Ignore** (hide until next **Rescan**). Click the issue summary in the **Issues** list to select it and show full details in the **Report** panel. **Hover** any control for a short tooltip (scope, filters, and actions).
 5. For unassigned `*_state` slots with a suggested type, use **Fix** on a row (single issue) or **Fix All** in the toolbar (every eligible issue in the **filtered** list). New `.tres` files are saved under the configured folder (default `res://addons/ui_system/ui_resources/plugin_generated/`); if a filename already exists, the plugin saves as `<name>_2.tres`, `<name>_3.tres`, … instead of overwriting. Override the folder with **`ui_system/plugin_state_output_path`**.
 
 All plugin usage details are documented in this README.
@@ -178,9 +178,9 @@ If you copy `addons/ui_system/` into another project, re-enable the plugin there
 
 ## Diagnostics layout
 
-- The **list** at the top shows **compact summary lines** per issue (severity prefix + short text). Full “Fix:” prose stays in the **details pane** so narrow panels stay readable.
-- **Select a row** (summary button) to load the **details pane** below: full issue text, fix hint, component/node/path, and property metadata when applicable. For **binding type warnings** (e.g. value shape mismatch), the details pane also shows a scan-time **Value type** and **Effective value** snippet (truncated for long strings), reflecting `UiState.value` at the time of the scan.
-- **Toolbar:** **Focus node** (selected row) and **Fix All** (bulk quick-fix for eligible filtered issues). Each row also has **Fix**, **Focus**, and **Ignore**. Use **Copy report** to copy the entire filtered list.
+- The **Issues** panel lists **compact summary lines** per issue (severity prefix + short text). Full “Fix:” prose stays in the **Report** panel so narrow docks stay readable.
+- **Click an issue summary** to load the **Report** panel: full issue text, fix hint, component/node/path, and property metadata when applicable. For **binding type warnings** (e.g. value shape mismatch), the report also shows a scan-time **Value type** and **Effective value** snippet (truncated for long strings), reflecting `UiState.value` at the time of the scan.
+- **Toolbar:** **Rescan**, **Copy report**, and **Fix All** (bulk quick-fix for eligible filtered issues). Each issue row has **Fix**, **Focus** (select that issue’s scene node), and **Ignore**. Use **Copy report** to copy the entire filtered list.
 
 **Persisted per project:** scan mode, severity filters, auto-refresh, and state output folder are saved in **Project Settings** and restored when you reopen the project (no need to reconfigure each session).
 
@@ -197,7 +197,7 @@ If you copy `addons/ui_system/` into another project, re-enable the plugin there
 | **State output folder** | Where quick-create saves new `.tres` files. Default: `res://addons/ui_system/ui_resources/plugin_generated/`. Collision-safe names: `<NodeName>_<property>_2.tres`, `_3.tres`, … |
 | **Rescan** | Run diagnostics now using the current **Scan** mode and filters (clears **Ignore** hides). |
 | **Copy report** | Copy the **filtered** summary list (and full text for export) to the clipboard. |
-| **Focus node** | Select the scene node for the **selected** issue (enabled when the issue has a `node_path`). |
+| **Focus** | On each row: select the scene node for that issue (disabled when the row has no `node_path`). |
 | **Fix** | On each row: for an unassigned `*_state` with a suggested type (**Info** optional slots or **Warning** required slots), creates the typed state, saves it, assigns with **undo/redo**. |
 | **Fix All** | Same as **Fix** for **every** eligible issue in the **current filtered** list (skips rows without a suggested type). |
 

@@ -55,7 +55,6 @@ var _details_scroll: ScrollContainer
 var _details_label: RichTextLabel
 var _btn_refresh: Button
 var _btn_copy: Button
-var _btn_focus: Button
 var _btn_fix_all: Button
 
 ## group_key -> expanded (for grouped view)
@@ -252,20 +251,63 @@ func _build_ui() -> void:
 	_path_edit.tooltip_text = "Folder where Fix and Fix All save new .tres state files. If a filename already exists, the plugin uses _2, _3, … suffixes instead of overwriting."
 	path_row.add_child(_path_edit)
 
+	var issues_section := VBoxContainer.new()
+	issues_section.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	issues_section.add_theme_constant_override(&"separation", 4)
+	vbox.add_child(issues_section)
+
+	var issues_title := Label.new()
+	issues_title.text = "Issues"
+	issues_section.add_child(issues_title)
+
+	var issues_panel := PanelContainer.new()
+	issues_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	issues_panel.custom_minimum_size = Vector2(0, 140)
+	issues_panel.tooltip_text = "Diagnostics list; click an issue summary to open the report below."
+	issues_section.add_child(issues_panel)
+
+	var issues_panel_margin := MarginContainer.new()
+	issues_panel_margin.add_theme_constant_override(&"margin_left", 6)
+	issues_panel_margin.add_theme_constant_override(&"margin_right", 6)
+	issues_panel_margin.add_theme_constant_override(&"margin_top", 6)
+	issues_panel_margin.add_theme_constant_override(&"margin_bottom", 6)
+	issues_panel.add_child(issues_panel_margin)
+
 	_issues_scroll = ScrollContainer.new()
+	_issues_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_issues_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_issues_scroll.custom_minimum_size = Vector2(0, 140)
 	_issues_scroll.tooltip_text = "Scroll the diagnostics list."
-	vbox.add_child(_issues_scroll)
+	issues_panel_margin.add_child(_issues_scroll)
 
 	_issues_container = VBoxContainer.new()
 	_issues_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_issues_scroll.add_child(_issues_container)
 
+	var report_section := VBoxContainer.new()
+	report_section.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	report_section.add_theme_constant_override(&"separation", 4)
+	vbox.add_child(report_section)
+
+	var report_title := Label.new()
+	report_title.text = "Report"
+	report_section.add_child(report_title)
+
+	var report_panel := PanelContainer.new()
+	report_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	report_panel.custom_minimum_size = Vector2(0, 120)
+	report_section.add_child(report_panel)
+
+	var report_panel_margin := MarginContainer.new()
+	report_panel_margin.add_theme_constant_override(&"margin_left", 6)
+	report_panel_margin.add_theme_constant_override(&"margin_right", 6)
+	report_panel_margin.add_theme_constant_override(&"margin_top", 6)
+	report_panel_margin.add_theme_constant_override(&"margin_bottom", 6)
+	report_panel.add_child(report_panel_margin)
+
 	_details_scroll = ScrollContainer.new()
+	_details_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_details_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_details_scroll.custom_minimum_size = Vector2(0, 120)
-	vbox.add_child(_details_scroll)
+	report_panel_margin.add_child(_details_scroll)
 
 	_details_label = RichTextLabel.new()
 	_details_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -289,12 +331,6 @@ func _build_ui() -> void:
 	_btn_copy.pressed.connect(_on_copy_report)
 	_btn_copy.tooltip_text = "Copy the filtered diagnostics report to the clipboard."
 	btn_row.add_child(_btn_copy)
-	_btn_focus = Button.new()
-	_btn_focus.text = "Focus node"
-	_btn_focus.disabled = true
-	_btn_focus.pressed.connect(_on_focus_node)
-	_btn_focus.tooltip_text = "Select and focus the scene node for the currently selected issue."
-	btn_row.add_child(_btn_focus)
 	_btn_fix_all = Button.new()
 	_btn_fix_all.text = "Fix All"
 	_btn_fix_all.tooltip_text = "Apply available quick fixes to all eligible issues in the filtered list."
@@ -303,7 +339,6 @@ func _build_ui() -> void:
 	btn_row.add_child(_btn_fix_all)
 
 	_update_details_pane(null)
-	_update_action_buttons(null)
 
 
 func _connect_editor_signals() -> void:
@@ -373,7 +408,7 @@ func _select_issue_at_index(idx: int) -> void:
 	_selected_flat_index = idx
 	var issue: Variant = _get_selected_issue()
 	_update_details_pane(issue)
-	_update_action_buttons(issue)
+	_rebuild_issue_list_ui()
 
 
 func _get_selected_issue() -> Variant:
@@ -389,7 +424,7 @@ func _escape_bbcode_literal(s: String) -> String:
 
 func _update_details_pane(issue: Variant) -> void:
 	if issue == null:
-		_details_label.text = "[i]Select an issue in the list above to see the full message, fix, and metadata.[/i]"
+		_details_label.text = "[i]Click an issue summary in the Issues list to see the full message, fix, and metadata.[/i]"
 		return
 	var sev := _severity_display_name(issue.severity)
 	var body := ""
@@ -436,13 +471,6 @@ func _can_create_state_for_issue(issue: Variant) -> bool:
 		return false
 	# Unassigned binding rows (optional INFO or required WARNING) carry a suggested class.
 	return issue.severity == UiSystemDiagnosticModel.Severity.INFO or issue.severity == UiSystemDiagnosticModel.Severity.WARNING
-
-
-func _update_action_buttons(issue: Variant) -> void:
-	if issue == null:
-		_btn_focus.disabled = true
-		return
-	_btn_focus.disabled = issue.node_path.is_empty()
 
 
 func _update_fix_all_button() -> void:
@@ -557,11 +585,9 @@ func _apply_filters() -> void:
 	_selected_flat_index = -1
 	if _issues_shown.is_empty():
 		_update_details_pane(null)
-		_update_action_buttons(null)
 	else:
 		_selected_flat_index = 0
 		_update_details_pane(_issues_shown[0])
-		_update_action_buttons(_issues_shown[0])
 
 	_update_fix_all_button()
 	_rebuild_issue_list_ui()
@@ -677,22 +703,40 @@ func _toggle_group(group_key: String) -> void:
 
 func _make_issue_row(issue: Variant, flat_index: int) -> Control:
 	var row := HBoxContainer.new()
+	row.add_theme_constant_override(&"separation", 6)
 	var summary: String = issue.summary_text if not String(issue.summary_text).is_empty() else issue.message
 	var sel_btn := Button.new()
 	sel_btn.text = "%s %s" % [_severity_prefix(issue.severity), summary]
-	sel_btn.flat = true
+	sel_btn.flat = false
 	sel_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	sel_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sel_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	var fi := flat_index
 	sel_btn.pressed.connect(func(): _select_issue_at_index(fi))
-	sel_btn.tooltip_text = "Select this issue and show full details below."
+	sel_btn.tooltip_text = "Click to open this issue in the Report panel below."
+	if flat_index == _selected_flat_index:
+		var sel_style := StyleBoxFlat.new()
+		sel_style.bg_color = Color(0.25, 0.45, 0.75, 0.28)
+		sel_style.set_corner_radius_all(3)
+		sel_style.set_content_margin_all(4)
+		sel_btn.add_theme_stylebox_override(&"normal", sel_style)
+		var sel_hover := StyleBoxFlat.new()
+		sel_hover.bg_color = Color(0.3, 0.52, 0.82, 0.34)
+		sel_hover.set_corner_radius_all(3)
+		sel_hover.set_content_margin_all(4)
+		sel_btn.add_theme_stylebox_override(&"hover", sel_hover)
+		var sel_pressed := StyleBoxFlat.new()
+		sel_pressed.bg_color = Color(0.22, 0.38, 0.62, 0.4)
+		sel_pressed.set_corner_radius_all(3)
+		sel_pressed.set_content_margin_all(4)
+		sel_btn.add_theme_stylebox_override(&"pressed", sel_pressed)
 	row.add_child(sel_btn)
 
 	var btn_fix := Button.new()
 	btn_fix.text = "Fix"
 	btn_fix.disabled = not _can_create_state_for_issue(issue)
 	btn_fix.pressed.connect(func(): _on_row_fix(fi))
-	btn_fix.tooltip_text = "Apply the available quick fix for this issue when eligible (e.g. create and assign a typed UiState)."
+	btn_fix.tooltip_text = "Apply the available quick fix for this issue when eligible (e.g. create and assign a UiState)."
 	row.add_child(btn_fix)
 
 	var btn_focus := Button.new()
@@ -754,19 +798,6 @@ func _on_copy_report() -> void:
 			line += " Fix: %s" % issue.fix_hint
 		lines.append(line)
 	DisplayServer.clipboard_set("\n".join(lines))
-
-
-func _on_focus_node() -> void:
-	var issue: Variant = _get_selected_issue()
-	if issue == null or issue.node_path.is_empty():
-		return
-	var ei := _plugin.get_editor_interface()
-	var root := ei.get_edited_scene_root()
-	if root == null:
-		return
-	var node := root.get_node_or_null(issue.node_path)
-	if node:
-		ei.edit_node(node)
 
 
 func _resolve_output_dir() -> String:

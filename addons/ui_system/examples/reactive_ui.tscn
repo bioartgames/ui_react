@@ -31,10 +31,6 @@ target = NodePath(".")
 pivot_offset = Vector2(-1, -1.375)
 metadata/_custom_type_script = "uid://diigywt0dm170"
 
-[sub_resource type="Resource" id="3"]
-script = ExtResource("16_float")
-value = 25.0
-
 [sub_resource type="Resource" id="Resource_mbr4o"]
 script = ExtResource("4_1o4e8")
 target = NodePath(".")
@@ -48,6 +44,10 @@ target = NodePath(".")
 trigger = 12
 animation = 23
 metadata/_custom_type_script = "uid://diigywt0dm170"
+
+[sub_resource type="Resource" id="3"]
+script = ExtResource("16_float")
+value = 25.0
 
 [sub_resource type="Resource" id="Resource_dcre7"]
 script = ExtResource("4_1o4e8")
@@ -153,7 +153,6 @@ metadata/_custom_type_script = "uid://lv5ixpw5hlvp"
 layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("5_52c3u")
-value_state = SubResource("3")
 animation_targets = Array[ExtResource("4_1o4e8")]([SubResource("Resource_mbr4o"), SubResource("Resource_yjg32")])
 metadata/_custom_type_script = "uid://toxmw3una1r3"
 
