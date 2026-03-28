@@ -114,6 +114,21 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 			)
 			continue
 		var u := st as UiState
+		if component == "UiReactItemList" and prop == &"selected_state" and owner is ItemList:
+			if (owner as ItemList).select_mode == ItemList.SELECT_SINGLE and u is UiFloatState:
+				out.append(
+					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+						UiReactDiagnosticModel.Severity.ERROR,
+						component,
+						str(owner.name),
+						"%s cannot use UiFloatState in single-select mode." % prop,
+						"Use UiIntState (int indices only). Float is not accepted for list selection.",
+						node_path,
+						prop,
+						&"UiIntState",
+					)
+				)
+				continue
 		if not _binding_type_ok(u, expected, component, prop):
 			var phrase: String = _expected_type_phrase(component, prop, expected)
 			out.append(

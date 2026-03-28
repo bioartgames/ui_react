@@ -11,6 +11,8 @@ class_name UiReactItemList
 ## **Optional** — Inspector-driven tweens (selection, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
+const _WARN_SINGLE_SELECT_EXPECT_INT := "UiReactItemList: expected int for single-select selected_state"
+
 var _updating: bool = false
 var _is_initializing: bool = true
 
@@ -98,11 +100,13 @@ func _sync_selection_ui_to_state() -> void:
 		return
 	var v: Variant = selected_state.get_value()
 	deselect_all()
-	if v is int or v is float:
-		var idx := int(v)
+	if v is int:
+		var idx: int = v
 		if idx >= 0 and idx < item_count:
 			select(idx)
 	elif v is Array:
+		if select_mode == ItemList.SELECT_SINGLE:
+			return
 		for idx in _indices_from_variant_array(v):
 			select(idx)
 
@@ -111,8 +115,8 @@ func _clamp_selection_state_if_needed() -> void:
 	if not selected_state:
 		return
 	var v: Variant = selected_state.get_value()
-	if v is int or v is float:
-		var idx := int(v)
+	if v is int:
+		var idx: int = v
 		if idx == -1:
 			return
 		if item_count == 0 or idx < 0 or idx >= item_count:
@@ -120,8 +124,8 @@ func _clamp_selection_state_if_needed() -> void:
 	elif v is Array and select_mode != ItemList.SELECT_SINGLE:
 		var filtered: Array = []
 		for item in v:
-			if item is int or item is float:
-				var i := int(item)
+			if item is int:
+				var i: int = item
 				if i >= 0 and i < item_count:
 					filtered.append(i)
 		if filtered != v:
@@ -158,9 +162,20 @@ func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void
 	if _updating:
 		return
 	
-	if new_value is int or new_value is float:
-		# Single selection mode (int index or float from UiFloatState)
-		var index = int(new_value)
+	if new_value is Array:
+		if select_mode == ItemList.SELECT_SINGLE:
+			push_warning("UiReactItemList: single-select selected_state expects int, not Array")
+			return
+		var indices: Array[int] = _indices_from_variant_array(new_value)
+		_updating = true
+		deselect_all()
+		for idx in indices:
+			select(idx)
+		_updating = false
+	elif new_value is int:
+		if select_mode != ItemList.SELECT_SINGLE:
+			return
+		var index: int = new_value
 		if index < 0:
 			_updating = true
 			deselect_all()
@@ -168,21 +183,13 @@ func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void
 			return
 		if index >= item_count:
 			return
-		
 		_updating = true
 		deselect_all()
 		if index >= 0:
 			select(index)
 		_updating = false
-	elif new_value is Array:
-		# Multi selection mode
-		var indices: Array[int] = _indices_from_variant_array(new_value)
-		
-		_updating = true
-		deselect_all()
-		for idx in indices:
-			select(idx)
-		_updating = false
+	elif select_mode == ItemList.SELECT_SINGLE:
+		push_warning(_WARN_SINGLE_SELECT_EXPECT_INT)
 
 func _on_disabled_state_changed(_new_value: Variant, _old_value: Variant) -> void:
 	# Note: ItemList doesn't expose disabled property in Godot 4.5, so this is a no-op
@@ -192,8 +199,8 @@ func _on_disabled_state_changed(_new_value: Variant, _old_value: Variant) -> voi
 func _indices_from_variant_array(raw: Array) -> Array[int]:
 	var indices: Array[int] = []
 	for item in raw:
-		if item is int or item is float:
-			var idx = int(item)
+		if item is int:
+			var idx: int = item
 			if idx >= 0 and idx < item_count:
 				indices.append(idx)
 	return indices

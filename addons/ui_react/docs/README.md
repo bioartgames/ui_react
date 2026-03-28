@@ -109,6 +109,8 @@ Prefer **`UiAnimUtils`** for tweens from code; prefer **`UiAnimTarget`** arrays 
 
 **`UiState` is abstract:** do not instantiate it directly. Each control export uses a concrete **`Ui*State`** (or the abstract slot only where noted above). Read and write payload data with **`get_value()`** / **`set_value()`** (subclasses expose a typed **`value`** property in the Inspector). Older projects that used a single concrete `UiState` resource with a `Variant` export must migrate to the matching concrete class and resave resources.
 
+**Strict integer indices:** Tab index (`UiReactTabContainer.selected_state`), **`UiIntState`**, and ItemList single-select **`selected_state`** use **`int` only**. **`float` is not accepted** for those bindings (no silent coercion from float or from **`UiFloatState`** there). Reserve **`UiFloatState`** for sliders, spin boxes, and progress bars.
+
 ---
 
 ## Used by controls (avoid importing unless advanced)
@@ -125,7 +127,7 @@ These may change between template versions; **do not rely on them from game code
 | Symptom | Likely cause | Fix |
 |--------|----------------|-----|
 | Animation never plays | Empty `animation_targets`, wrong **Trigger**, or invalid **Target** NodePath | In Inspector: set Trigger, drag a **Control** onto Target, pick animation type. Check Output for warnings. |
-| State doesn’t sync | State not assigned, or wrong concrete type | Assign the exported `*_state` field; use the **Ui React** dock to catch type mismatches. Payload must match control semantics (bool / int index / float / String / Array). |
+| State doesn’t sync | State not assigned, or wrong concrete type | Assign the exported `*_state` field; use the **Ui React** dock to catch type mismatches. Use **int** for tab list indices; **float** only for range controls (slider / spin / progress); bool / String / Array as documented per control. |
 | “Target not found” warning | NodePath not under this node | Use a path relative to the control, or drag the node into the Target field. |
 | Tab arrays don’t apply | `tabs_state` / `disabled_tabs_state` / `visible_tabs_state` not an **Array** | Those `UiState` values must be `Array` (see Output warning). |
 | Item list rows don’t update | `items_state` missing or not an **Array** | Assign `items_state` to a `UiState` / `UiArrayState` whose `value` is an `Array` (e.g. `["A", "B", 1]` — each entry is stringified for display). |
@@ -179,7 +181,7 @@ If you copy `addons/ui_react/` into another project, re-enable the plugin there 
 ## Diagnostics layout
 
 - The **Issues** panel lists **compact summary lines** per issue (severity prefix + short text). Full “Fix:” prose stays in the **Report** panel so narrow docks stay readable.
-- **Click an issue summary** to load the **Report** panel: full issue text, fix hint, component/node/path, and property metadata when applicable. For **binding type warnings** (e.g. value shape mismatch), the report also shows a scan-time **Value type** and **Effective value** snippet (truncated for long strings), reflecting `UiState.value` at the time of the scan.
+- **Click an issue summary** to load the **Report** panel: full issue text, fix hint, component/node/path, and property metadata when applicable. For issues that include scan-time value preview metadata, the report may show **Value type** and **Effective value** (truncated for long strings), reflecting bound state payload hints at scan time.
 - **Toolbar:** **Rescan**, **Copy report**, and **Fix All** (bulk quick-fix for eligible filtered issues). Each issue row has **Fix**, **Focus** (select that issue’s scene node), and **Ignore**. Use **Copy report** to copy the entire filtered list.
 
 **Persisted per project:** scan mode, severity filters, auto-refresh, and state output folder are saved in **Project Settings** and restored when you reopen the project (no need to reconfigure each session).
@@ -214,17 +216,17 @@ If you copy `addons/ui_react/` into another project, re-enable the plugin there 
 
 ## Binding metadata & validation
 
-The scanner (`ui_react_scanner_service.gd`) records which `UiState` exports each `UiReact*` control expects, including a **kind** hint (`bool`, `float`, `string`, `array`, ...). The validator (`ui_react_validator_service.gd`) turns those hints into **warnings** when the assigned `UiState.value` shape is unlikely to match typical usage.
+The scanner (`ui_react_scanner_service.gd`) records which exports each `UiReact*` control expects, including a **kind** hint (`bool`, `int`, `float`, `string`, `array`, ...). The validator (`ui_react_validator_service.gd`) reports **errors** when the assigned resource is not the expected concrete `Ui*State` subclass for that slot.
 
 ### `UiReactItemList` bindings
 
 | Export | Kind | Notes |
 |--------|------|--------|
-| `items_state` | `array` | Optional. When set, `value` should be an **Array**; each element is displayed with `str()`. Non-array values are ignored at runtime (with a warning) and produce a **Warning** in the dock. |
-| `selected_state` | `float` | Index-based selection (single: numeric index; multi: `Array` of indices). |
+| `items_state` | `array` | Optional. When set, **`UiArrayState`** **`value`** should be an **Array**; each element is displayed with `str()`. Non-array values are ignored at runtime (with a warning). |
+| `selected_state` | `int` (suggested) | Single-select: **`UiIntState`** (**`int`** indices only, including `-1`). Multi-select: **`UiArrayState`** with **`Array`** of **`int`** indices. **`float` / `UiFloatState` are not supported** for selection sync. |
 | `disabled_state` | `bool` | Optional; reserved for API consistency. |
 
-Use **`UiArrayState`** (or a generic `UiState` holding an `Array`) for `items_state` so inspector intent and diagnostics line up.
+Use **`UiArrayState`** for `items_state` so inspector intent and diagnostics line up.
 
 ## Architecture (for contributors)
 
