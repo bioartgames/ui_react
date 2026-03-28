@@ -1,13 +1,37 @@
-## Optional typed [UiState] for boolean [member value] payloads (toggles, pressed/disabled flags).
-## Generic [UiState] remains fully supported; use this when you want clearer intent in the Inspector.
+## Typed [UiState] for boolean payloads (toggles, pressed/disabled flags).
 class_name UiBoolState
 extends UiState
 
+@export var value: bool = false
+
+
 func _init(initial_value: Variant = false) -> void:
-	super._init(initial_value)
+	if typeof(initial_value) != TYPE_NIL:
+		value = bool(initial_value)
+
+
+func get_value() -> Variant:
+	return value
+
+
+func set_value(new_value: Variant) -> void:
+	var v := bool(new_value)
+	if value == v:
+		return
+	var old: bool = value
+	value = v
+	value_changed.emit(v, old)
+	emit_changed()
+
+
+func set_silent(new_value: Variant) -> void:
+	value = bool(new_value)
+	emit_changed()
+
 
 func get_bool_value() -> bool:
-	return bool(value)
+	return value
+
 
 func set_bool_value(v: bool) -> void:
 	set_value(v)

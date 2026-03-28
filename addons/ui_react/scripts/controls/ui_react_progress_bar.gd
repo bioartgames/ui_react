@@ -2,7 +2,7 @@ extends ProgressBar
 class_name UiReactProgressBar
 
 ## Two-way binding for [member Range.value] ([float]). **Assign** for reactive sync.
-@export var value_state: UiState
+@export var value_state: UiFloatState
 
 ## **Optional** — Inspector-driven tweens (value, completed, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
@@ -15,8 +15,8 @@ var _is_initializing: bool = true
 func _ready() -> void:
 	if value_state:
 		value_state.value_changed.connect(_on_value_state_changed)
-		_on_value_state_changed(value_state.value, value_state.value)
-		_last_value = UiReactStateBindingHelper.coerce_float(value_state.value)
+		_on_value_state_changed(value_state.get_value(), value_state.get_value())
+		_last_value = UiReactStateBindingHelper.coerce_float(value_state.get_value())
 	else:
 		_last_value = value
 	_was_completed = _is_completed()

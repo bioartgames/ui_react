@@ -1,21 +1,20 @@
+## Abstract base for reactive state resources used with [UiReact*] controls.
+## Instantiate a concrete subclass ([UiBoolState], [UiIntState], [UiFloatState], [UiStringState], [UiArrayState]) only.
+@abstract
 class_name UiState
 extends Resource
 
 signal value_changed(new_value: Variant, old_value: Variant)
 
-@export var value: Variant
 
-func _init(initial_value: Variant = null) -> void:
-	value = initial_value
+func get_value() -> Variant:
+	push_error("UiState.get_value() must be overridden in subclass")
+	return null
 
-func set_value(new_value: Variant) -> void:
-	if value == new_value:
-		return
-	var old_value: Variant = value
-	value = new_value
-	value_changed.emit(new_value, old_value)
-	emit_changed()
 
-func set_silent(new_value: Variant) -> void:
-	value = new_value
-	emit_changed()
+func set_value(_new_value: Variant) -> void:
+	push_error("UiState.set_value() must be overridden in subclass")
+
+
+func set_silent(_new_value: Variant) -> void:
+	push_error("UiState.set_silent() must be overridden in subclass")

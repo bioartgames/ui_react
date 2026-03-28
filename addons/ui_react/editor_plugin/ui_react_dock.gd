@@ -467,7 +467,7 @@ func _update_details_pane(issue: Variant) -> void:
 		body += "[b]Property[/b]: %s\n" % str(issue.property_name)
 	if issue.suggested_state_class != &"":
 		body += "[b]Suggested type[/b]: %s\n" % str(issue.suggested_state_class)
-	# Value preview: scan-time UiState.value snippet (binding warnings only). Omit from text search (see _issue_matches_search).
+	# Value preview: scan-time state value snippet (binding warnings only). Omit from text search (see _issue_matches_search).
 	if not String(issue.value_preview).is_empty():
 		if not String(issue.value_type).is_empty():
 			body += "[b]Value type[/b]: %s\n" % _escape_bbcode_literal(String(issue.value_type))
@@ -760,7 +760,7 @@ func _make_issue_row(issue: Variant, flat_index: int) -> Control:
 	btn_fix.text = "Fix"
 	btn_fix.disabled = not _can_create_state_for_issue(issue)
 	btn_fix.pressed.connect(func(): _on_row_fix(fi))
-	btn_fix.tooltip_text = "Apply the available quick fix for this issue when eligible (e.g. create and assign a UiState)."
+	btn_fix.tooltip_text = "Apply the available quick fix for this issue when eligible (e.g. create and assign a concrete Ui*State resource)."
 	row.add_child(btn_fix)
 
 	var btn_focus := Button.new()

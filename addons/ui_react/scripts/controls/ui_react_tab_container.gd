@@ -2,7 +2,7 @@ extends TabContainer
 class_name UiReactTabContainer
 
 ## Two-way binding for current tab index ([int]). **Optional** — assign for external control of selection.
-@export var selected_state: UiState
+@export var selected_state: UiIntState
 
 ## **Optional** — Advanced tabs: dynamic tab list, per-tab content [UiState]s, disabled/visible arrays ([UiTabContainerCfg]).
 @export var tab_config: UiTabContainerCfg
@@ -20,18 +20,18 @@ func _ready() -> void:
 
 	if selected_state:
 		selected_state.value_changed.connect(_on_selected_state_changed)
-		_on_selected_state_changed(selected_state.value, selected_state.value)
+		_on_selected_state_changed(selected_state.get_value(), selected_state.get_value())
 
 	if tab_config:
 		if tab_config.tabs_state:
 			tab_config.tabs_state.value_changed.connect(_on_tabs_state_changed)
-			_on_tabs_state_changed(tab_config.tabs_state.value, null)
+			_on_tabs_state_changed(tab_config.tabs_state.get_value(), null)
 		if tab_config.disabled_tabs_state:
 			tab_config.disabled_tabs_state.value_changed.connect(_on_disabled_tabs_state_changed)
-			_on_disabled_tabs_state_changed(tab_config.disabled_tabs_state.value, null)
+			_on_disabled_tabs_state_changed(tab_config.disabled_tabs_state.get_value(), null)
 		if tab_config.visible_tabs_state:
 			tab_config.visible_tabs_state.value_changed.connect(_on_visible_tabs_state_changed)
-			_on_visible_tabs_state_changed(tab_config.visible_tabs_state.value, null)
+			_on_visible_tabs_state_changed(tab_config.visible_tabs_state.get_value(), null)
 
 	_validate_animation_targets()
 	UiReactStateBindingHelper.deferred_finish_initialization(self)
@@ -84,7 +84,7 @@ func _on_tab_selected(tab_index: int) -> void:
 	if not selected_state or _updating:
 		return
 	var new_value: Variant = tab_index
-	if selected_state.value == new_value:
+	if selected_state.get_value() == new_value:
 		return
 	_updating = true
 	selected_state.set_value(new_value)

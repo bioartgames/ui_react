@@ -7,10 +7,10 @@ Self-contained UI building blocks for Godot 4.x: attach **UiReact\*** scripts fo
 ## The 3-step setup (repeat for every control)
 
 1. **Attach** the matching `UiReact*` script to a native Control (Button, HSlider, Label, …).
-2. **Assign** `UiState` (or optional typed `UiBoolState` / `UiFloatState` / `UiStringState` / `UiArrayState`) on the exported fields you care about (pressed/value/text/etc.).
+2. **Assign** the **typed** state resource each export expects (`UiBoolState`, `UiIntState`, `UiFloatState`, `UiStringState`, or `UiArrayState`). Two polymorphic exports use the abstract `UiState` slot so you can pick the right concrete class: `UiReactLabel.text_state` (**`UiStringState` or `UiArrayState`**) and `UiReactItemList.selected_state` (**`UiIntState`** in single-select, **`UiArrayState`** in multi-select).
 3. **Optionally** fill `animation_targets` with `UiAnimTarget` entries to run tweens from the Inspector (no tween code).
 
-That’s it. Game logic can read/write the same `UiState` resources; controls stay in sync.
+That’s it. Game logic reads and writes through **`get_value()`** / **`set_value()`** on those resources; controls stay in sync.
 
 ### Inspector hints (Godot 4.x)
 
@@ -34,14 +34,14 @@ Open **`res://addons/ui_react/examples/reactive_ui.tscn`** and press **Play** (o
 **Button + pressed state**
 
 1. Add a **Button**, attach **`UiReactButton`** (`scripts/controls/ui_react_button.gd`).
-2. Create a **UiState** resource (`scripts/api/models/ui_state.gd`), set `value` to `false` (or your default).
+2. Create a **`UiBoolState`** resource (`scripts/api/models/ui_bool_state.gd`), set **`value`** to `false` (or your default).
 3. Assign it to **`pressed_state`** on the button.
 4. Optional: assign **`disabled_state`** and/or **`animation_targets`**.
 
 **Slider + shared value**
 
 1. Add **HSlider**, attach **`UiReactSlider`**.
-2. Create **UiState** with a numeric `value` (e.g. `50.0`).
+2. Create **`UiFloatState`** with **`value`** e.g. `50.0`.
 3. Assign to **`value_state`**.
 
 **Label + text from state**
@@ -84,8 +84,8 @@ All plugin usage details are documented in this README.
 | **UiReactLineEdit** | `text_state` | `text_state` for sync. |
 | **UiReactLabel** | `text_state` | `text_state` for sync. |
 | **UiReactOptionButton** | `selected_state`, `disabled_state` | `selected_state` for sync (usually string item text). |
-| **UiReactItemList** | `items_state`, `selected_state`, `disabled_state` | `items_state` (optional) populates rows from an **Array** (`str()` per entry). `selected_state` is **index-based** selection sync. |
-| **UiReactTabContainer** | `selected_state`, `tab_config` | `selected_state` for index sync; `tab_config` optional (dynamic tabs / per-tab states). |
+| **UiReactItemList** | `items_state`, `selected_state`, `disabled_state` | **`items_state`**: **`UiArrayState`**. **`selected_state`**: **`UiIntState`** (single-select) or **`UiArrayState`** (multi-select indices). **`disabled_state`**: **`UiBoolState`**. |
+| **UiReactTabContainer** | `selected_state`, `tab_config` | **`selected_state`**: **`UiIntState`**. **`tab_config`**: optional **`UiTabContainerCfg`** (use **`UiArrayState`** for tab/disabled/visibility arrays). |
 
 **`animation_targets`** is always **optional**: leave empty if you don’t want automatic tweens.
 
@@ -99,15 +99,15 @@ Paths are under **`res://addons/ui_react/`**.
 |------|---------------------|------|
 | Animation facade | `UiAnimUtils` | `scripts/api/ui_anim_utils.gd` |
 | Chained animations (optional) | `UiAnimSequence` | `scripts/internal/anim/ui_anim_sequence.gd` |
-| State (generic) | `UiState` | `scripts/api/models/ui_state.gd` |
-| State (optional typed) | `UiBoolState`, `UiFloatState`, `UiStringState`, `UiArrayState` | `scripts/api/models/ui_*_state.gd` |
+| State (abstract base) | `UiState` | `scripts/api/models/ui_state.gd` |
+| State (concrete) | `UiBoolState`, `UiIntState`, `UiFloatState`, `UiStringState`, `UiArrayState` | `scripts/api/models/ui_*_state.gd` |
 | Inspector animation row | `UiAnimTarget` | `scripts/api/models/ui_anim_target.gd` |
 | Config bases | `UiTargetCfg`, `UiControlTargetCfg`, `UiTabContainerCfg` | `scripts/api/models/` |
 | Attachable controls | `UiReact*` | `scripts/controls/` |
 
 Prefer **`UiAnimUtils`** for tweens from code; prefer **`UiAnimTarget`** arrays on controls for no-code animation.
 
-**Typed vs generic `UiState`:** `UiState` accepts any `Variant` and is the default. Use `UiBoolState` / `UiFloatState` / `UiStringState` / `UiArrayState` when you want clearer intent in the Inspector and typed helpers (`get_float_value()`, etc.). Existing scenes using `UiState` do not need to change.
+**`UiState` is abstract:** do not instantiate it directly. Each control export uses a concrete **`Ui*State`** (or the abstract slot only where noted above). Read and write payload data with **`get_value()`** / **`set_value()`** (subclasses expose a typed **`value`** property in the Inspector). Older projects that used a single concrete `UiState` resource with a `Variant` export must migrate to the matching concrete class and resave resources.
 
 ---
 
@@ -125,7 +125,7 @@ These may change between template versions; **do not rely on them from game code
 | Symptom | Likely cause | Fix |
 |--------|----------------|-----|
 | Animation never plays | Empty `animation_targets`, wrong **Trigger**, or invalid **Target** NodePath | In Inspector: set Trigger, drag a **Control** onto Target, pick animation type. Check Output for warnings. |
-| State doesn’t sync | `UiState` not assigned, or wrong type | Assign the exported `*_state` field; ensure `UiState.value` type matches (bool/float/String/Array as documented). |
+| State doesn’t sync | State not assigned, or wrong concrete type | Assign the exported `*_state` field; use the **Ui React** dock to catch type mismatches. Payload must match control semantics (bool / int index / float / String / Array). |
 | “Target not found” warning | NodePath not under this node | Use a path relative to the control, or drag the node into the Target field. |
 | Tab arrays don’t apply | `tabs_state` / `disabled_tabs_state` / `visible_tabs_state` not an **Array** | Those `UiState` values must be `Array` (see Output warning). |
 | Item list rows don’t update | `items_state` missing or not an **Array** | Assign `items_state` to a `UiState` / `UiArrayState` whose `value` is an `Array` (e.g. `["A", "B", 1]` — each entry is stringified for display). |
@@ -141,7 +141,7 @@ These may change between template versions; **do not rely on them from game code
 | `scripts/controls/` | Attachable **UiReact\*** scripts. |
 | `scripts/internal/anim/` | Animation implementation (unstable for direct use). |
 | `scripts/internal/react/` | Reactive helpers (unstable for direct use). |
-| `examples/` | `reactive_ui.tscn` smoke demo. |
+| `examples/` | `demo.tscn` smoke demo. |
 | `docs/` | Extra notes (e.g. migration, editor plugin, [Plugin UX roadmap](plugin_ux_roadmap.md)). |
 | `editor_plugin/` | Optional Godot editor plugin (dock, validation, quick state creation). |
 | `ui_resources/` | Sample `.tres` for the example scene; `plugin_generated/` holds plugin-created states (optional). |
@@ -160,7 +160,7 @@ Extended path mapping (old tree → addon) lives in **`docs/migration.md`** if p
 
 | You have | Optional improvement |
 |----------|----------------------|
-| Generic `UiState` everywhere | Swap to `UiBoolState` / `UiFloatState` / `UiStringState` / `UiArrayState` where it clarifies payload type. |
+| Older generic `UiState` `.tres` files | Replace with the concrete **`Ui*State`** expected by each export; **`UiReactTabContainer.selected_state`** uses **`UiIntState`**. |
 | `show_animated` / `hide_animated` with strings | Prefer `UiAnimUtils.preset(...)` with `UiAnimUtils.Preset` enums. |
 | Plain `NodePath` targets in mind | Inspector now restricts targets to **Control**; existing saved paths still load. |
 

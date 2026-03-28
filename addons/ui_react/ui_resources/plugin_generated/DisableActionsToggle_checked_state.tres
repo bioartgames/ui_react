@@ -1,0 +1,6 @@
+[gd_resource type="Resource" script_class="UiBoolState" load_steps=2 format=3 uid="uid://dyiybrrey3gto"]
+
+[ext_resource type="Script" uid="uid://cxg5hj6ihqtue" path="res://addons/ui_react/scripts/api/models/ui_bool_state.gd" id="1_6qw6h"]
+
+[resource]
+script = ExtResource("1_6qw6h")

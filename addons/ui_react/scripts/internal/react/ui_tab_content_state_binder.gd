@@ -35,7 +35,7 @@ static func bind_tab_content(tab_container: TabContainer, tab_config: UiTabConta
 		if tab_child.has(prop):
 			var child_state = tab_child.get(prop)
 			if child_state is UiState:
-				child_state.set_silent(content_state.value)
+				child_state.set_silent(content_state.get_value())
 				var callable = on_content_changed.bind(tab_index, prop)
 				if content_state.value_changed.is_connected(callable):
 					content_state.value_changed.disconnect(callable)
@@ -48,7 +48,7 @@ static func bind_tab_content(tab_container: TabContainer, tab_config: UiTabConta
 			if first_child.has(prop):
 				var child_state = first_child.get(prop)
 				if child_state is UiState:
-					child_state.set_silent(content_state.value)
+					child_state.set_silent(content_state.get_value())
 					var child_prop_key: StringName = StringName(String(CHILD_PROPERTY_PREFIX) + String(prop))
 					var callable = on_content_changed.bind(tab_index, child_prop_key)
 					if content_state.value_changed.is_connected(callable):

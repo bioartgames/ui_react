@@ -1,10 +1,10 @@
 extends SpinBox
 class_name UiReactSpinBox
 
-## Two-way binding for numeric value ([float]). **Assign** for reactive sync with [UiState].
-@export var value_state: UiState
+## Two-way binding for numeric value ([float]). **Assign** for reactive sync with [UiFloatState].
+@export var value_state: UiFloatState
 ## Two-way binding for editable/disabled ([bool]). **Optional**.
-@export var disabled_state: UiState
+@export var disabled_state: UiBoolState
 
 ## **Optional** — Inspector-driven tweens (value, focus, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
@@ -19,13 +19,13 @@ func _ready() -> void:
 	focus_exited.connect(_on_focus_exited)
 	if value_state:
 		value_state.value_changed.connect(_on_value_state_changed)
-		_on_value_state_changed(value_state.value, value_state.value)
-		_last_value = UiReactStateBindingHelper.coerce_float(value_state.value)
+		_on_value_state_changed(value_state.get_value(), value_state.get_value())
+		_last_value = UiReactStateBindingHelper.coerce_float(value_state.get_value())
 	else:
 		_last_value = value
 	if disabled_state:
 		disabled_state.value_changed.connect(_on_disabled_state_changed)
-		_on_disabled_state_changed(disabled_state.value, disabled_state.value)
+		_on_disabled_state_changed(disabled_state.get_value(), disabled_state.get_value())
 	_validate_animation_targets()
 	UiReactStateBindingHelper.deferred_finish_initialization(self)
 
@@ -91,7 +91,7 @@ func _on_value_changed(new_value: float) -> void:
 	
 	if not value_state or _updating:
 		return
-	if float(value_state.value) == new_value:
+	if UiReactStateBindingHelper.coerce_float(value_state.get_value()) == new_value:
 		return
 	_updating = true
 	value_state.set_value(new_value)

@@ -2,9 +2,9 @@ extends OptionButton
 class_name UiReactOptionButton
 
 ## Two-way binding for the selected item (typically [String] item text). **Assign** for reactive sync.
-@export var selected_state: UiState
+@export var selected_state: UiStringState
 ## Two-way binding for disabled state ([bool]). **Optional**.
-@export var disabled_state: UiState
+@export var disabled_state: UiBoolState
 
 ## **Optional** — Inspector-driven tweens (selection, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
@@ -16,10 +16,10 @@ func _ready() -> void:
 	item_selected.connect(_on_item_selected)
 	if selected_state:
 		selected_state.value_changed.connect(_on_selected_state_changed)
-		_on_selected_state_changed(selected_state.value, selected_state.value)
+		_on_selected_state_changed(selected_state.get_value(), selected_state.get_value())
 	if disabled_state:
 		disabled_state.value_changed.connect(_on_disabled_state_changed)
-		_on_disabled_state_changed(disabled_state.value, disabled_state.value)
+		_on_disabled_state_changed(disabled_state.get_value(), disabled_state.get_value())
 	_validate_animation_targets()
 	UiReactStateBindingHelper.deferred_finish_initialization(self)
 
@@ -67,7 +67,7 @@ func _on_item_selected(index: int) -> void:
 	if not selected_state or _updating:
 		return
 	var new_value: Variant = get_item_text(index)
-	if selected_state.value == new_value:
+	if selected_state.get_value() == new_value:
 		return
 	_updating = true
 	selected_state.set_value(new_value)

@@ -2,9 +2,9 @@ extends CheckBox
 class_name UiReactCheckBox
 
 ## Two-way binding for checked state ([bool]). **Optional** — omit for a plain CheckBox.
-@export var checked_state: UiState
+@export var checked_state: UiBoolState
 ## Two-way binding for disabled state ([bool]). **Optional**.
-@export var disabled_state: UiState
+@export var disabled_state: UiBoolState
 
 ## **Optional** — Inspector-driven tweens (toggled, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
@@ -16,10 +16,10 @@ func _ready() -> void:
 	toggled.connect(_on_toggled)
 	if checked_state:
 		checked_state.value_changed.connect(_on_checked_state_changed)
-		_on_checked_state_changed(checked_state.value, checked_state.value)
+		_on_checked_state_changed(checked_state.get_value(), checked_state.get_value())
 	if disabled_state:
 		disabled_state.value_changed.connect(_on_disabled_state_changed)
-		_on_disabled_state_changed(disabled_state.value, disabled_state.value)
+		_on_disabled_state_changed(disabled_state.get_value(), disabled_state.get_value())
 	_validate_animation_targets()
 	UiReactStateBindingHelper.deferred_finish_initialization(self)
 
@@ -69,7 +69,7 @@ func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 func _on_toggled(active: bool) -> void:
 	if not checked_state or _updating:
 		return
-	if checked_state.value == active:
+	if checked_state.get_value() == active:
 		return
 	_updating = true
 	checked_state.set_value(active)

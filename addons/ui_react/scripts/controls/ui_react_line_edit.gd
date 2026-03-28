@@ -2,7 +2,7 @@ extends LineEdit
 class_name UiReactLineEdit
 
 ## Two-way binding for text ([String]). **Assign** for reactive sync.
-@export var text_state: UiState
+@export var text_state: UiStringState
 
 ## **Optional** — Inspector-driven tweens (text, focus, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
@@ -14,7 +14,7 @@ func _ready() -> void:
 	text_changed.connect(_on_text_changed)
 	if text_state:
 		text_state.value_changed.connect(_on_text_state_changed)
-		_on_text_state_changed(text_state.value, text_state.value)
+		_on_text_state_changed(text_state.get_value(), text_state.get_value())
 	focus_entered.connect(_on_focus_entered)
 	focus_exited.connect(_on_focus_exited)
 	_validate_animation_targets()
@@ -79,7 +79,7 @@ func _on_text_changed(new_text: String) -> void:
 	
 	if not text_state or _updating:
 		return
-	if text_state.value == new_text:
+	if text_state.get_value() == new_text:
 		return
 	_updating = true
 	text_state.set_value(new_text)

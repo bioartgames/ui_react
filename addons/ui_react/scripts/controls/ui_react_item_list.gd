@@ -1,12 +1,12 @@
 extends ItemList
 class_name UiReactItemList
 
-## Two-way binding for selection (see script for value shape). **Assign** for reactive sync.
+## Two-way binding for selection (see script for value shape). **Assign** [UiIntState] (single-select) or [UiArrayState] (multi-select).
 @export var selected_state: UiState
-## **Optional** — list row contents from a [UiState] whose [member UiState.value] is an [Array]. Each element is shown via [method @GlobalScope.str].
-@export var items_state: UiState
+## **Optional** — list row contents from a [UiArrayState] (or assign an [Array] payload). Each element is shown via [method @GlobalScope.str].
+@export var items_state: UiArrayState
 ## **Optional** — wired for API consistency; ItemList has no disabled property in Godot 4.5, so changes are currently ignored.
-@export var disabled_state: UiState
+@export var disabled_state: UiBoolState
 
 ## **Optional** — Inspector-driven tweens (selection, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
@@ -19,13 +19,13 @@ func _ready() -> void:
 	item_activated.connect(_on_item_activated)
 	if items_state:
 		items_state.value_changed.connect(_on_items_state_changed)
-		_on_items_state_changed(items_state.value, items_state.value)
+		_on_items_state_changed(items_state.get_value(), items_state.get_value())
 	if selected_state:
 		selected_state.value_changed.connect(_on_selected_state_changed)
-		_on_selected_state_changed(selected_state.value, selected_state.value)
+		_on_selected_state_changed(selected_state.get_value(), selected_state.get_value())
 	if disabled_state:
 		disabled_state.value_changed.connect(_on_disabled_state_changed)
-		_on_disabled_state_changed(disabled_state.value, disabled_state.value)
+		_on_disabled_state_changed(disabled_state.get_value(), disabled_state.get_value())
 	_validate_animation_targets()
 	UiReactStateBindingHelper.deferred_finish_initialization(self)
 
@@ -81,7 +81,7 @@ func _on_items_state_changed(new_value: Variant, _old_value: Variant) -> void:
 			"UiReactItemList",
 			self,
 			"items_state must use an Array value.",
-			"Set UiState.value to an Array (e.g. [\"A\", \"B\"]) or use UiArrayState.",
+			"Set items_state to an Array payload (e.g. [\"A\", \"B\"]) via UiArrayState.",
 		)
 		return
 	_updating = true
@@ -96,7 +96,7 @@ func _on_items_state_changed(new_value: Variant, _old_value: Variant) -> void:
 func _sync_selection_ui_to_state() -> void:
 	if not selected_state:
 		return
-	var v := selected_state.value
+	var v: Variant = selected_state.get_value()
 	deselect_all()
 	if v is int or v is float:
 		var idx := int(v)
@@ -110,7 +110,7 @@ func _sync_selection_ui_to_state() -> void:
 func _clamp_selection_state_if_needed() -> void:
 	if not selected_state:
 		return
-	var v := selected_state.value
+	var v: Variant = selected_state.get_value()
 	if v is int or v is float:
 		var idx := int(v)
 		if idx == -1:
@@ -140,10 +140,10 @@ func _on_item_selected(_index: int) -> void:
 		# Single selection: store index or -1 if nothing selected
 		new_value = selected_items[0] if selected_items.size() > 0 else -1
 	else:
-		# Multi selection: store array of indices
-		new_value = selected_items
-	
-	if selected_state.value == new_value:
+		# Multi selection: store array of indices ([PackedInt32Array] -> [Array] for [UiArrayState])
+		new_value = Array(selected_items)
+
+	if selected_state.get_value() == new_value:
 		return
 	
 	_updating = true

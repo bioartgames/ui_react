@@ -2,7 +2,7 @@ extends HSlider
 class_name UiReactSlider
 
 ## Two-way binding for the slider value ([float]). **Assign** for reactive sync; omit for a local-only slider.
-@export var value_state: UiState
+@export var value_state: UiFloatState
 
 ## **Optional** — Inspector-driven tweens (value changed, drag, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
@@ -16,8 +16,8 @@ func _ready() -> void:
 	value_changed.connect(_on_value_changed)
 	if value_state:
 		value_state.value_changed.connect(_on_value_state_changed)
-		_on_value_state_changed(value_state.value, value_state.value)
-		_last_value = UiReactStateBindingHelper.coerce_float(value_state.value)
+		_on_value_state_changed(value_state.get_value(), value_state.get_value())
+		_last_value = UiReactStateBindingHelper.coerce_float(value_state.get_value())
 	else:
 		_last_value = value
 	gui_input.connect(_on_gui_input)
@@ -91,7 +91,7 @@ func _on_value_changed(v: float) -> void:
 	
 	if not value_state or _updating:
 		return
-	if UiReactStateBindingHelper.coerce_float(value_state.value) == v:
+	if UiReactStateBindingHelper.coerce_float(value_state.get_value()) == v:
 		return
 	_updating = true
 	value_state.set_value(v)

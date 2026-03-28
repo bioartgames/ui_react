@@ -25,16 +25,17 @@ static func instantiate_state(state_class: StringName) -> Resource:
 	match String(state_class):
 		"UiBoolState":
 			return UiBoolState.new(false)
+		"UiIntState":
+			return UiIntState.new(0)
 		"UiFloatState":
 			return UiFloatState.new(0.0)
 		"UiStringState":
 			return UiStringState.new("")
 		"UiArrayState":
 			return UiArrayState.new([])
-		"UiState":
-			return UiState.new(null)
 		_:
-			return UiState.new(null)
+			push_warning("UiReactStateFactoryService: unknown or non-instantiable state class %s" % state_class)
+			return null
 
 
 static func build_file_path(output_dir: String, node_name: String, property_name: String) -> String:

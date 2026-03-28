@@ -1,7 +1,7 @@
 extends Label
 class_name UiReactLabel
 
-## Two-way binding for displayed text ([String] or nested structures — see [method _as_text]). **Assign** for reactive sync.
+## Two-way binding for displayed text ([String] or nested structures — see [method _as_text]). **Assign** [UiStringState] or [UiArrayState] (composite / nested [UiState] in arrays).
 @export var text_state: UiState
 
 ## **Optional** — Inspector-driven tweens (text, hover). Leave empty for no automatic animations.
@@ -14,7 +14,7 @@ var _is_initializing: bool = true
 func _ready() -> void:
 	if text_state:
 		text_state.value_changed.connect(_on_text_state_changed)
-		_on_text_state_changed(text_state.value, text_state.value)
+		_on_text_state_changed(text_state.get_value(), text_state.get_value())
 	_validate_animation_targets()
 	UiReactStateBindingHelper.deferred_finish_initialization(self)
 
@@ -88,7 +88,7 @@ func _rebind_nested_states(value: Variant) -> void:
 
 func _on_nested_changed(_new_value: Variant, _old_value: Variant) -> void:
 	if text_state:
-		_on_text_state_changed(text_state.value, text_state.value)
+		_on_text_state_changed(text_state.get_value(), text_state.get_value())
 
 func _as_text(value: Variant) -> String:
 	return UiReactStateBindingHelper.as_text_recursive(value)

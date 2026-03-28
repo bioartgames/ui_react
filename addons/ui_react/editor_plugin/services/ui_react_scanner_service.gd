@@ -50,11 +50,11 @@ const BINDINGS_BY_COMPONENT: Dictionary = {
 	],
 	"UiReactItemList": [
 		{"property": &"items_state", "kind": "array", "optional": true},
-		{"property": &"selected_state", "kind": "float", "optional": true},
+		{"property": &"selected_state", "kind": "int", "optional": true},
 		{"property": &"disabled_state", "kind": "bool", "optional": true},
 	],
 	"UiReactTabContainer": [
-		{"property": &"selected_state", "kind": "float", "optional": true},
+		{"property": &"selected_state", "kind": "int", "optional": true},
 	],
 }
 
@@ -94,6 +94,8 @@ static func kind_to_suggested_class(kind: String) -> StringName:
 	match kind:
 		"bool":
 			return &"UiBoolState"
+		"int":
+			return &"UiIntState"
 		"float":
 			return &"UiFloatState"
 		"string":
@@ -101,4 +103,4 @@ static func kind_to_suggested_class(kind: String) -> StringName:
 		"array":
 			return &"UiArrayState"
 		_:
-			return &"UiState"
+			return &""
