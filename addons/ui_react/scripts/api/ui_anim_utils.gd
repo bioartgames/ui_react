@@ -2,9 +2,9 @@
 ##
 ## Ownership (implementations live in family modules):
 ## - Slide/center motion: [UiAnimSlideAnimations]
-## - Scale/pop/bounce/elastic: [UiAnimScaleAnimations]
+## - Scale/pop/bounce/elastic (pop is scale-only): [UiAnimScaleAnimations]
 ## - Fade/glow/color: [UiAnimOpacityColorAnimations]
-## - Rotate/pulse/shake/breathing/wobble/float: [UiAnimTransformEffects]
+## - Rotate/pulse/shake/breathing/wobble/float (rotate is transform-only): [UiAnimTransformEffects]
 ## - Reset/focus/snapshot clear: [UiAnimStateUtils]
 ## - Stop/interrupt: [UiAnimRuntimeControl]
 ## - Loop orchestration: [UiAnimLoopRunner]

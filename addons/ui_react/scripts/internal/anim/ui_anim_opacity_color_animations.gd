@@ -3,8 +3,7 @@ class_name UiAnimOpacityColorAnimations
 extends RefCounted
 
 static func animate_fade_in(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
-	if not source_node or not target:
-		push_warning("UiAnimUtils: Invalid source_node or target for animate_fade_in")
+	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_fade_in"):
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -13,9 +12,8 @@ static func animate_fade_in(source_node: Node, target: Control, speed := UiAnimC
 		
 		target.modulate.a = UiAnimConstants.ALPHA_MIN
 		
-		var tween = source_node.create_tween()
+		var tween := UiAnimTweenFactory.create_safe_tween(source_node)
 		if not tween:
-			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		tween.tween_property(target, 'modulate:a', UiAnimConstants.ALPHA_MAX, speed).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
@@ -36,17 +34,15 @@ static func animate_fade_in(source_node: Node, target: Control, speed := UiAnimC
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
 static func animate_fade_out(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, auto_visible: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
-	if not source_node or not target:
-		push_warning("UiAnimUtils: Invalid source_node or target for animate_fade_out")
+	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_fade_out"):
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
 		if auto_visible:
 			target.visible = true
 		
-		var tween = source_node.create_tween()
+		var tween := UiAnimTweenFactory.create_safe_tween(source_node)
 		if not tween:
-			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		tween.tween_property(target, 'modulate:a', UiAnimConstants.ALPHA_MIN, speed).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
@@ -65,8 +61,7 @@ static func animate_fade_out(source_node: Node, target: Control, speed := UiAnim
 		return animation_callable.call()
 
 static func animate_glow_pulse(source_node: Node, target: Control, duration: float = 1.5, repeat_count: int = -1, easing: int = Tween.EASE_OUT, glow_min_alpha: float = 0.7, auto_visible: bool = false) -> Signal:
-	if not source_node or not target:
-		push_warning("UiAnimUtils: Invalid source_node or target for animate_glow_pulse")
+	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_glow_pulse"):
 		return Signal()
 	
 	if auto_visible:
@@ -89,8 +84,7 @@ static func animate_glow_pulse(source_node: Node, target: Control, duration: flo
 	
 	return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 static func animate_color_flash(source_node: Node, target: Control, flash_color: Color = Color.YELLOW, duration: float = 0.2, flash_intensity: float = 1.5, auto_visible: bool = false, easing: int = Tween.EASE_OUT) -> Signal:
-	if not source_node or not target:
-		push_warning("UiAnimUtils: Invalid source_node or target for animate_color_flash")
+	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_color_flash"):
 		return Signal()
 	
 	if auto_visible:
@@ -108,7 +102,7 @@ static func animate_color_flash(source_node: Node, target: Control, flash_color:
 	
 	# Kill any existing tweens on modulate by creating a zero-duration tween
 	# This interrupts any active flash animations before starting a new one
-	var interrupt_tween = source_node.create_tween()
+	var interrupt_tween := UiAnimTweenFactory.create_safe_tween(source_node)
 	if interrupt_tween:
 		interrupt_tween.tween_property(target, "modulate", target.modulate, 0.0)
 		interrupt_tween.kill()
@@ -120,9 +114,8 @@ static func animate_color_flash(source_node: Node, target: Control, flash_color:
 		original_modulate.a
 	)
 	
-	var tween = source_node.create_tween()
+	var tween := UiAnimTweenFactory.create_safe_tween(source_node)
 	if not tween:
-		push_warning("UiAnimUtils: Failed to create tween")
 		return Signal()
 	
 	# Flash to color

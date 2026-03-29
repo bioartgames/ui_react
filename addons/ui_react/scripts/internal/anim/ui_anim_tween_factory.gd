@@ -4,6 +4,23 @@ extends RefCounted
 
 const PIVOT_CENTER_MULTIPLIER := 0.5
 
+## Returns false if [param source_node] or [param target] is null; emits [method push_warning] and leaves animation callers to return [method Signal] (empty) so awaits do not hang.
+static func guard_anim_pair(source_node: Node, target: Control, operation_name: String) -> bool:
+	if not source_node or not target:
+		push_warning("UiAnimUtils: Invalid source_node or target for %s" % operation_name)
+		return false
+	return true
+
+
+## Returns the viewport for layout-based motion, or null if missing (with warning). Call after [method guard_anim_pair].
+static func guard_viewport(source_node: Node, operation_name: String):
+	var viewport := source_node.get_viewport()
+	if not viewport:
+		push_warning("UiAnimUtils: source_node has no viewport for %s" % operation_name)
+		return null
+	return viewport
+
+
 ## Creates a tween with null checking and error handling.
 static func create_safe_tween(node: Node) -> Tween:
 	if not node:

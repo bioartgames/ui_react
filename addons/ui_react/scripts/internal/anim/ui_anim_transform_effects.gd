@@ -3,8 +3,7 @@ class_name UiAnimTransformEffects
 extends RefCounted
 
 static func animate_rotate_in(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, start_angle: float = -360.0, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
-	if not source_node or not target:
-		push_warning("UiAnimUtils: Invalid source_node or target for animate_rotate_in")
+	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_rotate_in"):
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -19,9 +18,8 @@ static func animate_rotate_in(source_node: Node, target: Control, speed := UiAni
 		
 		target.rotation_degrees = start_angle
 		
-		var tween = source_node.create_tween()
+		var tween := UiAnimTweenFactory.create_safe_tween(source_node)
 		if not tween:
-			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		tween.tween_property(target, 'rotation_degrees', 0.0, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -44,8 +42,7 @@ static func animate_rotate_in(source_node: Node, target: Control, speed := UiAni
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
 static func animate_rotate_out(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, end_angle: float = 360.0, auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
-	if not source_node or not target:
-		push_warning("UiAnimUtils: Invalid source_node or target for animate_rotate_out")
+	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_rotate_out"):
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -55,9 +52,8 @@ static func animate_rotate_out(source_node: Node, target: Control, speed := UiAn
 		if auto_setup:
 			target.rotation_degrees = 0.0
 		
-		var tween = source_node.create_tween()
+		var tween := UiAnimTweenFactory.create_safe_tween(source_node)
 		if not tween:
-			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		tween.tween_property(target, 'rotation_degrees', end_angle, speed).set_trans(Tween.TRANS_BACK).set_ease(easing)
@@ -67,48 +63,6 @@ static func animate_rotate_out(source_node: Node, target: Control, speed := UiAn
 		
 		if auto_reset:
 			tween.finished.connect(func(): target.rotation_degrees = 0.0)
-		
-		return tween.finished
-	
-	if repeat_count != 0:
-		return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
-	else:
-		return animation_callable.call()
-
-## Animates a control with a pop effect (scale overshoots then settles to 1.0).
-## [param source_node]: The node to create the tween from (usually self).
-## [param target]: The control node to animate.
-## [param speed]: Animation duration in seconds (default: 0.3).
-## [param overshoot]: Scale overshoot amount (default: 1.2).
-## [param pivot_offset]: Custom pivot offset for scaling (default: Vector2(-1, -1) uses center).
-## [param auto_visible]: If true, automatically sets visible=true before animation (default: false).
-## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
-## [return]: Signal that emits when animation finishes.
-static func animate_pop(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, overshoot: float = 1.2, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
-	if not source_node or not target:
-		push_warning("UiAnimUtils: Invalid source_node or target for animate_pop")
-		return Signal()
-	
-	var animation_callable = func() -> Signal:
-		if auto_visible:
-			target.visible = true
-		
-		if pivot_offset == Vector2(-1, -1):
-			target.pivot_offset = UiAnimTweenFactory.get_center_pivot_offset(target)
-		else:
-			target.pivot_offset = pivot_offset
-		
-		target.scale = UiAnimConstants.SCALE_MIN
-		
-		var tween = source_node.create_tween()
-		if not tween:
-			push_warning("UiAnimUtils: Failed to create tween")
-			return Signal()
-		
-		# First tween: scale to overshoot
-		tween.tween_property(target, 'scale', Vector2(overshoot, overshoot) * UiAnimConstants.SCALE_MAX, speed * 0.6).set_trans(Tween.TRANS_BACK).set_ease(easing)
-		# Second tween: settle back to 1.0
-		tween.tween_property(target, 'scale', UiAnimConstants.SCALE_MAX, speed * 0.4).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
 		return tween.finished
 	
@@ -128,8 +82,7 @@ static func animate_pop(source_node: Node, target: Control, speed := UiAnimConst
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
 static func animate_pulse(source_node: Node, target: Control, speed := 0.5, pulse_amount: float = 1.1, pulse_count: int = 2, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
-	if not source_node or not target:
-		push_warning("UiAnimUtils: Invalid source_node or target for animate_pulse")
+	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_pulse"):
 		return Signal()
 	
 	var animation_callable = func() -> Signal:
@@ -142,9 +95,8 @@ static func animate_pulse(source_node: Node, target: Control, speed := 0.5, puls
 			target.pivot_offset = pivot_offset
 		
 		var original_scale = target.scale
-		var tween = source_node.create_tween()
+		var tween := UiAnimTweenFactory.create_safe_tween(source_node)
 		if not tween:
-			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		# Create pulse cycles
@@ -170,8 +122,7 @@ static func animate_pulse(source_node: Node, target: Control, speed := 0.5, puls
 ## Note: Position is automatically preserved using the unified baseline snapshot system.
 ## [return]: Signal that emits when animation finishes.
 static func animate_shake(source_node: Node, target: Control, speed := 0.5, intensity: float = 10.0, shake_count: int = 5, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
-	if not source_node or not target:
-		push_warning("UiAnimUtils: Invalid source_node or target for animate_shake")
+	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_shake"):
 		return Signal()
 
 	# Acquire baseline snapshot (automatic state preservation)
@@ -189,9 +140,8 @@ static func animate_shake(source_node: Node, target: Control, speed := 0.5, inte
 		
 		# Use saved position from baseline snapshot
 		var original_position = saved_position
-		var tween = source_node.create_tween()
+		var tween := UiAnimTweenFactory.create_safe_tween(source_node)
 		if not tween:
-			push_warning("UiAnimUtils: Failed to create tween")
 			return Signal()
 		
 		var shake_duration = speed / shake_count
@@ -219,8 +169,7 @@ static func animate_shake(source_node: Node, target: Control, speed := 0.5, inte
 
 	return result_signal
 static func animate_breathing(source_node: Node, target: Control, duration: float = 2.0, repeat_count: int = -1, easing: int = Tween.EASE_OUT, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false) -> Signal:
-	if not source_node or not target:
-		push_warning("UiAnimUtils: Invalid source_node or target for animate_breathing")
+	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_breathing"):
 		return Signal()
 	
 	if auto_visible:
@@ -257,8 +206,7 @@ static func animate_breathing(source_node: Node, target: Control, duration: floa
 ## [param auto_visible]: If true, automatically sets visible=true before animation (default: false).
 ## [return]: Signal that emits when animation finishes (or can be used to track infinite loops).
 static func animate_wobble(source_node: Node, target: Control, duration: float = 1.5, repeat_count: int = -1, easing: int = Tween.EASE_OUT, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false) -> Signal:
-	if not source_node or not target:
-		push_warning("UiAnimUtils: Invalid source_node or target for animate_wobble")
+	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_wobble"):
 		return Signal()
 	
 	if auto_visible:
@@ -299,8 +247,7 @@ static func animate_wobble(source_node: Node, target: Control, duration: float =
 ## Note: Position is automatically preserved using the unified baseline snapshot system.
 ## [return]: Signal that emits when animation finishes (or can be used to track infinite loops).
 static func animate_float(source_node: Node, target: Control, duration: float = 2.0, repeat_count: int = -1, easing: int = Tween.EASE_OUT, float_distance: float = UiAnimConstants.DEFAULT_FLOAT_DISTANCE_PX, auto_visible: bool = false) -> Signal:
-	if not source_node or not target:
-		push_warning("UiAnimUtils: Invalid source_node or target for animate_float")
+	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_float"):
 		return Signal()
 
 	if auto_visible:
