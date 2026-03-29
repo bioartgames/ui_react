@@ -64,6 +64,22 @@ static func validate_and_map_triggers(owner: Control, component_name: String, an
 	result.trigger_map = collect_triggers(result.animation_targets)
 	return result
 
+
+## Validates [param owner]'s animation targets at [param animation_targets_property] (default [code]animation_targets[/code]), assigns the filtered [UiAnimTarget] array back, and returns the trigger map.
+## Use [param allow_empty_for] like [method validate_animation_targets] (e.g. [code]UiAnimTarget.Trigger.SELECTION_CHANGED[/code] for tab selection entries with no Target path).
+## All current UiReact controls use the default property name; override only if a control uses a different export name.
+static func apply_validated_targets(
+	owner: Control,
+	component_name: String,
+	allow_empty_for: Array[int] = [],
+	animation_targets_property: StringName = &"animation_targets",
+) -> Dictionary:
+	var raw: Variant = owner.get(animation_targets_property)
+	var targets: Array[UiAnimTarget] = raw as Array[UiAnimTarget]
+	var result := validate_and_map_triggers(owner, component_name, targets, allow_empty_for)
+	owner.set(animation_targets_property, result.animation_targets)
+	return result.trigger_map
+
 ## Connects [param callable] to [param sig] only if not already connected (shared trigger wiring).
 static func connect_if_absent(sig: Signal, callable: Callable) -> void:
 	if not sig.is_connected(callable):

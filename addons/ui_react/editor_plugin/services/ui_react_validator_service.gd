@@ -66,8 +66,8 @@ static func _expected_type_phrase(component: String, prop: StringName, expected:
 	return str(expected)
 
 
-static func _validate_bindings(component: String, owner: Control, node_path: NodePath) -> Array:
-	var out: Array = []
+static func _validate_bindings(component: String, owner: Control, node_path: NodePath) -> Array[UiReactDiagnosticModel.DiagnosticIssue]:
+	var out: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
 	var bindings: Array = UiReactScannerService.BINDINGS_BY_COMPONENT.get(component, [])
 	for b in bindings:
 		var prop: StringName = b.get("property", &"")

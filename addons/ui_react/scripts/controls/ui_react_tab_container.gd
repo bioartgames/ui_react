@@ -37,14 +37,11 @@ func _ready() -> void:
 	UiReactStateBindingHelper.deferred_finish_initialization(self)
 
 func _validate_animation_targets() -> void:
-	var validation_result := UiReactAnimTargetHelper.validate_and_map_triggers(
+	var trigger_map: Dictionary = UiReactAnimTargetHelper.apply_validated_targets(
 		self,
 		"UiReactTabContainer",
-		animation_targets,
-		[UiAnimTarget.Trigger.SELECTION_CHANGED]
+		[UiAnimTarget.Trigger.SELECTION_CHANGED],
 	)
-	animation_targets = validation_result.animation_targets
-	var trigger_map: Dictionary = validation_result.trigger_map
 
 	if trigger_map.has(UiAnimTarget.Trigger.SELECTION_CHANGED):
 		UiReactAnimTargetHelper.connect_if_absent(tab_selected, _on_trigger_selection_changed)

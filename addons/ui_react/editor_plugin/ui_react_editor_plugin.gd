@@ -4,7 +4,6 @@ extends EditorPlugin
 const _DOCK_SCENE_PATH := "res://addons/ui_react/editor_plugin/ui_react_dock.tscn"
 
 var _dock: Control
-var _bottom_panel_button: Button
 
 
 func _enter_tree() -> void:
@@ -14,7 +13,7 @@ func _enter_tree() -> void:
 		return
 	_dock = dock_scene.instantiate() as Control
 	_dock.setup(self)
-	_bottom_panel_button = add_control_to_bottom_panel(_dock, "Ui React")
+	add_control_to_bottom_panel(_dock, "Ui React")
 	scene_changed.connect(_on_editor_scene_changed)
 
 
@@ -25,7 +24,6 @@ func _exit_tree() -> void:
 		remove_control_from_bottom_panel(_dock)
 		_dock.queue_free()
 		_dock = null
-		_bottom_panel_button = null
 
 
 func _on_editor_scene_changed(_scene_root: Node) -> void:

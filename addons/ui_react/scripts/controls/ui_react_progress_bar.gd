@@ -30,10 +30,8 @@ func _is_completed() -> bool:
 ## Validates animation targets and filters out invalid ones.
 ## Called automatically in [method _ready].
 func _validate_animation_targets() -> void:
-	var validation_result := UiReactAnimTargetHelper.validate_and_map_triggers(self, "UiReactProgressBar", animation_targets)
-	animation_targets = validation_result.animation_targets
-	var trigger_map: Dictionary = validation_result.trigger_map
-	
+	var trigger_map: Dictionary = UiReactAnimTargetHelper.apply_validated_targets(self, "UiReactProgressBar")
+
 	# Connect signals based on which triggers are used
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER):
 		UiReactAnimTargetHelper.connect_if_absent(mouse_entered, _on_trigger_hover_enter)
