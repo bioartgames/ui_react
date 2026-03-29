@@ -27,7 +27,7 @@ Copy `addons/ui_react/` into your Godot project at **`addons/ui_react/`**. Open 
 
 ### 2) Run the example
 
-Open **`res://addons/ui_react/examples/reactive_ui.tscn`** and press **Play** (or set it as **Main Scene** in **Project Settings → Application → Run**). Use the scene tree to see how states and targets are wired.
+Open **`res://addons/ui_react/examples/demo.tscn`** (smoke demo) and press **Play** (or set it as **Main Scene** in **Project Settings → Application → Run**). Use the scene tree to see how states and targets are wired.
 
 ### 3) Minimal recipes (editor-first, no code required)
 
@@ -178,11 +178,15 @@ Optional editor tooling shipped under **`addons/ui_react/editor_plugin/`**. It d
 
 If you copy `addons/ui_react/` into another project, re-enable the plugin there after import.
 
+## Versioning
+
+The plugin **version** is declared in [`editor_plugin/plugin.cfg`](editor_plugin/plugin.cfg) (`version=`). Release history and notable changes are tracked in **[CHANGELOG.md](CHANGELOG.md)** in this addon folder (so it travels when you copy `addons/ui_react/`).
+
 ## Diagnostics layout
 
 - The **upper issue list** shows **compact summary lines** per issue (severity prefix + short text). Full “Fix:” prose stays in the **report** area below so narrow docks stay readable.
 - **Click an issue summary** to load the **report**: full issue text, fix hint, component/node/path, and property metadata when applicable. For issues that include scan-time value preview metadata, the report may show **Value type** and **Effective value** (truncated for long strings), reflecting bound state payload hints at scan time.
-- **Toolbar:** **Rescan**, **Copy report**, **Fix All** (bulk quick-fix for eligible filtered issues), and **Ignore All** (hide every issue in the **current filtered** list until **Rescan**). Each issue row has **Fix**, **Focus** (select that issue’s scene node), and **Ignore**. Use **Copy report** to copy the entire filtered list.
+- **Toolbar:** **Rescan**, **Copy report**, **Fix All** (bulk quick-fix for eligible filtered issues), and **Ignore All** (hide every issue in the **current filtered** list until **Rescan**). Each issue row has **Fix**, **Focus** (select that issue’s scene node), and **Ignore**. Use **Copy report** to copy the filtered list using the same summary text as each row (and fix hints when present).
 
 **Persisted per project:** scan mode, **Group** mode, severity filters, auto-refresh, and state output folder are saved in **Project Settings** and restored when you reopen the project (no need to reconfigure each session).
 
@@ -198,7 +202,7 @@ If you copy `addons/ui_react/` into another project, re-enable the plugin there 
 | **Filter** | Text filter across node name, path, property, component, and issue text (debounced). When an issue includes a value preview, the **Value type** label is also matched (not the full value text). |
 | **State output folder** | Where quick-create saves new `.tres` files. Default: `res://addons/ui_react/ui_resources/plugin_generated/`. Collision-safe names: `<NodeName>_<property>_2.tres`, `_3.tres`, … |
 | **Rescan** | Run diagnostics now using the current **Scan** mode and filters (clears **Ignore** hides). |
-| **Copy report** | Copy the **filtered** summary list (and full text for export) to the clipboard. |
+| **Copy report** | Copy the **filtered** list to the clipboard: same summary line as each row, plus **Fix:** hint when present. |
 | **Focus** | On each row: select the scene node for that issue (disabled when the row has no `node_path`). |
 | **Fix** | On each row: for an unassigned `*_state` with a suggested type (**Info** optional slots or **Warning** required slots), creates the typed state, saves it, assigns with **undo/redo**. |
 | **Fix All** | Same as **Fix** for **every** eligible issue in the **current filtered** list (skips rows without a suggested type). |

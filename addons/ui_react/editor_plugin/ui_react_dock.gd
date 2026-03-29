@@ -840,7 +840,7 @@ func _toggle_group(group_key: String) -> void:
 func _make_issue_row(issue: Variant, flat_index: int) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override(&"separation", 6)
-	var summary: String = issue.summary_text if not String(issue.summary_text).is_empty() else issue.message
+	var summary: String = issue.get_summary_line()
 	var sel_btn := Button.new()
 	sel_btn.text = "%s %s" % [_severity_prefix(issue.severity), summary]
 	sel_btn.flat = false
@@ -942,7 +942,7 @@ func _on_ignore_all() -> void:
 func _on_copy_report() -> void:
 	var lines: Array[String] = []
 	for issue in _issues_shown:
-		var line := "%s %s" % [_severity_prefix(issue.severity), issue.message]
+		var line := "%s %s" % [_severity_prefix(issue.severity), issue.get_summary_line()]
 		if not issue.fix_hint.is_empty():
 			line += " Fix: %s" % issue.fix_hint
 		lines.append(line)
@@ -1042,7 +1042,8 @@ func _on_fix_all() -> void:
 
 	_plugin.get_editor_interface().get_resource_filesystem().scan()
 	request_refresh(&"after_fix_all")
-	print("UiReactDock: Fix All — created: %d, failed: %d" % [created, failed])
+	if failed > 0:
+		push_warning("UiReactDock: Fix All — created: %d, failed: %d" % [created, failed])
 
 
 func _collect_react_under(n: Node) -> Array[Node]:
