@@ -20,6 +20,9 @@ const _DEF_SHOW_WARNINGS := true
 const _DEF_SHOW_INFO := true
 const _DEF_AUTO_REFRESH := true
 
+const _EMPTY_ISSUES_BBCODE_NO_DIAGNOSTICS := "[i]No diagnostics reported for the current scan.[/i]"
+const _EMPTY_ISSUES_BBCODE_FILTERED := "[i]No issues match the current filters or search.[/i]"
+
 ## Blocks save callbacks while applying persisted values (avoids duplicate writes / refresh loops).
 var _suppress_pref_save: bool = false
 
@@ -688,6 +691,12 @@ func _sort_group_keys(keys: Array[String]) -> void:
 		keys.sort()
 
 
+func _issues_empty_state_bbcode() -> String:
+	if _issues_all.is_empty():
+		return _EMPTY_ISSUES_BBCODE_NO_DIAGNOSTICS
+	return _EMPTY_ISSUES_BBCODE_FILTERED
+
+
 func _rebuild_issue_list_ui() -> void:
 	for i in range(_issues_container.get_child_count() - 1, -1, -1):
 		_issues_container.get_child(i).queue_free()
@@ -696,7 +705,18 @@ func _rebuild_issue_list_ui() -> void:
 	if _group_option:
 		mode = _group_option.get_item_id(_group_option.selected)
 
-	if mode == _GROUP_FLAT or _issues_shown.is_empty():
+	if _issues_shown.is_empty():
+		var empty_lbl := RichTextLabel.new()
+		empty_lbl.bbcode_enabled = true
+		empty_lbl.text = _issues_empty_state_bbcode()
+		empty_lbl.fit_content = true
+		empty_lbl.scroll_active = false
+		empty_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		empty_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_issues_container.add_child(empty_lbl)
+		return
+
+	if mode == _GROUP_FLAT:
 		for i in range(_issues_shown.size()):
 			_issues_container.add_child(_make_issue_row(_issues_shown[i], i))
 		return
