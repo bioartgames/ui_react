@@ -56,6 +56,7 @@ var _details_label: RichTextLabel
 var _btn_refresh: Button
 var _btn_copy: Button
 var _btn_fix_all: Button
+var _replace_confirm_dialog: ConfirmationDialog
 
 ## group_key -> expanded (for grouped view)
 var _group_expanded: Dictionary = {}
@@ -259,6 +260,8 @@ func _build_ui() -> void:
 	var split_main := VSplitContainer.new()
 	split_main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	split_main.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	split_main.add_theme_constant_override(&"autohide", 0)
+	split_main.add_theme_constant_override(&"minimum_grab_thickness", 10)
 	vbox.add_child(split_main)
 
 	var issues_section := VBoxContainer.new()
@@ -337,7 +340,7 @@ func _build_ui() -> void:
 	_details_label.fit_content = true
 	_details_label.scroll_active = false
 	_details_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_details_label.tooltip_text = "Full message, fix hint, metadata, and for binding warnings a scan-time Value type / Effective value preview."
+	_details_label.tooltip_text = "Full message, fix hint, metadata, and for binding issues with a UiState assigned a scan-time Value type / Effective value preview."
 	_details_scroll.add_child(_details_label)
 
 	# Keep initial split neutral so Issues/Report start balanced by default.
@@ -357,10 +360,15 @@ func _build_ui() -> void:
 	btn_row.add_child(_btn_copy)
 	_btn_fix_all = Button.new()
 	_btn_fix_all.text = "Fix All"
-	_btn_fix_all.tooltip_text = "Apply available quick fixes to all eligible issues in the filtered list."
+	_btn_fix_all.tooltip_text = "Create and assign state resources for all eligible empty-slot issues (INFO/WARNING only). ERROR rows use per-row Fix; replacing an existing resource asks for confirmation."
 	_btn_fix_all.disabled = true
 	_btn_fix_all.pressed.connect(_on_fix_all)
 	btn_row.add_child(_btn_fix_all)
+
+	_replace_confirm_dialog = ConfirmationDialog.new()
+	_replace_confirm_dialog.ok_button_text = "Replace"
+	_replace_confirm_dialog.cancel_button_text = "Cancel"
+	add_child(_replace_confirm_dialog)
 
 	_update_details_pane(null)
 
@@ -493,14 +501,28 @@ func _can_create_state_for_issue(issue: Variant) -> bool:
 		return false
 	if issue.property_name == &"" or issue.suggested_state_class == &"":
 		return false
-	# Unassigned binding rows (optional INFO or required WARNING) carry a suggested class.
-	return issue.severity == UiReactDiagnosticModel.Severity.INFO or issue.severity == UiReactDiagnosticModel.Severity.WARNING
+	if issue.node_path.is_empty():
+		return false
+	match issue.severity:
+		UiReactDiagnosticModel.Severity.INFO, UiReactDiagnosticModel.Severity.WARNING, UiReactDiagnosticModel.Severity.ERROR:
+			return true
+		_:
+			return false
+
+
+func _can_fix_all_for_issue(issue: Variant) -> bool:
+	if not _can_create_state_for_issue(issue):
+		return false
+	return (
+		issue.severity == UiReactDiagnosticModel.Severity.INFO
+		or issue.severity == UiReactDiagnosticModel.Severity.WARNING
+	)
 
 
 func _update_fix_all_button() -> void:
 	var any := false
 	for issue in _issues_shown:
-		if _can_create_state_for_issue(issue):
+		if _can_fix_all_for_issue(issue):
 			any = true
 			break
 	_btn_fix_all.disabled = not any
@@ -760,7 +782,7 @@ func _make_issue_row(issue: Variant, flat_index: int) -> Control:
 	btn_fix.text = "Fix"
 	btn_fix.disabled = not _can_create_state_for_issue(issue)
 	btn_fix.pressed.connect(func(): _on_row_fix(fi))
-	btn_fix.tooltip_text = "Apply the available quick fix for this issue when eligible (e.g. create and assign a concrete Ui*State resource)."
+	btn_fix.tooltip_text = "When eligible: create and assign a suggested Ui*State resource. Empty slot: no prompt. ERROR wrong-type rows with an existing resource: confirm before replace."
 	row.add_child(btn_fix)
 
 	var btn_focus := Button.new()
@@ -785,7 +807,12 @@ func _on_row_fix(flat_index: int) -> void:
 	var issue: Variant = _issues_shown[flat_index]
 	if not _can_create_state_for_issue(issue):
 		return
-	if not _create_and_assign_for_issue(issue):
+	var node := _resolve_node_for_issue_fix(issue)
+	if node == null:
+		return
+	if not await _maybe_confirm_replace_binding(node, issue):
+		return
+	if not _create_and_assign_core(issue, node):
 		return
 	_plugin.get_editor_interface().get_resource_filesystem().scan()
 	request_refresh(&"after_row_fix")
@@ -833,18 +860,49 @@ func _resolve_output_dir() -> String:
 	return out_dir
 
 
-func _create_and_assign_for_issue(issue: Variant) -> bool:
+func _resolve_node_for_issue_fix(issue: Variant) -> Node:
 	if issue == null or issue.property_name == &"" or issue.suggested_state_class == &"":
-		return false
+		return null
 	var ei := _plugin.get_editor_interface()
 	var root := ei.get_edited_scene_root()
 	if root == null:
-		return false
+		return null
 	var node := root.get_node_or_null(issue.node_path)
 	if node == null or not (node is Node):
 		push_warning("UiReactDock: node not found for path %s" % issue.node_path)
-		return false
+		return null
+	return node
 
+
+func _maybe_confirm_replace_binding(node: Node, issue: Variant) -> bool:
+	var cur: Variant = node.get(issue.property_name)
+	if cur == null:
+		return true
+	_replace_confirm_dialog.title = "Replace binding resource"
+	_replace_confirm_dialog.dialog_text = (
+		"Property '%s' already has a resource assigned. Replace it with a new %s saved to the output folder? "
+		% [str(issue.property_name), str(issue.suggested_state_class)]
+		+ "The old reference will be unassigned from this property (the file on disk is not deleted)."
+	)
+	_replace_confirm_dialog.popup_centered()
+	var accepted := false
+	var finished := false
+	var on_ok := func() -> void:
+		accepted = true
+		finished = true
+	var on_cancel := func() -> void:
+		accepted = false
+		finished = true
+	_replace_confirm_dialog.confirmed.connect(on_ok, CONNECT_ONE_SHOT)
+	_replace_confirm_dialog.canceled.connect(on_cancel, CONNECT_ONE_SHOT)
+	while not finished:
+		await get_tree().process_frame
+	return accepted
+
+
+func _create_and_assign_core(issue: Variant, node: Node) -> bool:
+	if node == null:
+		return false
 	var out_dir := _resolve_output_dir()
 	_save_ui_preference(_KEY_STATE_OUTPUT_PATH, out_dir)
 	var err := UiReactStateFactoryService.ensure_output_dir(out_dir)
@@ -861,10 +919,17 @@ func _create_and_assign_for_issue(issue: Variant) -> bool:
 	return true
 
 
+func _create_and_assign_for_issue(issue: Variant) -> bool:
+	var node := _resolve_node_for_issue_fix(issue)
+	if node == null:
+		return false
+	return _create_and_assign_core(issue, node)
+
+
 func _on_fix_all() -> void:
 	var to_fix: Array = []
 	for issue in _issues_shown:
-		if _can_create_state_for_issue(issue):
+		if _can_fix_all_for_issue(issue):
 			to_fix.append(issue)
 	if to_fix.is_empty():
 		return

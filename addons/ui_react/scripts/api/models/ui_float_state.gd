@@ -1,3 +1,4 @@
+@tool
 ## Typed [UiState] for numeric payloads (sliders, spin boxes, progress bars).
 class_name UiFloatState
 extends UiState
@@ -20,7 +21,8 @@ func set_value(new_value: Variant) -> void:
 		return
 	var old: float = value
 	value = v
-	value_changed.emit(v, old)
+	if not Engine.is_editor_hint():
+		value_changed.emit(v, old)
 	emit_changed()
 
 

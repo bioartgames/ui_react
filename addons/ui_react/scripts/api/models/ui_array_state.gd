@@ -1,3 +1,4 @@
+@tool
 ## Typed [UiState] for [Array] payloads (tab lists, composite label text, multi-select indices).
 class_name UiArrayState
 extends UiState
@@ -29,7 +30,8 @@ func set_value(new_value: Variant) -> void:
 		return
 	var old: Array = value
 	value = next
-	value_changed.emit(next, old)
+	if not Engine.is_editor_hint():
+		value_changed.emit(next, old)
 	emit_changed()
 
 

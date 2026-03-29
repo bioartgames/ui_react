@@ -2,6 +2,8 @@
 class_name UiReactValidatorService
 extends RefCounted
 
+const _VALUE_PREVIEW_HELPER := preload("res://addons/ui_react/editor_plugin/services/ui_react_value_preview_helper.gd")
+
 static func validate_nodes(
 	nodes: Array[Node],
 	root_for_paths: Node,
@@ -36,7 +38,7 @@ static func _binding_type_ok(u: UiState, expected: StringName, component: String
 		"UiBoolState":
 			return u is UiBoolState
 		"UiIntState":
-			return u.get_class() == &"UiIntState"
+			return u is UiIntState
 		"UiFloatState":
 			return u is UiFloatState
 		"UiStringState":
@@ -45,6 +47,11 @@ static func _binding_type_ok(u: UiState, expected: StringName, component: String
 			return u is UiArrayState
 		_:
 			return true
+
+
+static func _append_binding_issue_with_preview(out: Array, issue: UiReactDiagnosticModel.DiagnosticIssue, u: UiState) -> void:
+	_VALUE_PREVIEW_HELPER.enrich_issue_from_state(issue, u)
+	out.append(issue)
 
 
 static func _expected_type_phrase(component: String, prop: StringName, expected: StringName) -> String:
@@ -116,33 +123,31 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 		var u := st as UiState
 		if component == "UiReactItemList" and prop == &"selected_state" and owner is ItemList:
 			if (owner as ItemList).select_mode == ItemList.SELECT_SINGLE and u is UiFloatState:
-				out.append(
-					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
-						UiReactDiagnosticModel.Severity.ERROR,
-						component,
-						str(owner.name),
-						"%s cannot use UiFloatState in single-select mode." % prop,
-						"Use UiIntState (int indices only). Float is not accepted for list selection.",
-						node_path,
-						prop,
-						&"UiIntState",
-					)
-				)
-				continue
-		if not _binding_type_ok(u, expected, component, prop):
-			var phrase: String = _expected_type_phrase(component, prop, expected)
-			out.append(
-				UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+				var issue_il := UiReactDiagnosticModel.DiagnosticIssue.make_structured(
 					UiReactDiagnosticModel.Severity.ERROR,
 					component,
 					str(owner.name),
-					"%s expects %s (got %s)." % [prop, phrase, u.get_class()],
-					"Assign a resource of the expected type.",
+					"%s cannot use UiFloatState in single-select mode." % prop,
+					"Use UiIntState (int indices only). Float is not accepted for list selection.",
 					node_path,
 					prop,
-					suggested,
+					&"UiIntState",
 				)
+				_append_binding_issue_with_preview(out, issue_il, u)
+				continue
+		if not _binding_type_ok(u, expected, component, prop):
+			var phrase: String = _expected_type_phrase(component, prop, expected)
+			var issue_bt := UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+				UiReactDiagnosticModel.Severity.ERROR,
+				component,
+				str(owner.name),
+				"%s expects %s (got %s)." % [prop, phrase, u.get_class()],
+				"Assign a resource of the expected type.",
+				node_path,
+				prop,
+				suggested,
 			)
+			_append_binding_issue_with_preview(out, issue_bt, u)
 	return out
 
 

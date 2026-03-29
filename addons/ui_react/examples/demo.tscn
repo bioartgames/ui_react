@@ -17,16 +17,16 @@
 [ext_resource type="Resource" uid="uid://cxl14gsie0wgq" path="res://addons/ui_react/ui_resources/bool.tres" id="10_mq8g6"]
 [ext_resource type="Script" uid="uid://dohh71knb8vid" path="res://addons/ui_react/scripts/controls/ui_react_tab_container.gd" id="11_f7u6l"]
 [ext_resource type="Resource" uid="uid://cn1hlo5gsuec1" path="res://addons/ui_react/ui_resources/plugin_generated/Progress_value_state.tres" id="11_ym70l"]
-[ext_resource type="Resource" uid="uid://br6sld2ydronl" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveTabContainer_selected_state.tres" id="12_ym70l"]
 [ext_resource type="Resource" uid="uid://cvu2qm22ysl0y" path="res://addons/ui_react/ui_resources/text.tres" id="13_7xx27"]
 [ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://addons/ui_react/scripts/controls/ui_react_line_edit.gd" id="14_ioyot"]
 [ext_resource type="Script" uid="uid://duphbaan8pk5f" path="res://addons/ui_react/scripts/controls/ui_react_item_list.gd" id="15_mxh75"]
-[ext_resource type="Resource" uid="uid://d383uqp48us27" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveItemList_selected_state.tres" id="16_7tkpi"]
-[ext_resource type="Resource" uid="uid://b1pcj3277xqps" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveItemList_items_state.tres" id="17_tbmpo"]
-[ext_resource type="Resource" uid="uid://dnbocewy457dt" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveItemList_disabled_state.tres" id="18_rnrhn"]
+[ext_resource type="Resource" uid="uid://bnbb7vn2fiym0" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveTabContainer_selected_state_3.tres" id="18_g6gj5"]
 [ext_resource type="Script" uid="uid://diihw85b5p4bd" path="res://addons/ui_react/scripts/controls/ui_react_spin_box.gd" id="19_dbjnf"]
 [ext_resource type="Resource" uid="uid://lgi4p02hftfx" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveSpinBox_value_state.tres" id="20_8uop6"]
 [ext_resource type="Resource" uid="uid://bhflx6tho5wwt" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveSpinBox_disabled_state.tres" id="21_6ier6"]
+[ext_resource type="Resource" uid="uid://dg5jkx4x3wb8q" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveItemList_selected_state_3.tres" id="22_g6gj5"]
+[ext_resource type="Resource" uid="uid://b5d1r32yp303b" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveItemList_items_state_3.tres" id="23_rt7ea"]
+[ext_resource type="Resource" uid="uid://boe41b25xlwf5" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveItemList_disabled_state_2.tres" id="24_mq8g6"]
 
 [sub_resource type="Resource" id="Resource_p7nh0"]
 script = ExtResource("3_yauoy")
@@ -191,7 +191,7 @@ layout_mode = 2
 size_flags_vertical = 3
 current_tab = 0
 script = ExtResource("11_f7u6l")
-selected_state = ExtResource("12_ym70l")
+selected_state = ExtResource("18_g6gj5")
 metadata/_custom_type_script = "uid://dohh71knb8vid"
 
 [node name="Panel" type="Panel" parent="VBox/ReactiveTabContainer"]
@@ -240,9 +240,9 @@ allow_reselect = true
 auto_width = true
 auto_height = true
 script = ExtResource("15_mxh75")
-selected_state = ExtResource("16_7tkpi")
-items_state = ExtResource("17_tbmpo")
-disabled_state = ExtResource("18_rnrhn")
+selected_state = ExtResource("22_g6gj5")
+items_state = ExtResource("23_rt7ea")
+disabled_state = ExtResource("24_mq8g6")
 metadata/_custom_type_script = "uid://duphbaan8pk5f"
 
 [node name="ReactiveSpinBox" type="SpinBox" parent="VBox"]

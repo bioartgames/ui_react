@@ -1,3 +1,4 @@
+@tool
 ## Typed [UiState] for integer payloads (tab index, list selection, discrete indices).
 ## Only [int] values and [code]null[/code] (stored as [code]0[/code]) are accepted; [float] and other types are rejected with a warning.
 class_name UiIntState
@@ -38,7 +39,8 @@ func set_value(new_value: Variant) -> void:
 		return
 	var old: int = value
 	value = v
-	value_changed.emit(v, old)
+	if not Engine.is_editor_hint():
+		value_changed.emit(v, old)
 	emit_changed()
 
 

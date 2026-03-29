@@ -1,3 +1,4 @@
+@tool
 ## Typed [UiState] for string payloads (labels, line edits, option item text).
 class_name UiStringState
 extends UiState
@@ -20,7 +21,8 @@ func set_value(new_value: Variant) -> void:
 		return
 	var old: String = value
 	value = v
-	value_changed.emit(v, old)
+	if not Engine.is_editor_hint():
+		value_changed.emit(v, old)
 	emit_changed()
 
 

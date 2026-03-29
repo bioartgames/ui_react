@@ -1,0 +1,6 @@
+[gd_resource type="Resource" script_class="UiArrayState" load_steps=2 format=3 uid="uid://csl6u3micy325"]
+
+[ext_resource type="Script" uid="uid://dwwa3tekslkjw" path="res://addons/ui_react/scripts/api/models/ui_array_state.gd" id="1_a83be"]
+
+[resource]
+script = ExtResource("1_a83be")

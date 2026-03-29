@@ -1,3 +1,4 @@
+@tool
 ## Typed [UiState] for boolean payloads (toggles, pressed/disabled flags).
 class_name UiBoolState
 extends UiState
@@ -20,7 +21,8 @@ func set_value(new_value: Variant) -> void:
 		return
 	var old: bool = value
 	value = v
-	value_changed.emit(v, old)
+	if not Engine.is_editor_hint():
+		value_changed.emit(v, old)
 	emit_changed()
 
 
