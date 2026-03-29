@@ -245,10 +245,10 @@ Per-feature implementation plans (objective, files, steps, validation, rollout):
 
 | Feature | Plan |
 |--------|------|
-| Preview `UiState.value` in issue details | [feature_value_preview.md](plugin_ux_plans/feature_value_preview.md) |
-| Type-aware autofix (safe conversions) | [feature_type_autofix.md](plugin_ux_plans/feature_type_autofix.md) |
+| Preview `get_value()` payload in issue details (scan-time) | [feature_value_preview.md](plugin_ux_plans/feature_value_preview.md) |
+| Typed assign / replace autofix (concrete `Ui*State`) | [feature_type_autofix.md](plugin_ux_plans/feature_type_autofix.md) |
 | Real-time binding health card | [feature_binding_health_card.md](plugin_ux_plans/feature_binding_health_card.md) |
-| Guided setup wizard (defaults only, v1) | [feature_setup_wizard.md](plugin_ux_plans/feature_setup_wizard.md) |
+| Guided setup wizard (typed defaults, v1) | [feature_setup_wizard.md](plugin_ux_plans/feature_setup_wizard.md) |
 | Runtime play-mode bridge / live stream (v1) | [feature_runtime_bridge.md](plugin_ux_plans/feature_runtime_bridge.md) |
 
 Runtime addon code under `scripts/internal/*` remains **unstable** for direct game use; the plugin may depend on it only for parity with future refactors—prefer mirroring rules inside `services/` if drift becomes a problem.
