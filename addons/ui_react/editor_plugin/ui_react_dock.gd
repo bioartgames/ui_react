@@ -1,5 +1,6 @@
 @tool
 extends Control
+class_name UiReactDock
 
 const _SCAN_SELECTION := 0
 const _SCAN_SCENE := 1
@@ -34,6 +35,8 @@ var _expect_startup_scene_retry: bool = false
 
 var _plugin: EditorPlugin
 var _actions: UiReactActionController
+var _dock_actions: UiReactDockActions
+var _issue_list: UiReactDockIssueList
 
 var _issues_all: Array = []
 var _issues_shown: Array = []
@@ -71,6 +74,8 @@ func setup(plugin: EditorPlugin) -> void:
 	_plugin = plugin
 	_actions = UiReactActionController.new(plugin.get_undo_redo())
 	_build_ui()
+	_dock_actions = UiReactDockActions.new(self)
+	_issue_list = UiReactDockIssueList.new(self)
 	_register_default_project_settings()
 	_load_persisted_ui_preferences()
 	_connect_editor_signals()
@@ -104,6 +109,10 @@ func _save_ui_preference(key: String, value: Variant) -> void:
 	var err := ProjectSettings.save()
 	if err != OK:
 		push_warning("UiReactDock: could not save project settings (%s)" % key)
+
+
+func _persist_state_output_path(out_dir: String) -> void:
+	_save_ui_preference(_KEY_STATE_OUTPUT_PATH, out_dir)
 
 
 func _register_default_project_settings() -> void:
@@ -172,50 +181,6 @@ func _load_persisted_ui_preferences() -> void:
 		_path_edit.text = UiReactStateFactoryService.default_output_dir()
 
 	_suppress_pref_save = false
-
-
-func _editor_theme() -> Theme:
-	if _plugin == null:
-		return null
-	return _plugin.get_editor_interface().get_editor_theme()
-
-
-func _apply_richtext_content_theme(rtl: RichTextLabel) -> void:
-	var t := _editor_theme()
-	if t == null:
-		return
-	if t.has_color(&"default_color", &"RichTextLabel"):
-		rtl.add_theme_color_override(&"default_color", t.get_color(&"default_color", &"RichTextLabel"))
-	elif t.has_color(&"font_color", &"Label"):
-		rtl.add_theme_color_override(&"default_color", t.get_color(&"font_color", &"Label"))
-	if t.has_font_size(&"normal_font_size", &"RichTextLabel"):
-		rtl.add_theme_font_size_override(&"normal_font_size", t.get_font_size(&"normal_font_size", &"RichTextLabel"))
-
-
-func _apply_panelcontainer_editor_panel(panel: PanelContainer) -> void:
-	var t := _editor_theme()
-	if t == null:
-		return
-	if t.has_stylebox(&"panel", &"PanelContainer"):
-		panel.add_theme_stylebox_override(&"panel", t.get_stylebox(&"panel", &"PanelContainer"))
-
-
-func _apply_split_bar_from_editor_theme(split: SplitContainer) -> void:
-	var t := _editor_theme()
-	if t == null:
-		return
-	if t.has_stylebox(&"split_bar_background", &"SplitContainer"):
-		split.add_theme_stylebox_override(
-			&"split_bar_background", t.get_stylebox(&"split_bar_background", &"SplitContainer")
-		)
-		return
-	var sb := StyleBoxFlat.new()
-	var col := Color(0.42, 0.45, 0.52, 1.0)
-	if t.has_color(&"contrast_1", &"Editor"):
-		col = t.get_color(&"contrast_1", &"Editor")
-	sb.bg_color = col
-	sb.set_corner_radius_all(2)
-	split.add_theme_stylebox_override(&"split_bar_background", sb)
 
 
 func _build_ui() -> void:
@@ -325,7 +290,7 @@ func _build_ui() -> void:
 	split_main.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	split_main.add_theme_constant_override(&"autohide", 0)
 	split_main.add_theme_constant_override(&"minimum_grab_thickness", 10)
-	_apply_split_bar_from_editor_theme(split_main)
+	UiReactDockTheme.apply_split_bar(split_main, _plugin)
 	split_main.tooltip_text = "Drag to resize the issue list and the report below."
 	vbox.add_child(split_main)
 
@@ -341,7 +306,7 @@ func _build_ui() -> void:
 	issues_panel.custom_minimum_size = Vector2(0, 56)
 	issues_panel.tooltip_text = "Issue list for this scan. Click a row to open its report below."
 	issues_section.add_child(issues_panel)
-	_apply_panelcontainer_editor_panel(issues_panel)
+	UiReactDockTheme.apply_panelcontainer(issues_panel, _plugin)
 
 	var issues_panel_margin := MarginContainer.new()
 	issues_panel_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -374,7 +339,7 @@ func _build_ui() -> void:
 	report_panel.custom_minimum_size = Vector2(0, 56)
 	report_panel.tooltip_text = "Report: full text, fix hints, and metadata for the selected issue."
 	report_section.add_child(report_panel)
-	_apply_panelcontainer_editor_panel(report_panel)
+	UiReactDockTheme.apply_panelcontainer(report_panel, _plugin)
 
 	var report_panel_margin := MarginContainer.new()
 	report_panel_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -401,7 +366,7 @@ func _build_ui() -> void:
 	_details_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_details_label.tooltip_text = "Report body: full message, fix hint, metadata; binding rows may include value type and effective value preview."
 	_details_scroll.add_child(_details_label)
-	_apply_richtext_content_theme(_details_label)
+	UiReactDockTheme.apply_richtext_content(_details_label, _plugin)
 
 	# Keep initial split neutral (issue list vs report) by default.
 	split_main.split_offset = 0
@@ -415,20 +380,20 @@ func _build_ui() -> void:
 	btn_row.add_child(_btn_refresh)
 	_btn_copy = Button.new()
 	_btn_copy.text = "Copy report"
-	_btn_copy.pressed.connect(_on_copy_report)
+	_btn_copy.pressed.connect(_on_copy_report_pressed)
 	_btn_copy.tooltip_text = "Copy the filtered diagnostics report to the clipboard."
 	btn_row.add_child(_btn_copy)
 	_btn_fix_all = Button.new()
 	_btn_fix_all.text = "Fix All"
 	_btn_fix_all.tooltip_text = "Create and assign state resources for all eligible empty-slot issues (INFO/WARNING only). ERROR rows use per-row Fix; replacing an existing resource asks for confirmation."
 	_btn_fix_all.disabled = true
-	_btn_fix_all.pressed.connect(_on_fix_all)
+	_btn_fix_all.pressed.connect(_on_fix_all_pressed)
 	btn_row.add_child(_btn_fix_all)
 	_btn_ignore_all = Button.new()
 	_btn_ignore_all.text = "Ignore All"
 	_btn_ignore_all.tooltip_text = "Hide all visible issues until the next Rescan."
 	_btn_ignore_all.disabled = true
-	_btn_ignore_all.pressed.connect(_on_ignore_all)
+	_btn_ignore_all.pressed.connect(_on_ignore_all_pressed)
 	btn_row.add_child(_btn_ignore_all)
 
 	_replace_confirm_dialog = ConfirmationDialog.new()
@@ -460,7 +425,7 @@ func _on_group_mode_selected(idx: int) -> void:
 	if _suppress_pref_save:
 		return
 	_save_ui_preference(_KEY_GROUP_MODE, _group_option.get_item_id(idx))
-	_rebuild_issue_list_ui()
+	_issue_list.rebuild()
 
 
 func _on_auto_refresh_toggled(_pressed: bool) -> void:
@@ -509,7 +474,7 @@ func _select_issue_at_index(idx: int) -> void:
 	_selected_flat_index = idx
 	var issue: Variant = _get_selected_issue()
 	_update_details_pane(issue)
-	_rebuild_issue_list_ui()
+	_issue_list.rebuild()
 
 
 func _get_selected_issue() -> Variant:
@@ -518,51 +483,11 @@ func _get_selected_issue() -> Variant:
 	return _issues_shown[_selected_flat_index]
 
 
-## Prevents user/state text from breaking [RichTextLabel] BBCode (e.g. values containing "[").
-func _escape_bbcode_literal(s: String) -> String:
-	return s.replace("[", "[lb]")
-
-
 func _update_details_pane(issue: Variant) -> void:
 	if issue == null:
-		_details_label.text = "Select an issue above to view the report: full message, fix hints, and metadata."
+		_details_label.text = UiReactDockDetails.idle_placeholder_text()
 		return
-	var sev := _severity_display_name(issue.severity)
-	var body := ""
-	body += "[b]Severity[/b]: %s\n" % sev
-	if not issue.component_name.is_empty():
-		body += "[b]Component[/b]: %s\n" % issue.component_name
-	if not issue.node_name.is_empty():
-		body += "[b]Node[/b]: %s\n" % issue.node_name
-	if not issue.node_path.is_empty():
-		body += "[b]Path[/b]: %s\n" % str(issue.node_path)
-	var itxt: String = issue.issue_text if not issue.issue_text.is_empty() else issue.message
-	body += "[b]Issue[/b]: %s\n" % itxt
-	if not issue.fix_hint.is_empty():
-		body += "[b]Fix[/b]: %s\n" % issue.fix_hint
-	if issue.property_name != &"":
-		body += "[b]Property[/b]: %s\n" % str(issue.property_name)
-	if issue.suggested_state_class != &"":
-		body += "[b]Suggested type[/b]: %s\n" % str(issue.suggested_state_class)
-	# Value preview: scan-time state value snippet (binding warnings only). Omit from text search (see _issue_matches_search).
-	if not String(issue.value_preview).is_empty():
-		if not String(issue.value_type).is_empty():
-			body += "[b]Value type[/b]: %s\n" % _escape_bbcode_literal(String(issue.value_type))
-		body += "[b]Effective value[/b]: %s" % _escape_bbcode_literal(String(issue.value_preview))
-		if issue.value_truncated:
-			body += " [i](truncated)[/i]"
-		body += "\n"
-	_details_label.text = body
-
-
-func _severity_display_name(sev: int) -> String:
-	match sev:
-		UiReactDiagnosticModel.Severity.ERROR:
-			return "Error"
-		UiReactDiagnosticModel.Severity.WARNING:
-			return "Warning"
-		_:
-			return "Info"
+	_details_label.text = UiReactDockDetails.build_details_bbcode(issue)
 
 
 func _can_create_state_for_issue(issue: Variant) -> bool:
@@ -633,7 +558,7 @@ func refresh() -> void:
 	else:
 		var seen: Dictionary = {}
 		for sel in ei.get_selection().get_selected_nodes():
-			for r in _collect_react_under(sel):
+			for r in _dock_actions.collect_react_under(sel):
 				if not seen.has(r):
 					seen[r] = true
 					nodes.append(r)
@@ -657,30 +582,6 @@ func refresh() -> void:
 	_apply_filters()
 
 
-func _issue_fingerprint(issue: Variant) -> String:
-	return "%s|%s|%s" % [str(issue.node_path), str(issue.property_name), str(issue.issue_text)]
-
-
-func _issue_matches_search(issue: Variant, q: String) -> bool:
-	if q.is_empty():
-		return true
-	var needle := q.to_lower()
-	var parts: Array[String] = []
-	parts.append(String(issue.summary_text).to_lower())
-	parts.append(String(issue.message).to_lower())
-	parts.append(String(issue.issue_text).to_lower())
-	parts.append(String(issue.fix_hint).to_lower())
-	parts.append(String(issue.node_name).to_lower())
-	parts.append(str(issue.node_path).to_lower())
-	parts.append(str(issue.property_name).to_lower())
-	parts.append(String(issue.component_name).to_lower())
-	# Do not index full value_preview (noisy / huge); optional: allow filtering by short value_type label only.
-	if not String(issue.value_type).is_empty():
-		parts.append(String(issue.value_type).to_lower())
-	var blob := " ".join(parts)
-	return needle in blob
-
-
 func _apply_filters() -> void:
 	_issues_shown.clear()
 	var q := ""
@@ -694,9 +595,9 @@ func _apply_filters() -> void:
 			continue
 		if issue.severity == UiReactDiagnosticModel.Severity.INFO and not _filter_info.button_pressed:
 			continue
-		if not _issue_matches_search(issue, q):
+		if not UiReactDockFilter.matches_search(issue, q):
 			continue
-		if _ignored_issue_keys.has(_issue_fingerprint(issue)):
+		if _ignored_issue_keys.has(UiReactDockFilter.fingerprint(issue)):
 			continue
 		_issues_shown.append(issue)
 
@@ -708,349 +609,28 @@ func _apply_filters() -> void:
 		_update_details_pane(_issues_shown[0])
 
 	_update_bottom_action_buttons()
-	_rebuild_issue_list_ui()
-
-
-func _severity_prefix(sev: int) -> String:
-	match sev:
-		UiReactDiagnosticModel.Severity.ERROR:
-			return "[E]"
-		UiReactDiagnosticModel.Severity.WARNING:
-			return "[W]"
-		_:
-			return "[I]"
-
-
-func _group_key_for_issue(issue: Variant) -> String:
-	var mode := _GROUP_FLAT
-	if _group_option:
-		mode = _group_option.get_item_id(_group_option.selected)
-	match mode:
-		_GROUP_BY_NODE:
-			if not issue.node_name.is_empty():
-				return issue.node_name
-			return str(issue.node_path) if not issue.node_path.is_empty() else "(scene)"
-		_GROUP_BY_SEVERITY:
-			match issue.severity:
-				UiReactDiagnosticModel.Severity.ERROR:
-					return "Errors"
-				UiReactDiagnosticModel.Severity.WARNING:
-					return "Warnings"
-				_:
-					return "Info"
-		_:
-			return ""
-
-
-func _sort_group_keys(keys: Array[String]) -> void:
-	var mode := _GROUP_FLAT
-	if _group_option:
-		mode = _group_option.get_item_id(_group_option.selected)
-	if mode == _GROUP_BY_SEVERITY:
-		# Fixed order: Errors, Warnings, Info
-		var order := {"Errors": 0, "Warnings": 1, "Info": 2}
-		keys.sort_custom(func(a: String, b: String) -> bool:
-			var ia: int = order.get(a, 99)
-			var ib: int = order.get(b, 99)
-			if ia != ib:
-				return ia < ib
-			return a < b
-		)
-	else:
-		keys.sort()
-
-
-func _issues_empty_state_text() -> String:
-	if _issues_all.is_empty():
-		return _EMPTY_ISSUES_NO_DIAGNOSTICS
-	return _EMPTY_ISSUES_FILTERED
-
-
-func _rebuild_issue_list_ui() -> void:
-	for i in range(_issues_container.get_child_count() - 1, -1, -1):
-		_issues_container.get_child(i).queue_free()
-
-	var mode := _GROUP_FLAT
-	if _group_option:
-		mode = _group_option.get_item_id(_group_option.selected)
-
-	if _issues_shown.is_empty():
-		var empty_lbl := RichTextLabel.new()
-		empty_lbl.bbcode_enabled = false
-		empty_lbl.text = _issues_empty_state_text()
-		empty_lbl.fit_content = true
-		empty_lbl.scroll_active = false
-		empty_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		empty_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_apply_richtext_content_theme(empty_lbl)
-		_issues_container.add_child(empty_lbl)
-		return
-
-	if mode == _GROUP_FLAT:
-		for i in range(_issues_shown.size()):
-			_issues_container.add_child(_make_issue_row(_issues_shown[i], i))
-		return
-
-	# Grouped
-	var buckets: Dictionary = {}
-	for i in range(_issues_shown.size()):
-		var issue: Variant = _issues_shown[i]
-		var gk := _group_key_for_issue(issue)
-		if not buckets.has(gk):
-			buckets[gk] = []
-		(buckets[gk] as Array).append(i)
-
-	var keys: Array[String] = []
-	for k in buckets.keys():
-		keys.append(String(k))
-	_sort_group_keys(keys)
-
-	for gk in keys:
-		var indices: Array = buckets[gk]
-		if not _group_expanded.has(gk):
-			_group_expanded[gk] = true
-		var expanded: bool = bool(_group_expanded[gk])
-
-		var header := HBoxContainer.new()
-		var toggle := Button.new()
-		toggle.text = ("▼ " if expanded else "▶ ") + "%s (%d)" % [gk, indices.size()]
-		toggle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		toggle.flat = true
-		toggle.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		var gk_cap: String = gk
-		toggle.pressed.connect(func(): _toggle_group(gk_cap))
-		toggle.tooltip_text = "Expand or collapse this group."
-		header.add_child(toggle)
-		_issues_container.add_child(header)
-
-		var inner := VBoxContainer.new()
-		inner.visible = expanded
-		inner.add_theme_constant_override("separation", 2)
-		for idx in indices:
-			inner.add_child(_make_issue_row(_issues_shown[idx], int(idx)))
-		_issues_container.add_child(inner)
-
-
-func _toggle_group(group_key: String) -> void:
-	var cur: bool = bool(_group_expanded.get(group_key, true))
-	_group_expanded[group_key] = not cur
-	_rebuild_issue_list_ui()
-
-
-func _make_issue_row(issue: Variant, flat_index: int) -> Control:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override(&"separation", 6)
-	var summary: String = issue.get_summary_line()
-	var sel_btn := Button.new()
-	sel_btn.text = "%s %s" % [_severity_prefix(issue.severity), summary]
-	sel_btn.flat = false
-	sel_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	sel_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	sel_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	var fi := flat_index
-	sel_btn.pressed.connect(func(): _select_issue_at_index(fi))
-	sel_btn.tooltip_text = "Open this issue in the report below."
-	if flat_index == _selected_flat_index:
-		var sel_style := StyleBoxFlat.new()
-		sel_style.bg_color = Color(0.25, 0.45, 0.75, 0.28)
-		sel_style.set_corner_radius_all(3)
-		sel_style.set_content_margin_all(4)
-		sel_btn.add_theme_stylebox_override(&"normal", sel_style)
-		var sel_hover := StyleBoxFlat.new()
-		sel_hover.bg_color = Color(0.3, 0.52, 0.82, 0.34)
-		sel_hover.set_corner_radius_all(3)
-		sel_hover.set_content_margin_all(4)
-		sel_btn.add_theme_stylebox_override(&"hover", sel_hover)
-		var sel_pressed := StyleBoxFlat.new()
-		sel_pressed.bg_color = Color(0.22, 0.38, 0.62, 0.4)
-		sel_pressed.set_corner_radius_all(3)
-		sel_pressed.set_content_margin_all(4)
-		sel_btn.add_theme_stylebox_override(&"pressed", sel_pressed)
-	row.add_child(sel_btn)
-
-	var btn_fix := Button.new()
-	btn_fix.text = "Fix"
-	btn_fix.disabled = not _can_create_state_for_issue(issue)
-	btn_fix.pressed.connect(func(): _on_row_fix(fi))
-	btn_fix.tooltip_text = "When eligible: create and assign a suggested Ui*State resource. Empty slot: no prompt. ERROR wrong-type rows with an existing resource: confirm before replace."
-	row.add_child(btn_fix)
-
-	var btn_focus := Button.new()
-	btn_focus.text = "Focus"
-	btn_focus.disabled = issue.node_path.is_empty()
-	btn_focus.pressed.connect(func(): _on_row_focus(fi))
-	btn_focus.tooltip_text = "Focus the scene node referenced by this issue."
-	row.add_child(btn_focus)
-
-	var btn_ignore := Button.new()
-	btn_ignore.text = "Ignore"
-	btn_ignore.pressed.connect(func(): _on_row_ignore(fi))
-	btn_ignore.tooltip_text = "Hide this issue until the next Rescan."
-	row.add_child(btn_ignore)
-
-	return row
+	_issue_list.rebuild()
 
 
 func _on_row_fix(flat_index: int) -> void:
-	if flat_index < 0 or flat_index >= _issues_shown.size():
-		return
-	var issue: Variant = _issues_shown[flat_index]
-	if not _can_create_state_for_issue(issue):
-		return
-	var node := _resolve_node_for_issue_fix(issue)
-	if node == null:
-		return
-	if not await _maybe_confirm_replace_binding(node, issue):
-		return
-	if not _create_and_assign_core(issue, node):
-		return
-	_plugin.get_editor_interface().get_resource_filesystem().scan()
-	request_refresh(&"after_row_fix")
+	await _dock_actions.on_row_fix(flat_index)
 
 
 func _on_row_focus(flat_index: int) -> void:
-	if flat_index < 0 or flat_index >= _issues_shown.size():
-		return
-	var issue: Variant = _issues_shown[flat_index]
-	if issue.node_path.is_empty():
-		return
-	var ei := _plugin.get_editor_interface()
-	var root := ei.get_edited_scene_root()
-	if root == null:
-		return
-	var node := root.get_node_or_null(issue.node_path)
-	if node:
-		ei.edit_node(node)
+	_dock_actions.on_row_focus(flat_index)
 
 
 func _on_row_ignore(flat_index: int) -> void:
-	if flat_index < 0 or flat_index >= _issues_shown.size():
-		return
-	var issue: Variant = _issues_shown[flat_index]
-	_ignored_issue_keys[_issue_fingerprint(issue)] = true
-	_apply_filters()
+	_dock_actions.on_row_ignore(flat_index)
 
 
-func _on_ignore_all() -> void:
-	if _issues_shown.is_empty():
-		return
-	for issue in _issues_shown:
-		_ignored_issue_keys[_issue_fingerprint(issue)] = true
-	_apply_filters()
+func _on_ignore_all_pressed() -> void:
+	_dock_actions.on_ignore_all()
 
 
-func _on_copy_report() -> void:
-	var lines: Array[String] = []
-	for issue in _issues_shown:
-		var line := "%s %s" % [_severity_prefix(issue.severity), issue.get_summary_line()]
-		if not issue.fix_hint.is_empty():
-			line += " Fix: %s" % issue.fix_hint
-		lines.append(line)
-	DisplayServer.clipboard_set("\n".join(lines))
+func _on_copy_report_pressed() -> void:
+	_dock_actions.on_copy_report()
 
 
-func _resolve_output_dir() -> String:
-	var out_dir := _path_edit.text.strip_edges()
-	if out_dir.is_empty():
-		out_dir = UiReactStateFactoryService.default_output_dir()
-	if not out_dir.ends_with("/"):
-		out_dir += "/"
-	return out_dir
-
-
-func _resolve_node_for_issue_fix(issue: Variant) -> Node:
-	if issue == null or issue.property_name == &"" or issue.suggested_state_class == &"":
-		return null
-	var ei := _plugin.get_editor_interface()
-	var root := ei.get_edited_scene_root()
-	if root == null:
-		return null
-	var node := root.get_node_or_null(issue.node_path)
-	if node == null or not (node is Node):
-		push_warning("UiReactDock: node not found for path %s" % issue.node_path)
-		return null
-	return node
-
-
-func _maybe_confirm_replace_binding(node: Node, issue: Variant) -> bool:
-	var cur: Variant = node.get(issue.property_name)
-	if cur == null:
-		return true
-	_replace_confirm_dialog.title = "Replace binding resource"
-	_replace_confirm_dialog.dialog_text = (
-		"Property '%s' already has a resource assigned. Replace it with a new %s saved to the output folder? "
-		% [str(issue.property_name), str(issue.suggested_state_class)]
-		+ "The old reference will be unassigned from this property (the file on disk is not deleted)."
-	)
-	_replace_confirm_dialog.popup_centered()
-	var accepted := false
-	var finished := false
-	var on_ok := func() -> void:
-		accepted = true
-		finished = true
-	var on_cancel := func() -> void:
-		accepted = false
-		finished = true
-	_replace_confirm_dialog.confirmed.connect(on_ok, CONNECT_ONE_SHOT)
-	_replace_confirm_dialog.canceled.connect(on_cancel, CONNECT_ONE_SHOT)
-	while not finished:
-		await get_tree().process_frame
-	return accepted
-
-
-func _create_and_assign_core(issue: Variant, node: Node) -> bool:
-	if node == null:
-		return false
-	var out_dir := _resolve_output_dir()
-	_save_ui_preference(_KEY_STATE_OUTPUT_PATH, out_dir)
-	var err := UiReactStateFactoryService.ensure_output_dir(out_dir)
-	if err != OK:
-		push_error("UiReactDock: could not create output folder: %s" % out_dir)
-		return false
-
-	var res := UiReactStateFactoryService.instantiate_state(issue.suggested_state_class)
-	var path: String = UiReactStateFactoryService.build_unique_file_path(out_dir, str(node.name), str(issue.property_name))
-	var loaded := UiReactStateFactoryService.save_and_reload(res, path)
-	if loaded == null:
-		return false
-	_actions.assign_resource_property(node, issue.property_name, loaded)
-	return true
-
-
-func _create_and_assign_for_issue(issue: Variant) -> bool:
-	var node := _resolve_node_for_issue_fix(issue)
-	if node == null:
-		return false
-	return _create_and_assign_core(issue, node)
-
-
-func _on_fix_all() -> void:
-	var to_fix: Array = []
-	for issue in _issues_shown:
-		if _can_fix_all_for_issue(issue):
-			to_fix.append(issue)
-	if to_fix.is_empty():
-		return
-
-	var created := 0
-	var failed := 0
-	for issue in to_fix:
-		if _create_and_assign_for_issue(issue):
-			created += 1
-		else:
-			failed += 1
-
-	_plugin.get_editor_interface().get_resource_filesystem().scan()
-	request_refresh(&"after_fix_all")
-	if failed > 0:
-		push_warning("UiReactDock: Fix All — created: %d, failed: %d" % [created, failed])
-
-
-func _collect_react_under(n: Node) -> Array[Node]:
-	var out: Array[Node] = []
-	if UiReactScannerService.is_react_node(n):
-		out.append(n)
-	for c in n.get_children():
-		for r in _collect_react_under(c):
-			out.append(r)
-	return out
+func _on_fix_all_pressed() -> void:
+	_dock_actions.on_fix_all()
