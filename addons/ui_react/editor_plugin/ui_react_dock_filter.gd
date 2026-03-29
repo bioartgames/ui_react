@@ -3,11 +3,11 @@ class_name UiReactDockFilter
 extends Object
 
 
-static func fingerprint(issue: Variant) -> String:
+static func fingerprint(issue: UiReactDiagnosticModel.DiagnosticIssue) -> String:
 	return "%s|%s|%s" % [str(issue.node_path), str(issue.property_name), str(issue.issue_text)]
 
 
-static func matches_search(issue: Variant, q: String) -> bool:
+static func matches_search(issue: UiReactDiagnosticModel.DiagnosticIssue, q: String) -> bool:
 	if q.is_empty():
 		return true
 	var needle := q.to_lower()

@@ -38,8 +38,8 @@ var _actions: UiReactActionController
 var _dock_actions: UiReactDockActions
 var _issue_list: UiReactDockIssueList
 
-var _issues_all: Array = []
-var _issues_shown: Array = []
+var _issues_all: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
+var _issues_shown: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
 
 ## Session-only: hidden until next [method refresh] (fingerprint keys).
 var _ignored_issue_keys: Dictionary = {}
@@ -401,7 +401,7 @@ func _build_ui() -> void:
 	_replace_confirm_dialog.cancel_button_text = "Cancel"
 	add_child(_replace_confirm_dialog)
 
-	_update_details_pane(null)
+	_set_details_idle()
 
 
 func _connect_editor_signals() -> void:
@@ -472,25 +472,29 @@ func _on_path_changed(new_text: String) -> void:
 
 func _select_issue_at_index(idx: int) -> void:
 	_selected_flat_index = idx
-	var issue: Variant = _get_selected_issue()
-	_update_details_pane(issue)
+	var issue := _get_selected_issue()
+	if issue == null:
+		_set_details_idle()
+	else:
+		_update_details_pane(issue)
 	_issue_list.rebuild()
 
 
-func _get_selected_issue() -> Variant:
+func _get_selected_issue() -> UiReactDiagnosticModel.DiagnosticIssue:
 	if _selected_flat_index < 0 or _selected_flat_index >= _issues_shown.size():
 		return null
 	return _issues_shown[_selected_flat_index]
 
 
-func _update_details_pane(issue: Variant) -> void:
-	if issue == null:
-		_details_label.text = UiReactDockDetails.idle_placeholder_text()
-		return
+func _set_details_idle() -> void:
+	_details_label.text = UiReactDockDetails.idle_placeholder_text()
+
+
+func _update_details_pane(issue: UiReactDiagnosticModel.DiagnosticIssue) -> void:
 	_details_label.text = UiReactDockDetails.build_details_bbcode(issue)
 
 
-func _can_create_state_for_issue(issue: Variant) -> bool:
+func _can_create_state_for_issue(issue: UiReactDiagnosticModel.DiagnosticIssue) -> bool:
 	if issue == null:
 		return false
 	if issue.property_name == &"" or issue.suggested_state_class == &"":
@@ -504,7 +508,7 @@ func _can_create_state_for_issue(issue: Variant) -> bool:
 			return false
 
 
-func _can_fix_all_for_issue(issue: Variant) -> bool:
+func _can_fix_all_for_issue(issue: UiReactDiagnosticModel.DiagnosticIssue) -> bool:
 	if not _can_create_state_for_issue(issue):
 		return false
 	return (
@@ -603,7 +607,7 @@ func _apply_filters() -> void:
 
 	_selected_flat_index = -1
 	if _issues_shown.is_empty():
-		_update_details_pane(null)
+		_set_details_idle()
 	else:
 		_selected_flat_index = 0
 		_update_details_pane(_issues_shown[0])

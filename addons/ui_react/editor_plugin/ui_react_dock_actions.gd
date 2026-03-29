@@ -28,7 +28,7 @@ func resolve_output_dir() -> String:
 	return out_dir
 
 
-func resolve_node_for_issue_fix(issue: Variant) -> Node:
+func resolve_node_for_issue_fix(issue: UiReactDiagnosticModel.DiagnosticIssue) -> Node:
 	if issue == null or issue.property_name == &"" or issue.suggested_state_class == &"":
 		return null
 	var ei := _dock._plugin.get_editor_interface()
@@ -42,7 +42,7 @@ func resolve_node_for_issue_fix(issue: Variant) -> Node:
 	return node
 
 
-func maybe_confirm_replace_binding(node: Node, issue: Variant) -> bool:
+func maybe_confirm_replace_binding(node: Node, issue: UiReactDiagnosticModel.DiagnosticIssue) -> bool:
 	var cur: Variant = node.get(issue.property_name)
 	if cur == null:
 		return true
@@ -68,7 +68,7 @@ func maybe_confirm_replace_binding(node: Node, issue: Variant) -> bool:
 	return accepted
 
 
-func create_and_assign_core(issue: Variant, node: Node) -> bool:
+func create_and_assign_core(issue: UiReactDiagnosticModel.DiagnosticIssue, node: Node) -> bool:
 	if node == null:
 		return false
 	var out_dir := resolve_output_dir()
@@ -89,7 +89,7 @@ func create_and_assign_core(issue: Variant, node: Node) -> bool:
 	return true
 
 
-func create_and_assign_for_issue(issue: Variant) -> bool:
+func create_and_assign_for_issue(issue: UiReactDiagnosticModel.DiagnosticIssue) -> bool:
 	var node := resolve_node_for_issue_fix(issue)
 	if node == null:
 		return false
@@ -99,7 +99,7 @@ func create_and_assign_for_issue(issue: Variant) -> bool:
 func on_row_fix(flat_index: int) -> void:
 	if flat_index < 0 or flat_index >= _dock._issues_shown.size():
 		return
-	var issue: Variant = _dock._issues_shown[flat_index]
+	var issue: UiReactDiagnosticModel.DiagnosticIssue = _dock._issues_shown[flat_index]
 	if not _dock._can_create_state_for_issue(issue):
 		return
 	var node := resolve_node_for_issue_fix(issue)
@@ -116,7 +116,7 @@ func on_row_fix(flat_index: int) -> void:
 func on_row_focus(flat_index: int) -> void:
 	if flat_index < 0 or flat_index >= _dock._issues_shown.size():
 		return
-	var issue: Variant = _dock._issues_shown[flat_index]
+	var issue: UiReactDiagnosticModel.DiagnosticIssue = _dock._issues_shown[flat_index]
 	if issue.node_path.is_empty():
 		return
 	var ei := _dock._plugin.get_editor_interface()
@@ -131,7 +131,7 @@ func on_row_focus(flat_index: int) -> void:
 func on_row_ignore(flat_index: int) -> void:
 	if flat_index < 0 or flat_index >= _dock._issues_shown.size():
 		return
-	var issue: Variant = _dock._issues_shown[flat_index]
+	var issue: UiReactDiagnosticModel.DiagnosticIssue = _dock._issues_shown[flat_index]
 	_dock._ignored_issue_keys[UiReactDockFilter.fingerprint(issue)] = true
 	_dock._apply_filters()
 
@@ -158,7 +158,7 @@ func on_copy_report() -> void:
 
 
 func on_fix_all() -> void:
-	var to_fix: Array = []
+	var to_fix: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
 	for issue in _dock._issues_shown:
 		if _dock._can_fix_all_for_issue(issue):
 			to_fix.append(issue)

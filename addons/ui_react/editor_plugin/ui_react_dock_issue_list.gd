@@ -23,7 +23,7 @@ static func severity_prefix(sev: int) -> String:
 			return "[I]"
 
 
-static func group_key_for_issue(issue: Variant, mode: int) -> String:
+static func group_key_for_issue(issue: UiReactDiagnosticModel.DiagnosticIssue, mode: int) -> String:
 	match mode:
 		_GROUP_BY_NODE:
 			if not issue.node_name.is_empty():
@@ -100,7 +100,7 @@ func rebuild() -> void:
 
 	var buckets: Dictionary = {}
 	for i in range(_dock._issues_shown.size()):
-		var issue: Variant = _dock._issues_shown[i]
+		var issue: UiReactDiagnosticModel.DiagnosticIssue = _dock._issues_shown[i]
 		var gk := group_key_for_issue(issue, mode)
 		if not buckets.has(gk):
 			buckets[gk] = []
@@ -137,7 +137,7 @@ func rebuild() -> void:
 		_dock._issues_container.add_child(inner)
 
 
-func _make_issue_row(issue: Variant, flat_index: int) -> Control:
+func _make_issue_row(issue: UiReactDiagnosticModel.DiagnosticIssue, flat_index: int) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override(&"separation", 6)
 	var summary: String = issue.get_summary_line()

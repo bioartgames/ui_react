@@ -7,8 +7,8 @@ const _VALUE_PREVIEW_HELPER := preload("res://addons/ui_react/editor_plugin/serv
 static func validate_nodes(
 	nodes: Array[Node],
 	root_for_paths: Node,
-) -> Array:
-	var issues: Array = []
+) -> Array[UiReactDiagnosticModel.DiagnosticIssue]:
+	var issues: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
 	for node in nodes:
 		if node == null or not (node is Control):
 			continue
@@ -49,7 +49,11 @@ static func _binding_type_ok(u: UiState, expected: StringName, component: String
 			return true
 
 
-static func _append_binding_issue_with_preview(out: Array, issue: UiReactDiagnosticModel.DiagnosticIssue, u: UiState) -> void:
+static func _append_binding_issue_with_preview(
+	out: Array[UiReactDiagnosticModel.DiagnosticIssue],
+	issue: UiReactDiagnosticModel.DiagnosticIssue,
+	u: UiState,
+) -> void:
 	_VALUE_PREVIEW_HELPER.enrich_issue_from_state(issue, u)
 	out.append(issue)
 
@@ -157,8 +161,10 @@ static func _variant_type_name(v: Variant) -> String:
 	return str(typeof(v))
 
 
-static func _validate_anim_targets(component: String, owner: Control, node_path: NodePath) -> Array:
-	var out: Array = []
+static func _validate_anim_targets(
+	component: String, owner: Control, node_path: NodePath
+) -> Array[UiReactDiagnosticModel.DiagnosticIssue]:
+	var out: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
 	if not &"animation_targets" in owner:
 		return out
 	var arr: Variant = owner.get(&"animation_targets")

@@ -21,7 +21,7 @@ static func idle_placeholder_text() -> String:
 	return "Select an issue above to view the report: full message, fix hints, and metadata."
 
 
-static func build_details_bbcode(issue: Variant) -> String:
+static func build_details_bbcode(issue: UiReactDiagnosticModel.DiagnosticIssue) -> String:
 	var sev := severity_display_name(issue.severity)
 	var body := ""
 	body += "[b]Severity[/b]: %s\n" % sev
