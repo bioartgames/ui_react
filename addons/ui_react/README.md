@@ -247,7 +247,6 @@ Per-feature implementation plans (objective, files, steps, validation, rollout):
 |--------|------|
 | Preview `get_value()` payload in issue details (scan-time) | [feature_value_preview.md](plugin_ux_plans/feature_value_preview.md) |
 | Typed assign / replace autofix (concrete `Ui*State`) | [feature_type_autofix.md](plugin_ux_plans/feature_type_autofix.md) |
-| Real-time binding health card | [feature_binding_health_card.md](plugin_ux_plans/feature_binding_health_card.md) |
 | Guided setup wizard (typed defaults, v1) | [feature_setup_wizard.md](plugin_ux_plans/feature_setup_wizard.md) |
 | Runtime play-mode bridge / live stream (v1) | [feature_runtime_bridge.md](plugin_ux_plans/feature_runtime_bridge.md) |
 

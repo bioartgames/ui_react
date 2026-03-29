@@ -1,7 +1,0 @@
-[gd_resource type="Resource" script_class="UiFloatState" load_steps=2 format=3 uid="uid://lgi4p02hftfx"]
-
-[ext_resource type="Script" uid="uid://cy1vsor6ek3xr" path="res://addons/ui_react/scripts/api/models/ui_float_state.gd" id="1_2w7m2"]
-
-[resource]
-script = ExtResource("1_2w7m2")
-value = 0.0

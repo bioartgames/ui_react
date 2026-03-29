@@ -1,6 +1,0 @@
-[gd_resource type="Resource" script_class="UiIntState" load_steps=2 format=3 uid="uid://dwjr2x3of8kmg"]
-
-[ext_resource type="Script" uid="uid://dxvrutpo1gjxg" path="res://addons/ui_react/scripts/api/models/ui_int_state.gd" id="1_3e8vv"]
-
-[resource]
-script = ExtResource("1_3e8vv")

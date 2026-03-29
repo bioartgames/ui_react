@@ -14,14 +14,15 @@ const _KEY_SHOW_WARNINGS := "ui_react/plugin_show_warnings"
 const _KEY_SHOW_INFO := "ui_react/plugin_show_info"
 const _KEY_AUTO_REFRESH := "ui_react/plugin_auto_refresh"
 const _KEY_STATE_OUTPUT_PATH := "ui_react/plugin_state_output_path"
+const _KEY_GROUP_MODE := "ui_react/plugin_group_mode"
 
 const _DEF_SHOW_ERRORS := true
 const _DEF_SHOW_WARNINGS := true
 const _DEF_SHOW_INFO := true
 const _DEF_AUTO_REFRESH := true
 
-const _EMPTY_ISSUES_BBCODE_NO_DIAGNOSTICS := "[i]No diagnostics reported for the current scan.[/i]"
-const _EMPTY_ISSUES_BBCODE_FILTERED := "[i]No issues match the current filters or search.[/i]"
+const _EMPTY_ISSUES_NO_DIAGNOSTICS := "No issues reported for the current scan."
+const _EMPTY_ISSUES_FILTERED := "No issues match the current filters or search."
 
 ## Blocks save callbacks while applying persisted values (avoids duplicate writes / refresh loops).
 var _suppress_pref_save: bool = false
@@ -59,6 +60,7 @@ var _details_label: RichTextLabel
 var _btn_refresh: Button
 var _btn_copy: Button
 var _btn_fix_all: Button
+var _btn_ignore_all: Button
 var _replace_confirm_dialog: ConfirmationDialog
 
 ## group_key -> expanded (for grouped view)
@@ -124,6 +126,9 @@ func _register_default_project_settings() -> void:
 	if not ProjectSettings.has_setting(_KEY_AUTO_REFRESH):
 		ProjectSettings.set_setting(_KEY_AUTO_REFRESH, _DEF_AUTO_REFRESH)
 		added_defaults = true
+	if not ProjectSettings.has_setting(_KEY_GROUP_MODE):
+		ProjectSettings.set_setting(_KEY_GROUP_MODE, _GROUP_FLAT)
+		added_defaults = true
 	if added_defaults:
 		var err := ProjectSettings.save()
 		if err != OK:
@@ -144,6 +149,17 @@ func _load_persisted_ui_preferences() -> void:
 		else:
 			_mode_option.select(_mode_option.get_item_index(_SCAN_SELECTION))
 
+	var group_raw: Variant = ProjectSettings.get_setting(_KEY_GROUP_MODE, _GROUP_FLAT)
+	var group_id: int = int(group_raw) if typeof(group_raw) in [TYPE_INT, TYPE_FLOAT] else _GROUP_FLAT
+	if group_id != _GROUP_FLAT and group_id != _GROUP_BY_NODE and group_id != _GROUP_BY_SEVERITY:
+		group_id = _GROUP_FLAT
+	if _group_option:
+		var gidx := _group_option.get_item_index(group_id)
+		if gidx >= 0:
+			_group_option.select(gidx)
+		else:
+			_group_option.select(_group_option.get_item_index(_GROUP_FLAT))
+
 	if _filter_err:
 		_filter_err.button_pressed = bool(ProjectSettings.get_setting(_KEY_SHOW_ERRORS, _DEF_SHOW_ERRORS))
 	if _filter_warn:
@@ -156,6 +172,50 @@ func _load_persisted_ui_preferences() -> void:
 		_path_edit.text = UiReactStateFactoryService.default_output_dir()
 
 	_suppress_pref_save = false
+
+
+func _editor_theme() -> Theme:
+	if _plugin == null:
+		return null
+	return _plugin.get_editor_interface().get_editor_theme()
+
+
+func _apply_richtext_content_theme(rtl: RichTextLabel) -> void:
+	var t := _editor_theme()
+	if t == null:
+		return
+	if t.has_color(&"default_color", &"RichTextLabel"):
+		rtl.add_theme_color_override(&"default_color", t.get_color(&"default_color", &"RichTextLabel"))
+	elif t.has_color(&"font_color", &"Label"):
+		rtl.add_theme_color_override(&"default_color", t.get_color(&"font_color", &"Label"))
+	if t.has_font_size(&"normal_font_size", &"RichTextLabel"):
+		rtl.add_theme_font_size_override(&"normal_font_size", t.get_font_size(&"normal_font_size", &"RichTextLabel"))
+
+
+func _apply_panelcontainer_editor_panel(panel: PanelContainer) -> void:
+	var t := _editor_theme()
+	if t == null:
+		return
+	if t.has_stylebox(&"panel", &"PanelContainer"):
+		panel.add_theme_stylebox_override(&"panel", t.get_stylebox(&"panel", &"PanelContainer"))
+
+
+func _apply_split_bar_from_editor_theme(split: SplitContainer) -> void:
+	var t := _editor_theme()
+	if t == null:
+		return
+	if t.has_stylebox(&"split_bar_background", &"SplitContainer"):
+		split.add_theme_stylebox_override(
+			&"split_bar_background", t.get_stylebox(&"split_bar_background", &"SplitContainer")
+		)
+		return
+	var sb := StyleBoxFlat.new()
+	var col := Color(0.42, 0.45, 0.52, 1.0)
+	if t.has_color(&"contrast_1", &"Editor"):
+		col = t.get_color(&"contrast_1", &"Editor")
+	sb.bg_color = col
+	sb.set_corner_radius_all(2)
+	split.add_theme_stylebox_override(&"split_bar_background", sb)
 
 
 func _build_ui() -> void:
@@ -265,6 +325,8 @@ func _build_ui() -> void:
 	split_main.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	split_main.add_theme_constant_override(&"autohide", 0)
 	split_main.add_theme_constant_override(&"minimum_grab_thickness", 10)
+	_apply_split_bar_from_editor_theme(split_main)
+	split_main.tooltip_text = "Drag to resize the issue list and the report below."
 	vbox.add_child(split_main)
 
 	var issues_section := VBoxContainer.new()
@@ -273,17 +335,13 @@ func _build_ui() -> void:
 	issues_section.add_theme_constant_override(&"separation", 4)
 	split_main.add_child(issues_section)
 
-	var issues_title := Label.new()
-	issues_title.text = "Issues"
-	issues_title.tooltip_text = "Drag the splitter below this section to resize Issues vs Report."
-	issues_section.add_child(issues_title)
-
 	var issues_panel := PanelContainer.new()
 	issues_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	issues_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	issues_panel.custom_minimum_size = Vector2(0, 56)
-	issues_panel.tooltip_text = "Diagnostics list; click an issue summary to open the report below."
+	issues_panel.tooltip_text = "Issue list for this scan. Click a row to open its report below."
 	issues_section.add_child(issues_panel)
+	_apply_panelcontainer_editor_panel(issues_panel)
 
 	var issues_panel_margin := MarginContainer.new()
 	issues_panel_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -297,7 +355,7 @@ func _build_ui() -> void:
 	_issues_scroll = ScrollContainer.new()
 	_issues_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_issues_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_issues_scroll.tooltip_text = "Scroll the diagnostics list."
+	_issues_scroll.tooltip_text = "Scroll the issue list."
 	issues_panel_margin.add_child(_issues_scroll)
 
 	_issues_container = VBoxContainer.new()
@@ -310,16 +368,13 @@ func _build_ui() -> void:
 	report_section.add_theme_constant_override(&"separation", 4)
 	split_main.add_child(report_section)
 
-	var report_title := Label.new()
-	report_title.text = "Report"
-	report_title.tooltip_text = "Drag the splitter above this section to resize Issues vs Report."
-	report_section.add_child(report_title)
-
 	var report_panel := PanelContainer.new()
 	report_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	report_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	report_panel.custom_minimum_size = Vector2(0, 56)
+	report_panel.tooltip_text = "Report: full text, fix hints, and metadata for the selected issue."
 	report_section.add_child(report_panel)
+	_apply_panelcontainer_editor_panel(report_panel)
 
 	var report_panel_margin := MarginContainer.new()
 	report_panel_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -333,6 +388,7 @@ func _build_ui() -> void:
 	_details_scroll = ScrollContainer.new()
 	_details_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_details_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_details_scroll.tooltip_text = "Report details for the selected issue."
 	report_panel_margin.add_child(_details_scroll)
 
 	_details_label = RichTextLabel.new()
@@ -343,10 +399,11 @@ func _build_ui() -> void:
 	_details_label.fit_content = true
 	_details_label.scroll_active = false
 	_details_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_details_label.tooltip_text = "Full message, fix hint, metadata, and for binding issues with a UiState assigned a scan-time Value type / Effective value preview."
+	_details_label.tooltip_text = "Report body: full message, fix hint, metadata; binding rows may include value type and effective value preview."
 	_details_scroll.add_child(_details_label)
+	_apply_richtext_content_theme(_details_label)
 
-	# Keep initial split neutral so Issues/Report start balanced by default.
+	# Keep initial split neutral (issue list vs report) by default.
 	split_main.split_offset = 0
 
 	var btn_row := HBoxContainer.new()
@@ -367,6 +424,12 @@ func _build_ui() -> void:
 	_btn_fix_all.disabled = true
 	_btn_fix_all.pressed.connect(_on_fix_all)
 	btn_row.add_child(_btn_fix_all)
+	_btn_ignore_all = Button.new()
+	_btn_ignore_all.text = "Ignore All"
+	_btn_ignore_all.tooltip_text = "Hide all visible issues until the next Rescan."
+	_btn_ignore_all.disabled = true
+	_btn_ignore_all.pressed.connect(_on_ignore_all)
+	btn_row.add_child(_btn_ignore_all)
 
 	_replace_confirm_dialog = ConfirmationDialog.new()
 	_replace_confirm_dialog.ok_button_text = "Replace"
@@ -393,7 +456,10 @@ func _on_scan_mode_selected(idx: int) -> void:
 	request_refresh(&"scan_mode_changed")
 
 
-func _on_group_mode_selected(_idx: int) -> void:
+func _on_group_mode_selected(idx: int) -> void:
+	if _suppress_pref_save:
+		return
+	_save_ui_preference(_KEY_GROUP_MODE, _group_option.get_item_id(idx))
 	_rebuild_issue_list_ui()
 
 
@@ -459,7 +525,7 @@ func _escape_bbcode_literal(s: String) -> String:
 
 func _update_details_pane(issue: Variant) -> void:
 	if issue == null:
-		_details_label.text = "[i]Click an issue summary in the Issues list to see the full message, fix, and metadata.[/i]"
+		_details_label.text = "Select an issue above to view the report: full message, fix hints, and metadata."
 		return
 	var sev := _severity_display_name(issue.severity)
 	var body := ""
@@ -522,13 +588,16 @@ func _can_fix_all_for_issue(issue: Variant) -> bool:
 	)
 
 
-func _update_fix_all_button() -> void:
-	var any := false
+func _update_bottom_action_buttons() -> void:
+	var any_fix := false
 	for issue in _issues_shown:
 		if _can_fix_all_for_issue(issue):
-			any = true
+			any_fix = true
 			break
-	_btn_fix_all.disabled = not any
+	if _btn_fix_all:
+		_btn_fix_all.disabled = not any_fix
+	if _btn_ignore_all:
+		_btn_ignore_all.disabled = _issues_shown.is_empty()
 
 
 func refresh() -> void:
@@ -542,8 +611,8 @@ func refresh() -> void:
 				UiReactDiagnosticModel.Severity.INFO,
 				"",
 				"",
-				"No edited scene.",
-				"Open a scene with UiReact* controls.",
+				"Open a scene in the editor, then click Rescan.",
+				"Diagnostics use the active edited scene. Open one from the Scene or FileSystem dock, or switch to its tab if it's already open, then press Rescan.",
 				NodePath(),
 				&"",
 				&"",
@@ -575,8 +644,8 @@ func refresh() -> void:
 				UiReactDiagnosticModel.Severity.INFO,
 				"",
 				"",
-				"No UiReact* nodes in this scan scope.",
-				"Attach a UiReact* script or change scan mode to Entire scene.",
+				"Change scan scope or add Ui React nodes, then click Rescan.",
+				"Use Scan for Entire scene or Selection. Entire scene covers all Ui React nodes in the open scene; Selection follows your current selection and its subtree. Add Ui React components, adjust the selection, or switch scan mode, then press Rescan.",
 				NodePath(),
 				&"",
 				&"",
@@ -638,7 +707,7 @@ func _apply_filters() -> void:
 		_selected_flat_index = 0
 		_update_details_pane(_issues_shown[0])
 
-	_update_fix_all_button()
+	_update_bottom_action_buttons()
 	_rebuild_issue_list_ui()
 
 
@@ -691,10 +760,10 @@ func _sort_group_keys(keys: Array[String]) -> void:
 		keys.sort()
 
 
-func _issues_empty_state_bbcode() -> String:
+func _issues_empty_state_text() -> String:
 	if _issues_all.is_empty():
-		return _EMPTY_ISSUES_BBCODE_NO_DIAGNOSTICS
-	return _EMPTY_ISSUES_BBCODE_FILTERED
+		return _EMPTY_ISSUES_NO_DIAGNOSTICS
+	return _EMPTY_ISSUES_FILTERED
 
 
 func _rebuild_issue_list_ui() -> void:
@@ -707,12 +776,13 @@ func _rebuild_issue_list_ui() -> void:
 
 	if _issues_shown.is_empty():
 		var empty_lbl := RichTextLabel.new()
-		empty_lbl.bbcode_enabled = true
-		empty_lbl.text = _issues_empty_state_bbcode()
+		empty_lbl.bbcode_enabled = false
+		empty_lbl.text = _issues_empty_state_text()
 		empty_lbl.fit_content = true
 		empty_lbl.scroll_active = false
 		empty_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		empty_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_apply_richtext_content_theme(empty_lbl)
 		_issues_container.add_child(empty_lbl)
 		return
 
@@ -779,7 +849,7 @@ func _make_issue_row(issue: Variant, flat_index: int) -> Control:
 	sel_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	var fi := flat_index
 	sel_btn.pressed.connect(func(): _select_issue_at_index(fi))
-	sel_btn.tooltip_text = "Click to open this issue in the Report panel below."
+	sel_btn.tooltip_text = "Open this issue in the report below."
 	if flat_index == _selected_flat_index:
 		var sel_style := StyleBoxFlat.new()
 		sel_style.bg_color = Color(0.25, 0.45, 0.75, 0.28)
@@ -858,6 +928,14 @@ func _on_row_ignore(flat_index: int) -> void:
 		return
 	var issue: Variant = _issues_shown[flat_index]
 	_ignored_issue_keys[_issue_fingerprint(issue)] = true
+	_apply_filters()
+
+
+func _on_ignore_all() -> void:
+	if _issues_shown.is_empty():
+		return
+	for issue in _issues_shown:
+		_ignored_issue_keys[_issue_fingerprint(issue)] = true
 	_apply_filters()
 
 

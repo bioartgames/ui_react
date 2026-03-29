@@ -27,3 +27,4 @@ plugin_show_errors=true
 plugin_show_warnings=true
 plugin_show_info=true
 plugin_auto_refresh=true
+plugin_group_mode=1
