@@ -484,6 +484,10 @@ func refresh() -> void:
 	else:
 		_issues_all.append_array(UiReactValidatorService.validate_nodes(nodes, root))
 
+	_issues_all.append_array(
+		UiReactUnusedStateService.build_issues(_dock_actions.resolve_output_dir(), root)
+	)
+
 	_apply_filters()
 
 
