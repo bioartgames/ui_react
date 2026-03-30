@@ -33,15 +33,10 @@ static func build_issues(output_dir: String, root: Node) -> Array[UiReactDiagnos
 		var res := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE) as Resource
 		if res != null and res is UiState:
 			issues.append(
-				UiReactDiagnosticModel.DiagnosticIssue.make_structured(
-					UiReactDiagnosticModel.Severity.INFO,
-					"",
-					"",
+				UiReactDiagnosticModel.DiagnosticIssue.make_unused_state_file_issue(
+					path,
 					"Unused state file: %s" % path,
 					_FIX_HINT,
-					NodePath(),
-					&"",
-					&"",
 				)
 			)
 	return issues

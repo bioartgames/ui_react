@@ -94,6 +94,8 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 						node_path,
 						prop,
 						suggested,
+						UiReactDiagnosticModel.IssueKind.GENERIC,
+						"",
 					)
 				)
 			else:
@@ -107,6 +109,8 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 						node_path,
 						prop,
 						suggested,
+						UiReactDiagnosticModel.IssueKind.GENERIC,
+						"",
 					)
 				)
 			continue
@@ -121,6 +125,8 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 					node_path,
 					prop,
 					suggested,
+					UiReactDiagnosticModel.IssueKind.GENERIC,
+					"",
 				)
 			)
 			continue
@@ -136,6 +142,8 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 					node_path,
 					prop,
 					&"UiIntState",
+					UiReactDiagnosticModel.IssueKind.GENERIC,
+					"",
 				)
 				_append_binding_issue_with_preview(out, issue_il, ui_state)
 				continue
@@ -150,6 +158,8 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 				node_path,
 				prop,
 				suggested,
+				UiReactDiagnosticModel.IssueKind.GENERIC,
+				"",
 			)
 			_append_binding_issue_with_preview(out, issue_bt, ui_state)
 	return out
@@ -184,6 +194,8 @@ static func _validate_anim_targets(
 					node_path,
 					&"animation_targets",
 					&"",
+					UiReactDiagnosticModel.IssueKind.GENERIC,
+					"",
 				)
 			)
 			continue
@@ -201,6 +213,8 @@ static func _validate_anim_targets(
 					node_path,
 					&"animation_targets",
 					&"",
+					UiReactDiagnosticModel.IssueKind.GENERIC,
+					"",
 				)
 			)
 			continue
@@ -216,6 +230,8 @@ static func _validate_anim_targets(
 					node_path,
 					&"animation_targets",
 					&"",
+					UiReactDiagnosticModel.IssueKind.GENERIC,
+					"",
 				)
 			)
 			continue
@@ -230,6 +246,8 @@ static func _validate_anim_targets(
 					node_path,
 					&"animation_targets",
 					&"",
+					UiReactDiagnosticModel.IssueKind.GENERIC,
+					"",
 				)
 			)
 	return out

@@ -8,10 +8,18 @@ enum Severity {
 	ERROR,
 }
 
+enum IssueKind {
+	GENERIC,
+	UNUSED_STATE_FILE,
+}
+
 ## One actionable row in the dock list.
 class DiagnosticIssue:
 	extends RefCounted
-	var severity: int = Severity.INFO
+	var severity: int = UiReactDiagnosticModel.Severity.INFO
+	var issue_kind: UiReactDiagnosticModel.IssueKind = UiReactDiagnosticModel.IssueKind.GENERIC
+	## [code]res://[/code] path when [member issue_kind] is [enum IssueKind.UNUSED_STATE_FILE].
+	var resource_path: String = ""
 	## Legacy full line (export / copy report). Prefer [member issue_text] + structured fields for UI.
 	var message: String = ""
 	## Optional explicit fix hint (details pane and copy report).
@@ -44,35 +52,34 @@ class DiagnosticIssue:
 			return summary_text
 		return message
 
-	static func make(
-		p_severity: int,
-		p_message: String,
-		p_fix: String,
-		p_node_path: NodePath = NodePath(),
-		p_property: StringName = &"",
-		p_suggested: StringName = &"",
-	) -> DiagnosticIssue:
+	static func make_unused_state_file_issue(res_path: String, issue_text: String, fix_hint: String) -> DiagnosticIssue:
 		var i := DiagnosticIssue.new()
-		i.severity = p_severity
-		i.message = p_message
-		i.fix_hint = p_fix
-		i.node_path = p_node_path
-		i.property_name = p_property
-		i.suggested_state_class = p_suggested
-		i.issue_text = p_message
-		i.summary_text = p_message
+		i.severity = UiReactDiagnosticModel.Severity.INFO
+		i.issue_kind = UiReactDiagnosticModel.IssueKind.UNUSED_STATE_FILE
+		i.resource_path = res_path
+		i.issue_text = issue_text
+		i.summary_text = issue_text
+		i.message = issue_text
+		i.fix_hint = fix_hint
+		i.node_path = NodePath()
+		i.property_name = &""
+		i.suggested_state_class = &""
+		i.component_name = ""
+		i.node_name = ""
 		return i
 
-	## Preferred constructor for validator output: structured fields + legacy [member message] for exports.
+	## Structured constructor for validator and dock output; [param p_issue_kind] [param p_resource_path] required at call sites.
 	static func make_structured(
 		p_severity: int,
 		p_component: String,
 		p_node_name: String,
 		p_issue_text: String,
 		p_fix: String,
-		p_node_path: NodePath = NodePath(),
-		p_property: StringName = &"",
-		p_suggested: StringName = &"",
+		p_node_path: NodePath,
+		p_property: StringName,
+		p_suggested: StringName,
+		p_issue_kind: UiReactDiagnosticModel.IssueKind,
+		p_resource_path: String,
 	) -> DiagnosticIssue:
 		var i := DiagnosticIssue.new()
 		i.severity = p_severity
@@ -89,27 +96,7 @@ class DiagnosticIssue:
 		i.node_path = p_node_path
 		i.property_name = p_property
 		i.suggested_state_class = p_suggested
+		i.issue_kind = p_issue_kind
+		i.resource_path = p_resource_path
 		return i
 
-
-## Preferred factory for validators/dock (instance method — LSP resolves this reliably vs nested-class statics).
-func create_structured_issue(
-	p_severity: int,
-	p_component: String,
-	p_node_name: String,
-	p_issue_text: String,
-	p_fix: String,
-	p_node_path: NodePath = NodePath(),
-	p_property: StringName = &"",
-	p_suggested: StringName = &"",
-) -> DiagnosticIssue:
-	return DiagnosticIssue.make_structured(
-		p_severity,
-		p_component,
-		p_node_name,
-		p_issue_text,
-		p_fix,
-		p_node_path,
-		p_property,
-		p_suggested,
-	)

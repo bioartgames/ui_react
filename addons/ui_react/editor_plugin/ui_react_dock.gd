@@ -23,6 +23,8 @@ var _issues_shown: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
 
 ## Session-only: hidden until next [method refresh] (fingerprint keys).
 var _ignored_issue_keys: Dictionary = {}
+## Project-persisted: [code]res://[/code] paths of ignored unused-state file diagnostics.
+var _ignored_unused_state_paths: Dictionary = {}
 
 var _selected_flat_index: int = -1
 
@@ -58,6 +60,7 @@ func setup(plugin: EditorPlugin) -> void:
 	_issue_list = UiReactDockIssueList.new(self)
 	UiReactDockConfig.register_default_project_settings()
 	UiReactDockConfig.load_into(self)
+	_ignored_unused_state_paths = UiReactDockConfig.load_ignored_unused_state_paths_dict()
 	_connect_editor_signals()
 	call_deferred(&"_run_startup_refresh")
 
@@ -307,12 +310,39 @@ func _build_ui() -> void:
 
 func _connect_editor_signals() -> void:
 	var ei := _plugin.get_editor_interface()
-	ei.get_selection().selection_changed.connect(_on_selection_changed)
+	var selection := ei.get_selection()
+	if not selection.selection_changed.is_connected(_on_selection_changed):
+		selection.selection_changed.connect(_on_selection_changed)
+	var fs := ei.get_resource_filesystem()
+	if fs == null:
+		return
+	if not fs.filesystem_changed.is_connected(_on_editor_filesystem_changed):
+		fs.filesystem_changed.connect(_on_editor_filesystem_changed)
+
+
+func _disconnect_editor_signals() -> void:
+	if _plugin == null:
+		return
+	var ei := _plugin.get_editor_interface()
+	var selection := ei.get_selection()
+	if selection.selection_changed.is_connected(_on_selection_changed):
+		selection.selection_changed.disconnect(_on_selection_changed)
+	var fs := ei.get_resource_filesystem()
+	if fs != null and fs.filesystem_changed.is_connected(_on_editor_filesystem_changed):
+		fs.filesystem_changed.disconnect(_on_editor_filesystem_changed)
+
+
+func _exit_tree() -> void:
+	_disconnect_editor_signals()
 
 
 func _on_selection_changed() -> void:
 	if _auto_refresh and _auto_refresh.button_pressed and _mode_option.get_item_id(_mode_option.selected) == UiReactDockConfig.SCAN_MODE_SELECTION:
 		request_refresh(&"selection_changed")
+
+
+func _on_editor_filesystem_changed() -> void:
+	request_refresh(&"filesystem_changed")
 
 
 func _on_scan_mode_selected(idx: int) -> void:
@@ -398,6 +428,8 @@ func _update_details_pane(issue: UiReactDiagnosticModel.DiagnosticIssue) -> void
 func _can_create_state_for_issue(issue: UiReactDiagnosticModel.DiagnosticIssue) -> bool:
 	if issue == null:
 		return false
+	if issue.issue_kind == UiReactDiagnosticModel.IssueKind.UNUSED_STATE_FILE:
+		return false
 	if issue.property_name == &"" or issue.suggested_state_class == &"":
 		return false
 	if issue.node_path.is_empty():
@@ -446,6 +478,8 @@ func refresh() -> void:
 				NodePath(),
 				&"",
 				&"",
+				UiReactDiagnosticModel.IssueKind.GENERIC,
+				"",
 			)
 		)
 		_apply_filters()
@@ -479,6 +513,8 @@ func refresh() -> void:
 				NodePath(),
 				&"",
 				&"",
+				UiReactDiagnosticModel.IssueKind.GENERIC,
+				"",
 			)
 		)
 	else:
@@ -504,6 +540,11 @@ func _apply_filters() -> void:
 			continue
 		if issue.severity == UiReactDiagnosticModel.Severity.INFO and not _filter_info.button_pressed:
 			continue
+		if (
+			issue.issue_kind == UiReactDiagnosticModel.IssueKind.UNUSED_STATE_FILE
+			and _ignored_unused_state_paths.has(issue.resource_path)
+		):
+			continue
 		if not UiReactDockFilter.matches_search(issue, q):
 			continue
 		if _ignored_issue_keys.has(UiReactDockFilter.fingerprint(issue)):
@@ -527,6 +568,10 @@ func _on_row_fix(flat_index: int) -> void:
 
 func _on_row_focus(flat_index: int) -> void:
 	_dock_actions.on_row_focus(flat_index)
+
+
+func _on_row_reveal(flat_index: int) -> void:
+	_dock_actions.on_row_reveal(flat_index)
 
 
 func _on_row_ignore(flat_index: int) -> void:

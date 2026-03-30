@@ -16,6 +16,7 @@ const KEY_SHOW_INFO := "ui_react/plugin_show_info"
 const KEY_AUTO_REFRESH := "ui_react/plugin_auto_refresh"
 const KEY_STATE_OUTPUT_PATH := "ui_react/plugin_state_output_path"
 const KEY_GROUP_MODE := "ui_react/plugin_group_mode"
+const KEY_IGNORED_UNUSED_STATE_PATHS := "ui_react/plugin_ignored_unused_state_paths"
 
 const DEF_SHOW_ERRORS := true
 const DEF_SHOW_WARNINGS := true
@@ -52,6 +53,9 @@ static func register_default_project_settings() -> void:
 		added_defaults = true
 	if not ProjectSettings.has_setting(KEY_GROUP_MODE):
 		ProjectSettings.set_setting(KEY_GROUP_MODE, GROUP_FLAT)
+		added_defaults = true
+	if not ProjectSettings.has_setting(KEY_IGNORED_UNUSED_STATE_PATHS):
+		ProjectSettings.set_setting(KEY_IGNORED_UNUSED_STATE_PATHS, PackedStringArray())
 		added_defaults = true
 	if added_defaults:
 		var err := ProjectSettings.save()
@@ -96,3 +100,31 @@ static func load_into(dock: UiReactDock) -> void:
 		dock._path_edit.text = UiReactStateFactoryService.default_output_dir()
 
 	dock._suppress_pref_save = false
+
+
+static func load_ignored_unused_state_paths_dict() -> Dictionary:
+	var raw: Variant = ProjectSettings.get_setting(KEY_IGNORED_UNUSED_STATE_PATHS, PackedStringArray())
+	if raw is PackedStringArray:
+		var out: Dictionary = {}
+		for p in raw as PackedStringArray:
+			var s := String(p).strip_edges()
+			if not s.is_empty():
+				out[s] = true
+		return out
+	return {}
+
+
+static func save_ignored_unused_state_paths_dict(paths: Dictionary) -> void:
+	var seen: Dictionary = {}
+	for k in paths.keys():
+		var s := String(k).strip_edges()
+		if not s.is_empty():
+			seen[s] = true
+	var arr := PackedStringArray()
+	for k2 in seen.keys():
+		arr.append(String(k2))
+	arr.sort()
+	ProjectSettings.set_setting(KEY_IGNORED_UNUSED_STATE_PATHS, arr)
+	var err := ProjectSettings.save()
+	if err != OK:
+		push_warning("UiReactDockConfig: could not save ignored unused state paths")

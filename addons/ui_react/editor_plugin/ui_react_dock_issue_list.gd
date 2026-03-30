@@ -164,24 +164,37 @@ func _make_issue_row(issue: UiReactDiagnosticModel.DiagnosticIssue, flat_index: 
 		sel_btn.add_theme_stylebox_override(&"pressed", sel_pressed)
 	row.add_child(sel_btn)
 
-	var btn_fix := Button.new()
-	btn_fix.text = "Fix"
-	btn_fix.disabled = not _dock._can_create_state_for_issue(issue)
-	btn_fix.pressed.connect(func(): _dock._on_row_fix(fi))
-	btn_fix.tooltip_text = "When eligible: create and assign a suggested Ui*State resource. Empty slot: no prompt. ERROR wrong-type rows with an existing resource: confirm before replace."
-	row.add_child(btn_fix)
+	if issue.issue_kind == UiReactDiagnosticModel.IssueKind.UNUSED_STATE_FILE:
+		var btn_reveal := Button.new()
+		btn_reveal.text = "Reveal"
+		btn_reveal.pressed.connect(func(): _dock._on_row_reveal(fi))
+		btn_reveal.tooltip_text = "Select this file in the FileSystem dock."
+		row.add_child(btn_reveal)
 
-	var btn_focus := Button.new()
-	btn_focus.text = "Focus"
-	btn_focus.disabled = issue.node_path.is_empty()
-	btn_focus.pressed.connect(func(): _dock._on_row_focus(fi))
-	btn_focus.tooltip_text = "Focus the scene node referenced by this issue."
-	row.add_child(btn_focus)
+		var btn_ignore_u := Button.new()
+		btn_ignore_u.text = "Ignore"
+		btn_ignore_u.pressed.connect(func(): _dock._on_row_ignore(fi))
+		btn_ignore_u.tooltip_text = "Hide this unused file diagnostic for this project (stored in Project Settings)."
+		row.add_child(btn_ignore_u)
+	else:
+		var btn_fix := Button.new()
+		btn_fix.text = "Fix"
+		btn_fix.disabled = not _dock._can_create_state_for_issue(issue)
+		btn_fix.pressed.connect(func(): _dock._on_row_fix(fi))
+		btn_fix.tooltip_text = "When eligible: create and assign a suggested Ui*State resource. Empty slot: no prompt. ERROR wrong-type rows with an existing resource: confirm before replace."
+		row.add_child(btn_fix)
 
-	var btn_ignore := Button.new()
-	btn_ignore.text = "Ignore"
-	btn_ignore.pressed.connect(func(): _dock._on_row_ignore(fi))
-	btn_ignore.tooltip_text = "Hide this issue until the next Rescan."
-	row.add_child(btn_ignore)
+		var btn_focus := Button.new()
+		btn_focus.text = "Focus"
+		btn_focus.disabled = issue.node_path.is_empty()
+		btn_focus.pressed.connect(func(): _dock._on_row_focus(fi))
+		btn_focus.tooltip_text = "Focus the scene node referenced by this issue."
+		row.add_child(btn_focus)
+
+		var btn_ignore := Button.new()
+		btn_ignore.text = "Ignore"
+		btn_ignore.pressed.connect(func(): _dock._on_row_ignore(fi))
+		btn_ignore.tooltip_text = "Hide this issue until the next Rescan."
+		row.add_child(btn_ignore)
 
 	return row

@@ -128,10 +128,35 @@ func on_row_focus(flat_index: int) -> void:
 		ei.edit_node(node)
 
 
+func on_row_reveal(flat_index: int) -> void:
+	if flat_index < 0 or flat_index >= _dock._issues_shown.size():
+		return
+	var issue: UiReactDiagnosticModel.DiagnosticIssue = _dock._issues_shown[flat_index]
+	if issue.issue_kind != UiReactDiagnosticModel.IssueKind.UNUSED_STATE_FILE:
+		push_error("UiReactDock: Reveal applies only to unused state file rows.")
+		return
+	var res_path: String = issue.resource_path.strip_edges()
+	if res_path.is_empty():
+		push_error("UiReactDock: unused state row has empty resource_path.")
+		return
+	if not ResourceLoader.exists(res_path):
+		push_error("UiReactDock: resource not found: %s" % res_path)
+		return
+	_dock._plugin.get_editor_interface().select_file(res_path)
+
+
 func on_row_ignore(flat_index: int) -> void:
 	if flat_index < 0 or flat_index >= _dock._issues_shown.size():
 		return
 	var issue: UiReactDiagnosticModel.DiagnosticIssue = _dock._issues_shown[flat_index]
+	if issue.issue_kind == UiReactDiagnosticModel.IssueKind.UNUSED_STATE_FILE:
+		var res_path: String = issue.resource_path.strip_edges()
+		if res_path.is_empty():
+			return
+		_dock._ignored_unused_state_paths[res_path] = true
+		UiReactDockConfig.save_ignored_unused_state_paths_dict(_dock._ignored_unused_state_paths)
+		_dock._apply_filters()
+		return
 	_dock._ignored_issue_keys[UiReactDockFilter.fingerprint(issue)] = true
 	_dock._apply_filters()
 
@@ -139,8 +164,17 @@ func on_row_ignore(flat_index: int) -> void:
 func on_ignore_all() -> void:
 	if _dock._issues_shown.is_empty():
 		return
+	var touched_unused := false
 	for issue in _dock._issues_shown:
-		_dock._ignored_issue_keys[UiReactDockFilter.fingerprint(issue)] = true
+		if issue.issue_kind == UiReactDiagnosticModel.IssueKind.UNUSED_STATE_FILE:
+			var res_path: String = issue.resource_path.strip_edges()
+			if not res_path.is_empty():
+				_dock._ignored_unused_state_paths[res_path] = true
+				touched_unused = true
+		else:
+			_dock._ignored_issue_keys[UiReactDockFilter.fingerprint(issue)] = true
+	if touched_unused:
+		UiReactDockConfig.save_ignored_unused_state_paths_dict(_dock._ignored_unused_state_paths)
 	_dock._apply_filters()
 
 

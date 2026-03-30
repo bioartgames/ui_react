@@ -28,3 +28,4 @@ plugin_show_warnings=true
 plugin_show_info=true
 plugin_auto_refresh=true
 plugin_group_mode=1
+plugin_ignored_unused_state_paths=PackedStringArray()
