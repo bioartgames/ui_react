@@ -2,26 +2,6 @@
 extends Control
 class_name UiReactDock
 
-const _SCAN_SELECTION := 0
-const _SCAN_SCENE := 1
-
-const _GROUP_FLAT := 0
-const _GROUP_BY_NODE := 1
-const _GROUP_BY_SEVERITY := 2
-
-const _KEY_SCAN_MODE := "ui_react/plugin_scan_mode"
-const _KEY_SHOW_ERRORS := "ui_react/plugin_show_errors"
-const _KEY_SHOW_WARNINGS := "ui_react/plugin_show_warnings"
-const _KEY_SHOW_INFO := "ui_react/plugin_show_info"
-const _KEY_AUTO_REFRESH := "ui_react/plugin_auto_refresh"
-const _KEY_STATE_OUTPUT_PATH := "ui_react/plugin_state_output_path"
-const _KEY_GROUP_MODE := "ui_react/plugin_group_mode"
-
-const _DEF_SHOW_ERRORS := true
-const _DEF_SHOW_WARNINGS := true
-const _DEF_SHOW_INFO := true
-const _DEF_AUTO_REFRESH := true
-
 const _EMPTY_ISSUES_NO_DIAGNOSTICS := "No issues reported for the current scan."
 const _EMPTY_ISSUES_FILTERED := "No issues match the current filters or search."
 
@@ -76,8 +56,8 @@ func setup(plugin: EditorPlugin) -> void:
 	_build_ui()
 	_dock_actions = UiReactDockActions.new(self)
 	_issue_list = UiReactDockIssueList.new(self)
-	_register_default_project_settings()
-	_load_persisted_ui_preferences()
+	UiReactDockConfig.register_default_project_settings()
+	UiReactDockConfig.load_into(self)
 	_connect_editor_signals()
 	call_deferred(&"_run_startup_refresh")
 
@@ -102,85 +82,6 @@ func _run_startup_refresh() -> void:
 ## Called from [EditorPlugin] when the edited scene tab changes (open/switch/empty).
 func notify_edited_scene_changed() -> void:
 	request_refresh(&"scene_changed")
-
-
-func _save_ui_preference(key: String, value: Variant) -> void:
-	ProjectSettings.set_setting(key, value)
-	var err := ProjectSettings.save()
-	if err != OK:
-		push_warning("UiReactDock: could not save project settings (%s)" % key)
-
-
-func _persist_state_output_path(out_dir: String) -> void:
-	_save_ui_preference(_KEY_STATE_OUTPUT_PATH, out_dir)
-
-
-func _register_default_project_settings() -> void:
-	var added_defaults := false
-	if not ProjectSettings.has_setting(_KEY_STATE_OUTPUT_PATH):
-		ProjectSettings.set_setting(_KEY_STATE_OUTPUT_PATH, UiReactStateFactoryService.DEFAULT_OUTPUT_DIR)
-		added_defaults = true
-	if not ProjectSettings.has_setting(_KEY_SCAN_MODE):
-		ProjectSettings.set_setting(_KEY_SCAN_MODE, _SCAN_SELECTION)
-		added_defaults = true
-	if not ProjectSettings.has_setting(_KEY_SHOW_ERRORS):
-		ProjectSettings.set_setting(_KEY_SHOW_ERRORS, _DEF_SHOW_ERRORS)
-		added_defaults = true
-	if not ProjectSettings.has_setting(_KEY_SHOW_WARNINGS):
-		ProjectSettings.set_setting(_KEY_SHOW_WARNINGS, _DEF_SHOW_WARNINGS)
-		added_defaults = true
-	if not ProjectSettings.has_setting(_KEY_SHOW_INFO):
-		ProjectSettings.set_setting(_KEY_SHOW_INFO, _DEF_SHOW_INFO)
-		added_defaults = true
-	if not ProjectSettings.has_setting(_KEY_AUTO_REFRESH):
-		ProjectSettings.set_setting(_KEY_AUTO_REFRESH, _DEF_AUTO_REFRESH)
-		added_defaults = true
-	if not ProjectSettings.has_setting(_KEY_GROUP_MODE):
-		ProjectSettings.set_setting(_KEY_GROUP_MODE, _GROUP_FLAT)
-		added_defaults = true
-	if added_defaults:
-		var err := ProjectSettings.save()
-		if err != OK:
-			push_warning("UiReactDock: could not save default project settings")
-
-
-func _load_persisted_ui_preferences() -> void:
-	_suppress_pref_save = true
-
-	var mode_raw: Variant = ProjectSettings.get_setting(_KEY_SCAN_MODE, _SCAN_SELECTION)
-	var mode_id: int = int(mode_raw) if typeof(mode_raw) in [TYPE_INT, TYPE_FLOAT] else _SCAN_SELECTION
-	if mode_id != _SCAN_SELECTION and mode_id != _SCAN_SCENE:
-		mode_id = _SCAN_SELECTION
-	if _mode_option:
-		var idx := _mode_option.get_item_index(mode_id)
-		if idx >= 0:
-			_mode_option.select(idx)
-		else:
-			_mode_option.select(_mode_option.get_item_index(_SCAN_SELECTION))
-
-	var group_raw: Variant = ProjectSettings.get_setting(_KEY_GROUP_MODE, _GROUP_FLAT)
-	var group_id: int = int(group_raw) if typeof(group_raw) in [TYPE_INT, TYPE_FLOAT] else _GROUP_FLAT
-	if group_id != _GROUP_FLAT and group_id != _GROUP_BY_NODE and group_id != _GROUP_BY_SEVERITY:
-		group_id = _GROUP_FLAT
-	if _group_option:
-		var gidx := _group_option.get_item_index(group_id)
-		if gidx >= 0:
-			_group_option.select(gidx)
-		else:
-			_group_option.select(_group_option.get_item_index(_GROUP_FLAT))
-
-	if _filter_err:
-		_filter_err.button_pressed = bool(ProjectSettings.get_setting(_KEY_SHOW_ERRORS, _DEF_SHOW_ERRORS))
-	if _filter_warn:
-		_filter_warn.button_pressed = bool(ProjectSettings.get_setting(_KEY_SHOW_WARNINGS, _DEF_SHOW_WARNINGS))
-	if _filter_info:
-		_filter_info.button_pressed = bool(ProjectSettings.get_setting(_KEY_SHOW_INFO, _DEF_SHOW_INFO))
-	if _auto_refresh:
-		_auto_refresh.button_pressed = bool(ProjectSettings.get_setting(_KEY_AUTO_REFRESH, _DEF_AUTO_REFRESH))
-	if _path_edit:
-		_path_edit.text = UiReactStateFactoryService.default_output_dir()
-
-	_suppress_pref_save = false
 
 
 func _build_ui() -> void:
@@ -209,8 +110,8 @@ func _build_ui() -> void:
 	mode_row.add_child(Label.new())
 	mode_row.get_child(0).text = "Scan:"
 	_mode_option = OptionButton.new()
-	_mode_option.add_item("Selection", _SCAN_SELECTION)
-	_mode_option.add_item("Entire scene", _SCAN_SCENE)
+	_mode_option.add_item("Selection", UiReactDockConfig.SCAN_MODE_SELECTION)
+	_mode_option.add_item("Entire scene", UiReactDockConfig.SCAN_MODE_SCENE)
 	_mode_option.item_selected.connect(_on_scan_mode_selected)
 	_mode_option.tooltip_text = "Choose scan scope: Selection scans selected nodes and their subtrees; Entire scene scans all UiReact* nodes in the edited scene."
 	mode_row.add_child(_mode_option)
@@ -227,9 +128,9 @@ func _build_ui() -> void:
 	group_row.add_child(Label.new())
 	group_row.get_child(0).text = "Group:"
 	_group_option = OptionButton.new()
-	_group_option.add_item("Flat list", _GROUP_FLAT)
-	_group_option.add_item("By node", _GROUP_BY_NODE)
-	_group_option.add_item("By severity", _GROUP_BY_SEVERITY)
+	_group_option.add_item("Flat list", UiReactDockConfig.GROUP_FLAT)
+	_group_option.add_item("By node", UiReactDockConfig.GROUP_BY_NODE)
+	_group_option.add_item("By severity", UiReactDockConfig.GROUP_BY_SEVERITY)
 	_group_option.item_selected.connect(_on_group_mode_selected)
 	_group_option.tooltip_text = "Organize the issue list as a flat list, grouped by node, or grouped by severity."
 	group_row.add_child(_group_option)
@@ -410,49 +311,49 @@ func _connect_editor_signals() -> void:
 
 
 func _on_selection_changed() -> void:
-	if _auto_refresh and _auto_refresh.button_pressed and _mode_option.get_item_id(_mode_option.selected) == _SCAN_SELECTION:
+	if _auto_refresh and _auto_refresh.button_pressed and _mode_option.get_item_id(_mode_option.selected) == UiReactDockConfig.SCAN_MODE_SELECTION:
 		request_refresh(&"selection_changed")
 
 
 func _on_scan_mode_selected(idx: int) -> void:
 	if _suppress_pref_save:
 		return
-	_save_ui_preference(_KEY_SCAN_MODE, _mode_option.get_item_id(idx))
+	UiReactDockConfig.save_ui_preference(UiReactDockConfig.KEY_SCAN_MODE, _mode_option.get_item_id(idx))
 	request_refresh(&"scan_mode_changed")
 
 
 func _on_group_mode_selected(idx: int) -> void:
 	if _suppress_pref_save:
 		return
-	_save_ui_preference(_KEY_GROUP_MODE, _group_option.get_item_id(idx))
+	UiReactDockConfig.save_ui_preference(UiReactDockConfig.KEY_GROUP_MODE, _group_option.get_item_id(idx))
 	_issue_list.rebuild()
 
 
 func _on_auto_refresh_toggled(_pressed: bool) -> void:
 	if _suppress_pref_save:
 		return
-	_save_ui_preference(_KEY_AUTO_REFRESH, _auto_refresh.button_pressed)
+	UiReactDockConfig.save_ui_preference(UiReactDockConfig.KEY_AUTO_REFRESH, _auto_refresh.button_pressed)
 	request_refresh(&"auto_refresh_toggled")
 
 
 func _on_filter_errors_toggled(_pressed: bool) -> void:
 	if _suppress_pref_save:
 		return
-	_save_ui_preference(_KEY_SHOW_ERRORS, _filter_err.button_pressed)
+	UiReactDockConfig.save_ui_preference(UiReactDockConfig.KEY_SHOW_ERRORS, _filter_err.button_pressed)
 	_apply_filters()
 
 
 func _on_filter_warnings_toggled(_pressed: bool) -> void:
 	if _suppress_pref_save:
 		return
-	_save_ui_preference(_KEY_SHOW_WARNINGS, _filter_warn.button_pressed)
+	UiReactDockConfig.save_ui_preference(UiReactDockConfig.KEY_SHOW_WARNINGS, _filter_warn.button_pressed)
 	_apply_filters()
 
 
 func _on_filter_info_toggled(_pressed: bool) -> void:
 	if _suppress_pref_save:
 		return
-	_save_ui_preference(_KEY_SHOW_INFO, _filter_info.button_pressed)
+	UiReactDockConfig.save_ui_preference(UiReactDockConfig.KEY_SHOW_INFO, _filter_info.button_pressed)
 	_apply_filters()
 
 
@@ -467,7 +368,7 @@ func _on_path_changed(new_text: String) -> void:
 		return
 	if not p.ends_with("/"):
 		p += "/"
-	_save_ui_preference(_KEY_STATE_OUTPUT_PATH, p)
+	UiReactDockConfig.save_ui_preference(UiReactDockConfig.KEY_STATE_OUTPUT_PATH, p)
 
 
 func _select_issue_at_index(idx: int) -> void:
@@ -556,7 +457,7 @@ func refresh() -> void:
 	_expect_startup_scene_retry = false
 
 	var nodes: Array[Node] = []
-	if _mode_option.get_item_id(_mode_option.selected) == _SCAN_SCENE:
+	if _mode_option.get_item_id(_mode_option.selected) == UiReactDockConfig.SCAN_MODE_SCENE:
 		for n in UiReactScannerService.collect_react_nodes(root):
 			nodes.append(n)
 	else:

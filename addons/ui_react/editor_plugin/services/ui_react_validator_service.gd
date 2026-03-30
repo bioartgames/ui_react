@@ -15,9 +15,9 @@ static func validate_nodes(
 		var component := UiReactScannerService.get_component_name_from_script(node.get_script() as Script)
 		if component.is_empty():
 			continue
-		var np := root_for_paths.get_path_to(node) if root_for_paths and node.is_inside_tree() else NodePath(String(node.get_path()))
-		issues.append_array(_validate_bindings(component, node as Control, np))
-		issues.append_array(_validate_anim_targets(component, node as Control, np))
+		var node_path := root_for_paths.get_path_to(node) if root_for_paths and node.is_inside_tree() else NodePath(String(node.get_path()))
+		issues.append_array(_validate_bindings(component, node as Control, node_path))
+		issues.append_array(_validate_anim_targets(component, node as Control, node_path))
 	return issues
 
 
@@ -29,22 +29,22 @@ static func _expected_binding_state_class(component: String, prop: StringName, k
 	return UiReactScannerService.kind_to_suggested_class(kind)
 
 
-static func _binding_type_ok(u: UiState, expected: StringName, component: String, prop: StringName) -> bool:
+static func _binding_type_ok(ui_state: UiState, expected: StringName, component: String, prop: StringName) -> bool:
 	if component == "UiReactLabel" and prop == &"text_state":
-		return u is UiStringState or u is UiArrayState
+		return ui_state is UiStringState or ui_state is UiArrayState
 	if expected.is_empty():
 		return true
 	match String(expected):
 		"UiBoolState":
-			return u is UiBoolState
+			return ui_state is UiBoolState
 		"UiIntState":
-			return u is UiIntState
+			return ui_state is UiIntState
 		"UiFloatState":
-			return u is UiFloatState
+			return ui_state is UiFloatState
 		"UiStringState":
-			return u is UiStringState
+			return ui_state is UiStringState
 		"UiArrayState":
-			return u is UiArrayState
+			return ui_state is UiArrayState
 		_:
 			return true
 
@@ -52,9 +52,9 @@ static func _binding_type_ok(u: UiState, expected: StringName, component: String
 static func _append_binding_issue_with_preview(
 	out: Array[UiReactDiagnosticModel.DiagnosticIssue],
 	issue: UiReactDiagnosticModel.DiagnosticIssue,
-	u: UiState,
+	ui_state: UiState,
 ) -> void:
-	_VALUE_PREVIEW_HELPER.enrich_issue_from_state(issue, u)
+	_VALUE_PREVIEW_HELPER.enrich_issue_from_state(issue, ui_state)
 	out.append(issue)
 
 
@@ -81,8 +81,8 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 		var suggested: StringName = UiReactScannerService.kind_to_suggested_class(kind)
 		if component == "UiReactItemList" and prop == &"selected_state":
 			suggested = expected
-		var st: Variant = owner.get(prop)
-		if st == null:
+		var property_value: Variant = owner.get(prop)
+		if property_value == null:
 			if optional:
 				out.append(
 					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
@@ -110,13 +110,13 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 					)
 				)
 			continue
-		if not (st is UiState):
+		if not (property_value is UiState):
 			out.append(
 				UiReactDiagnosticModel.DiagnosticIssue.make_structured(
 					UiReactDiagnosticModel.Severity.ERROR,
 					component,
 					str(owner.name),
-					"%s must be a UiState subclass (got %s)." % [prop, _variant_type_name(st)],
+					"%s must be a UiState subclass (got %s)." % [prop, _variant_type_name(property_value)],
 					"Assign a concrete UiBoolState, UiIntState, UiFloatState, UiStringState, or UiArrayState resource.",
 					node_path,
 					prop,
@@ -124,9 +124,9 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 				)
 			)
 			continue
-		var u := st as UiState
+		var ui_state := property_value as UiState
 		if component == "UiReactItemList" and prop == &"selected_state" and owner is ItemList:
-			if (owner as ItemList).select_mode == ItemList.SELECT_SINGLE and u is UiFloatState:
+			if (owner as ItemList).select_mode == ItemList.SELECT_SINGLE and ui_state is UiFloatState:
 				var issue_il := UiReactDiagnosticModel.DiagnosticIssue.make_structured(
 					UiReactDiagnosticModel.Severity.ERROR,
 					component,
@@ -137,21 +137,21 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 					prop,
 					&"UiIntState",
 				)
-				_append_binding_issue_with_preview(out, issue_il, u)
+				_append_binding_issue_with_preview(out, issue_il, ui_state)
 				continue
-		if not _binding_type_ok(u, expected, component, prop):
+		if not _binding_type_ok(ui_state, expected, component, prop):
 			var phrase: String = _expected_type_phrase(component, prop, expected)
 			var issue_bt := UiReactDiagnosticModel.DiagnosticIssue.make_structured(
 				UiReactDiagnosticModel.Severity.ERROR,
 				component,
 				str(owner.name),
-				"%s expects %s (got %s)." % [prop, phrase, u.get_class()],
+				"%s expects %s (got %s)." % [prop, phrase, ui_state.get_class()],
 				"Assign a resource of the expected type.",
 				node_path,
 				prop,
 				suggested,
 			)
-			_append_binding_issue_with_preview(out, issue_bt, u)
+			_append_binding_issue_with_preview(out, issue_bt, ui_state)
 	return out
 
 

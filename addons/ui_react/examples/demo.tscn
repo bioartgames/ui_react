@@ -1,4 +1,4 @@
-[gd_scene load_steps=39 format=3 uid="uid://1ctyp6anyhbh"]
+[gd_scene load_steps=38 format=3 uid="uid://1ctyp6anyhbh"]
 
 [ext_resource type="Script" uid="uid://3m8buhv674ja" path="res://addons/ui_react/scripts/controls/ui_react_check_box.gd" id="1_732tq"]
 [ext_resource type="Resource" uid="uid://dyiybrrey3gto" path="res://addons/ui_react/ui_resources/plugin_generated/DisableActionsToggle_checked_state.tres" id="2_1gbb3"]
@@ -94,9 +94,7 @@ script = ExtResource("12_25ulm")
 
 [sub_resource type="Resource" id="Resource_1gbb3"]
 script = ExtResource("7_g6gj5")
-
-[sub_resource type="Resource" id="Resource_qrupd"]
-script = ExtResource("2_yv7u2")
+value = ["Apple", &"Orange"]
 
 [sub_resource type="Resource" id="Resource_e7mev"]
 script = ExtResource("18_cxylq")
@@ -243,7 +241,6 @@ auto_height = true
 script = ExtResource("15_mxh75")
 selected_state = SubResource("Resource_yauoy")
 items_state = SubResource("Resource_1gbb3")
-disabled_state = SubResource("Resource_qrupd")
 metadata/_custom_type_script = "uid://duphbaan8pk5f"
 
 [node name="ReactiveSpinBox" type="SpinBox" parent="VBox"]

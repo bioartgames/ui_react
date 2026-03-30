@@ -4,6 +4,8 @@ extends RefCounted
 
 const DEFAULT_OUTPUT_DIR := "res://addons/ui_react/ui_resources/plugin_generated/"
 
+const MAX_UNIQUE_FILENAME_SUFFIX_ATTEMPTS := 10000
+
 
 static func default_output_dir() -> String:
 	var p := ProjectSettings.get_setting("ui_react/plugin_state_output_path", DEFAULT_OUTPUT_DIR) as String
@@ -50,7 +52,7 @@ static func build_unique_file_path(output_dir: String, node_name: String, proper
 	if not _resource_file_exists(first):
 		return first
 	var i := 2
-	while i < 10000:
+	while i < MAX_UNIQUE_FILENAME_SUFFIX_ATTEMPTS:
 		var candidate := "%s%s_%d.tres" % [output_dir, base, i]
 		if not _resource_file_exists(candidate):
 			return candidate

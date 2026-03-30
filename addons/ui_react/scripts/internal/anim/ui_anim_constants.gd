@@ -13,3 +13,6 @@ const SCALE_MAX := Vector2.ONE
 const BREATHING_SCALE_MULTIPLIER := 1.05
 const WOBBLE_ROTATION_DEGREES := 3.0
 const DEFAULT_FLOAT_DISTANCE_PX := 10.0
+
+## Sentinel passed to scale/transform helpers: pivot is resolved to the control’s visual center.
+const PIVOT_USE_CONTROL_DEFAULT := Vector2(-1, -1)

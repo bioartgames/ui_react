@@ -171,9 +171,9 @@ func _is_pivot_visible_for(action: AnimationAction) -> bool:
 ## ============================================
 
 ## Custom pivot offset for scaling/rotation animations.
-## Use Vector2(-1, -1) for center (default), or specify custom offset in pixels.
+## Use `UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT` for center (default), or specify custom offset in pixels.
 ## Only affects animations that use pivot (EXPAND, SHRINK, POP, PULSE, ROTATE, etc.).
-@export var pivot_offset: Vector2 = Vector2(-1, -1)
+@export var pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT
 
 ## Note: All animations now automatically preserve their initial state for consistent RESET behavior.
 ## The preserve_position parameter has been removed as all animations use unified baseline snapshots.
@@ -259,7 +259,7 @@ func apply(owner: Node) -> Signal:
 ## [param control_target]: The already-resolved control to animate.
 ## [return]: Signal that emits when animation completes (or empty Signal if not applicable).
 func apply_to_control(owner: Node, control_target: Control) -> Signal:
-	if not owner or not control_target:
+	if not UiAnimTweenFactory.guard_anim_pair(owner, control_target, "UiAnimTarget.apply_to_control"):
 		return Signal()
 
 	var tween_easing: int = _tween_easing_from_enum()
@@ -327,20 +327,20 @@ func _apply_slide_family(owner: Node, control_target: Control, tween_easing: int
 	match animation:
 		AnimationAction.SLIDE_FROM_LEFT:
 			if reverse:
-				return UiAnimUtils.animate_slide_to_left(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
-			return UiAnimUtils.animate_slide_from_left(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
+				return UiAnimUtils.animate_slide_to_left(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, repeat_count, tween_easing)
+			return UiAnimUtils.animate_slide_from_left(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, repeat_count, tween_easing)
 		AnimationAction.SLIDE_FROM_RIGHT:
 			if reverse:
-				return UiAnimUtils.animate_slide_to_right(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
-			return UiAnimUtils.animate_slide_from_right(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
+				return UiAnimUtils.animate_slide_to_right(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, repeat_count, tween_easing)
+			return UiAnimUtils.animate_slide_from_right(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, repeat_count, tween_easing)
 		AnimationAction.SLIDE_FROM_TOP:
 			if reverse:
-				return UiAnimUtils.animate_slide_to_top(owner, control_target, duration, true, tween_easing)
-			return UiAnimUtils.animate_slide_from_top(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
+				return UiAnimUtils.animate_slide_to_top(owner, control_target, duration, true, repeat_count, tween_easing)
+			return UiAnimUtils.animate_slide_from_top(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, repeat_count, tween_easing)
 		AnimationAction.SLIDE_FROM_BOTTOM:
 			if reverse:
-				return UiAnimUtils.animate_slide_to_bottom(owner, control_target, duration, true, tween_easing)
-			return UiAnimUtils.animate_slide_from_bottom(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, tween_easing)
+				return UiAnimUtils.animate_slide_to_bottom(owner, control_target, duration, true, repeat_count, tween_easing)
+			return UiAnimUtils.animate_slide_from_bottom(owner, control_target, DEFAULT_SLIDE_OFFSET_PX, duration, true, repeat_count, tween_easing)
 	return Signal()
 
 
@@ -348,20 +348,20 @@ func _apply_center_slide_family(owner: Node, control_target: Control, tween_easi
 	match animation:
 		AnimationAction.FROM_LEFT_TO_CENTER:
 			if reverse:
-				return UiAnimUtils.animate_from_center_to_left(owner, control_target, duration, true, tween_easing)
-			return UiAnimUtils.animate_from_left_to_center(owner, control_target, duration, true, tween_easing)
+				return UiAnimUtils.animate_from_center_to_left(owner, control_target, duration, true, repeat_count, tween_easing)
+			return UiAnimUtils.animate_from_left_to_center(owner, control_target, duration, true, repeat_count, tween_easing)
 		AnimationAction.FROM_RIGHT_TO_CENTER:
 			if reverse:
-				return UiAnimUtils.animate_from_center_to_right(owner, control_target, duration, true, tween_easing)
-			return UiAnimUtils.animate_from_right_to_center(owner, control_target, duration, true, tween_easing)
+				return UiAnimUtils.animate_from_center_to_right(owner, control_target, duration, true, repeat_count, tween_easing)
+			return UiAnimUtils.animate_from_right_to_center(owner, control_target, duration, true, repeat_count, tween_easing)
 		AnimationAction.FROM_TOP_TO_CENTER:
 			if reverse:
-				return UiAnimUtils.animate_from_center_to_top(owner, control_target, duration, true, tween_easing)
-			return UiAnimUtils.animate_from_top_to_center(owner, control_target, duration, true, tween_easing)
+				return UiAnimUtils.animate_from_center_to_top(owner, control_target, duration, true, repeat_count, tween_easing)
+			return UiAnimUtils.animate_from_top_to_center(owner, control_target, duration, true, repeat_count, tween_easing)
 		AnimationAction.FROM_BOTTOM_TO_CENTER:
 			if reverse:
-				return UiAnimUtils.animate_from_center_to_bottom(owner, control_target, duration, true, tween_easing)
-			return UiAnimUtils.animate_from_bottom_to_center(owner, control_target, duration, true, tween_easing)
+				return UiAnimUtils.animate_from_center_to_bottom(owner, control_target, duration, true, repeat_count, tween_easing)
+			return UiAnimUtils.animate_from_bottom_to_center(owner, control_target, duration, true, repeat_count, tween_easing)
 	return Signal()
 
 
@@ -370,14 +370,14 @@ func _apply_elastic_bounce_rotate_family(owner: Node, control_target: Control, t
 		AnimationAction.BOUNCE_IN:
 			if reverse:
 				return UiAnimUtils.animate_bounce_out(owner, control_target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
-			return UiAnimUtils.animate_bounce_in(owner, control_target, duration, pivot_offset, true, tween_easing)
+			return UiAnimUtils.animate_bounce_in(owner, control_target, duration, pivot_offset, true, repeat_count, tween_easing)
 		AnimationAction.ELASTIC_IN:
 			if reverse:
 				return UiAnimUtils.animate_elastic_out(owner, control_target, duration, pivot_offset, true, true, true, repeat_count, tween_easing)
-			return UiAnimUtils.animate_elastic_in(owner, control_target, duration, pivot_offset, true, tween_easing)
+			return UiAnimUtils.animate_elastic_in(owner, control_target, duration, pivot_offset, true, repeat_count, tween_easing)
 		AnimationAction.ROTATE_IN:
 			if reverse:
-				return UiAnimUtils.animate_rotate_out(owner, control_target, duration, ROTATE_OUT_END_DEGREES, true, true, true, tween_easing)
+				return UiAnimUtils.animate_rotate_out(owner, control_target, duration, ROTATE_OUT_END_DEGREES, true, true, true, repeat_count, tween_easing)
 			return UiAnimUtils.animate_rotate_in(owner, control_target, duration, rotate_start_angle, pivot_offset, true, repeat_count, tween_easing)
 	return Signal()
 

@@ -18,7 +18,7 @@ That’s it. Game logic reads and writes through **`get_value()`** / **`set_valu
 
 ### Inspector hints (Godot 4.x)
 
-- **`UiAnimTarget.target` / `UiControlTargetCfg.target`**: exported as a **Control-only** node path (`@export_node_path("Control")`). The picker rejects non-`Control` nodes.
+- **`UiAnimTarget.target`**: exported as a **Control-only** node path (`@export_node_path("Control")`). The picker rejects non-`Control` nodes.
 - **`UiAnimTarget` tuning numbers** (duration, repeat count, rotate angle, pop/pulse/shake/flash intensity, etc.): use **@export_range** sliders/spinboxes in the Inspector—see tooltips on each field.
 
 ---
@@ -60,7 +60,7 @@ Open **`res://addons/ui_react/examples/demo.tscn`** (smoke demo) and press **Pla
 await UiAnimUtils.animate_expand(self, some_control).finished
 ```
 
-**Named show/hide presets (preferred):** use `UiAnimUtils.preset(UiAnimUtils.Preset.FADE_IN, self, panel)` (enum) instead of string-based `show_animated` / `hide_animated`, which remain for older projects.
+**Show/hide presets:** use `UiAnimUtils.preset(UiAnimUtils.Preset.FADE_IN, self, panel)` (and other `UiAnimUtils.Preset` values). Default durations, offsets, and related numeric defaults for your own compositions live in **`UiAnimConstants`** (`scripts/internal/anim/ui_anim_constants.gd`).
 
 `UiAnimUtils` is **`res://addons/ui_react/scripts/api/ui_anim_utils.gd`** (global class `UiAnimUtils`).
 
@@ -88,7 +88,7 @@ All plugin usage details are documented in this README.
 | **UiReactLineEdit** | `text_state` | `text_state` for sync. |
 | **UiReactLabel** | `text_state` | `text_state` for sync. |
 | **UiReactOptionButton** | `selected_state`, `disabled_state` | `selected_state` for sync (usually string item text). |
-| **UiReactItemList** | `items_state`, `selected_state`, `disabled_state` | **`items_state`**: **`UiArrayState`**. **`selected_state`**: **`UiIntState`** (single-select) or **`UiArrayState`** (multi-select indices). **`disabled_state`**: **`UiBoolState`**. |
+| **UiReactItemList** | `items_state`, `selected_state` | **`items_state`**: **`UiArrayState`**. **`selected_state`**: **`UiIntState`** (single-select) or **`UiArrayState`** (multi-select indices). Godot’s **ItemList** has no built-in disabled state—wrap or gate input with a parent **Control** / `mouse_filter` / focus policy in game code if you need “disabled” behavior. |
 | **UiReactTabContainer** | `selected_state`, `tab_config` | **`selected_state`**: **`UiIntState`**. **`tab_config`**: optional **`UiTabContainerCfg`** (use **`UiArrayState`** for tab/disabled/visibility arrays). |
 
 **`animation_targets`** is always **optional**: leave empty if you don’t want automatic tweens.
@@ -102,11 +102,12 @@ Paths are under **`res://addons/ui_react/`**.
 | Kind | Global class / area | Path |
 |------|---------------------|------|
 | Animation facade | `UiAnimUtils` | `scripts/api/ui_anim_utils.gd` |
+| Animation defaults (numeric) | `UiAnimConstants` | `scripts/internal/anim/ui_anim_constants.gd` |
 | Chained animations (optional) | `UiAnimSequence` | `scripts/internal/anim/ui_anim_sequence.gd` |
 | State (abstract base) | `UiState` | `scripts/api/models/ui_state.gd` |
 | State (concrete) | `UiBoolState`, `UiIntState`, `UiFloatState`, `UiStringState`, `UiArrayState` | `scripts/api/models/ui_*_state.gd` |
 | Inspector animation row | `UiAnimTarget` | `scripts/api/models/ui_anim_target.gd` |
-| Config bases | `UiTargetCfg`, `UiControlTargetCfg`, `UiTabContainerCfg` | `scripts/api/models/` |
+| Tab / container config | `UiTabContainerCfg` | `scripts/api/models/ui_tab_container_cfg.gd` |
 | Attachable controls | `UiReact*` | `scripts/controls/` |
 
 Prefer **`UiAnimUtils`** for tweens from code; prefer **`UiAnimTarget`** arrays on controls for no-code animation.
@@ -135,6 +136,7 @@ These may change between template versions; **do not rely on them from game code
 | “Target not found” warning | NodePath not under this node | Use a path relative to the control, or drag the node into the Target field. |
 | Tab arrays don’t apply | `tabs_state` / `disabled_tabs_state` / `visible_tabs_state` not an **Array** | Those `UiState` values must be `Array` (see Output warning). |
 | Item list rows don’t update | `items_state` missing or not an **Array** | Assign `items_state` to a `UiState` / `UiArrayState` whose `value` is an `Array` (e.g. `["A", "B", 1]` — each entry is stringified for display). |
+| Need a “disabled” list | **`UiReactItemList` has no `disabled_state`** (ItemList has no engine disabled flag) | Use a parent **Control**, `mouse_filter`, or focus rules to block interaction; keep list visibility/text driven by state as usual. |
 
 ---
 
@@ -167,7 +169,7 @@ Extended path mapping (old tree → addon) lives in **`docs/migration.md`** if p
 | You have | Optional improvement |
 |----------|----------------------|
 | Older generic `UiState` `.tres` files | Replace with the concrete **`Ui*State`** expected by each export; **`UiReactTabContainer.selected_state`** uses **`UiIntState`**. |
-| `show_animated` / `hide_animated` with strings | Prefer `UiAnimUtils.preset(...)` with `UiAnimUtils.Preset` enums. |
+| String preset APIs removed in 2.x | Use `UiAnimUtils.preset(...)` with `UiAnimUtils.Preset` enums. |
 | Plain `NodePath` targets in mind | Inspector now restricts targets to **Control**; existing saved paths still load. |
 
 # Ui React (Editor Plugin)

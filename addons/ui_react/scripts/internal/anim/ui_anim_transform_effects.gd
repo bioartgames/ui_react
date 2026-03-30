@@ -2,7 +2,7 @@
 class_name UiAnimTransformEffects
 extends RefCounted
 
-static func animate_rotate_in(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, start_angle: float = -360.0, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_rotate_in(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, start_angle: float = -360.0, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_rotate_in"):
 		return Signal()
 	
@@ -11,7 +11,7 @@ static func animate_rotate_in(source_node: Node, target: Control, speed := UiAni
 			target.visible = true
 		
 		# Set pivot offset for rotation center
-		if pivot_offset == Vector2(-1, -1):
+		if pivot_offset == UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT:
 			target.pivot_offset = UiAnimTweenFactory.get_center_pivot_offset(target)
 		else:
 			target.pivot_offset = pivot_offset
@@ -77,11 +77,11 @@ static func animate_rotate_out(source_node: Node, target: Control, speed := UiAn
 ## [param speed]: Duration for each pulse cycle in seconds (default: 0.5).
 ## [param pulse_amount]: Scale amount to pulse to (default: 1.1).
 ## [param pulse_count]: Number of pulse cycles (default: 2).
-## [param pivot_offset]: Custom pivot offset for scaling (default: Vector2(-1, -1) uses center).
+## [param pivot_offset]: Custom pivot offset for scaling (default: UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT uses center).
 ## [param auto_visible]: If true, automatically sets visible=true before animation (default: false).
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
-static func animate_pulse(source_node: Node, target: Control, speed := 0.5, pulse_amount: float = 1.1, pulse_count: int = 2, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_pulse(source_node: Node, target: Control, speed := 0.5, pulse_amount: float = 1.1, pulse_count: int = 2, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_pulse"):
 		return Signal()
 	
@@ -89,7 +89,7 @@ static func animate_pulse(source_node: Node, target: Control, speed := 0.5, puls
 		if auto_visible:
 			target.visible = true
 		
-		if pivot_offset == Vector2(-1, -1):
+		if pivot_offset == UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT:
 			target.pivot_offset = UiAnimTweenFactory.get_center_pivot_offset(target)
 		else:
 			target.pivot_offset = pivot_offset
@@ -168,14 +168,14 @@ static func animate_shake(source_node: Node, target: Control, speed := 0.5, inte
 	, CONNECT_ONE_SHOT)
 
 	return result_signal
-static func animate_breathing(source_node: Node, target: Control, duration: float = 2.0, repeat_count: int = -1, easing: int = Tween.EASE_OUT, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false) -> Signal:
+static func animate_breathing(source_node: Node, target: Control, duration: float = 2.0, repeat_count: int = -1, easing: int = Tween.EASE_OUT, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_breathing"):
 		return Signal()
 	
 	if auto_visible:
 		target.visible = true
 	
-	if pivot_offset == Vector2(-1, -1):
+	if pivot_offset == UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT:
 		target.pivot_offset = UiAnimTweenFactory.get_center_pivot_offset(target)
 	else:
 		target.pivot_offset = pivot_offset
@@ -202,17 +202,17 @@ static func animate_breathing(source_node: Node, target: Control, duration: floa
 ## [param target]: The control node to animate.
 ## [param duration]: Duration per cycle in seconds (default: 1.5).
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: -1).
-## [param pivot_offset]: Custom pivot offset for rotation (default: Vector2(-1, -1) uses center).
+## [param pivot_offset]: Custom pivot offset for rotation (default: UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT uses center).
 ## [param auto_visible]: If true, automatically sets visible=true before animation (default: false).
 ## [return]: Signal that emits when animation finishes (or can be used to track infinite loops).
-static func animate_wobble(source_node: Node, target: Control, duration: float = 1.5, repeat_count: int = -1, easing: int = Tween.EASE_OUT, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false) -> Signal:
+static func animate_wobble(source_node: Node, target: Control, duration: float = 1.5, repeat_count: int = -1, easing: int = Tween.EASE_OUT, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_wobble"):
 		return Signal()
 	
 	if auto_visible:
 		target.visible = true
 	
-	if pivot_offset == Vector2(-1, -1):
+	if pivot_offset == UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT:
 		target.pivot_offset = UiAnimTweenFactory.get_center_pivot_offset(target)
 	else:
 		target.pivot_offset = pivot_offset

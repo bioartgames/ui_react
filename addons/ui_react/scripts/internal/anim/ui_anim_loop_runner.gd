@@ -119,15 +119,7 @@ class _AnimationLoopHelper extends Node:
 				tween.kill()
 		_active_tweens.clear()
 
-		if _target_control:
-			var current_pos = _target_control.position
-			var current_scale = _target_control.scale
-			var current_modulate = _target_control.modulate
-			var current_rotation = _target_control.rotation_degrees
-			_target_control.position = current_pos
-			_target_control.scale = current_scale
-			_target_control.modulate = current_modulate
-			_target_control.rotation_degrees = current_rotation
+		# No need to reassign position/scale/modulate/rotation — killing tweens leaves property values as-is.
 
 		loop_finished.emit()
 		queue_free()

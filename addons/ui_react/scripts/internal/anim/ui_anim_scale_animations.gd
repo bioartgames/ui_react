@@ -2,7 +2,10 @@
 class_name UiAnimScaleAnimations
 extends RefCounted
 
-static func animate_expand(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+const _POP_OVERSHOOT_PHASE_FRACTION := 0.6
+const _POP_SETTLE_PHASE_FRACTION := 0.4
+
+static func animate_expand(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_expand"):
 		return Signal()
 
@@ -13,7 +16,7 @@ static func animate_expand(source_node: Node, target: Control, speed := UiAnimCo
 		if auto_visible:
 			target.visible = true
 		
-		if pivot_offset == Vector2(-1, -1):
+		if pivot_offset == UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT:
 			target.pivot_offset = UiAnimTweenFactory.get_center_pivot_offset(target)
 		else:
 			target.pivot_offset = pivot_offset
@@ -51,11 +54,11 @@ static func animate_expand(source_node: Node, target: Control, speed := UiAnimCo
 ## [param source_node]: The node to create the tween from (usually self).
 ## [param target]: The control node to animate.
 ## [param speed]: Animation duration in seconds (default: 0.15).
-## [param pivot_offset]: Custom pivot offset for scaling (default: Vector2(-1, -1) uses center).
+## [param pivot_offset]: Custom pivot offset for scaling (default: UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT uses center).
 ## [param auto_visible]: If true, automatically sets visible=true before animation (default: false).
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
-static func animate_expand_x(source_node: Node, target: Control, speed := UiAnimConstants.SHRINK_ANIMATION_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_expand_x(source_node: Node, target: Control, speed := UiAnimConstants.SHRINK_ANIMATION_SPEED, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_expand_x"):
 		return Signal()
 
@@ -66,7 +69,7 @@ static func animate_expand_x(source_node: Node, target: Control, speed := UiAnim
 		if auto_visible:
 			target.visible = true
 		
-		if pivot_offset == Vector2(-1, -1):
+		if pivot_offset == UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT:
 			target.pivot_offset = UiAnimTweenFactory.get_center_pivot_offset(target)
 		else:
 			target.pivot_offset = pivot_offset
@@ -99,11 +102,11 @@ static func animate_expand_x(source_node: Node, target: Control, speed := UiAnim
 ## [param source_node]: The node to create the tween from (usually self).
 ## [param target]: The control node to animate.
 ## [param speed]: Animation duration in seconds (default: 0.15).
-## [param pivot_offset]: Custom pivot offset for scaling (default: Vector2(-1, -1) uses center).
+## [param pivot_offset]: Custom pivot offset for scaling (default: UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT uses center).
 ## [param auto_visible]: If true, automatically sets visible=true before animation (default: false).
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
-static func animate_expand_y(source_node: Node, target: Control, speed := UiAnimConstants.SHRINK_ANIMATION_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_expand_y(source_node: Node, target: Control, speed := UiAnimConstants.SHRINK_ANIMATION_SPEED, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
 		push_warning("UiAnimUtils: Invalid source_node or target for animate_expand_y")
 		return Signal()
@@ -115,7 +118,7 @@ static func animate_expand_y(source_node: Node, target: Control, speed := UiAnim
 		if auto_visible:
 			target.visible = true
 		
-		if pivot_offset == Vector2(-1, -1):
+		if pivot_offset == UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT:
 			target.pivot_offset = UiAnimTweenFactory.get_center_pivot_offset(target)
 		else:
 			target.pivot_offset = pivot_offset
@@ -148,13 +151,13 @@ static func animate_expand_y(source_node: Node, target: Control, speed := UiAnim
 ## [param source_node]: The node to create the tween from (usually self).
 ## [param target]: The control node to animate.
 ## [param speed]: Animation duration in seconds (default: 0.3).
-## [param pivot_offset]: Custom pivot offset for scaling (default: Vector2(-1, -1) uses center).
+## [param pivot_offset]: Custom pivot offset for scaling (default: UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT uses center).
 ## [param auto_visible]: If true, automatically sets visible=true before animation and visible=false after completion (default: false).
 ## [param auto_setup]: If true, automatically sets scale=Vector2.ONE before animation (default: false).
 ## [param auto_reset]: If true, automatically resets scale=Vector2.ONE after animation completes (default: false).
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
-static func animate_shrink(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_shrink(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_shrink"):
 		return Signal()
 	
@@ -162,7 +165,7 @@ static func animate_shrink(source_node: Node, target: Control, speed := UiAnimCo
 		if auto_visible:
 			target.visible = true
 		
-		if pivot_offset == Vector2(-1, -1):
+		if pivot_offset == UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT:
 			target.pivot_offset = UiAnimTweenFactory.get_center_pivot_offset(target)
 		else:
 			target.pivot_offset = pivot_offset
@@ -193,13 +196,13 @@ static func animate_shrink(source_node: Node, target: Control, speed := UiAnimCo
 ## [param source_node]: The node to create the tween from (usually self).
 ## [param target]: The control node to animate.
 ## [param speed]: Animation duration in seconds (default: 0.15).
-## [param pivot_offset]: Custom pivot offset for scaling (default: Vector2(-1, -1) uses center).
+## [param pivot_offset]: Custom pivot offset for scaling (default: UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT uses center).
 ## [param auto_visible]: If true, automatically sets visible=true before animation and visible=false after completion (default: false).
 ## [param auto_setup]: If true, automatically sets scale.x=1.0 before animation (default: false).
 ## [param auto_reset]: If true, automatically resets scale.x=1.0 after animation completes (default: false).
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
-static func animate_shrink_x(source_node: Node, target: Control, speed := UiAnimConstants.SHRINK_ANIMATION_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_shrink_x(source_node: Node, target: Control, speed := UiAnimConstants.SHRINK_ANIMATION_SPEED, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_shrink_x"):
 		return Signal()
 	
@@ -207,7 +210,7 @@ static func animate_shrink_x(source_node: Node, target: Control, speed := UiAnim
 		if auto_visible:
 			target.visible = true
 		
-		if pivot_offset == Vector2(-1, -1):
+		if pivot_offset == UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT:
 			target.pivot_offset = UiAnimTweenFactory.get_center_pivot_offset(target)
 		else:
 			target.pivot_offset = pivot_offset
@@ -238,13 +241,13 @@ static func animate_shrink_x(source_node: Node, target: Control, speed := UiAnim
 ## [param source_node]: The node to create the tween from (usually self).
 ## [param target]: The control node to animate.
 ## [param speed]: Animation duration in seconds (default: 0.15).
-## [param pivot_offset]: Custom pivot offset for scaling (default: Vector2(-1, -1) uses center).
+## [param pivot_offset]: Custom pivot offset for scaling (default: UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT uses center).
 ## [param auto_visible]: If true, automatically sets visible=true before animation and visible=false after completion (default: false).
 ## [param auto_setup]: If true, automatically sets scale.y=1.0 before animation (default: false).
 ## [param auto_reset]: If true, automatically resets scale.y=1.0 after animation completes (default: false).
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
-static func animate_shrink_y(source_node: Node, target: Control, speed := UiAnimConstants.SHRINK_ANIMATION_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_shrink_y(source_node: Node, target: Control, speed := UiAnimConstants.SHRINK_ANIMATION_SPEED, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
 		push_warning("UiAnimUtils: Invalid source_node or target for animate_shrink_y")
 		return Signal()
@@ -253,7 +256,7 @@ static func animate_shrink_y(source_node: Node, target: Control, speed := UiAnim
 		if auto_visible:
 			target.visible = true
 		
-		if pivot_offset == Vector2(-1, -1):
+		if pivot_offset == UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT:
 			target.pivot_offset = UiAnimTweenFactory.get_center_pivot_offset(target)
 		else:
 			target.pivot_offset = pivot_offset
@@ -280,7 +283,7 @@ static func animate_shrink_y(source_node: Node, target: Control, speed := UiAnim
 	else:
 		return animation_callable.call()
 
-static func animate_bounce_in(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_bounce_in(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_bounce_in"):
 		return Signal()
 	
@@ -288,7 +291,7 @@ static func animate_bounce_in(source_node: Node, target: Control, speed := UiAni
 		if auto_visible:
 			target.visible = true
 		
-		if pivot_offset == Vector2(-1, -1):
+		if pivot_offset == UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT:
 			target.pivot_offset = UiAnimTweenFactory.get_center_pivot_offset(target)
 		else:
 			target.pivot_offset = pivot_offset
@@ -312,13 +315,13 @@ static func animate_bounce_in(source_node: Node, target: Control, speed := UiAni
 ## [param source_node]: The node to create the tween from (usually self).
 ## [param target]: The control node to animate.
 ## [param speed]: Animation duration in seconds (default: 0.3).
-## [param pivot_offset]: Custom pivot offset for scaling (default: Vector2(-1, -1) uses center).
+## [param pivot_offset]: Custom pivot offset for scaling (default: UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT uses center).
 ## [param auto_visible]: If true, automatically sets visible=true before animation and visible=false after completion (default: false).
 ## [param auto_setup]: If true, automatically sets scale=Vector2.ONE before animation (default: false).
 ## [param auto_reset]: If true, automatically resets scale=Vector2.ONE after animation completes (default: false).
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
-static func animate_bounce_out(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_bounce_out(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not source_node or not target:
 		push_warning("UiAnimUtils: Invalid source_node or target for animate_bounce_out")
 		return Signal()
@@ -327,7 +330,7 @@ static func animate_bounce_out(source_node: Node, target: Control, speed := UiAn
 		if auto_visible:
 			target.visible = true
 		
-		if pivot_offset == Vector2(-1, -1):
+		if pivot_offset == UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT:
 			target.pivot_offset = UiAnimTweenFactory.get_center_pivot_offset(target)
 		else:
 			target.pivot_offset = pivot_offset
@@ -358,11 +361,11 @@ static func animate_bounce_out(source_node: Node, target: Control, speed := UiAn
 ## [param source_node]: The node to create the tween from (usually self).
 ## [param target]: The control node to animate.
 ## [param speed]: Animation duration in seconds (default: 0.3).
-## [param pivot_offset]: Custom pivot offset for scaling (default: Vector2(-1, -1) uses center).
+## [param pivot_offset]: Custom pivot offset for scaling (default: UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT uses center).
 ## [param auto_visible]: If true, automatically sets visible=true before animation (default: false).
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
-static func animate_elastic_in(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_elastic_in(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_elastic_in"):
 		return Signal()
 	
@@ -370,7 +373,7 @@ static func animate_elastic_in(source_node: Node, target: Control, speed := UiAn
 		if auto_visible:
 			target.visible = true
 		
-		if pivot_offset == Vector2(-1, -1):
+		if pivot_offset == UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT:
 			target.pivot_offset = UiAnimTweenFactory.get_center_pivot_offset(target)
 		else:
 			target.pivot_offset = pivot_offset
@@ -394,13 +397,13 @@ static func animate_elastic_in(source_node: Node, target: Control, speed := UiAn
 ## [param source_node]: The node to create the tween from (usually self).
 ## [param target]: The control node to animate.
 ## [param speed]: Animation duration in seconds (default: 0.3).
-## [param pivot_offset]: Custom pivot offset for scaling (default: Vector2(-1, -1) uses center).
+## [param pivot_offset]: Custom pivot offset for scaling (default: UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT uses center).
 ## [param auto_visible]: If true, automatically sets visible=true before animation and visible=false after completion (default: false).
 ## [param auto_setup]: If true, automatically sets scale=Vector2.ONE before animation (default: false).
 ## [param auto_reset]: If true, automatically resets scale=Vector2.ONE after animation completes (default: false).
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
-static func animate_elastic_out(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_elastic_out(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_elastic_out"):
 		return Signal()
 	
@@ -408,7 +411,7 @@ static func animate_elastic_out(source_node: Node, target: Control, speed := UiA
 		if auto_visible:
 			target.visible = true
 		
-		if pivot_offset == Vector2(-1, -1):
+		if pivot_offset == UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT:
 			target.pivot_offset = UiAnimTweenFactory.get_center_pivot_offset(target)
 		else:
 			target.pivot_offset = pivot_offset
@@ -440,11 +443,11 @@ static func animate_elastic_out(source_node: Node, target: Control, speed := UiA
 ## [param target]: The control node to animate.
 ## [param speed]: Animation duration in seconds (default: 0.3).
 ## [param overshoot]: Scale overshoot amount (default: 1.2).
-## [param pivot_offset]: Custom pivot offset for scaling (default: Vector2(-1, -1) uses center).
+## [param pivot_offset]: Custom pivot offset for scaling (default: UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT uses center).
 ## [param auto_visible]: If true, automatically sets visible=true before animation (default: false).
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
-static func animate_pop(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, overshoot: float = 1.2, pivot_offset: Vector2 = Vector2(-1, -1), auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_pop(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, overshoot: float = 1.2, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_pop"):
 		return Signal()
 	
@@ -452,7 +455,7 @@ static func animate_pop(source_node: Node, target: Control, speed := UiAnimConst
 		if auto_visible:
 			target.visible = true
 		
-		if pivot_offset == Vector2(-1, -1):
+		if pivot_offset == UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT:
 			target.pivot_offset = UiAnimTweenFactory.get_center_pivot_offset(target)
 		else:
 			target.pivot_offset = pivot_offset
@@ -464,9 +467,9 @@ static func animate_pop(source_node: Node, target: Control, speed := UiAnimConst
 			return Signal()
 		
 		# First tween: scale to overshoot
-		tween.tween_property(target, 'scale', Vector2(overshoot, overshoot) * UiAnimConstants.SCALE_MAX, speed * 0.6).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		tween.tween_property(target, 'scale', Vector2(overshoot, overshoot) * UiAnimConstants.SCALE_MAX, speed * _POP_OVERSHOOT_PHASE_FRACTION).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		# Second tween: settle back to 1.0
-		tween.tween_property(target, 'scale', UiAnimConstants.SCALE_MAX, speed * 0.4).set_trans(Tween.TRANS_BACK).set_ease(easing)
+		tween.tween_property(target, 'scale', UiAnimConstants.SCALE_MAX, speed * _POP_SETTLE_PHASE_FRACTION).set_trans(Tween.TRANS_BACK).set_ease(easing)
 		
 		return tween.finished
 	

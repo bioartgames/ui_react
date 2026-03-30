@@ -5,8 +5,6 @@ class_name UiReactItemList
 @export var selected_state: UiState
 ## **Optional** — list row contents from a [UiArrayState] (or assign an [Array] payload). Each element is shown via [method @GlobalScope.str].
 @export var items_state: UiArrayState
-## **Optional** — wired for API consistency; ItemList has no disabled property in Godot 4.5, so changes are currently ignored.
-@export var disabled_state: UiBoolState
 
 ## **Optional** — Inspector-driven tweens (selection, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
@@ -25,9 +23,6 @@ func _ready() -> void:
 	if selected_state:
 		selected_state.value_changed.connect(_on_selected_state_changed)
 		_on_selected_state_changed(selected_state.get_value(), selected_state.get_value())
-	if disabled_state:
-		disabled_state.value_changed.connect(_on_disabled_state_changed)
-		_on_disabled_state_changed(disabled_state.get_value(), disabled_state.get_value())
 	_validate_animation_targets()
 	UiReactStateBindingHelper.deferred_finish_initialization(self)
 
@@ -188,11 +183,6 @@ func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void
 		_updating = false
 	elif select_mode == ItemList.SELECT_SINGLE:
 		push_warning(_WARN_SINGLE_SELECT_EXPECT_INT)
-
-func _on_disabled_state_changed(_new_value: Variant, _old_value: Variant) -> void:
-	# Note: ItemList doesn't expose disabled property in Godot 4.5, so this is a no-op
-	pass
-
 
 func _indices_from_variant_array(raw: Array) -> Array[int]:
 	var indices: Array[int] = []

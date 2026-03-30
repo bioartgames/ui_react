@@ -72,7 +72,7 @@ func create_and_assign_core(issue: UiReactDiagnosticModel.DiagnosticIssue, node:
 	if node == null:
 		return false
 	var out_dir := resolve_output_dir()
-	_dock._persist_state_output_path(out_dir)
+	UiReactDockConfig.save_ui_preference(UiReactDockConfig.KEY_STATE_OUTPUT_PATH, out_dir)
 	var err := UiReactStateFactoryService.ensure_output_dir(out_dir)
 	if err != OK:
 		push_error("UiReactDock: could not create output folder: %s" % out_dir)
