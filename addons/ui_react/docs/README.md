@@ -2,6 +2,10 @@
 
 Self-contained UI building blocks for Godot 4.x: attach **UiReact\*** scripts for two-way **UiState** binding, optional **inspector-driven animations** via **UiAnimTarget**, and a code-friendly **UiAnimUtils** tween facade—so you can build polished UI with little or no game code.
 
+### Roadmap
+
+Public direction, phased delivery, and a full **capability backlog** (so deferred work stays visible) live in the repo root **[`ROADMAP.md`](../../ROADMAP.md)**—charter, phases **P0–P5+**, screen matrix, exit criteria, and Appendix table **CB-001–CB-030**.
+
 ---
 
 ## The 3-step setup (repeat for every control)
