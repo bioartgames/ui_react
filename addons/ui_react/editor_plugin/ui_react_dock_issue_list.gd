@@ -2,10 +2,6 @@
 class_name UiReactDockIssueList
 extends RefCounted
 
-const _GROUP_FLAT := 0
-const _GROUP_BY_NODE := 1
-const _GROUP_BY_SEVERITY := 2
-
 var _dock: UiReactDock
 
 
@@ -25,11 +21,11 @@ static func severity_prefix(sev: int) -> String:
 
 static func group_key_for_issue(issue: UiReactDiagnosticModel.DiagnosticIssue, mode: int) -> String:
 	match mode:
-		_GROUP_BY_NODE:
+		UiReactDockConfig.GROUP_BY_NODE:
 			if not issue.node_name.is_empty():
 				return issue.node_name
 			return str(issue.node_path) if not issue.node_path.is_empty() else "(scene)"
-		_GROUP_BY_SEVERITY:
+		UiReactDockConfig.GROUP_BY_SEVERITY:
 			match issue.severity:
 				UiReactDiagnosticModel.Severity.ERROR:
 					return "Errors"
@@ -42,7 +38,7 @@ static func group_key_for_issue(issue: UiReactDiagnosticModel.DiagnosticIssue, m
 
 
 static func sort_group_keys(keys: Array[String], mode: int) -> void:
-	if mode == _GROUP_BY_SEVERITY:
+	if mode == UiReactDockConfig.GROUP_BY_SEVERITY:
 		var order := {"Errors": 0, "Warnings": 1, "Info": 2}
 		keys.sort_custom(func(a: String, b: String) -> bool:
 			var ia: int = order.get(a, 99)
@@ -73,7 +69,7 @@ func rebuild() -> void:
 	for i in range(_dock._issues_container.get_child_count() - 1, -1, -1):
 		_dock._issues_container.get_child(i).queue_free()
 
-	var mode := _GROUP_FLAT
+	var mode := UiReactDockConfig.GROUP_FLAT
 	if _dock._group_option:
 		mode = _dock._group_option.get_item_id(_dock._group_option.selected)
 
@@ -93,7 +89,7 @@ func rebuild() -> void:
 		_dock._issues_container.add_child(empty_lbl)
 		return
 
-	if mode == _GROUP_FLAT:
+	if mode == UiReactDockConfig.GROUP_FLAT:
 		for i in range(_dock._issues_shown.size()):
 			_dock._issues_container.add_child(_make_issue_row(_dock._issues_shown[i], i))
 		return

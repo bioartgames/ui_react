@@ -2,6 +2,9 @@
 class_name UiReactDockTheme
 extends Object
 
+## Fallback when the editor theme has no `contrast_1` (split grab bar).
+const SPLIT_BAR_FALLBACK_COLOR := Color(0.42, 0.45, 0.52, 1.0)
+
 
 static func editor_theme(plugin: EditorPlugin) -> Theme:
 	if plugin == null:
@@ -41,7 +44,7 @@ static func apply_split_bar(split: SplitContainer, plugin: EditorPlugin) -> void
 		)
 		return
 	var sb := StyleBoxFlat.new()
-	var col := Color(0.42, 0.45, 0.52, 1.0)
+	var col := SPLIT_BAR_FALLBACK_COLOR
 	if t.has_color(&"contrast_1", &"Editor"):
 		col = t.get_color(&"contrast_1", &"Editor")
 	sb.bg_color = col
