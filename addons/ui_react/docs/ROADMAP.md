@@ -113,7 +113,7 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 
 | ID | Capability / topic | Screen examples | Target phase | Status | Notes |
 |----|-------------------|-----------------|--------------|--------|-------|
-| CB-001 | Core: `UiState`, `UiReact*`, `UiAnimUtils`, `UiAnimTarget`, editor dock | All | P0 | Done | Baseline shipped; maintain compat per SemVer. |
+| CB-001 | Core: `UiState`, `UiReact*`, `UiAnimUtils`, `UiAnimTarget`, editor dock | All | P0 | Done | Baseline shipped; maintain compat per SemVer. Includes typed diagnostics (`IssueKind`/`resource_path`), unused state file diagnostics, Reveal + persisted ignore flows, and filesystem-triggered dock refresh. |
 | CB-002 | Transactional / draft state (apply, cancel, revert) | Options, key remap drafts | P1 | Planned | Depends on P1 exit criteria. |
 | CB-003 | Computed state (explicit dependencies, documented limits) | Shop totals, afford flags, filtered inventory | P2 | Planned | Use glossary term “computed state” only. |
 | CB-004 | Explicit dependency / recalc rules (documented) | Same as CB-003 | P2 | Planned | Ships with or immediately after CB-003. |

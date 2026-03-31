@@ -4,7 +4,7 @@ Self-contained UI building blocks for Godot 4.x: attach **UiReact\*** scripts fo
 
 ### Roadmap
 
-Public direction, phased delivery, and a full **capability backlog** (so deferred work stays visible) live in the repo root **[`ROADMAP.md`](../../ROADMAP.md)**—charter, phases **P0–P5+**, screen matrix, exit criteria, and Appendix table **CB-001–CB-030**.
+Public direction, phased delivery, and a full **capability backlog** (so deferred work stays visible) live in **[`docs/ROADMAP.md`](docs/ROADMAP.md)**—charter, phases **P0–P5+**, screen matrix, exit criteria, and Appendix table **CB-001–CB-030**.
 
 ---
 
@@ -68,9 +68,9 @@ await UiAnimUtils.animate_expand(self, some_control).finished
 
 1. Open **Project → Project Settings → Plugins** and enable **Ui React** (bundled at `editor_plugin/plugin.cfg`).
 2. Open the **Ui React** panel in the **bottom editor dock** (tab bar).
-3. Choose **Scan: Selection** or **Entire scene**, press **Rescan** to run diagnostics on demand, and review results. Dock choices (scan mode, **Group** mode, filters, auto-refresh, output folder) are **remembered per project** when you reopen it. The tool also **updates when you switch the active edited scene** (so you do not need to toggle scan mode to see results).
-4. Use **Group** (flat / by node / by severity), **Filter** (text search across node, path, property, messages), and severity toggles to narrow the list. Each row has **Fix**, **Focus**, and **Ignore** (hide until next **Rescan**). Click an issue summary in the **upper list** to select it and show full details in the **report** below. **Hover** any control for a short tooltip (scope, filters, and actions).
-5. For unassigned `*_state` slots with a suggested type, use **Fix** on a row (single issue) or **Fix All** in the toolbar (every eligible issue in the **filtered** list). Use **Ignore All** to hide **all** visible (filtered) issues until the next **Rescan**. New `.tres` files are saved under the configured folder (default `res://addons/ui_react/ui_resources/plugin_generated/`); if a filename already exists, the plugin saves as `<name>_2.tres`, `<name>_3.tres`, … instead of overwriting. Override the folder with **`ui_react/plugin_state_output_path`**.
+3. Choose **Scan: Selection** or **Entire scene**, press **Rescan** to run diagnostics on demand, and review results. Dock choices (scan mode, **Group** mode, filters, auto-refresh, output folder) are **remembered per project** when you reopen it. The tool also **updates when you switch the active edited scene**, and when **EditorFileSystem** reports filesystem changes (coalesced refresh so rapid imports do not spam rescans).
+4. Use **Group** (flat / by node / by severity), **Filter**, and severity toggles to narrow the list. **Binding** issues (validator output) show **Fix**, **Focus**, and **Ignore**—**Ignore** is session-only until the next **Rescan**. **Unused state file** issues (typed `UiState` `.tres` in the output folder, not referenced by this scene) show **Reveal** and **Ignore**—**Reveal** opens the FileSystem dock and calls **`navigate_to_path`** so the file is shown with keyboard focus; **Ignore** is **stored in Project Settings** (**`ui_react/plugin_ignored_unused_state_paths`**) and survives **Rescan**. With **Group → By node**, those unused-file rows appear under **Unused state files**, not under **`(scene)`**. Click an issue summary in the **upper list** to select it and show full details in the **report** below. **Hover** any control for a short tooltip (scope, filters, and actions).
+5. For unassigned `*_state` slots with a suggested type, use **Fix** on a row (single issue) or **Fix All** in the toolbar (every eligible **binding** row in the **filtered** list). **Ignore All** applies session **Ignore** to binding rows and appends unused-file paths to the persisted ignore list (see **Project settings** below). New `.tres` files are saved under the configured folder (default `res://addons/ui_react/ui_resources/plugin_generated/`); if a filename already exists, the plugin saves as `<name>_2.tres`, `<name>_3.tres`, … instead of overwriting. Override the folder with **`ui_react/plugin_state_output_path`**.
 
 All plugin usage details are documented in this README.
 
@@ -150,7 +150,7 @@ These may change between template versions; **do not rely on them from game code
 | `scripts/internal/anim/` | Animation implementation (unstable for direct use). |
 | `scripts/internal/react/` | Reactive helpers (unstable for direct use). |
 | `examples/` | `demo.tscn` smoke demo. |
-| `docs/` | Extra notes (e.g. migration, editor plugin, [Plugin UX roadmap](plugin_ux_roadmap.md)). |
+| `docs/` | **README**, **CHANGELOG**, and addon **ROADMAP** (this folder). |
 | `editor_plugin/` | Optional Godot editor plugin (dock, validation, quick state creation). |
 | `ui_resources/` | Sample `.tres` for the example scene; `plugin_generated/` holds plugin-created states (optional). |
 
@@ -186,33 +186,36 @@ If you copy `addons/ui_react/` into another project, re-enable the plugin there 
 
 ## Versioning
 
-The plugin **version** is declared in [`editor_plugin/plugin.cfg`](editor_plugin/plugin.cfg) (`version=`). Release history and notable changes are tracked in **[CHANGELOG.md](CHANGELOG.md)** in this addon folder (so it travels when you copy `addons/ui_react/`).
+The plugin **version** is declared in [`editor_plugin/plugin.cfg`](editor_plugin/plugin.cfg) (`version=`). Release history and notable changes are tracked in **[`docs/CHANGELOG.md`](docs/CHANGELOG.md)** in this addon folder (so it travels when you copy `addons/ui_react/`).
 
 ## Diagnostics layout
 
 - The **upper issue list** shows **compact summary lines** per issue (severity prefix + short text). Full “Fix:” prose stays in the **report** area below so narrow docks stay readable.
-- **Click an issue summary** to load the **report**: full issue text, fix hint, component/node/path, and property metadata when applicable. For issues that include scan-time value preview metadata, the report may show **Value type** and **Effective value** (truncated for long strings), reflecting bound state payload hints at scan time.
-- **Toolbar:** **Rescan**, **Copy report**, **Fix All** (bulk quick-fix for eligible filtered issues), and **Ignore All** (hide every issue in the **current filtered** list until **Rescan**). Each issue row has **Fix**, **Focus** (select that issue’s scene node), and **Ignore**. Use **Copy report** to copy the filtered list using the same summary text as each row (and fix hints when present).
+- **Click an issue summary** to load the **report**: full issue text, fix hint, component/node/path, **Resource** (`res://` path when the issue carries `resource_path`), property metadata when applicable, and—when present—scan-time **Value type** / **Effective value** (truncated for long strings).
+- **Toolbar:** **Rescan**, **Copy report**, **Fix All** (binding issues only; eligible filtered rows), and **Ignore All** (applies session **Ignore** to binding issues; adds unused-file paths to the **persisted** ignore list). **Row actions:** binding rows—**Fix**, **Focus**, **Ignore**; unused-file rows—**Reveal**, **Ignore**. Use **Copy report** to copy the filtered list using the same summary text as each row (and fix hints when present).
 
-**Persisted per project:** scan mode, **Group** mode, severity filters, auto-refresh, and state output folder are saved in **Project Settings** and restored when you reopen the project (no need to reconfigure each session).
+**Persisted per project:** scan mode, **Group** mode, severity filters, auto-refresh, state output folder, and ignored unused file paths (**`ui_react/plugin_ignored_unused_state_paths`**) are saved in **Project Settings** and restored when you reopen the project (no need to reconfigure each session).
 
-**When diagnostics update:** the list updates when you press **Rescan**, when you open or **switch the active edited scene** tab (so **Entire scene** mode stays accurate after restart), and—if **Auto-refresh on selection** is enabled—in **Selection** mode when the editor selection changes.
+**When diagnostics update:** the list updates when you press **Rescan**, when you open or **switch the active edited scene** tab, when **EditorFileSystem** signals filesystem changes, and—if **Auto-refresh on selection** is enabled—in **Selection** mode when the editor selection changes.
+
+**Rescan** clears **session-only** hides (**Ignore** on binding issues). It does **not** remove paths from **`plugin_ignored_unused_state_paths`**; clear those in **Project Settings** if needed.
 
 ## Dock features
 
 | Control | Purpose |
 |--------|---------|
 | **Scan** | **Selection** — selected nodes and their subtree `UiReact*` controls. **Entire scene** — all `UiReact*` nodes under the edited scene root. |
-| **Group** | **Flat list**, **By node**, or **By severity** (collapsible groups). |
+| **Group** | **Flat list**, **By node**, or **By severity** (collapsible groups). **By node:** unused `.tres` diagnostics group under **Unused state files**. |
 | **Show** | Filter diagnostics by severity (Errors / Warnings / Info). |
-| **Filter** | Text filter across node name, path, property, component, and issue text (debounced). When an issue includes a value preview, the **Value type** label is also matched (not the full value text). |
+| **Filter** | Text filter across node name, path, property, component, messages, fix hints, **resource path** (`res://` for unused-file rows), and value-type hints (debounced). Value preview body text is not searched. |
 | **State output folder** | Where quick-create saves new `.tres` files. Default: `res://addons/ui_react/ui_resources/plugin_generated/`. Collision-safe names: `<NodeName>_<property>_2.tres`, `_3.tres`, … |
-| **Rescan** | Run diagnostics now using the current **Scan** mode and filters (clears **Ignore** hides). |
+| **Rescan** | Run diagnostics now using the current **Scan** mode and filters; clears **session** **Ignore** on binding issues only. |
 | **Copy report** | Copy the **filtered** list to the clipboard: same summary line as each row, plus **Fix:** hint when present. |
-| **Focus** | On each row: select the scene node for that issue (disabled when the row has no `node_path`). |
-| **Fix** | On each row: for an unassigned `*_state` with a suggested type (**Info** optional slots or **Warning** required slots), creates the typed state, saves it, assigns with **undo/redo**. |
-| **Fix All** | Same as **Fix** for **every** eligible issue in the **current filtered** list (skips rows without a suggested type). |
-| **Ignore All** | Same as **Ignore** for **every** issue in the **current filtered** list (hidden until **Rescan**). |
+| **Reveal** | Unused-file rows only: FileSystem dock **`navigate_to_path`** for that `.tres`. |
+| **Focus** | Binding rows only: select the scene node for that issue (disabled when the row has no `node_path`). |
+| **Fix** | Binding rows only: for an unassigned `*_state` with a suggested type (**Info** optional slots or **Warning** required slots), creates the typed state, saves it, assigns with **undo/redo**. |
+| **Fix All** | Same as **Fix** for **every** eligible **binding** row in the **current filtered** list. |
+| **Ignore** / **Ignore All** | Binding issues: hide until **Rescan**. Unused-file issues: append path to **`plugin_ignored_unused_state_paths`** (persisted). |
 
 ## Project settings
 
@@ -225,6 +228,7 @@ The plugin **version** is declared in [`editor_plugin/plugin.cfg`](editor_plugin
 | `ui_react/plugin_show_info` | `true` | Show **Info** in the list. |
 | `ui_react/plugin_auto_refresh` | `true` | Auto-refresh when selection changes (Selection scan only). |
 | `ui_react/plugin_group_mode` | `0` | `0` = Flat list, `1` = By node, `2` = By severity. |
+| `ui_react/plugin_ignored_unused_state_paths` | `PackedStringArray()` (empty) | `res://` paths of unused-file diagnostics hidden until removed from this list. |
 
 ## Binding metadata & validation
 
@@ -243,24 +247,17 @@ Use **`UiArrayState`** for `items_state` so inspector intent and diagnostics lin
 ## Architecture (for contributors)
 
 - `ui_react_editor_plugin.gd` — `EditorPlugin` entry; registers the dock.
-- `ui_react_dock.gd` — Dock UI only.
+- `ui_react_dock.gd` — Dock UI, refresh orchestration, editor signal wiring.
+- `models/ui_react_diagnostic_model.gd` — `DiagnosticIssue`, **IssueKind** (`GENERIC` vs `UNUSED_STATE_FILE`), **`resource_path`** for file-scoped rows.
 - `services/ui_react_scanner_service.gd` — Finds `UiReact*` nodes and binding metadata.
-- `services/ui_react_validator_service.gd` — Emits `UiReactDiagnosticModel.DiagnosticIssue` rows (mirrors runtime validation rules where practical).
+- `services/ui_react_validator_service.gd` — Emits binding `DiagnosticIssue` rows (mirrors runtime validation rules where practical).
+- `services/ui_react_state_reference_collector.gd` — Collects `res://` paths of `UiState` resources referenced by bindings (including `tab_config`).
+- `services/ui_react_unused_state_service.gd` — Emits **unused** `.tres` issues for the configured output folder vs the current scene.
 - `services/ui_react_state_factory_service.gd` — Creates typed states and saves them to disk.
+- `ui_react_dock_config.gd` — ProjectSettings keys and load/save for dock preferences.
 - `controllers/ui_react_action_controller.gd` — Wraps `EditorUndoRedoManager` property changes.
 
-### Plugin UX roadmap (planned work)
-
-Canonical **master roadmap** (feature order, dependencies, shared constraints, **acceptance gates**, rollback strategy, **milestone review cadence**): **[plugin_ux_roadmap.md](plugin_ux_roadmap.md)**.
-
-Per-feature implementation plans (objective, files, steps, validation, rollout):
-
-| Feature | Plan |
-|--------|------|
-| Preview `get_value()` payload in issue details (scan-time) | [feature_value_preview.md](plugin_ux_plans/feature_value_preview.md) |
-| Typed assign / replace autofix (concrete `Ui*State`) | [feature_type_autofix.md](plugin_ux_plans/feature_type_autofix.md) |
-| Guided setup wizard (typed defaults, v1) | [feature_setup_wizard.md](plugin_ux_plans/feature_setup_wizard.md) |
-| Runtime play-mode bridge / live stream (v1) | [feature_runtime_bridge.md](plugin_ux_plans/feature_runtime_bridge.md) |
+**Planning docs:** phased capability backlog for this addon lives in **[`docs/ROADMAP.md`](docs/ROADMAP.md)**. A hosting repository may add its own root roadmap separately.
 
 Runtime addon code under `scripts/internal/*` remains **unstable** for direct game use; the plugin may depend on it only for parity with future refactors—prefer mirroring rules inside `services/` if drift becomes a problem.
 
