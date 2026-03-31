@@ -31,6 +31,8 @@ static func build_details_bbcode(issue: UiReactDiagnosticModel.DiagnosticIssue) 
 		body += "[b]Node[/b]: %s\n" % issue.node_name
 	if not issue.node_path.is_empty():
 		body += "[b]Path[/b]: %s\n" % str(issue.node_path)
+	if not issue.resource_path.is_empty():
+		body += "[b]Resource[/b]: %s\n" % escape_bbcode_literal(issue.resource_path)
 	var itxt: String = issue.issue_text if not issue.issue_text.is_empty() else issue.message
 	body += "[b]Issue[/b]: %s\n" % itxt
 	if not issue.fix_hint.is_empty():

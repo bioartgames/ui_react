@@ -19,7 +19,10 @@ static func build_issues(output_dir: String, root: Node) -> Array[UiReactDiagnos
 		return issues
 	var referenced: Dictionary = UiReactStateReferenceCollector.collect_referenced_state_paths_for_scene(root)
 	var candidates: Array[String] = []
-	da.list_dir_begin()
+	var list_err := da.list_dir_begin()
+	if list_err != OK:
+		push_warning("UiReactUnusedStateService: list_dir_begin failed (%s) for %s" % [list_err, dir_trim])
+		return issues
 	var entry := da.get_next()
 	while entry != "":
 		if not da.current_is_dir() and entry.ends_with(".tres"):

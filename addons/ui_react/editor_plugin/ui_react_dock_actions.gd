@@ -142,7 +142,11 @@ func on_row_reveal(flat_index: int) -> void:
 	if not ResourceLoader.exists(res_path):
 		push_error("UiReactDock: resource not found: %s" % res_path)
 		return
-	_dock._plugin.get_editor_interface().select_file(res_path)
+	var fs_dock := _dock._plugin.get_editor_interface().get_file_system_dock()
+	if fs_dock == null:
+		push_error("UiReactDock: FileSystem dock unavailable.")
+		return
+	fs_dock.navigate_to_path(res_path)
 
 
 func on_row_ignore(flat_index: int) -> void:
