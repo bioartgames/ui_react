@@ -2,6 +2,8 @@
 class_name UiReactDockIssueList
 extends RefCounted
 
+const _GROUP_KEY_UNUSED_STATE_FILES := "Unused state files"
+
 var _dock: UiReactDock
 
 
@@ -22,6 +24,8 @@ static func severity_prefix(sev: int) -> String:
 static func group_key_for_issue(issue: UiReactDiagnosticModel.DiagnosticIssue, mode: int) -> String:
 	match mode:
 		UiReactDockConfig.GROUP_BY_NODE:
+			if issue.issue_kind == UiReactDiagnosticModel.IssueKind.UNUSED_STATE_FILE:
+				return _GROUP_KEY_UNUSED_STATE_FILES
 			if not issue.node_name.is_empty():
 				return issue.node_name
 			return str(issue.node_path) if not issue.node_path.is_empty() else "(scene)"

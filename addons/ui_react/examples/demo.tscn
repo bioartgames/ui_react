@@ -6,7 +6,7 @@
 [ext_resource type="Script" uid="uid://cxg5hj6ihqtue" path="res://addons/ui_react/scripts/api/models/ui_bool_state.gd" id="2_yv7u2"]
 [ext_resource type="Script" uid="uid://diigywt0dm170" path="res://addons/ui_react/scripts/api/models/ui_anim_target.gd" id="3_yauoy"]
 [ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://addons/ui_react/scripts/controls/ui_react_slider.gd" id="4_1gbb3"]
-[ext_resource type="Resource" uid="uid://0gjnhl8i0lww" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveButton_pressed_state_6.tres" id="5_1gbb3"]
+[ext_resource type="Resource" uid="uid://cyjlmydycap52" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveButton_pressed_state.tres" id="5_mlp57"]
 [ext_resource type="Script" uid="uid://s6xiov8r6bil" path="res://addons/ui_react/scripts/controls/ui_react_progress_bar.gd" id="5_qrupd"]
 [ext_resource type="Script" uid="uid://bw7gojuop1hic" path="res://addons/ui_react/scripts/controls/ui_react_label.gd" id="6_e7mev"]
 [ext_resource type="Script" uid="uid://dwwa3tekslkjw" path="res://addons/ui_react/scripts/api/models/ui_array_state.gd" id="7_g6gj5"]
@@ -142,7 +142,7 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 text = "Press this thing."
 script = ExtResource("2_mlp57")
-pressed_state = ExtResource("5_1gbb3")
+pressed_state = ExtResource("5_mlp57")
 disabled_state = ExtResource("2_1gbb3")
 animation_targets = Array[ExtResource("3_yauoy")]([SubResource("Resource_p7nh0")])
 metadata/_custom_type_script = "uid://lv5ixpw5hlvp"
