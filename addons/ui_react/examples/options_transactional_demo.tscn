@@ -1,28 +1,32 @@
-[gd_scene load_steps=12 format=3 uid="uid://lp6x0p7wqckg"]
+[gd_scene load_steps=15 format=3 uid="uid://lp6x0p7wqckg"]
 
-[ext_resource type="Script" uid="uid://bs2pjikmddqt3" path="res://addons/ui_react/examples/options_transactional_demo.gd" id="1_root"]
-[ext_resource type="Script" uid="uid://c1jlkpahxxnpi" path="res://addons/ui_react/scripts/api/models/ui_transactional_state.gd" id="2_txn"]
-[ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://addons/ui_react/scripts/controls/ui_react_slider.gd" id="3_sl"]
-[ext_resource type="Script" uid="uid://3m8buhv674ja" path="res://addons/ui_react/scripts/controls/ui_react_check_box.gd" id="4_cb"]
-[ext_resource type="Script" uid="uid://ddkpdoxca60md" path="res://addons/ui_react/scripts/api/models/ui_transactional_group.gd" id="5_grp"]
-[ext_resource type="Script" uid="uid://da03oq3dwj1le" path="res://addons/ui_react/scripts/controls/ui_react_transactional_actions.gd" id="6_act"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_string_state.gd" id="7_str"]
+[ext_resource type="Script" uid="uid://c1jlkpahxxnpi" path="res://addons/ui_react/scripts/api/models/ui_transactional_state.gd" id="1_txn"]
+[ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://addons/ui_react/scripts/controls/ui_react_slider.gd" id="2_sl"]
+[ext_resource type="Script" uid="uid://3m8buhv674ja" path="res://addons/ui_react/scripts/controls/ui_react_check_box.gd" id="3_cb"]
+[ext_resource type="Script" uid="uid://st55qiias3cb" path="res://addons/ui_react/scripts/api/models/ui_state.gd" id="3_cux1w"]
+[ext_resource type="Script" uid="uid://ddkpdoxca60md" path="res://addons/ui_react/scripts/api/models/ui_transactional_group.gd" id="4_grp"]
+[ext_resource type="Script" uid="uid://da03oq3dwj1le" path="res://addons/ui_react/scripts/controls/ui_react_transactional_actions.gd" id="5_act"]
+[ext_resource type="Script" uid="uid://bn8meqr8amxa7" path="res://addons/ui_react/examples/options_status_computed.gd" id="6_status"]
+[ext_resource type="Script" uid="uid://dy5qoe773fdne" path="res://addons/ui_react/scripts/controls/ui_react_computed_sync.gd" id="7_sync"]
 [ext_resource type="Script" uid="uid://bw7gojuop1hic" path="res://addons/ui_react/scripts/controls/ui_react_label.gd" id="8_lbl"]
+[ext_resource type="Resource" uid="uid://b4gdunujg6evw" path="res://addons/ui_react/ui_resources/plugin_generated/MuteToggle_disabled_state_3.tres" id="9_6xi6r"]
 
 [sub_resource type="Resource" id="txn_vol"]
-script = ExtResource("2_txn")
+script = ExtResource("1_txn")
 committed_value = 0.65
 
 [sub_resource type="Resource" id="txn_mute"]
-script = ExtResource("2_txn")
+script = ExtResource("1_txn")
 committed_value = false
 
-[sub_resource type="Resource" id="txn_group"]
-script = ExtResource("5_grp")
-states = Array[ExtResource("2_txn")]([SubResource("txn_vol"), SubResource("txn_mute")])
+[sub_resource type="Resource" id="status_computed"]
+script = ExtResource("6_status")
+sources = Array[ExtResource("3_cux1w")]([SubResource("txn_vol"), SubResource("txn_mute")])
+value = "Draft: volume=0.65 mute=false | Committed: volume=0.65 mute=false"
 
-[sub_resource type="Resource" id="status_str"]
-script = ExtResource("7_str")
+[sub_resource type="Resource" id="txn_group"]
+script = ExtResource("4_grp")
+states = Array[ExtResource("1_txn")]([SubResource("txn_vol"), SubResource("txn_mute")])
 
 [node name="OptionsTransactionalDemo" type="Control"]
 layout_mode = 3
@@ -31,16 +35,17 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_root")
-master_volume_state = SubResource("txn_vol")
-mute_state = SubResource("txn_mute")
-transactional_group = SubResource("txn_group")
-status_text_state = SubResource("status_str")
+
+[node name="ComputedSync" type="Control" parent="."]
+anchors_preset = 0
+mouse_filter = 2
+script = ExtResource("7_sync")
+computed = SubResource("status_computed")
 
 [node name="TxnActions" type="Control" parent="."]
 anchors_preset = 0
 mouse_filter = 2
-script = ExtResource("6_act")
+script = ExtResource("5_act")
 group = SubResource("txn_group")
 apply_button_path = NodePath("../VBox/ButtonRow/ApplyButton")
 cancel_button_path = NodePath("../VBox/ButtonRow/CancelButton")
@@ -76,14 +81,15 @@ size_flags_horizontal = 3
 max_value = 1.0
 step = 0.01
 value = 0.65
-script = ExtResource("3_sl")
+script = ExtResource("2_sl")
 value_state = SubResource("txn_vol")
 
 [node name="MuteToggle" type="CheckBox" parent="VBox"]
 layout_mode = 2
 text = "Mute audio"
-script = ExtResource("4_cb")
+script = ExtResource("3_cb")
 checked_state = SubResource("txn_mute")
+disabled_state = ExtResource("9_6xi6r")
 
 [node name="ButtonRow" type="HBoxContainer" parent="VBox"]
 layout_mode = 2
@@ -102,4 +108,4 @@ custom_minimum_size = Vector2(1, 1)
 layout_mode = 2
 autowrap_mode = 2
 script = ExtResource("8_lbl")
-text_state = SubResource("status_str")
+text_state = SubResource("status_computed")

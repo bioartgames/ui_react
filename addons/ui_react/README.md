@@ -11,7 +11,7 @@ Public direction, phased delivery, and a full **capability backlog** (so deferre
 ## The 3-step setup (repeat for every control)
 
 1. **Attach** the matching `UiReact*` script to a native Control (Button, HSlider, Label, …).
-2. **Assign** the **typed** state resource each export expects (`UiBoolState`, `UiIntState`, `UiFloatState`, `UiStringState`, `UiArrayState`, or **`UiTransactionalState`** where noted). Exports typed as **`UiState`** accept any concrete state implementing the binding’s payload shape — including **`UiTransactionalState`** — for `UiReactSlider` / `UiReactSpinBox` / `UiReactProgressBar` **`value_state`**, `UiReactCheckBox` **`checked_state`**, `UiReactLabel.text_state` (**`UiStringState` or `UiArrayState`**, or transactional string/array), and `UiReactItemList.selected_state` (**`UiIntState`** in single-select, **`UiArrayState`** in multi-select).
+2. **Assign** the **typed** state resource each export expects (`UiBoolState`, `UiIntState`, `UiFloatState`, `UiStringState`, `UiArrayState`, **`UiTransactionalState`**, or a **subclass** of **`UiComputedStringState` / `UiComputedBoolState`** where noted). Exports typed as **`UiState`** accept any concrete state implementing the binding’s payload shape — including **`UiTransactionalState`** — for `UiReactSlider` / `UiReactSpinBox` / `UiReactProgressBar` **`value_state`**, `UiReactCheckBox` **`checked_state`**, `UiReactLabel.text_state` (**`UiStringState` or `UiArrayState`**, **`UiComputedStringState`**, or transactional string/array), and `UiReactItemList.selected_state` (**`UiIntState`** in single-select, **`UiArrayState`** in multi-select).
 3. **Optionally** fill `animation_targets` with `UiAnimTarget` entries to run tweens from the Inspector (no tween code).
 
 That’s it. Game logic reads and writes through **`get_value()`** / **`set_value()`** on those resources; controls stay in sync.
@@ -31,7 +31,7 @@ Copy `addons/ui_react/` into your Godot project at **`addons/ui_react/`**. Open 
 
 ### 2) Run the example
 
-Open **`res://addons/ui_react/examples/demo.tscn`** (smoke demo) or **`res://addons/ui_react/examples/options_transactional_demo.tscn`** (options-style **Apply / Cancel** with **`UiTransactionalState`**) and press **Play** (or set either as **Main Scene**). Use the scene tree to see how states and targets are wired.
+Open **`res://addons/ui_react/examples/demo.tscn`** (smoke demo), **`res://addons/ui_react/examples/options_transactional_demo.tscn`** (options-style **Apply / Cancel** with **`UiTransactionalState`** plus computed status), or **`res://addons/ui_react/examples/shop_computed_demo.tscn`** (shop-style **computed** string + bool) and press **Play** (or set either as **Main Scene**). Use the scene tree to see how states and targets are wired.
 
 ### 3) Minimal recipes (editor-first, no code required)
 
@@ -80,10 +80,10 @@ All plugin usage details are documented in this README.
 
 | Control | Bindings (typical) | Required for “reactive” behavior |
 |--------|--------------------|----------------------------------|
-| **UiReactButton** | `pressed_state`, `disabled_state` | At least one state if you want sync with `UiState`; neither required for a plain Button. |
+| **UiReactButton** | `pressed_state`, `disabled_state` | At least one state if you want sync with `UiState`; neither required for a plain Button. **`disabled_state`** accepts **`UiBoolState`** or a **`UiComputedBoolState`** subclass. |
 | **UiReactCheckBox** | `checked_state`, `disabled_state` | Assign `checked_state` (**`UiState`**: **`UiBoolState`** or bool-shaped **`UiTransactionalState`**) for two-way sync. |
 | **UiReactSlider** | `value_state` | Assign **`value_state`** (**`UiState`**: **`UiFloatState`** or float/int-shaped **`UiTransactionalState`**) for two-way sync; else behaves like a normal slider. |
-| **UiReactSpinBox** | `value_state`, `disabled_state` | Same **`value_state`** pattern as slider; `disabled_state` optional (**`UiBoolState`**). |
+| **UiReactSpinBox** | `value_state`, `disabled_state` | Same **`value_state`** pattern as slider; `disabled_state` optional (**`UiBoolState`** or **`UiComputedBoolState`** subclass). |
 | **UiReactProgressBar** | `value_state` | Same **`value_state`** pattern as slider. |
 | **UiReactLineEdit** | `text_state` | `text_state` for sync. |
 | **UiReactLabel** | `text_state` | `text_state` for sync. |
@@ -106,13 +106,14 @@ Paths are under **`res://addons/ui_react/`**.
 | Chained animations (optional) | `UiAnimSequence` | `scripts/internal/anim/ui_anim_sequence.gd` |
 | State (abstract base) | `UiState` | `scripts/api/models/ui_state.gd` |
 | State (concrete) | `UiBoolState`, `UiIntState`, `UiFloatState`, `UiStringState`, `UiArrayState`, `UiTransactionalState`, `UiTransactionalGroup` | `scripts/api/models/ui_*_state.gd`, `scripts/api/models/ui_transactional_state.gd`, `scripts/api/models/ui_transactional_group.gd` |
+| State (computed base) | `UiComputedStringState`, `UiComputedBoolState` | `scripts/api/models/ui_computed_string_state.gd`, `scripts/api/models/ui_computed_bool_state.gd` |
 | Inspector animation row | `UiAnimTarget` | `scripts/api/models/ui_anim_target.gd` |
 | Tab / container config | `UiTabContainerCfg` | `scripts/api/models/ui_tab_container_cfg.gd` |
-| Attachable controls | `UiReact*`, `UiReactTransactionalActions` | `scripts/controls/` |
+| Attachable controls | `UiReact*`, `UiReactTransactionalActions`, `UiReactComputedSync` | `scripts/controls/` |
 
 Prefer **`UiAnimUtils`** for tweens from code; prefer **`UiAnimTarget`** arrays on controls for no-code animation.
 
-**`UiState` is abstract:** do not instantiate it directly. Each control export uses a concrete **`Ui*State`**, **`UiTransactionalState`**, or the polymorphic **`UiState`** slot where noted. Read and write the **bound** payload with **`get_value()`** / **`set_value()`** (typed states expose a **`value`** property; **`UiTransactionalState`** exposes **`committed_value`** plus draft via those methods). Older projects that used a single generic `UiState` resource with a `Variant` export must migrate to the matching concrete class and resave resources.
+**`UiState` is abstract:** do not instantiate it directly. Each control export uses a concrete **`Ui*State`**, **`UiTransactionalState`**, a **subclass** of **`UiComputedStringState`** / **`UiComputedBoolState`** (see **Computed state** below), or the polymorphic **`UiState`** slot where noted. Read and write the **bound** payload with **`get_value()`** / **`set_value()`** (typed states expose a **`value`** property; **`UiTransactionalState`** exposes **`committed_value`** plus draft via those methods). Older projects that used a single generic `UiState` resource with a `Variant` export must migrate to the matching concrete class and resave resources.
 
 **Strict integer indices:** Tab index (`UiReactTabContainer.selected_state`), **`UiIntState`**, and ItemList single-select **`selected_state`** use **`int` only**. **`float` is not accepted** for those bindings (no silent coercion from float or from **`UiFloatState`** / float-shaped **`UiTransactionalState`** there). Reserve **`UiFloatState`** (or transactional **float** payload) for sliders, spin boxes, and progress bars.
 
@@ -131,7 +132,7 @@ Use **`UiTransactionalState`** when you want **working-copy** values on an optio
 | **`cancel_draft()`** / **`reset_to_committed()`** | Copy **`committed_value`** → draft (revert UI). |
 | **`has_pending_changes()`** | `true` when draft and committed differ (see **`UiTransactionalState`** tooltips / script). |
 
-**Runnable example:** **`res://addons/ui_react/examples/options_transactional_demo.tscn`** — master volume (**`HSlider`** + **`UiReactSlider`**) and mute (**`CheckBox`** + **`UiReactCheckBox`**) share transactional resources; **Apply** / **Cancel** are wired through **`UiReactTransactionalActions`** to a **`UiTransactionalGroup`** (no per-scene apply/cancel loops). The demo status line uses **`UiReactLabel`** + **`UiStringState`** updated from the root script (reactive binding). This is **not** “computed state” (see **`docs/ROADMAP.md`** glossary): no dependency graph—just draft vs committed.
+**Runnable example:** **`res://addons/ui_react/examples/options_transactional_demo.tscn`** — master volume (**`HSlider`** + **`UiReactSlider`**) and mute (**`CheckBox`** + **`UiReactCheckBox`**) share transactional resources; **Apply** / **Cancel** are wired through **`UiReactTransactionalActions`** to a **`UiTransactionalGroup`** (no per-scene apply/cancel loops). The demo status line uses **`UiReactLabel`** + a **`UiComputedStringState`** subclass with **`UiReactComputedSync`** so draft / committed / pending text stays in sync (see **Computed state**).
 
 ### Transactional batch orchestration (`UiTransactionalGroup` + `UiReactTransactionalActions`)
 
@@ -143,19 +144,27 @@ When one screen has **several** `UiTransactionalState` resources and a single **
 4. Assign **`group`** to that `UiTransactionalGroup`.
 5. Set **`apply_button_path`** and **`cancel_button_path`** as `NodePath`s **relative to the `UiReactTransactionalActions` node** (example: `../VBox/ButtonRow/ApplyButton`).
 6. Leave **`begin_on_ready`** `true` to call **`begin_edit_all()`** once when the scene enters the tree, unless you start the edit session from code.
-7. **Read-only summary line (demo pattern):** add a **`UiStringState`**, assign it to **`UiReactLabel.text_state`**, and call **`set_value()`** on that string state from the same scene script that holds your transactional exports (or from a small dedicated script). Do **not** assign **`Label.text`** directly if the label uses **`UiReactLabel`**. No extra addon types are required.
+7. **Read-only summary line:** prefer a **`UiComputedStringState`** subclass plus **`UiReactComputedSync`** (see **Computed state**) so the label tracks draft / committed transactional values without scene glue. Alternatively, use a **`UiStringState`** and call **`set_value()`** from code. Do **not** assign **`Label.text`** directly if the label uses **`UiReactLabel`**.
 
 **API — `UiTransactionalGroup`:** `begin_edit_all()`, `apply_all()`, `cancel_all()`, `has_pending_changes()`.
 
 **API — `UiReactTransactionalActions`:** connects **`BaseButton.pressed`** on the two paths to **`apply_all()`** / **`cancel_all()`** on the group. No undo, no autoload, no extra bindings on other `UiReact*` controls.
 
-### P1 scope vs P2 (computed state)
+---
 
-- **P1 includes:** **`UiTransactionalState`**, **`UiTransactionalGroup`**, **`UiReactTransactionalActions`**, direct **`UiReact*`** bindings to transactional payloads, and **`res://addons/ui_react/examples/options_transactional_demo.tscn`**.
-- **P1 does not include:** multi-source **computed** text as a first-class core type; that is **P2** per **[`docs/ROADMAP.md`](docs/ROADMAP.md)**.
-- **Until P2:** a screen may update a **`UiStringState`** (bound to **`UiReactLabel`**) from scene code when summarizing several transactional states—**demo-oriented pattern**, not a framework promise.
+## Computed state (P2)
 
-First-class **computed state** resources or helpers, **autoload** orchestration services, and **per-control connection metadata** on every **`UiReact*`** node are **not** started until **P2+** per phased roadmap work—this release documents intent only; it does not implement those systems.
+Use a **`UiComputedStringState`** or **`UiComputedBoolState`** **subclass** when a **`UiStringState` / `UiBoolState` payload** should be **derived** from other **`UiState`** dependencies. Dependencies are listed only on the resource’s **`sources`** array (order preserved; **null** entries are skipped). There is **no** dependency graph solver, cycle detection, or automatic ordering—**avoid cycles** and keep **`sources`** explicit.
+
+| Piece | Role |
+|-------|------|
+| **`UiComputedStringState`**, **`UiComputedBoolState`** | Base **`@abstract`** resources; implement **`compute_string()`** / **`compute_bool()`** and call **`recompute()`** to **`set_value()`** from the result. |
+| **`UiReactComputedSync`** | **`Control`** placed in the scene; assign its **`computed`** export to your subclass instance. It connects each non-null **`sources`** entry’s **`value_changed`** and **`changed`** signals and calls **`recompute()`**, and disconnects in **`_exit_tree()`**. |
+| **Dependency cap** | At most **32** **`sources`** entries are subscribed; extras are ignored with an editor warning. |
+
+**Transactional + computed:** inside **`compute_*`**, read **`UiTransactionalState`** with **`get_draft_value()`**, **`get_committed_value()`**, and **`has_pending_changes()`** as needed—use **one** transactional resource per field in **`sources`**, not separate “draft” vs “committed” nodes.
+
+**Examples:** **`res://addons/ui_react/examples/shop_computed_demo.tscn`** (totals, afford, Buy disabled); **`res://addons/ui_react/examples/options_transactional_demo.tscn`** (status line).
 
 ---
 
@@ -190,7 +199,7 @@ These may change between template versions; **do not rely on them from game code
 | `scripts/controls/` | Attachable **UiReact\*** scripts. |
 | `scripts/internal/anim/` | Animation implementation (unstable for direct use). |
 | `scripts/internal/react/` | Reactive helpers (unstable for direct use). |
-| `examples/` | `demo.tscn` smoke demo; `options_transactional_demo.tscn` (transactional **Apply / Cancel** via `UiTransactionalGroup` + `UiReactTransactionalActions`). |
+| `examples/` | `demo.tscn` smoke demo; `options_transactional_demo.tscn` (transactional **Apply / Cancel** + computed status); `shop_computed_demo.tscn` (computed string + bool). |
 | `docs/` | **README**, **CHANGELOG**, and addon **ROADMAP** (this folder). |
 | `editor_plugin/` | Optional Godot editor plugin (dock, validation, quick state creation). |
 | `ui_resources/` | Sample `.tres` for the example scene; `plugin_generated/` holds plugin-created states (optional). |

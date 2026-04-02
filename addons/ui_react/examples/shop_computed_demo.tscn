@@ -1,0 +1,133 @@
+[gd_scene load_steps=16 format=3 uid="uid://bhrsm6wi0v4s"]
+
+[ext_resource type="Script" uid="uid://cy1vsor6ek3xr" path="res://addons/ui_react/scripts/api/models/ui_float_state.gd" id="1_fl"]
+[ext_resource type="Script" uid="uid://st55qiias3cb" path="res://addons/ui_react/scripts/api/models/ui_state.gd" id="2_st"]
+[ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://addons/ui_react/scripts/controls/ui_react_slider.gd" id="3_sl"]
+[ext_resource type="Script" uid="uid://bw7gojuop1hic" path="res://addons/ui_react/scripts/controls/ui_react_label.gd" id="4_lbl"]
+[ext_resource type="Script" uid="uid://lv5ixpw5hlvp" path="res://addons/ui_react/scripts/controls/ui_react_button.gd" id="5_btn"]
+[ext_resource type="Script" uid="uid://dy5qoe773fdne" path="res://addons/ui_react/scripts/controls/ui_react_computed_sync.gd" id="6_sync"]
+[ext_resource type="Script" uid="uid://ch6m8b48u340x" path="res://addons/ui_react/examples/shop_computed_afford.gd" id="7_aff"]
+[ext_resource type="Script" uid="uid://dbh65kk1hltrx" path="res://addons/ui_react/examples/shop_computed_buy_disabled.gd" id="8_dis"]
+[ext_resource type="Script" uid="uid://cbi7k8j508tvj" path="res://addons/ui_react/examples/shop_computed_status.gd" id="9_stat"]
+
+[sub_resource type="Resource" id="gold"]
+script = ExtResource("1_fl")
+value = 100.0
+
+[sub_resource type="Resource" id="price"]
+script = ExtResource("1_fl")
+value = 25.0
+
+[sub_resource type="Resource" id="qty"]
+script = ExtResource("1_fl")
+value = 1.0
+
+[sub_resource type="Resource" id="afford"]
+script = ExtResource("7_aff")
+sources = Array[ExtResource("2_st")]([SubResource("gold"), SubResource("price"), SubResource("qty")])
+value = true
+
+[sub_resource type="Resource" id="buy_dis"]
+script = ExtResource("8_dis")
+sources = Array[ExtResource("2_st")]([SubResource("afford")])
+
+[sub_resource type="Resource" id="status"]
+script = ExtResource("9_stat")
+sources = Array[ExtResource("2_st")]([SubResource("gold"), SubResource("price"), SubResource("qty")])
+value = "Total: 25.00 | Gold: 100.00 | Can afford"
+
+[node name="ShopComputedDemo" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="SyncAfford" type="Control" parent="."]
+anchors_preset = 0
+mouse_filter = 2
+script = ExtResource("6_sync")
+computed = SubResource("afford")
+
+[node name="SyncBuyDisabled" type="Control" parent="."]
+anchors_preset = 0
+mouse_filter = 2
+script = ExtResource("6_sync")
+computed = SubResource("buy_dis")
+
+[node name="SyncStatus" type="Control" parent="."]
+anchors_preset = 0
+mouse_filter = 2
+script = ExtResource("6_sync")
+computed = SubResource("status")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="VBox"]
+layout_mode = 2
+text = "Shop (computed state demo)"
+
+[node name="Help" type="Label" parent="VBox"]
+layout_mode = 2
+text = "Adjust gold, price, and quantity. Status and Buy disabled state update via UiReactComputedSync (no scene script)."
+
+[node name="GoldLabel" type="Label" parent="VBox"]
+layout_mode = 2
+text = "Player gold"
+
+[node name="GoldSlider" type="HSlider" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 200.0
+value = 100.0
+script = ExtResource("3_sl")
+value_state = SubResource("gold")
+
+[node name="PriceLabel" type="Label" parent="VBox"]
+layout_mode = 2
+text = "Item price (each)"
+
+[node name="PriceSlider" type="HSlider" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+step = 0.5
+value = 25.0
+script = ExtResource("3_sl")
+value_state = SubResource("price")
+
+[node name="QtyLabel" type="Label" parent="VBox"]
+layout_mode = 2
+text = "Quantity"
+
+[node name="QtySlider" type="HSlider" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 10.0
+value = 1.0
+script = ExtResource("3_sl")
+value_state = SubResource("qty")
+
+[node name="StatusLine" type="Label" parent="VBox"]
+custom_minimum_size = Vector2(1, 1)
+layout_mode = 2
+autowrap_mode = 2
+script = ExtResource("4_lbl")
+text_state = SubResource("status")
+
+[node name="BuyButton" type="Button" parent="VBox"]
+layout_mode = 2
+text = "Buy"
+script = ExtResource("5_btn")
+disabled_state = SubResource("buy_dis")

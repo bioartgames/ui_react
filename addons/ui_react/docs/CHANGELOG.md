@@ -8,6 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 No unreleased changes yet.
 
+## [2.2.0] - 2026-04-01
+
+### Added
+
+- **`UiComputedStringState`**, **`UiComputedBoolState`:** abstract bases with **`sources`**, **`recompute()`**, and **`compute_string()`** / **`compute_bool()`** (`scripts/api/models/ui_computed_string_state.gd`, `ui_computed_bool_state.gd`). No graph solver—explicit dependencies only; **do not** create cycles.
+- **`UiReactComputedSync`:** control that subscribes to **`sources`** on a computed resource (**`value_changed`** + **`changed`**), calls **`recompute()`**, and disconnects on **`_exit_tree()`**; hard cap of **32** dependency slots (`scripts/controls/ui_react_computed_sync.gd`).
+- **Examples:** **`examples/shop_computed_demo.tscn`** (+ afford / Buy-disabled / status subclass scripts); **`options_transactional_demo.tscn`** now uses computed status + sync (root scene script removed).
+
+### Changed
+
+- **Editor validator:** binding hints / label **`text_state`** phrasing now mention **`UiComputedStringState`** / **`UiComputedBoolState`** where relevant (`editor_plugin/services/ui_react_validator_service.gd`).
+
 ## [2.1.0] - 2026-04-01
 
 ### Added

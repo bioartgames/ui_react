@@ -90,11 +90,11 @@ Not every row is a v1.0 promise; this maps **Megaman-style** UI goals to **phase
 
 **P2 — Computed state**
 
-- [ ] Implementation merged with documented dependency limits (no “solver” claim).
-- [ ] README + glossary cross-link.
-- [ ] Example: shop or inventory-filter scenario (scene path in Appendix **Notes**).
-- [ ] `CHANGELOG.md` entry.
-- [ ] Dock/scanner updates **if** new state classes are first-class in diagnostics.
+- [x] Implementation merged with documented dependency limits (no “solver” claim).
+- [x] README + glossary cross-link.
+- [x] Example: shop or inventory-filter scenario (scene path in Appendix **Notes**).
+- [x] `CHANGELOG.md` entry.
+- [x] Dock/scanner updates **if** new state classes are first-class in diagnostics.
 
 **P3 — List richness and templates**
 
@@ -116,9 +116,9 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | ID | Capability / topic | Screen examples | Target phase | Status | Notes |
 |----|-------------------|-----------------|--------------|--------|-------|
 | CB-001 | Core: `UiState`, `UiReact*`, `UiAnimUtils`, `UiAnimTarget`, editor dock | All | P0 | Done | Baseline shipped; maintain compat per SemVer. Includes typed diagnostics (`IssueKind`/`resource_path`), scene-file-scoped unused `UiState` `.tres` diagnostics (no cross-scene clutter), Reveal + persisted ignore flows, and filesystem-triggered dock refresh. |
-| CB-002 | Transactional / draft state (apply, cancel, revert) | Options, key remap drafts | P1 | Done | **`UiTransactionalState`** + **`UiTransactionalGroup`** + **`UiReactTransactionalActions`**; README + **`options_transactional_demo.tscn`**. The example’s status line uses **`UiStringState`** + **`UiReactLabel`** (P1-close demo pattern; not P2 computed state). |
-| CB-003 | Computed state (explicit dependencies, documented limits) | Shop totals, afford flags, filtered inventory | P2 | Planned | Use glossary term “computed state” only. |
-| CB-004 | Explicit dependency / recalc rules (documented) | Same as CB-003 | P2 | Planned | Ships with or immediately after CB-003. |
+| CB-002 | Transactional / draft state (apply, cancel, revert) | Options, key remap drafts | P1 | Done | **`UiTransactionalState`** + **`UiTransactionalGroup`** + **`UiReactTransactionalActions`**; README + **`options_transactional_demo.tscn`**. Status line uses **`UiComputedStringState`** + **`UiReactComputedSync`** (**2.2.0**). |
+| CB-003 | Computed state (explicit dependencies, documented limits) | Shop totals, afford flags, filtered inventory | P2 | Done | **`UiComputedStringState`**, **`UiComputedBoolState`**, **`UiReactComputedSync`**; README; **`shop_computed_demo.tscn`**; **`options_transactional_demo.tscn`**. **2.2.0**. |
+| CB-004 | Explicit dependency / recalc rules (documented) | Same as CB-003 | P2 | Done | Same release as CB-003; cap **32** **`sources`**, no solver (README **Computed state**). |
 | CB-005 | Undo stack / nested transactions | Advanced options | P5+ | Deferred | Not v1.0 scope; promote if needed. |
 | CB-006 | Command pattern **as docs + example** (not mandatory core API) | Shop buy/sell, equip confirm | P1–P2 | Planned | Sidecar to P1/P2 docs; see Charter command scope. |
 | CB-007 | First-class command resource (e.g. `UiCommand`) | Same | P5+ | Deferred | Only after doc pattern proves shape. |
@@ -148,4 +148,4 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 
 ---
 
-*Last updated: 2026-04-01 — P1 closure: reactive demo status (`UiStringState` + `UiReactLabel`), changelog **2.1.0**; update quarterly or when phases close.*
+*Last updated: 2026-04-01 — P2 closure: computed state (**2.2.0**), shop + options examples; update quarterly or when phases close.*

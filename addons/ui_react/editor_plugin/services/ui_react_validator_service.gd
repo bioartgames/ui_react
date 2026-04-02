@@ -67,7 +67,7 @@ static func _append_binding_issue_with_preview(
 
 static func _expected_type_phrase(component: String, prop: StringName, expected: StringName) -> String:
 	if component == "UiReactLabel" and prop == &"text_state":
-		return "UiStringState, UiArrayState, or UiTransactionalState (string/array payload)"
+		return "UiStringState, UiComputedStringState, UiArrayState, or UiTransactionalState (string/array payload)"
 	if expected.is_empty():
 		return "a concrete UiState subclass"
 	return str(expected)
@@ -128,7 +128,7 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 					component,
 					str(owner.name),
 					"%s must be a UiState subclass (got %s)." % [prop, _variant_type_name(property_value)],
-					"Assign a concrete UiBoolState, UiIntState, UiFloatState, UiStringState, UiArrayState, or UiTransactionalState resource.",
+					"Assign a concrete UiBoolState, UiComputedBoolState, UiIntState, UiFloatState, UiStringState, UiComputedStringState, UiArrayState, or UiTransactionalState resource.",
 					node_path,
 					prop,
 					suggested,
