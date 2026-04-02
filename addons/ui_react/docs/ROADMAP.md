@@ -120,26 +120,26 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-003 | Computed state (explicit dependencies, documented limits) | Shop totals, afford flags, filtered inventory | P2 | Done | **`UiComputedStringState`**, **`UiComputedBoolState`**, **`UiReactComputedSync`**; README; **`shop_computed_demo.tscn`**; **`options_transactional_demo.tscn`**. **2.2.0**. Text-filter list demo (**`inventory_list_demo.tscn`**, **2.2.1**) complements inventory filtering without new computed-array core. |
 | CB-004 | Explicit dependency / recalc rules (documented) | Same as CB-003 | P2 | Done | Same release as CB-003; cap **32** **`sources`**, no solver (README **Computed state**). |
 | CB-005 | Undo stack / nested transactions | Advanced options | P5+ | Deferred | Not v1.0 scope; promote if needed. |
-| CB-006 | Command pattern **as docs + example** (not mandatory core API) | Shop buy/sell, equip confirm | P1–P2 | Planned | Sidecar to P1/P2 docs; see Charter command scope. |
+| CB-006 | Command pattern **as docs + example** (not mandatory core API) | Shop buy/sell, equip confirm | P1–P2 | Done | README **Imperative actions**; **`shop_computed_demo.gd`** + **`shop_computed_demo.tscn`**. **2.3.0**. No **`UiCommand`** in core. |
 | CB-007 | First-class command resource (e.g. `UiCommand`) | Same | P5+ | Deferred | Only after doc pattern proves shape. |
-| CB-008 | Richer `ItemList` / icons | Inventory, shop list | P3 | Planned | Optional code; issue-scoped. Not part of **2.2.1**. |
+| CB-008 | Richer `ItemList` / icons | Inventory, shop list | P3 | Done | **`UiReactItemList`** dictionary rows **`label`/`text`** + optional **`icon`**; **`inventory_list_demo`** uses **`res://icon.svg`**. **2.3.0**. |
 | CB-009 | Row template / static body pattern (docs + example) | Inventory, shop, loot | P3 | Done | README **List patterns (P3)** + **`inventory_list_demo.tscn`** / **`inventory_list_demo.gd`**. **2.2.1**. |
 | CB-010 | Virtualization / paging | Huge inventories | P5+ | Deferred | Measure need first. |
 | CB-011 | Filtering and sorting recipes (documentation) | Inventory | P2 | Done | Filter recipe in README **List patterns (P3)**; sort left as game-layer exercise. **2.2.1**. |
-| CB-012 | `UiReactTextureButton` or slot helper | Equipment grid, hotbar | P4 | Planned | 3× rule or two example scenes. |
-| CB-013 | `UiReactTree` | Categorized shop, hierarchical lists | P4 | Planned | Same inclusion rule as CB-012. |
-| CB-014 | `UiReactTextEdit` / `UiReactRichTextLabel` | Journal, long text | P4 | Deferred | Low priority unless repeated binding need. |
+| CB-012 | `UiReactTextureButton` or slot helper | Equipment grid, hotbar | P4 | Done | **`UiReactTextureButton`** (`scripts/controls/ui_react_texture_button.gd`); README; **`texture_button_demo.tscn`**. **2.4.0**. |
+| CB-013 | `UiReactTree` | Categorized shop, hierarchical lists | P4 | Done | **`UiReactTree`** (`scripts/controls/ui_react_tree.gd`); README **UiReactTree binding semantics**; **`tree_demo.tscn`**. **2.4.0**. |
+| CB-014 | **`UiReactRichTextLabel`** (BBCode display binding); **`UiReactTextEdit`** deferred | Journal, long text | P4 | Done | **`UiReactRichTextLabel`** + **`rich_text_label_demo`** + scanner/validator (**CB-020**) in **2.5.0**. Multi-line **editable** **`UiReactTextEdit`** not in this release. |
 | CB-015 | `ItemList` `disabled_state` no-op — documented workaround | Any list that needs gating | P3 | Done | README **List patterns (P3)** + **`inventory_list_demo.tscn`** overlay + **`UiBoolState`**. **2.2.1**. |
-| CB-016 | Screen transition presets (documentation / thin helper) | Main menu, pause | P2–P3 | Planned | Align with existing `UiAnimUtils` presets where possible. |
-| CB-017 | Modal / focus-trap recipe | Confirm dialogs, popups | P3 | Planned | Docs + Godot focus API links. |
+| CB-016 | Screen transition presets (documentation / thin helper) | Main menu, pause | P2–P3 | Done | README **Screen transitions**; **`UiAnimUtils.Preset`**. **2.3.0**. |
+| CB-017 | Modal / focus-trap recipe | Confirm dialogs, popups | P3 | Done | README **Modals, popups, and focus** + Godot doc links. **2.3.0**. |
 | CB-018 | State graph / debug overlay (editor or runtime) | Development | P5+ | Deferred | Productivity tool; after core phases. |
 | CB-019 | Dock modularization (internal refactor) | N/A | P5+ | Deferred | Maintainability; no user-facing v1.0 promise. |
 | CB-020 | Scanner + validator updates for new bindings | All new controls/states | Ongoing | Planned | Mirror `UiReactScannerService` / `BINDINGS_BY_COMPONENT` per control. |
 | CB-021 | Semver + CHANGELOG discipline | Releases | Ongoing | InProgress | Keep `CHANGELOG.md` aligned with releases. |
 | CB-022 | Example: options draft / apply | Options | P1 | Done | **`res://addons/ui_react/examples/options_transactional_demo.tscn`**. |
-| CB-023 | Example: shop math / afford | Shop | P2 | Done | **`res://addons/ui_react/examples/shop_computed_demo.tscn`** (**2.2.0**). |
+| CB-023 | Example: shop math / afford | Shop | P2 | Done | **`res://addons/ui_react/examples/shop_computed_demo.tscn`**; **Buy** mutation **2.3.0** (**`shop_computed_demo.gd`**). |
 | CB-024 | Example: inventory filter | Inventory | P2 | Done | **`res://addons/ui_react/examples/inventory_list_demo.tscn`** (**2.2.1**). |
-| CB-025 | Escape hatch documentation (plain `Control` + `UiState`) | Complex one-off UI | P3 | Planned | Reduce support burden for edge layouts. |
+| CB-025 | Escape hatch documentation (plain `Control` + `UiState`) | Complex one-off UI | P3 | Done | README **When not to use a `UiReact*` wrapper**. **2.3.0**. |
 | CB-026 | Full RPG “no scripting” guarantee | — | Wont | Wont | Conflicts with Non-goals. |
 | CB-027 | MMO / social UI framework | — | Wont | Wont | Out of scope. |
 | CB-028 | C#-first API | — | Wont | Wont | GDScript-only Charter. |
@@ -148,4 +148,4 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 
 ---
 
-*Last updated: 2026-04-01 — **2.2.1** ships P3 list patterns + **`inventory_list_demo`**; **2.2.0** shipped computed state + shop/options; update quarterly or when phases close.*
+*Last updated: 2026-04-02 — **2.5.0**: **`UiReactRichTextLabel`** + **`rich_text_label_demo`** (**CB-014** / **CB-020**); **2.4.0**: P4 **`UiReactTextureButton`** / **`UiReactTree`** + demos + CB-020 scanner rows; **2.3.0** CB-006/008/016/017/025 + shop buy + row icons; **2.2.1** P3 list demo; **2.2.0** computed state; update quarterly or when phases close.*

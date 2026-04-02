@@ -1,0 +1,71 @@
+[gd_scene load_steps=10 format=3 uid="uid://c7fm4g53kggou"]
+
+[ext_resource type="Script" uid="uid://bfkhyplgn8na3" path="res://addons/ui_react/examples/texture_button_demo.gd" id="1_root"]
+[ext_resource type="Script" uid="uid://b21fgnaf6xp7" path="res://addons/ui_react/scripts/controls/ui_react_texture_button.gd" id="2_tex"]
+[ext_resource type="Script" uid="uid://3m8buhv674ja" path="res://addons/ui_react/scripts/controls/ui_react_check_box.gd" id="3_cb"]
+[ext_resource type="Script" uid="uid://cxg5hj6ihqtue" path="res://addons/ui_react/scripts/api/models/ui_bool_state.gd" id="4_bool"]
+[ext_resource type="Texture2D" uid="uid://dqdnr3bne60mc" path="res://icon.svg" id="5_icon"]
+[ext_resource type="Script" uid="uid://diigywt0dm170" path="res://addons/ui_react/scripts/api/models/ui_anim_target.gd" id="5_l5dtt"]
+
+[sub_resource type="Resource" id="pressed"]
+script = ExtResource("4_bool")
+
+[sub_resource type="Resource" id="disabled"]
+script = ExtResource("4_bool")
+
+[sub_resource type="Resource" id="Resource_2i12f"]
+script = ExtResource("5_l5dtt")
+target = NodePath(".")
+animation = 17
+pivot_offset = Vector2(0, 0)
+metadata/_custom_type_script = "uid://diigywt0dm170"
+
+[node name="TextureButtonDemo" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_root")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Hint" type="Label" parent="VBox"]
+custom_minimum_size = Vector2(1, 1)
+layout_mode = 2
+text = "UiReactTextureButton demo: clicking sets pressed_state to true when toggle_mode is off. The checkbox shares the same resource as disabled_state."
+autowrap_mode = 3
+
+[node name="TextureButton" type="TextureButton" parent="VBox"]
+custom_minimum_size = Vector2(72, 72)
+layout_mode = 2
+texture_normal = ExtResource("5_icon")
+script = ExtResource("2_tex")
+pressed_state = SubResource("pressed")
+disabled_state = SubResource("disabled")
+animation_targets = Array[ExtResource("5_l5dtt")]([SubResource("Resource_2i12f")])
+
+[node name="DisableCheckBox" type="CheckBox" parent="VBox"]
+layout_mode = 2
+text = "Disabled (checked_state uses disabled_state resource)"
+script = ExtResource("3_cb")
+checked_state = SubResource("disabled")
+
+[node name="PressedLabel" type="Label" parent="VBox"]
+layout_mode = 2
+text = "pressed_state: —"
+
+[node name="DisabledLabel" type="Label" parent="VBox"]
+layout_mode = 2
+text = "disabled_state: —"

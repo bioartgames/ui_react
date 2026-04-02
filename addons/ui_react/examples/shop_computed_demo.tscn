@@ -1,14 +1,16 @@
-[gd_scene load_steps=16 format=3 uid="uid://bhrsm6wi0v4s"]
+[gd_scene load_steps=19 format=3 uid="uid://bhrsm6wi0v4s"]
 
+[ext_resource type="Script" uid="uid://c23k4pmtnl3sm" path="res://addons/ui_react/examples/shop_computed_demo.gd" id="0_shop"]
 [ext_resource type="Script" uid="uid://cy1vsor6ek3xr" path="res://addons/ui_react/scripts/api/models/ui_float_state.gd" id="1_fl"]
 [ext_resource type="Script" uid="uid://st55qiias3cb" path="res://addons/ui_react/scripts/api/models/ui_state.gd" id="2_st"]
 [ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://addons/ui_react/scripts/controls/ui_react_slider.gd" id="3_sl"]
-[ext_resource type="Script" uid="uid://bw7gojuop1hic" path="res://addons/ui_react/scripts/controls/ui_react_label.gd" id="4_lbl"]
+[ext_resource type="Script" uid="uid://dhntoxb5f7chr" path="res://addons/ui_react/scripts/controls/ui_react_rich_text_label.gd" id="4_rich"]
 [ext_resource type="Script" uid="uid://lv5ixpw5hlvp" path="res://addons/ui_react/scripts/controls/ui_react_button.gd" id="5_btn"]
 [ext_resource type="Script" uid="uid://dy5qoe773fdne" path="res://addons/ui_react/scripts/controls/ui_react_computed_sync.gd" id="6_sync"]
 [ext_resource type="Script" uid="uid://ch6m8b48u340x" path="res://addons/ui_react/examples/shop_computed_afford.gd" id="7_aff"]
 [ext_resource type="Script" uid="uid://dbh65kk1hltrx" path="res://addons/ui_react/examples/shop_computed_buy_disabled.gd" id="8_dis"]
 [ext_resource type="Script" uid="uid://cbi7k8j508tvj" path="res://addons/ui_react/examples/shop_computed_status.gd" id="9_stat"]
+[ext_resource type="Script" uid="uid://diigywt0dm170" path="res://addons/ui_react/scripts/api/models/ui_anim_target.gd" id="10_anim"]
 
 [sub_resource type="Resource" id="gold"]
 script = ExtResource("1_fl")
@@ -34,7 +36,18 @@ sources = Array[ExtResource("2_st")]([SubResource("afford")])
 [sub_resource type="Resource" id="status"]
 script = ExtResource("9_stat")
 sources = Array[ExtResource("2_st")]([SubResource("gold"), SubResource("price"), SubResource("qty")])
-value = "Total: 25.00 | Gold: 100.00 | Can afford"
+value = "[font_size=18][b]Order summary[/b][/font_size]
+[i]Live totals[/i] — Total: [code]25.00[/code]  ·  Gold: [code]100.00[/code]
+[color=green][b]Can afford[/b][/color]"
+
+[sub_resource type="Resource" id="status_pulse"]
+script = ExtResource("10_anim")
+target = NodePath(".")
+trigger = 5
+animation = 17
+duration = 0.22
+pulse_amount = 1.06
+pulse_count = 1
 
 [node name="ShopComputedDemo" type="Control"]
 layout_mode = 3
@@ -43,6 +56,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("0_shop")
+gold_state = SubResource("gold")
+price_state = SubResource("price")
+quantity_state = SubResource("qty")
 
 [node name="SyncAfford" type="Control" parent="."]
 anchors_preset = 0
@@ -81,7 +98,8 @@ text = "Shop (computed state demo)"
 
 [node name="Help" type="Label" parent="VBox"]
 layout_mode = 2
-text = "Adjust gold, price, and quantity. Status and Buy disabled state update via UiReactComputedSync (no scene script)."
+text = "Adjust gold, price, and quantity. Status line is UiReactRichTextLabel + BBCode from ShopComputedStatus; Buy subtracts gold via shop_computed_demo.gd (CB-006)."
+autowrap_mode = 3
 
 [node name="GoldLabel" type="Label" parent="VBox"]
 layout_mode = 2
@@ -119,12 +137,19 @@ value = 1.0
 script = ExtResource("3_sl")
 value_state = SubResource("qty")
 
-[node name="StatusLine" type="Label" parent="VBox"]
+[node name="StatusLine" type="RichTextLabel" parent="VBox"]
 custom_minimum_size = Vector2(1, 1)
 layout_mode = 2
+bbcode_enabled = true
+text = "[font_size=18][b]Order summary[/b][/font_size]
+[i]Live totals[/i] — Total: [code]25.00[/code]  ·  Gold: [code]100.00[/code]
+[color=green][b]Can afford[/b][/color]"
+fit_content = true
+scroll_active = false
 autowrap_mode = 2
-script = ExtResource("4_lbl")
+script = ExtResource("4_rich")
 text_state = SubResource("status")
+animation_targets = Array[ExtResource("10_anim")]([SubResource("status_pulse")])
 
 [node name="BuyButton" type="Button" parent="VBox"]
 layout_mode = 2

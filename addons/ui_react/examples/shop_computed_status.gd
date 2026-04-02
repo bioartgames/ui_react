@@ -1,5 +1,5 @@
 @tool
-## Example [UiComputedStringState]: one-line shop summary from [code][gold, price, quantity][/code] ([UiFloatState]).
+## Example [UiComputedStringState]: multi-line shop summary as **BBCode** for [UiReactRichTextLabel], from [code][gold, price, quantity][/code] ([UiFloatState]).
 class_name ShopComputedStatus
 extends "res://addons/ui_react/scripts/api/models/ui_computed_string_state.gd"
 
@@ -10,8 +10,14 @@ func compute_string() -> String:
 	var qty: float = _float_at(2)
 	var total: float = price * qty
 	var can: bool = gold >= total
+	var verdict: String = (
+		"[color=green][b]Can afford[/b][/color]" if can
+		else "[color=red][b]Cannot afford[/b][/color]"
+	)
 	return (
-		"Total: %.2f | Gold: %.2f | %s" % [total, gold, ("Can afford" if can else "Cannot afford")]
+		"[font_size=18][b]Order summary[/b][/font_size]\n"
+		+ "[i]Live totals[/i] — Total: [code]%.2f[/code]  ·  Gold: [code]%.2f[/code]\n" % [total, gold]
+		+ verdict
 	)
 
 

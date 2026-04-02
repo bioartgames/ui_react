@@ -3,7 +3,8 @@ class_name UiReactItemList
 
 ## Two-way binding for selection (see script for value shape). **Assign** [UiIntState] (single-select) or [UiArrayState] (multi-select).
 @export var selected_state: UiState
-## **Optional** — list row contents from a [UiArrayState] (or assign an [Array] payload). Each element is shown via [method @GlobalScope.str].
+## **Optional** — list row contents from a [UiArrayState] (or assign an [Array] payload).
+## Each element is either stringified with [method @GlobalScope.str], or a [Dictionary] with **label** or **text**, and optional **icon** ([Texture2D] or [code]res://[/code] path string).
 @export var items_state: UiArrayState
 
 ## **Optional** — Inspector-driven tweens (selection, hover). Leave empty for no automatic animations.
@@ -64,6 +65,38 @@ func _on_trigger_hover_exit() -> void:
 func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 	UiReactAnimTargetHelper.trigger_animations(self, animation_targets, trigger_type)
 
+
+func _add_item_from_entry(entry: Variant) -> void:
+	if entry is Dictionary:
+		var d: Dictionary = entry as Dictionary
+		var label_text := ""
+		if d.has("label"):
+			label_text = str(d["label"])
+		elif d.has("text"):
+			label_text = str(d["text"])
+		else:
+			label_text = str(entry)
+		var icon_tex: Texture2D = null
+		if d.has("icon"):
+			icon_tex = _coerce_entry_icon(d["icon"])
+		add_item(label_text, icon_tex)
+		return
+	add_item(str(entry))
+
+
+func _coerce_entry_icon(v: Variant) -> Texture2D:
+	if v is Texture2D:
+		return v as Texture2D
+	if typeof(v) == TYPE_STRING:
+		var p := str(v).strip_edges()
+		if p.is_empty():
+			return null
+		var res: Resource = ResourceLoader.load(p)
+		if res is Texture2D:
+			return res as Texture2D
+	return null
+
+
 func _on_items_state_changed(new_value: Variant, _old_value: Variant) -> void:
 	if _updating:
 		return
@@ -82,7 +115,7 @@ func _on_items_state_changed(new_value: Variant, _old_value: Variant) -> void:
 	_updating = true
 	clear()
 	for entry in new_value as Array:
-		add_item(str(entry))
+		_add_item_from_entry(entry)
 	_sync_selection_ui_to_state()
 	_updating = false
 	_clamp_selection_state_if_needed()

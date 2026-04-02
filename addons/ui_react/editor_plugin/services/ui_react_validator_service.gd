@@ -30,7 +30,7 @@ static func _expected_binding_state_class(component: String, prop: StringName, k
 
 
 static func _binding_type_ok(ui_state: UiState, expected: StringName, component: String, prop: StringName) -> bool:
-	if component == "UiReactLabel" and prop == &"text_state":
+	if (component == "UiReactLabel" or component == "UiReactRichTextLabel") and prop == &"text_state":
 		if ui_state is UiStringState or ui_state is UiArrayState:
 			return true
 		return ui_state is UiTransactionalState and (
@@ -66,7 +66,7 @@ static func _append_binding_issue_with_preview(
 
 
 static func _expected_type_phrase(component: String, prop: StringName, expected: StringName) -> String:
-	if component == "UiReactLabel" and prop == &"text_state":
+	if (component == "UiReactLabel" or component == "UiReactRichTextLabel") and prop == &"text_state":
 		return "UiStringState, UiComputedStringState, UiArrayState, or UiTransactionalState (string/array payload)"
 	if expected.is_empty():
 		return "a concrete UiState subclass"

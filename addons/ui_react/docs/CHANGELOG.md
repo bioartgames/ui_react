@@ -8,6 +8,55 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 No unreleased changes yet.
 
+## [2.5.0] - 2026-04-02
+
+### Added
+
+- **`UiReactRichTextLabel`** (`scripts/controls/ui_react_rich_text_label.gd`): display-only **`RichTextLabel`** binding; **`text_state`** mirrors **`UiReactLabel`** (string / array / computed / transactional shapes via **`UiReactStateBindingHelper.as_text_recursive`**); **`bbcode_enabled`** forced **`true`** in **`_ready()`**; optional **`animation_targets`** (hover + **`TEXT_CHANGED`**) — **CB-014**.
+- **Example:** **`examples/rich_text_label_demo.tscn`** + **`rich_text_label_demo.gd`** (mutate **`UiStringState`** only; no direct **`RichTextLabel.text`** writes).
+- **Editor:** **`UiReactScannerService`** stem + **`BINDINGS_BY_COMPONENT`** for **`UiReactRichTextLabel`**; **`UiReactValidatorService`** **`text_state`** typing parity with **`UiReactLabel`** — **CB-020**.
+
+### Changed
+
+- **README:** control table, **Text controls** subsection, quickstart + layout row + common mistake for display-only rich text; step-2 bullet includes **`UiReactRichTextLabel.text_state`**.
+- **`docs/ROADMAP.md`:** **CB-014** marked **Done** for **`UiReactRichTextLabel`** (**`UiReactTextEdit`** still out of scope).
+
+### Notes
+
+- **Minor** release: additive **`class_name`** + `@export` surface; no breaking changes to existing controls.
+
+## [2.4.0] - 2026-04-02
+
+### Added
+
+- **`UiReactTextureButton`** (`scripts/controls/ui_react_texture_button.gd`): same **`pressed_state`** / **`disabled_state`** / **`animation_targets`** pattern as **`UiReactButton`**, for **`TextureButton`** — **CB-012**.
+- **`UiReactTree`** (`scripts/controls/ui_react_tree.gd`): **`selected_state`** (**`UiIntState`**) maps to **visible pre-order** row index or **`-1`**; forces **`Tree.SELECT_SINGLE`** — **CB-013**.
+- **Examples:** **`examples/texture_button_demo.tscn`** + **`texture_button_demo.gd`**; **`examples/tree_demo.tscn`** + **`tree_demo.gd`** (deferred tree build so indices match bind time).
+- **Editor:** **`UiReactScannerService`** `SCRIPT_STEM_TO_COMPONENT` + **`BINDINGS_BY_COMPONENT`** for **`UiReactTextureButton`** and **`UiReactTree`** (**CB-020**).
+
+### Changed
+
+- **README:** control table + **UiReactTree binding semantics**; quickstart + layout paths for new demos; **Strict integer indices** note includes **`UiReactTree.selected_state`**.
+
+### Notes
+
+- **Minor** release: new global **`class_name`** controls and new `@export` surfaces only (additive).
+
+## [2.3.0] - 2026-04-01
+
+### Added
+
+- **`shop_computed_demo.gd`:** **Buy** subtracts **price × quantity** from **gold** when affordable (**CB-006**); wired from **`shop_computed_demo.tscn`**.
+- **`UiReactItemList`:** row entries may be **`Dictionary`** with **`label`** or **`text`**, optional **`icon`** (**`Texture2D`** or **`res://`** texture path) — **CB-008**.
+
+### Changed
+
+- **README:** **Imperative actions (CB-006)**, **Screen transitions (CB-016)**, **Modals / focus (CB-017)**, **Escape hatch (CB-025)**; **List patterns** updated for dict/icon rows; inventory demo first row uses project **`icon.svg`**.
+
+### Notes
+
+- **Minor** release: additive public behavior for **`UiReactItemList`** row parsing (strings and dicts remain supported).
+
 ## [2.2.1] - 2026-04-01
 
 ### Added

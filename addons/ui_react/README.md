@@ -11,7 +11,7 @@ Public direction, phased delivery, and a full **capability backlog** (so deferre
 ## The 3-step setup (repeat for every control)
 
 1. **Attach** the matching `UiReact*` script to a native Control (Button, HSlider, Label, …).
-2. **Assign** the **typed** state resource each export expects (`UiBoolState`, `UiIntState`, `UiFloatState`, `UiStringState`, `UiArrayState`, **`UiTransactionalState`**, or a **subclass** of **`UiComputedStringState` / `UiComputedBoolState`** where noted). Exports typed as **`UiState`** accept any concrete state implementing the binding’s payload shape — including **`UiTransactionalState`** — for `UiReactSlider` / `UiReactSpinBox` / `UiReactProgressBar` **`value_state`**, `UiReactCheckBox` **`checked_state`**, `UiReactLabel.text_state` (**`UiStringState` or `UiArrayState`**, **`UiComputedStringState`**, or transactional string/array), and `UiReactItemList.selected_state` (**`UiIntState`** in single-select, **`UiArrayState`** in multi-select).
+2. **Assign** the **typed** state resource each export expects (`UiBoolState`, `UiIntState`, `UiFloatState`, `UiStringState`, `UiArrayState`, **`UiTransactionalState`**, or a **subclass** of **`UiComputedStringState` / `UiComputedBoolState`** where noted). Exports typed as **`UiState`** accept any concrete state implementing the binding’s payload shape — including **`UiTransactionalState`** — for `UiReactSlider` / `UiReactSpinBox` / `UiReactProgressBar` **`value_state`**, `UiReactCheckBox` **`checked_state`**, `UiReactLabel.text_state` / **`UiReactRichTextLabel.text_state`** (**`UiStringState` or `UiArrayState`**, **`UiComputedStringState`**, or transactional string/array), and `UiReactItemList.selected_state` (**`UiIntState`** in single-select, **`UiArrayState`** in multi-select).
 3. **Optionally** fill `animation_targets` with `UiAnimTarget` entries to run tweens from the Inspector (no tween code).
 
 That’s it. Game logic reads and writes through **`get_value()`** / **`set_value()`** on those resources; controls stay in sync.
@@ -31,7 +31,7 @@ Copy `addons/ui_react/` into your Godot project at **`addons/ui_react/`**. Open 
 
 ### 2) Run the example
 
-Open **`res://addons/ui_react/examples/demo.tscn`** (smoke demo), **`res://addons/ui_react/examples/options_transactional_demo.tscn`** (options-style **Apply / Cancel** with **`UiTransactionalState`** plus computed status), **`res://addons/ui_react/examples/shop_computed_demo.tscn`** (shop-style **computed** string + bool), or **`res://addons/ui_react/examples/inventory_list_demo.tscn`** (**P3** — filtered **`UiReactItemList`**) and press **Play** (or set either as **Main Scene**). Use the scene tree to see how states and targets are wired.
+Open **`res://addons/ui_react/examples/demo.tscn`** (smoke demo), **`res://addons/ui_react/examples/options_transactional_demo.tscn`** (options-style **Apply / Cancel** with **`UiTransactionalState`** plus computed status), **`res://addons/ui_react/examples/shop_computed_demo.tscn`** (computed afford/status on **`UiReactRichTextLabel`** + BBCode from **`ShopComputedStatus`**; **Buy** subtracts gold via **`shop_computed_demo.gd`** — **CB-006**), **`res://addons/ui_react/examples/inventory_list_demo.tscn`** (filtered **`UiReactItemList`**, optional row **icons**), **`res://addons/ui_react/examples/texture_button_demo.tscn`** (**`UiReactTextureButton`** + **`UiBoolState`**), **`res://addons/ui_react/examples/tree_demo.tscn`** (**`UiReactTree`** selection index demo), or **`res://addons/ui_react/examples/rich_text_label_demo.tscn`** (**`UiReactRichTextLabel`** + BBCode from **`text_state`**) and press **Play** (or set either as **Main Scene**). Use the scene tree to see how states and targets are wired.
 
 ### 3) Minimal recipes (editor-first, no code required)
 
@@ -54,13 +54,19 @@ Open **`res://addons/ui_react/examples/demo.tscn`** (smoke demo), **`res://addon
 2. Create **UiState** with `value` as **String** (or nested structure per label docs).
 3. Assign to **`text_state`**.
 
+**RichTextLabel + BBCode from state (display-only)**
+
+1. Add **RichTextLabel**, attach **`UiReactRichTextLabel`**.
+2. Use the same **`text_state`** payload family as **`UiReactLabel`** (**`UiStringState`**, **`UiArrayState`**, **`UiComputedStringState`**, or transactional string/array payloads).
+3. Mutate copy only through **`get_value()`** / **`set_value()`** on that state — the wrapper sets **`bbcode_enabled`** and pushes the flattened string to **`RichTextLabel.text`**. There is **no** edit-back from the control; for editable rich text, use the **escape hatch** or await a future **`UiReactTextEdit`** (see **Text controls** below).
+
 ### 4) Optional: animations from code
 
 ```gdscript
 await UiAnimUtils.animate_expand(self, some_control).finished
 ```
 
-**Show/hide presets:** use `UiAnimUtils.preset(UiAnimUtils.Preset.FADE_IN, self, panel)` (and other `UiAnimUtils.Preset` values). Default durations, offsets, and related numeric defaults for your own compositions live in **`UiAnimConstants`** (`scripts/internal/anim/ui_anim_constants.gd`).
+**Show/hide presets:** use `UiAnimUtils.preset(UiAnimUtils.Preset.FADE_IN, self, panel)` (and other `UiAnimUtils.Preset` values). See **Screen transitions** below for a preset summary. Default durations, offsets, and related numeric defaults for your own compositions live in **`UiAnimConstants`** (`scripts/internal/anim/ui_anim_constants.gd`).
 
 `UiAnimUtils` is **`res://addons/ui_react/scripts/api/ui_anim_utils.gd`** (global class `UiAnimUtils`).
 
@@ -87,11 +93,29 @@ All plugin usage details are documented in this README.
 | **UiReactProgressBar** | `value_state` | Same **`value_state`** pattern as slider. |
 | **UiReactLineEdit** | `text_state` | `text_state` for sync. |
 | **UiReactLabel** | `text_state` | `text_state` for sync. |
+| **UiReactRichTextLabel** | `text_state` | **`text_state`** for **display-only** sync (BBCode string → **`RichTextLabel.text`**); wrapper forces **`bbcode_enabled`**. Same payload family as **`UiReactLabel`**; **no** UI→state writeback. |
 | **UiReactOptionButton** | `selected_state`, `disabled_state` | `selected_state` for sync (usually string item text). |
-| **UiReactItemList** | `items_state`, `selected_state` | **`items_state`**: **`UiArrayState`**. **`selected_state`**: **`UiIntState`** (single-select) or **`UiArrayState`** (multi-select indices). Godot’s **ItemList** has no built-in disabled state—wrap or gate input with a parent **Control** / `mouse_filter` / focus policy in game code if you need “disabled” behavior. |
+| **UiReactItemList** | `items_state`, `selected_state` | **`items_state`**: **`UiArrayState`** (`Array` of strings/variants or **`label`/`icon`** dicts per **List patterns**). **`selected_state`**: **`UiIntState`** (single-select) or **`UiArrayState`** (multi-select indices). Godot’s **ItemList** has no built-in disabled state—wrap or gate input with a parent **Control** / `mouse_filter` / focus policy in game code if you need “disabled” behavior. |
 | **UiReactTabContainer** | `selected_state`, `tab_config` | **`selected_state`**: **`UiIntState`**. **`tab_config`**: optional **`UiTabContainerCfg`** (use **`UiArrayState`** for tab/disabled/visibility arrays). |
+| **UiReactTextureButton** | `pressed_state`, `disabled_state` | Same semantics as **`UiReactButton`** on **`BaseButton`** (`pressed` vs `toggle_mode` / `toggled`, **`disabled_state`** may use **`UiBoolState`** or **`UiComputedBoolState`**). Assign **`texture_normal`** (and optional hover/pressed textures) in the Inspector. |
+| **UiReactTree** | `selected_state` | **`selected_state`**: **`UiIntState`**. Wrapper forces **single selection** (`Tree.SELECT_SINGLE`). See **UiReactTree binding semantics** below. |
+
+### UiReactTree binding semantics (P4)
+
+- **Payload:** **`UiIntState`** stores the **visible pre-order row index** for the current selection, or **`-1`** when nothing is selected.
+- **Traversal:** Rows are visited in depth-first order using Godot’s visible tree walk (`TreeItem.get_next_visible(false)`). If **`hide_root`** is **`true`**, the engine’s root **`TreeItem` is not counted**—index **`0`** is the first visible child under that root. If **`hide_root`** is **`false`**, the root row is index **`0`**.
+- **State → UI:** Valid indices call **`Tree.set_selected(item, 0)`**; **`-1`** calls **`deselect_all()`**. Out-of-range indices deselect and snap the state to **`-1`**.
+- **Populating rows:** Build or update **`TreeItem`**s from code or editor as usual; if you add or remove rows after bind time, re-assign **`selected_state`** (or set **`-1`**) so the index still matches the visible order.
 
 **`animation_targets`** is always **optional**: leave empty if you don’t want automatic tweens.
+
+### Text controls (`UiReactLineEdit`, `UiReactLabel`, `UiReactRichTextLabel`)
+
+| Control | Direction | Notes |
+|---------|-----------|--------|
+| **`UiReactLineEdit`** | Two-way | Plain string **`text_state`**; typing updates state when configured. |
+| **`UiReactLabel`** | Display | Plain **`Label`**; **`text_state`** accepts **`UiStringState`** / **`UiComputedStringState`**, **`UiArrayState`** (including nested **`UiState`** entries, flattened via **`as_text_recursive`**), and **`UiTransactionalState`** whose draft matches string/array shapes. |
+| **`UiReactRichTextLabel`** | Display-only | **`RichTextLabel`**; **`bbcode_enabled`** is set **`true`** in **`_ready()`** so BBCode always applies. **`text_state`** uses the **same** accepted family as **`UiReactLabel`**; the result is assigned to **`text`**. **No** editing back into state—if you need bidirectional rich editing, bind manually (**escape hatch**) or wait for **`UiReactTextEdit`**. |
 
 ---
 
@@ -115,7 +139,7 @@ Prefer **`UiAnimUtils`** for tweens from code; prefer **`UiAnimTarget`** arrays 
 
 **`UiState` is abstract:** do not instantiate it directly. Each control export uses a concrete **`Ui*State`**, **`UiTransactionalState`**, a **subclass** of **`UiComputedStringState`** / **`UiComputedBoolState`** (see **Computed state** below), or the polymorphic **`UiState`** slot where noted. Read and write the **bound** payload with **`get_value()`** / **`set_value()`** (typed states expose a **`value`** property; **`UiTransactionalState`** exposes **`committed_value`** plus draft via those methods). Older projects that used a single generic `UiState` resource with a `Variant` export must migrate to the matching concrete class and resave resources.
 
-**Strict integer indices:** Tab index (`UiReactTabContainer.selected_state`), **`UiIntState`**, and ItemList single-select **`selected_state`** use **`int` only**. **`float` is not accepted** for those bindings (no silent coercion from float or from **`UiFloatState`** / float-shaped **`UiTransactionalState`** there). Reserve **`UiFloatState`** (or transactional **float** payload) for sliders, spin boxes, and progress bars.
+**Strict integer indices:** Tab index (`UiReactTabContainer.selected_state`), **`UiReactTree.selected_state`**, **`UiIntState`**, and ItemList single-select **`selected_state`** use **`int` only**. **`float` is not accepted** for those bindings (no silent coercion from float or from **`UiFloatState`** / float-shaped **`UiTransactionalState`** there). Reserve **`UiFloatState`** (or transactional **float** payload) for sliders, spin boxes, and progress bars.
 
 ---
 
@@ -144,7 +168,7 @@ When one screen has **several** `UiTransactionalState` resources and a single **
 4. Assign **`group`** to that `UiTransactionalGroup`.
 5. Set **`apply_button_path`** and **`cancel_button_path`** as `NodePath`s **relative to the `UiReactTransactionalActions` node** (example: `../VBox/ButtonRow/ApplyButton`).
 6. Leave **`begin_on_ready`** `true` to call **`begin_edit_all()`** once when the scene enters the tree, unless you start the edit session from code.
-7. **Read-only summary line:** prefer a **`UiComputedStringState`** subclass plus **`UiReactComputedSync`** (see **Computed state**) so the label tracks draft / committed transactional values without scene glue. Alternatively, use a **`UiStringState`** and call **`set_value()`** from code. Do **not** assign **`Label.text`** directly if the label uses **`UiReactLabel`**.
+7. **Read-only summary line:** prefer a **`UiComputedStringState`** subclass plus **`UiReactComputedSync`** (see **Computed state**) so the label tracks draft / committed transactional values without scene glue. Alternatively, use a **`UiStringState`** and call **`set_value()`** from code. Do **not** assign **`Label.text`** directly if the label uses **`UiReactLabel`**, or **`RichTextLabel.text`** if it uses **`UiReactRichTextLabel`**.
 
 **API — `UiTransactionalGroup`:** `begin_edit_all()`, `apply_all()`, `cancel_all()`, `has_pending_changes()`.
 
@@ -164,16 +188,18 @@ Use a **`UiComputedStringState`** or **`UiComputedBoolState`** **subclass** when
 
 **Transactional + computed:** inside **`compute_*`**, read **`UiTransactionalState`** with **`get_draft_value()`**, **`get_committed_value()`**, and **`has_pending_changes()`** as needed—use **one** transactional resource per field in **`sources`**, not separate “draft” vs “committed” nodes.
 
-**Examples:** **`res://addons/ui_react/examples/shop_computed_demo.tscn`** (totals, afford, Buy disabled); **`res://addons/ui_react/examples/options_transactional_demo.tscn`** (status line).
+**Examples:** **`res://addons/ui_react/examples/shop_computed_demo.tscn`** (+ **`shop_computed_demo.gd`** — Buy / **CB-006**; status line **`UiReactRichTextLabel`** + **`ShopComputedStatus`** BBCode); **`res://addons/ui_react/examples/options_transactional_demo.tscn`** (status line).
 
 ---
 
 ## List patterns (P3)
 
-**`UiReactItemList`** rebuilds rows from **`items_state`** by calling **`add_item(str(entry))`** for each element of the bound **`Array`**. That means:
+**`UiReactItemList`** rebuilds rows from **`items_state`**: each element of the bound **`Array` becomes one row**:
 
-- **Prefer each `entry` to already be a readable string** for the row label. Numbers and other types work but are formatted with **`str()`**.
-- **Avoid assigning raw `Dictionary` (or other complex) values** as `items_state` elements unless you want the default **`str(dictionary)`** appearance—usually you keep a **catalog** (e.g. in game data or a small script) and write **display strings** into **`UiArrayState.value`** yourself.
+| Entry type | Behavior |
+|------------|----------|
+| **String**, number, or other non-**Dictionary** | Label is **`str(entry)`** (same as before). |
+| **Dictionary** | Use key **`label`** or **`text`** for the row label. Optional **`icon`**: a **`Texture2D`** or a **`String`** `res://` path loadable as a texture (e.g. imported **`.svg`** / **`.png`**). If `icon` is invalid or missing, the row has **no** icon. Unknown dict shapes still stringify poorly—prefer explicit **`label`**. |
 
 **Bindings (single-select):** assign **`items_state`** → **`UiArrayState`**, **`selected_state`** → **`UiIntState`**. The stored index is **the row index in the current list** (after any filter). See **Strict integer indices** under **Public API**—no floats for selection.
 
@@ -181,7 +207,7 @@ Use a **`UiComputedStringState`** or **`UiComputedBoolState`** **subclass** when
 
 1. Keep authoritative item data where your game prefers (resources, dictionaries in a script, etc.).
 2. Use a **`UiStringState`** (with **`UiReactLineEdit.text_state`**) or similar as the **filter query**.
-3. When the filter changes, rebuild an **`Array` of strings** and call **`items_state.set_value(...)`** so the list reflects the filtered rows.
+3. When the filter changes, rebuild an **`Array`** (strings and/or **`label`/`icon` dictionaries**) and call **`items_state.set_value(...)`** so the list reflects the filtered rows.
 4. Reset **`selected_state`** to **`-1`** (or clamp) when the filter changes so the selection does not point at the wrong item.
 5. Drive any **detail label** from **`selected_state`** + the same catalog mapping (see **`res://addons/ui_react/examples/inventory_list_demo.gd`**).
 
@@ -190,6 +216,69 @@ This pattern is **game-layer** glue; the addon does not ship a generic virtualiz
 **Disabled / modal gating (CB-015):** Godot’s **`ItemList`** has no real **disabled** mode, and **`UiReactItemList.disabled_state`** is not wired to engine list disabling. **Canonical workaround:** place the list inside a **`Control`**, add a **full-rect sibling overlay** (`Control` or `ColorRect` with **transparent** color) **above** the list in tree order, and drive **`Control.mouse_filter`**: **`MOUSE_FILTER_IGNORE`** when interaction is allowed (clicks pass through to the list), **`MOUSE_FILTER_STOP`** when the list should not receive pointer input. Optionally toggle **`visible`** on the overlay or list host instead. **`inventory_list_demo.tscn`** demonstrates overlay + **`UiBoolState`** (checkbox).
 
 **Runnable example:** **`res://addons/ui_react/examples/inventory_list_demo.tscn`**.
+
+---
+
+## Imperative actions (command-style, CB-006)
+
+The addon does **not** ship a **`UiCommand`** resource (**[`docs/ROADMAP.md`](docs/ROADMAP.md)** — **CB-007** deferred). For **one-shot** actions (**Buy**, **equip**, **delete**), use **game-layer** code:
+
+1. Connect the control’s signal (**`pressed`**, **`item_activated`**, …).
+2. Read any inputs from **`UiState`** via **`get_value()`**.
+3. Validate, then call **`set_value()`** on the authoritative state (gold, inventory, …). **`UiReact*`** and **computed** resources will react to the new values.
+
+**Pitfall:** **`UiReactButton.pressed_state`** syncs the button’s pressed flag with a **`UiBoolState`**; it is **not** a general “run this command” hook. Keep purchase logic in **`pressed`** (or a named handler) as in **`shop_computed_demo.gd`**.
+
+**Confirm / equip variants** often pair this pattern with a **modal** (**CB-017**): same **`set_value` / mutation** on the confirm button inside a popup.
+
+**Example:** **`res://addons/ui_react/examples/shop_computed_demo.tscn`** + **`shop_computed_demo.gd`**.
+
+---
+
+## Screen transitions (CB-016)
+
+Named show/hide presets are **`UiAnimUtils.preset(preset_type, source_node, target_control, speed)`** (`scripts/api/ui_anim_utils.gd`). Typical pairing:
+
+| `UiAnimUtils.Preset` | Typical use |
+|----------------------|------------|
+| **`FADE_IN`** / **`FADE_OUT`** | Panels, overlays |
+| **`EXPAND_IN`** / **`EXPAND_OUT`** | Center pop emphasis |
+| **`POP_IN`** / **`POP_OUT`** | Short scale pop |
+| **`SLIDE_IN_LEFT`**, **`SLIDE_IN_RIGHT`**, **`SLIDE_IN_TOP`** | Enter off-screen |
+| **`SLIDE_OUT_LEFT`**, **`SLIDE_OUT_RIGHT`**, **`SLIDE_OUT_TOP`** | Exit off-screen |
+
+**Example:**
+
+```gdscript
+await UiAnimUtils.preset(UiAnimUtils.Preset.FADE_IN, self, panel).finished
+```
+
+Tune durations and defaults via **`UiAnimConstants`** when composing lower-level **`animate_*`** calls; presets wrap the common cases.
+
+---
+
+## Modals, popups, and focus (CB-017)
+
+For dialogs and confirmations:
+
+- Prefer engine nodes suited to overlay UI: **`Window`**, **`PopupPanel`**, **`AcceptDialog`**, or a full-screen **`Control`** with **`process_mode`** / **`z_index`** as needed.
+- On open: move focus into the modal (**`grab_focus()`** on a **`LineEdit`** or default **`Button`**) so keyboard/gamepad users land in the right place.
+- On close: **`hide()`** / queue free and return focus to the control that opened the dialog if you track it (**`Viewport.gui_get_focus_owner()`** patterns in Godot work well for simple games).
+
+**Limitation:** A **full** focus trap (tab cycle strictly inside the modal, blocking every edge case) usually needs extra wiring or custom input filtering—not guaranteed by **`UiReact*`** alone.
+
+Godot reference: [Popup](https://docs.godotengine.org/en/stable/classes/class_popup.html), [Window](https://docs.godotengine.org/en/stable/classes/class_window.html), [Control focus](https://docs.godotengine.org/en/stable/classes/class_control.html#class-control-method-grab-focus).
+
+---
+
+## When not to use a `UiReact*` wrapper (escape hatch, CB-025)
+
+It is valid to attach a **plain** `Control` script and **manually** connect **`UiState.value_changed`** (and **`Resource.changed`**) to update widgets, then **`disconnect`** in **`_exit_tree()`**. Trade-offs:
+
+- **Pros:** arbitrary layouts, third-party controls, one-off screens without a matching **`UiReact*`** script.
+- **Cons:** more boilerplate, no **Ui React** dock binding diagnostics for that node unless you add a **`UiReact*`** later.
+
+Use this when the charter’s **“little or no game code”** path does not fit a specific screen; keep **economy / domain rules** in your game layer anyway (**Non-goals** in **`docs/ROADMAP.md`**).
 
 ---
 
@@ -211,8 +300,9 @@ These may change between template versions; **do not rely on them from game code
 | “Target not found” warning | NodePath not under this node | Use a path relative to the control, or drag the node into the Target field. |
 | Tab arrays don’t apply | `tabs_state` / `disabled_tabs_state` / `visible_tabs_state` not an **Array** | Those `UiState` values must be `Array` (see Output warning). |
 | Item list rows don’t update | `items_state` missing or not an **Array** | Assign `items_state` to a `UiState` / `UiArrayState` whose `value` is an `Array` (e.g. `["A", "B", 1]` — each entry is stringified for display). |
-| List rows look ugly (`{ ... }`) | `items_state` holds **Dictionary** entries | Build **display strings** into the array (see **List patterns (P3)**) or map data in game code before **`set_value`**. |
+| List rows look ugly (`{ ... }`) | `items_state` dictionaries lack **`label`** / **`text`** | Use **`label`** (or **`text`**) per **List patterns (P3)**; optional **`icon`**. |
 | Need a “disabled” list | **`UiReactItemList` has no `disabled_state`** (ItemList has no engine disabled flag) | Use a parent **Control**, **`mouse_filter`** overlay (**List patterns (P3)** / **CB-015**), or focus rules to block interaction; keep list visibility/text driven by state as usual. |
+| Rich label never reflects typing / edits | **`UiReactRichTextLabel`** is **display-only** (state → UI only) | Update copy via **`text_state.set_value()`** (or nested/array patterns as for **`UiReactLabel`**). For two-way rich editing, use the **escape hatch** or await **`UiReactTextEdit`**. |
 
 ---
 
@@ -225,7 +315,7 @@ These may change between template versions; **do not rely on them from game code
 | `scripts/controls/` | Attachable **UiReact\*** scripts. |
 | `scripts/internal/anim/` | Animation implementation (unstable for direct use). |
 | `scripts/internal/react/` | Reactive helpers (unstable for direct use). |
-| `examples/` | `demo.tscn` smoke demo; `options_transactional_demo.tscn` (transactional **Apply / Cancel** + computed status); `shop_computed_demo.tscn` (computed string + bool); `inventory_list_demo.tscn` (**P3** filtered **`UiReactItemList`**). |
+| `examples/` | `demo.tscn` smoke demo; `options_transactional_demo.tscn` (transactional **Apply / Cancel** + computed status); `shop_computed_demo.tscn` + `shop_computed_demo.gd` (computed + **CB-006** Buy; **`UiReactRichTextLabel`** status + **`ShopComputedStatus`** BBCode); `inventory_list_demo.tscn` (filtered list + optional row **icons** / **CB-008**); `texture_button_demo.tscn` + `texture_button_demo.gd` (**CB-012**); `tree_demo.tscn` + `tree_demo.gd` (**CB-013**); `rich_text_label_demo.tscn` + `rich_text_label_demo.gd` (**CB-014** **`UiReactRichTextLabel`**). |
 | `docs/` | **README**, **CHANGELOG**, and addon **ROADMAP** (this folder). |
 | `editor_plugin/` | Optional Godot editor plugin (dock, validation, quick state creation). |
 | `ui_resources/` | Sample `.tres` for the example scene; `plugin_generated/` holds plugin-created states (optional). |

@@ -1,6 +1,6 @@
 extends Control
-## P3 example: filter text drives row strings in [UiArrayState]; [UiReactItemList] shows one string per row via [method GlobalScope.str].
-## Catalog rows are dictionaries in code only—[member items_state] stays an [Array] of display [String]s (see README **List patterns**).
+## P3 example: filter text drives [UiArrayState]; [UiReactItemList] rows are strings or { **label**, **icon** } dicts (see README **List patterns**).
+## Catalog rows are dictionaries in code only; the first visible row uses the project icon for CB-008 demo.
 ## [member list_input_blocker_path]: full-rect overlay with [member Control.mouse_filter] STOP when [member list_locked_state] is [code]true[/code] (CB-015 workaround).
 
 const _CATALOG: Array[Dictionary] = [
@@ -17,6 +17,8 @@ const _CATALOG: Array[Dictionary] = [
 @export var detail_text_state: UiStringState
 @export var list_locked_state: UiBoolState
 @export var list_input_blocker_path: NodePath = NodePath("VBox/ListSlot/InputBlocker")
+
+const _DEMO_ROW_ICON := "res://icon.svg"
 
 var _input_blocker: Control
 var _filtered_catalog_indices: Array[int] = []
@@ -78,7 +80,11 @@ func _refresh_list() -> void:
 			or item_name.to_lower().contains(needle)
 			or kind.to_lower().contains(needle)
 		):
-			lines.append("%s (%s) × %s" % [item_name, kind, str(row.get("qty", 1))])
+			var line_text := "%s (%s) × %s" % [item_name, kind, str(row.get("qty", 1))]
+			if i == 0:
+				lines.append({"label": line_text, "icon": _DEMO_ROW_ICON})
+			else:
+				lines.append(line_text)
 			_filtered_catalog_indices.append(i)
 	if items_state:
 		items_state.set_value(lines)
