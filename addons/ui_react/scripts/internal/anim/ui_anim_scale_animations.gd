@@ -9,8 +9,9 @@ static func animate_expand(source_node: Node, target: Control, speed := UiAnimCo
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_expand"):
 		return Signal()
 
-	# Acquire baseline snapshot for universal reset support
-	UiAnimSnapshotStore.acquire_unified_snapshot(source_node, target)
+	var track_baseline: bool = UiAnimBaselineApplyContext.is_enabled()
+	if track_baseline:
+		UiAnimSnapshotStore.acquire_unified_snapshot(source_node, target)
 
 	var animation_callable = func() -> Signal:
 		if auto_visible:
@@ -43,10 +44,10 @@ static func animate_expand(source_node: Node, target: Control, speed := UiAnimCo
 	else:
 		result_signal = animation_callable.call()
 
-	# Connect to completion to release unified snapshot
-	result_signal.connect(func():
-		UiAnimSnapshotStore.release_unified_snapshot(target, true)
-	, CONNECT_ONE_SHOT)
+	if track_baseline:
+		result_signal.connect(func():
+			UiAnimSnapshotStore.release_unified_snapshot(target, true)
+		, CONNECT_ONE_SHOT)
 
 	return result_signal
 
@@ -62,8 +63,9 @@ static func animate_expand_x(source_node: Node, target: Control, speed := UiAnim
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_expand_x"):
 		return Signal()
 
-	# Acquire baseline snapshot for universal reset support
-	UiAnimSnapshotStore.acquire_unified_snapshot(source_node, target)
+	var track_baseline: bool = UiAnimBaselineApplyContext.is_enabled()
+	if track_baseline:
+		UiAnimSnapshotStore.acquire_unified_snapshot(source_node, target)
 
 	var animation_callable = func() -> Signal:
 		if auto_visible:
@@ -91,10 +93,10 @@ static func animate_expand_x(source_node: Node, target: Control, speed := UiAnim
 	else:
 		result_signal = animation_callable.call()
 
-	# Connect to completion to release unified snapshot
-	result_signal.connect(func():
-		UiAnimSnapshotStore.release_unified_snapshot(target, true)
-	, CONNECT_ONE_SHOT)
+	if track_baseline:
+		result_signal.connect(func():
+			UiAnimSnapshotStore.release_unified_snapshot(target, true)
+		, CONNECT_ONE_SHOT)
 
 	return result_signal
 
@@ -111,8 +113,9 @@ static func animate_expand_y(source_node: Node, target: Control, speed := UiAnim
 		push_warning("UiAnimUtils: Invalid source_node or target for animate_expand_y")
 		return Signal()
 
-	# Acquire baseline snapshot for universal reset support
-	UiAnimSnapshotStore.acquire_unified_snapshot(source_node, target)
+	var track_baseline: bool = UiAnimBaselineApplyContext.is_enabled()
+	if track_baseline:
+		UiAnimSnapshotStore.acquire_unified_snapshot(source_node, target)
 
 	var animation_callable = func() -> Signal:
 		if auto_visible:
@@ -140,10 +143,10 @@ static func animate_expand_y(source_node: Node, target: Control, speed := UiAnim
 	else:
 		result_signal = animation_callable.call()
 
-	# Connect to completion to release unified snapshot
-	result_signal.connect(func():
-		UiAnimSnapshotStore.release_unified_snapshot(target, true)
-	, CONNECT_ONE_SHOT)
+	if track_baseline:
+		result_signal.connect(func():
+			UiAnimSnapshotStore.release_unified_snapshot(target, true)
+		, CONNECT_ONE_SHOT)
 
 	return result_signal
 

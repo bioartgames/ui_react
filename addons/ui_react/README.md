@@ -109,6 +109,12 @@ All plugin usage details are documented in this README.
 
 **`animation_targets`** is always **optional**: leave empty if you don’t want automatic tweens.
 
+### UiAnimTarget: unified baseline and RESET
+
+- **`use_unified_baseline`** defaults to **on**. Supported motions (slides, center slides, **`EXPAND`/`EXPAND_X`/`EXPAND_Y`**, shake, float, color flash, etc.) **capture** a unified baseline for the tween and **release** it when the animation completes, so the control returns to the snapshot baseline (and **RESET** can restore it later).
+- Set **`use_unified_baseline`** to **off** on a row when you intentionally want motion to **persist** (legacy “slide stays offset” behavior).
+- **`RESET`** honors **`duration`**: **`0`** is an **instant** (**hard**) restore to the stored snapshot; **values above zero** tween (**soft** reset) using **`easing`**. **RESET** still needs a snapshot in **`UiAnimSnapshotStore`** from a prior captured animation (unchanged).
+
 ### Text controls (`UiReactLineEdit`, `UiReactLabel`, `UiReactRichTextLabel`)
 
 | Control | Direction | Notes |

@@ -90,14 +90,16 @@ static func animate_color_flash(source_node: Node, target: Control, flash_color:
 	if auto_visible:
 		target.visible = true
 
-	# Use unified snapshot system for consistency
-	var snapshot = UiAnimSnapshotStore.acquire_unified_snapshot(source_node, target)
+	var track_baseline: bool = UiAnimBaselineApplyContext.is_enabled()
+	var snapshot = null
+	if track_baseline:
+		snapshot = UiAnimSnapshotStore.acquire_unified_snapshot(source_node, target)
 	var original_modulate: Color
 	if snapshot:
 		original_modulate = snapshot.modulate
 	else:
-		# Fallback to current modulate if snapshot failed (null snapshot or acquisition failed)
-		push_warning("UiAnimUtils.animate_color_flash(): Failed to acquire unified snapshot for target '%s', using current modulate" % target.name)
+		if track_baseline:
+			push_warning("UiAnimUtils.animate_color_flash(): Failed to acquire unified snapshot for target '%s', using current modulate" % target.name)
 		original_modulate = target.modulate
 	
 	# Kill any existing tweens on modulate by creating a zero-duration tween
@@ -123,9 +125,9 @@ static func animate_color_flash(source_node: Node, target: Control, flash_color:
 	# Flash back to original (using the stored original from snapshot)
 	tween.tween_property(target, 'modulate', original_modulate, duration * 0.5).set_trans(Tween.TRANS_CUBIC).set_ease(easing)
 
-	# Connect to completion to release unified snapshot
-	tween.finished.connect(func():
-		UiAnimSnapshotStore.release_unified_snapshot(target, true)
-	, CONNECT_ONE_SHOT)
+	if track_baseline:
+		tween.finished.connect(func():
+			UiAnimSnapshotStore.release_unified_snapshot(target, true)
+		, CONNECT_ONE_SHOT)
 
 	return tween.finished

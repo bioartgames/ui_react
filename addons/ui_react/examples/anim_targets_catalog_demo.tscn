@@ -1,49 +1,27 @@
-[gd_scene load_steps=39 format=3 uid="uid://bmhxq7v0p4nw1"]
+[gd_scene load_steps=40 format=3 uid="uid://bmhxq7v0p4nw1"]
 
-[ext_resource type="Script" path="res://addons/ui_react/examples/anim_targets_catalog_demo.gd" id="1_root"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_float_state.gd" id="2_float"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_string_state.gd" id="3_str"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_bool_state.gd" id="4_bool"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_array_state.gd" id="5_arr"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_int_state.gd" id="6_int"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_button.gd" id="7_btn"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_check_box.gd" id="8_cb"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_line_edit.gd" id="9_le"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_slider.gd" id="10_sl"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_progress_bar.gd" id="11_pb"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_item_list.gd" id="12_il"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_anim_target.gd" id="13_at"]
-
-[sub_resource type="Resource" id="fslider"]
-script = ExtResource("2_float")
-value = 33.0
+[ext_resource type="Script" uid="uid://bnhjq7hqfqp5" path="res://addons/ui_react/examples/anim_targets_catalog_demo.gd" id="1_root"]
+[ext_resource type="Script" uid="uid://cy1vsor6ek3xr" path="res://addons/ui_react/scripts/api/models/ui_float_state.gd" id="2_float"]
+[ext_resource type="Script" uid="uid://3a3144h5usfc" path="res://addons/ui_react/scripts/api/models/ui_string_state.gd" id="3_str"]
+[ext_resource type="Script" uid="uid://cxg5hj6ihqtue" path="res://addons/ui_react/scripts/api/models/ui_bool_state.gd" id="4_bool"]
+[ext_resource type="Script" uid="uid://dwwa3tekslkjw" path="res://addons/ui_react/scripts/api/models/ui_array_state.gd" id="5_arr"]
+[ext_resource type="Script" uid="uid://dxvrutpo1gjxg" path="res://addons/ui_react/scripts/api/models/ui_int_state.gd" id="6_int"]
+[ext_resource type="Script" uid="uid://lv5ixpw5hlvp" path="res://addons/ui_react/scripts/controls/ui_react_button.gd" id="7_btn"]
+[ext_resource type="Script" uid="uid://3m8buhv674ja" path="res://addons/ui_react/scripts/controls/ui_react_check_box.gd" id="8_cb"]
+[ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://addons/ui_react/scripts/controls/ui_react_line_edit.gd" id="9_le"]
+[ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://addons/ui_react/scripts/controls/ui_react_slider.gd" id="10_sl"]
+[ext_resource type="Script" uid="uid://s6xiov8r6bil" path="res://addons/ui_react/scripts/controls/ui_react_progress_bar.gd" id="11_pb"]
+[ext_resource type="Script" uid="uid://duphbaan8pk5f" path="res://addons/ui_react/scripts/controls/ui_react_item_list.gd" id="12_il"]
+[ext_resource type="Script" uid="uid://diigywt0dm170" path="res://addons/ui_react/scripts/api/models/ui_anim_target.gd" id="13_at"]
 
 [sub_resource type="Resource" id="fprog"]
 script = ExtResource("2_float")
-value = 0.0
-
-[sub_resource type="Resource" id="stline"]
-script = ExtResource("3_str")
-
-[sub_resource type="Resource" id="boolsel"]
-script = ExtResource("4_bool")
-
-[sub_resource type="Resource" id="itemsrows"]
-script = ExtResource("5_arr")
-value = [&"Alpha", &"Beta"]
-
-[sub_resource type="Resource" id="sellist"]
-script = ExtResource("6_int")
 
 [sub_resource type="Resource" id="at_btn_press"]
 script = ExtResource("13_at")
 target = NodePath("../../../../PreviewPanel")
-trigger = 0
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
 
 [sub_resource type="Resource" id="at_btn_hi"]
 script = ExtResource("13_at")
@@ -51,9 +29,6 @@ target = NodePath("../../../../PreviewPanel")
 trigger = 1
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
 
 [sub_resource type="Resource" id="at_btn_ho"]
 script = ExtResource("13_at")
@@ -61,9 +36,9 @@ target = NodePath("../../../../PreviewPanel")
 trigger = 2
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="boolsel"]
+script = ExtResource("4_bool")
 
 [sub_resource type="Resource" id="at_cb_on"]
 script = ExtResource("13_at")
@@ -71,9 +46,6 @@ target = NodePath("../../../../PreviewPanel")
 trigger = 3
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
 
 [sub_resource type="Resource" id="at_cb_off"]
 script = ExtResource("13_at")
@@ -81,9 +53,9 @@ target = NodePath("../../../../PreviewPanel")
 trigger = 4
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="stline"]
+script = ExtResource("3_str")
 
 [sub_resource type="Resource" id="at_le_tc"]
 script = ExtResource("13_at")
@@ -91,9 +63,6 @@ target = NodePath("../../../../PreviewPanel")
 trigger = 5
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
 
 [sub_resource type="Resource" id="at_le_te"]
 script = ExtResource("13_at")
@@ -101,9 +70,6 @@ target = NodePath("../../../../PreviewPanel")
 trigger = 13
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
 
 [sub_resource type="Resource" id="at_le_fe"]
 script = ExtResource("13_at")
@@ -111,9 +77,6 @@ target = NodePath("../../../../PreviewPanel")
 trigger = 14
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
 
 [sub_resource type="Resource" id="at_le_fx"]
 script = ExtResource("13_at")
@@ -121,9 +84,10 @@ target = NodePath("../../../../PreviewPanel")
 trigger = 15
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="fslider"]
+script = ExtResource("2_float")
+value = 33.0
 
 [sub_resource type="Resource" id="at_sl_vc"]
 script = ExtResource("13_at")
@@ -131,9 +95,6 @@ target = NodePath("../../../../PreviewPanel")
 trigger = 7
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
 
 [sub_resource type="Resource" id="at_sl_vi"]
 script = ExtResource("13_at")
@@ -141,9 +102,6 @@ target = NodePath("../../../../PreviewPanel")
 trigger = 8
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
 
 [sub_resource type="Resource" id="at_sl_vd"]
 script = ExtResource("13_at")
@@ -151,9 +109,6 @@ target = NodePath("../../../../PreviewPanel")
 trigger = 9
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
 
 [sub_resource type="Resource" id="at_sl_ds"]
 script = ExtResource("13_at")
@@ -161,9 +116,6 @@ target = NodePath("../../../../PreviewPanel")
 trigger = 10
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
 
 [sub_resource type="Resource" id="at_sl_de"]
 script = ExtResource("13_at")
@@ -171,9 +123,6 @@ target = NodePath("../../../../PreviewPanel")
 trigger = 11
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
 
 [sub_resource type="Resource" id="at_pb_comp"]
 script = ExtResource("13_at")
@@ -181,9 +130,6 @@ target = NodePath("../../../../../PreviewPanel")
 trigger = 12
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
 
 [sub_resource type="Resource" id="at_pb_hi"]
 script = ExtResource("13_at")
@@ -191,9 +137,6 @@ target = NodePath("../../../../../PreviewPanel")
 trigger = 1
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
 
 [sub_resource type="Resource" id="at_pb_ho"]
 script = ExtResource("13_at")
@@ -201,9 +144,13 @@ target = NodePath("../../../../../PreviewPanel")
 trigger = 2
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="sellist"]
+script = ExtResource("6_int")
+
+[sub_resource type="Resource" id="itemsrows"]
+script = ExtResource("5_arr")
+value = [&"Alpha", &"Beta"]
 
 [sub_resource type="Resource" id="at_il_sel"]
 script = ExtResource("13_at")
@@ -211,9 +158,6 @@ target = NodePath("../../../../PreviewPanel")
 trigger = 6
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
 
 [sub_resource type="Resource" id="at_il_hi"]
 script = ExtResource("13_at")
@@ -221,9 +165,6 @@ target = NodePath("../../../../PreviewPanel")
 trigger = 1
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
 
 [sub_resource type="Resource" id="at_il_ho"]
 script = ExtResource("13_at")
@@ -231,9 +172,6 @@ target = NodePath("../../../../PreviewPanel")
 trigger = 2
 animation = 15
 duration = 0.25
-easing = 1
-repeat_count = 0
-pop_overshoot = 1.2
 
 [node name="AnimTargetsCatalogDemo" type="Control"]
 layout_mode = 3
@@ -271,7 +209,6 @@ text = "UiAnimTarget.AnimationAction"
 custom_minimum_size = Vector2(0, 200)
 layout_mode = 2
 size_flags_vertical = 3
-fixed_icon_size = Vector2i(0, 0)
 
 [node name="PlayButton" type="Button" parent="HSplit/LeftColumn"]
 layout_mode = 2
@@ -370,7 +307,6 @@ text = "Slider: VALUE + DRAG"
 [node name="AnimDemoSlider" type="HSlider" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox/RowSlider"]
 layout_mode = 2
 size_flags_horizontal = 3
-max_value = 100.0
 value = 33.0
 script = ExtResource("10_sl")
 value_state = SubResource("fslider")
@@ -392,8 +328,6 @@ text = "ProgressBar: COMPLETED + HOVER"
 custom_minimum_size = Vector2(120, 24)
 layout_mode = 2
 size_flags_horizontal = 3
-max_value = 100.0
-mouse_filter = 0
 script = ExtResource("11_pb")
 value_state = SubResource("fprog")
 animation_targets = Array[ExtResource("13_at")]([SubResource("at_pb_comp"), SubResource("at_pb_hi"), SubResource("at_pb_ho")])
@@ -413,8 +347,7 @@ text = "ItemList: SELECTION_CHANGED + HOVER"
 [node name="AnimDemoList" type="ItemList" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox/RowItemList"]
 custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
-mouse_filter = 0
 script = ExtResource("12_il")
-items_state = SubResource("itemsrows")
 selected_state = SubResource("sellist")
+items_state = SubResource("itemsrows")
 animation_targets = Array[ExtResource("13_at")]([SubResource("at_il_sel"), SubResource("at_il_hi"), SubResource("at_il_ho")])

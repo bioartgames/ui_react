@@ -8,6 +8,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 No unreleased changes yet.
 
+## [2.6.0] - 2026-04-02
+
+### Added
+
+- **`UiAnimBaselineApplyContext`** (`scripts/internal/anim/ui_anim_baseline_apply_context.gd`): apply-scope stack so **`UiAnimTarget`** can opt out of baseline capture per row without threading flags through **`UiAnimUtils`**.
+- **`UiAnimTarget.use_unified_baseline`** (`@export`, default **true**): when **false**, skip unified snapshot **acquire**/**release** for supported internal animations on that row.
+
+### Changed
+
+- **Slides** (edge + center): use the same unified snapshot **acquire** on start and **release** on completion as scale/expand (including **`UiAnimLoopRunner`** paths).
+- **`UiAnimTarget` RESET:** **`duration`** and **`easing`** on the row are passed through to **`animate_reset_all`** (**`duration == 0`** → instant restore; **`duration > 0`** → tweened restore). **`duration`** export minimum is **`0`** so hard reset is selectable in the Inspector.
+
+### Notes
+
+- **Minor** release: default **`UiAnimTarget`** behavior now restores slides to the baseline after the tween (matching expand). Projects that relied on slides **keeping** an offset must set **`use_unified_baseline = false`** on those rows. Direct **`UiAnimUtils`** calls do **not** push the context stack, so they keep the previous default (baseline **on**).
+
 ## [2.5.1] - 2026-04-02
 
 ### Added

@@ -146,7 +146,8 @@ func _is_pivot_visible_for(action: AnimationAction) -> bool:
 ## ============================================
 
 ## Animation duration in seconds.
-@export_range(0.001, 60.0) var duration: float = 0.3
+## For [enum AnimationAction.RESET], `0` is an instant (hard) restore; larger values tween to the stored snapshot (soft reset).
+@export_range(0.0, 60.0, 0.001, "or_greater") var duration: float = 0.3
 
 ## Easing type for the animation (dropdown selection in Inspector).
 @export var easing: Easing = Easing.EASE_OUT
@@ -164,6 +165,10 @@ func _is_pivot_visible_for(action: AnimationAction) -> bool:
 ## If true, this animation will not trigger when the control is disabled.
 ## Set to false if you want animations to play even when disabled (e.g., for visual feedback).
 @export var respect_disabled: bool = true
+
+## When true (default), animations that support it capture a unified baseline snapshot and release it when the tween completes (see slide, expand, shake, etc.).
+## When false, baseline capture is skipped for those animations so motion can persist without a matching release—legacy escape hatch; [enum AnimationAction.RESET] still requires an existing snapshot.
+@export var use_unified_baseline: bool = true
 
 ## ============================================
 ## ADVANCED SETTINGS
@@ -262,6 +267,13 @@ func apply_to_control(owner: Node, control_target: Control) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(owner, control_target, "UiAnimTarget.apply_to_control"):
 		return Signal()
 
+	UiAnimBaselineApplyContext.push(use_unified_baseline)
+	var result: Signal = _apply_to_control_impl(owner, control_target)
+	UiAnimBaselineApplyContext.pop()
+	return result
+
+
+func _apply_to_control_impl(owner: Node, control_target: Control) -> Signal:
 	var tween_easing: int = _tween_easing_from_enum()
 
 	match animation:
@@ -404,4 +416,4 @@ func _apply_effect_family(owner: Node, control_target: Control, tween_easing: in
 
 
 func _apply_reset(owner: Node, control_target: Control, tween_easing: int) -> Signal:
-	return UiAnimUtils.animate_reset_all(owner, control_target, RESET_INSTANT_DURATION_SECONDS, tween_easing, true)
+	return UiAnimUtils.animate_reset_all(owner, control_target, duration, tween_easing, true)

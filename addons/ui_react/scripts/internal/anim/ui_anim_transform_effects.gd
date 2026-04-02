@@ -125,13 +125,16 @@ static func animate_shake(source_node: Node, target: Control, speed := 0.5, inte
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_shake"):
 		return Signal()
 
-	# Acquire baseline snapshot (automatic state preservation)
-	var snapshot = UiAnimSnapshotStore.acquire_unified_snapshot(source_node, target)
+	var track_baseline: bool = UiAnimBaselineApplyContext.is_enabled()
+	var snapshot = null
+	if track_baseline:
+		snapshot = UiAnimSnapshotStore.acquire_unified_snapshot(source_node, target)
 	var saved_position: Vector2
 	if snapshot:
 		saved_position = snapshot.position
 	else:
-		push_warning("UiAnimUtils.animate_shake(): Failed to acquire baseline snapshot, using current position")
+		if track_baseline:
+			push_warning("UiAnimUtils.animate_shake(): Failed to acquire baseline snapshot, using current position")
 		saved_position = target.position
 	
 	var animation_callable = func() -> Signal:
@@ -162,10 +165,10 @@ static func animate_shake(source_node: Node, target: Control, speed := 0.5, inte
 	else:
 		result_signal = animation_callable.call()
 
-	# Connect to final completion to release unified snapshot
-	result_signal.connect(func():
-		UiAnimSnapshotStore.release_unified_snapshot(target, true)
-	, CONNECT_ONE_SHOT)
+	if track_baseline:
+		result_signal.connect(func():
+			UiAnimSnapshotStore.release_unified_snapshot(target, true)
+		, CONNECT_ONE_SHOT)
 
 	return result_signal
 static func animate_breathing(source_node: Node, target: Control, duration: float = 2.0, repeat_count: int = -1, easing: int = Tween.EASE_OUT, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false) -> Signal:
@@ -253,15 +256,18 @@ static func animate_float(source_node: Node, target: Control, duration: float = 
 	if auto_visible:
 		target.visible = true
 
-	# Acquire baseline snapshot (automatic state preservation)
-	var snapshot = UiAnimSnapshotStore.acquire_unified_snapshot(source_node, target)
+	var track_baseline: bool = UiAnimBaselineApplyContext.is_enabled()
+	var snapshot = null
+	if track_baseline:
+		snapshot = UiAnimSnapshotStore.acquire_unified_snapshot(source_node, target)
 	var saved_position: Vector2
 	if snapshot:
 		saved_position = snapshot.position
 	else:
-		push_warning("UiAnimUtils.animate_float(): Failed to acquire baseline snapshot, using current position")
+		if track_baseline:
+			push_warning("UiAnimUtils.animate_float(): Failed to acquire baseline snapshot, using current position")
 		saved_position = target.position
-	
+
 	var animation_callable = func() -> Signal:
 		var tween = UiAnimLoopRunner.create_tracked_tween(source_node)
 		if not tween:
@@ -280,9 +286,9 @@ static func animate_float(source_node: Node, target: Control, duration: float = 
 
 	var result_signal = UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
 
-	# Connect to final completion to release unified snapshot
-	result_signal.connect(func():
-		UiAnimSnapshotStore.release_unified_snapshot(target, true)
-	, CONNECT_ONE_SHOT)
+	if track_baseline:
+		result_signal.connect(func():
+			UiAnimSnapshotStore.release_unified_snapshot(target, true)
+		, CONNECT_ONE_SHOT)
 
 	return result_signal
