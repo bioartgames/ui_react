@@ -2,7 +2,7 @@ extends CheckBox
 class_name UiReactCheckBox
 
 ## Two-way binding for checked state ([bool]). **Optional** — omit for a plain CheckBox.
-@export var checked_state: UiBoolState
+@export var checked_state: UiState
 ## Two-way binding for disabled state ([bool]). **Optional**.
 @export var disabled_state: UiBoolState
 

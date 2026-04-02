@@ -41,7 +41,7 @@ This document is the **committal** plan for **dogfooding the addon in a real gam
 | Phase | Name | Summary |
 |-------|------|---------|
 | **P0** | Now / baseline | Current addon: `Ui*` states, `UiReact*` controls, `UiAnimUtils` + `UiAnimTarget`, editor dock with validator/scanner. Documentation anchor only—no additional delivery commitment. |
-| **P1** | Transactional state | Minimal draft / commit / revert (exact type names TBD in implementation). **Validation:** a real **Options**-class screen (audio / video / controls or equivalent) uses the pattern without ad hoc clone blobs. |
+| **P1** | Transactional state | Minimal draft / commit / revert via **`UiTransactionalState`**; batch **Apply** / **Cancel** via **`UiTransactionalGroup`** + **`UiReactTransactionalActions`** (no command resource). **Validation:** **Options**-class example **`options_transactional_demo.tscn`**. |
 | **P2** | Computed state | Minimal computed resource or helper with **explicit dependencies** and documented limits (no general graph solver promise in v1). **Validation:** at least one **shop** or **inventory-filter** example (example scene is acceptable before the full game screen exists). |
 | **P3** | List richness and templates | README recipe + example for row templates / icon lists; optional incremental changes to `UiReactItemList` **only if** scoped in an issue. **Validation:** documented + runnable example. |
 | **P4** | Selective new react controls | e.g. `UiReactTextureButton` / slot pattern, `UiReactTree`—**only** when the **3× rule** (Charter) fires; each new control aligns **scanner** (`UiReactScannerService`) and **validator** (`BINDINGS_BY_COMPONENT`) when new bindings are introduced. |
@@ -71,7 +71,7 @@ Not every row is a v1.0 promise; this maps **Megaman-style** UI goals to **phase
 | Screen / use case | P0 (today) | P1 | P2 | P3 | P4 |
 |-------------------|------------|----|----|----|-----|
 | Main menu | yes | — | nicer transitions (docs) | — | maybe |
-| Options + apply/cancel | partial | **target** | — | — | — |
+| Options + apply/cancel | partial | **yes** (example scene) | — | — | — |
 | Inventory | partial | — | filters | rows/templates | slots / tree |
 | Shop | partial | — | totals / afford | rows | — |
 | Equipment / combine | weak | — | preview stats | templates | slots / rules UI |
@@ -80,11 +80,13 @@ Not every row is a v1.0 promise; this maps **Megaman-style** UI goals to **phase
 
 **P1 — Transactional state**
 
-- [ ] Implementation merged (types TBD in PR).
-- [ ] README section describes draft / apply / cancel and links to example.
-- [ ] Example scene or shipped game screen path documented (path in the Appendix **Notes** when known).
-- [ ] `CHANGELOG.md` entry (minor or patch per SemVer).
-- [ ] Editor dock validator updated **if** new resource types participate in binding diagnostics.
+**Orchestration note (non-command, non-computed):** Screens with multiple transactional states use **`UiTransactionalGroup`** (`begin_edit_all` / `apply_all` / `cancel_all`) and optional inspector wiring **`UiReactTransactionalActions`** on **`BaseButton`** paths—no autoload scanner, no per-control connection arrays, and no mandatory `UiCommand`-style resource (Charter).
+
+- [x] Implementation merged: **`UiTransactionalState`**, **`UiTransactionalGroup`**, **`UiReactTransactionalActions`** (see addon `scripts/api/models/` and `scripts/controls/`).
+- [x] README section describes draft / apply / cancel and links to example.
+- [x] Example scene or shipped game screen path documented (path in the Appendix **Notes** when known).
+- [x] `CHANGELOG.md` entry (minor or patch per SemVer).
+- [x] Editor dock validator updated **if** new resource types participate in binding diagnostics.
 
 **P2 — Computed state**
 
@@ -113,8 +115,8 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 
 | ID | Capability / topic | Screen examples | Target phase | Status | Notes |
 |----|-------------------|-----------------|--------------|--------|-------|
-| CB-001 | Core: `UiState`, `UiReact*`, `UiAnimUtils`, `UiAnimTarget`, editor dock | All | P0 | Done | Baseline shipped; maintain compat per SemVer. Includes typed diagnostics (`IssueKind`/`resource_path`), unused state file diagnostics, Reveal + persisted ignore flows, and filesystem-triggered dock refresh. |
-| CB-002 | Transactional / draft state (apply, cancel, revert) | Options, key remap drafts | P1 | Planned | Depends on P1 exit criteria. |
+| CB-001 | Core: `UiState`, `UiReact*`, `UiAnimUtils`, `UiAnimTarget`, editor dock | All | P0 | Done | Baseline shipped; maintain compat per SemVer. Includes typed diagnostics (`IssueKind`/`resource_path`), scene-file-scoped unused `UiState` `.tres` diagnostics (no cross-scene clutter), Reveal + persisted ignore flows, and filesystem-triggered dock refresh. |
+| CB-002 | Transactional / draft state (apply, cancel, revert) | Options, key remap drafts | P1 | Done | **`UiTransactionalState`** + **`UiTransactionalGroup`** + **`UiReactTransactionalActions`**; README + **`options_transactional_demo.tscn`**. The example’s status line uses **`UiStringState`** + **`UiReactLabel`** (P1-close demo pattern; not P2 computed state). |
 | CB-003 | Computed state (explicit dependencies, documented limits) | Shop totals, afford flags, filtered inventory | P2 | Planned | Use glossary term “computed state” only. |
 | CB-004 | Explicit dependency / recalc rules (documented) | Same as CB-003 | P2 | Planned | Ships with or immediately after CB-003. |
 | CB-005 | Undo stack / nested transactions | Advanced options | P5+ | Deferred | Not v1.0 scope; promote if needed. |
@@ -134,7 +136,7 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-019 | Dock modularization (internal refactor) | N/A | P5+ | Deferred | Maintainability; no user-facing v1.0 promise. |
 | CB-020 | Scanner + validator updates for new bindings | All new controls/states | Ongoing | Planned | Mirror `UiReactScannerService` / `BINDINGS_BY_COMPONENT` per control. |
 | CB-021 | Semver + CHANGELOG discipline | Releases | Ongoing | InProgress | Keep `CHANGELOG.md` aligned with releases. |
-| CB-022 | Example: options draft / apply | Options | P1 | Planned | Tied to CB-002. |
+| CB-022 | Example: options draft / apply | Options | P1 | Done | **`res://addons/ui_react/examples/options_transactional_demo.tscn`**. |
 | CB-023 | Example: shop math / afford | Shop | P2 | Planned | Tied to CB-003. |
 | CB-024 | Example: inventory filter | Inventory | P2 | Planned | Tied to CB-003 / CB-011. |
 | CB-025 | Escape hatch documentation (plain `Control` + `UiState`) | Complex one-off UI | P3 | Planned | Reduce support burden for edge layouts. |
@@ -146,4 +148,4 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 
 ---
 
-*Last updated: roadmap document creation; update quarterly or when phases close.*
+*Last updated: 2026-04-01 — P1 closure: reactive demo status (`UiStringState` + `UiReactLabel`), changelog **2.1.0**; update quarterly or when phases close.*

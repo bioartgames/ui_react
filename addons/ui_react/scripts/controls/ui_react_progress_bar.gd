@@ -2,7 +2,7 @@ extends ProgressBar
 class_name UiReactProgressBar
 
 ## Two-way binding for [member Range.value] ([float]). **Assign** for reactive sync.
-@export var value_state: UiFloatState
+@export var value_state: UiState
 
 ## **Optional** — Inspector-driven tweens (value, completed, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []

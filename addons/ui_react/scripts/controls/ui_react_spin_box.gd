@@ -2,7 +2,7 @@ extends SpinBox
 class_name UiReactSpinBox
 
 ## Two-way binding for numeric value ([float]). **Assign** for reactive sync with [UiFloatState].
-@export var value_state: UiFloatState
+@export var value_state: UiState
 ## Two-way binding for editable/disabled ([bool]). **Optional**.
 @export var disabled_state: UiBoolState
 

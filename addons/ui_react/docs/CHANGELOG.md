@@ -6,18 +6,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+No unreleased changes yet.
+
+## [2.1.0] - 2026-04-01
+
 ### Added
 
-- **Editor dock — unused state files:** INFO diagnostics for typed **`UiState`** `.tres` in the configured output folder that are not referenced by the edited scene; **Reveal** (**FileSystemDock** **`navigate_to_path`**) and **Ignore** (persisted in **`ui_react/plugin_ignored_unused_state_paths`**).
+- **`UiTransactionalGroup`:** batch **`begin_edit_all`**, **`apply_all`**, **`cancel_all`**, **`has_pending_changes`** over an ordered **`states`** array (`scripts/api/models/ui_transactional_group.gd`).
+- **`UiReactTransactionalActions`:** inspector **`NodePath`** wiring from **Apply** / **Cancel** **`BaseButton`** nodes to a group’s **`apply_all`** / **`cancel_all`**, optional **`begin_on_ready`** (`scripts/controls/ui_react_transactional_actions.gd`).
+- **`UiTransactionalState`:** draft / **`committed_value`** lifecycle with **`begin_edit`**, **`apply_draft`**, **`cancel_draft`** / **`reset_to_committed`**, and **`has_pending_changes`** (`scripts/api/models/ui_transactional_state.gd`). Controls bind to the draft via **`get_value`/`set_value`** (same as other **`UiState`** resources).
+- **Example:** **`examples/options_transactional_demo.tscn`** (+ controller script) — options-style audio controls with **Apply** / **Cancel** using transactional state.
+- **Editor dock — unused state files:** INFO diagnostics for typed **`UiState`** `.tres` in the output folder that appear in the **saved** edited **`.tscn`** and are not bound on **`UiReact*`** exports; **Reveal** (**FileSystemDock** **`navigate_to_path`**) and **Ignore** (persisted in **`ui_react/plugin_ignored_unused_state_paths`**).
 - **Editor dock — refresh:** coalesced rescan on **`EditorFileSystem.filesystem_changed`**.
 - **Diagnostics model:** **`IssueKind`**, **`resource_path`**, and **`make_unused_state_file_issue`** on **`UiReactDiagnosticModel.DiagnosticIssue`**.
-- **Services:** **`UiReactStateReferenceCollector`**, **`UiReactUnusedStateService`**.
+- **Services:** **`UiReactStateReferenceCollector`**, **`UiReactUnusedStateService`**, **`UiReactSceneFileResourcePaths`** (scene-file **`res://`** extraction for unused-state filtering).
 
 ### Changed
 
+- **`UiReactUnusedStateService`:** unused **`UiState`** `.tres` INFO rows are **scene-file-scoped**—only resources under the configured output folder whose **`res://` path appears in the edited scene’s saved `.tscn` text** and are **not** assigned on any **`UiReact*`** export in that scene. **Unsaved scenes** yield no unused-state rows. New helper **`UiReactSceneFileResourcePaths`** parses **`res://`** substrings from the scene file.
+- **Copy / docs:** issue summary and fix hint state edited-scene-only scope; **README** and dock tooltips describe limitations (no project-wide scan; script-only refs not detected).
+- **`examples/options_transactional_demo`:** orchestration uses **`UiTransactionalGroup`** + **`UiReactTransactionalActions`**; scene script handles status display only.
+- **`UiReactSlider` / `UiReactSpinBox` / `UiReactProgressBar`:** **`value_state`** export type widened to **`UiState`** so **`UiFloatState`** or **`UiTransactionalState`** (float/int payload) can be assigned without losing inspector compatibility.
+- **`UiReactCheckBox`:** **`checked_state`** export type widened to **`UiState`** for **`UiBoolState`** or bool-shaped **`UiTransactionalState`**.
+- **Validator:** accepts **`UiTransactionalState`** when **`committed_value`** matches the binding’s expected payload type; **`UiReactLabel.text_state`** allows transactional string/array payloads.
 - **Editor dock — grouping:** **By node** places unused-file rows under **Unused state files** (not **`(scene)`**).
 - **Editor dock — details report:** optional **`Resource`** line for **`resource_path`**.
 - **`UiReactStateFactoryService.default_output_dir()`:** normalize saved path with **`String(...).strip_edges()`**.
+- **`examples/options_transactional_demo`:** status line uses **`UiReactLabel`** + **`UiStringState`**; root script updates **`UiStringState`** via **`set_value()`** only; **`transactional_group`** export drives **`has_pending_changes()`** for the status suffix.
+
+### Removed
+
+- **Unused-state false positives** from listing output-folder **`UiState`** files that are only referenced by **other** scenes’ `.tscn` files while a different scene is edited.
 
 ### Fixed
 
@@ -25,8 +44,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Documentation
 
-- **README:** editor plugin sections updated (row actions, refresh triggers, filter/`resource_path`, project key **`plugin_ignored_unused_state_paths`**, architecture list); removed dead **plugin_ux_*** links in favor of **`docs/ROADMAP.md`**.
-- Addon [`ROADMAP.md`](ROADMAP.md) (charter, phases P0–P5+, screen matrix, exit criteria, capability appendix **CB-001–CB-030**); link from **README** top.
+- **README:** scene-file-scoped unused **`UiState`** rules; **`UiReactSceneFileResourcePaths`** in contributor architecture list; **`UiTransactionalGroup`** + **`UiReactTransactionalActions`** orchestration; public API table + layout paths; transactional example description; existing transactional / **`UiState`** export / editor-plugin sections retained.
+- **`ROADMAP.md`:** P1 phase summary, exit-criteria orchestration note, **CB-002** notes, and footer **Last updated** for group + adapter.
+- **README:** **P1 vs P2 (computed state)** scope subsection; orchestration step 7 (**`UiStringState`** + **`UiReactLabel`** summary pattern); deferred-work sentence for P2+ systems.
+- **`ROADMAP.md`:** P1 exit criteria marked complete; **CB-002** notes for reactive demo status.
 
 ## [2.0.0] - 2026-03-29
 

@@ -11,7 +11,7 @@ Public direction, phased delivery, and a full **capability backlog** (so deferre
 ## The 3-step setup (repeat for every control)
 
 1. **Attach** the matching `UiReact*` script to a native Control (Button, HSlider, Label, …).
-2. **Assign** the **typed** state resource each export expects (`UiBoolState`, `UiIntState`, `UiFloatState`, `UiStringState`, or `UiArrayState`). Two polymorphic exports use the abstract `UiState` slot so you can pick the right concrete class: `UiReactLabel.text_state` (**`UiStringState` or `UiArrayState`**) and `UiReactItemList.selected_state` (**`UiIntState`** in single-select, **`UiArrayState`** in multi-select).
+2. **Assign** the **typed** state resource each export expects (`UiBoolState`, `UiIntState`, `UiFloatState`, `UiStringState`, `UiArrayState`, or **`UiTransactionalState`** where noted). Exports typed as **`UiState`** accept any concrete state implementing the binding’s payload shape — including **`UiTransactionalState`** — for `UiReactSlider` / `UiReactSpinBox` / `UiReactProgressBar` **`value_state`**, `UiReactCheckBox` **`checked_state`**, `UiReactLabel.text_state` (**`UiStringState` or `UiArrayState`**, or transactional string/array), and `UiReactItemList.selected_state` (**`UiIntState`** in single-select, **`UiArrayState`** in multi-select).
 3. **Optionally** fill `animation_targets` with `UiAnimTarget` entries to run tweens from the Inspector (no tween code).
 
 That’s it. Game logic reads and writes through **`get_value()`** / **`set_value()`** on those resources; controls stay in sync.
@@ -31,7 +31,7 @@ Copy `addons/ui_react/` into your Godot project at **`addons/ui_react/`**. Open 
 
 ### 2) Run the example
 
-Open **`res://addons/ui_react/examples/demo.tscn`** (smoke demo) and press **Play** (or set it as **Main Scene** in **Project Settings → Application → Run**). Use the scene tree to see how states and targets are wired.
+Open **`res://addons/ui_react/examples/demo.tscn`** (smoke demo) or **`res://addons/ui_react/examples/options_transactional_demo.tscn`** (options-style **Apply / Cancel** with **`UiTransactionalState`**) and press **Play** (or set either as **Main Scene**). Use the scene tree to see how states and targets are wired.
 
 ### 3) Minimal recipes (editor-first, no code required)
 
@@ -69,7 +69,7 @@ await UiAnimUtils.animate_expand(self, some_control).finished
 1. Open **Project → Project Settings → Plugins** and enable **Ui React** (bundled at `editor_plugin/plugin.cfg`).
 2. Open the **Ui React** panel in the **bottom editor dock** (tab bar).
 3. Choose **Scan: Selection** or **Entire scene**, press **Rescan** to run diagnostics on demand, and review results. Dock choices (scan mode, **Group** mode, filters, auto-refresh, output folder) are **remembered per project** when you reopen it. The tool also **updates when you switch the active edited scene**, and when **EditorFileSystem** reports filesystem changes (coalesced refresh so rapid imports do not spam rescans).
-4. Use **Group** (flat / by node / by severity), **Filter**, and severity toggles to narrow the list. **Binding** issues (validator output) show **Fix**, **Focus**, and **Ignore**—**Ignore** is session-only until the next **Rescan**. **Unused state file** issues (typed `UiState` `.tres` in the output folder, not referenced by this scene) show **Reveal** and **Ignore**—**Reveal** opens the FileSystem dock and calls **`navigate_to_path`** so the file is shown with keyboard focus; **Ignore** is **stored in Project Settings** (**`ui_react/plugin_ignored_unused_state_paths`**) and survives **Rescan**. With **Group → By node**, those unused-file rows appear under **Unused state files**, not under **`(scene)`**. Click an issue summary in the **upper list** to select it and show full details in the **report** below. **Hover** any control for a short tooltip (scope, filters, and actions).
+4. Use **Group** (flat / by node / by severity), **Filter**, and severity toggles to narrow the list. **Binding** issues (validator output) show **Fix**, **Focus**, and **Ignore**—**Ignore** is session-only until the next **Rescan**. **Unused state file** rows apply only to the **active edited, saved** scene: a typed `UiState` `.tres` must (1) live under the configured output folder, (2) have its `res://` path appear in that scene’s **`.tscn` text on disk**, and (3) **not** be assigned on any **Ui React** export in that scene’s node tree. Such rows show **Reveal** and **Ignore**—**Reveal** calls the FileSystem dock’s **`navigate_to_path`** for that `.tres`; **Ignore** is **stored in Project Settings** (**`ui_react/plugin_ignored_unused_state_paths`**) and survives **Rescan**. **Unsaved scenes** (no `scene_file_path`) produce **no** unused-state rows. **Script-only** references (never written into the `.tscn`) are **not** detected as candidates. This is **not** a project-wide unused scan. With **Group → By node**, unused-file rows appear under **Unused state files**, not under **`(scene)`**. Click an issue summary in the **upper list** to select it and show full details in the **report** below. **Hover** any control for a short tooltip (scope, filters, and actions).
 5. For unassigned `*_state` slots with a suggested type, use **Fix** on a row (single issue) or **Fix All** in the toolbar (every eligible **binding** row in the **filtered** list). **Ignore All** applies session **Ignore** to binding rows and appends unused-file paths to the persisted ignore list (see **Project settings** below). New `.tres` files are saved under the configured folder (default `res://addons/ui_react/ui_resources/plugin_generated/`); if a filename already exists, the plugin saves as `<name>_2.tres`, `<name>_3.tres`, … instead of overwriting. Override the folder with **`ui_react/plugin_state_output_path`**.
 
 All plugin usage details are documented in this README.
@@ -81,10 +81,10 @@ All plugin usage details are documented in this README.
 | Control | Bindings (typical) | Required for “reactive” behavior |
 |--------|--------------------|----------------------------------|
 | **UiReactButton** | `pressed_state`, `disabled_state` | At least one state if you want sync with `UiState`; neither required for a plain Button. |
-| **UiReactCheckBox** | `checked_state`, `disabled_state` | Same pattern as Button. |
-| **UiReactSlider** | `value_state` | Assign `value_state` for two-way sync; else behaves like a normal slider. |
-| **UiReactSpinBox** | `value_state`, `disabled_state` | `value_state` for sync; `disabled_state` optional. |
-| **UiReactProgressBar** | `value_state` | `value_state` for sync from state. |
+| **UiReactCheckBox** | `checked_state`, `disabled_state` | Assign `checked_state` (**`UiState`**: **`UiBoolState`** or bool-shaped **`UiTransactionalState`**) for two-way sync. |
+| **UiReactSlider** | `value_state` | Assign **`value_state`** (**`UiState`**: **`UiFloatState`** or float/int-shaped **`UiTransactionalState`**) for two-way sync; else behaves like a normal slider. |
+| **UiReactSpinBox** | `value_state`, `disabled_state` | Same **`value_state`** pattern as slider; `disabled_state` optional (**`UiBoolState`**). |
+| **UiReactProgressBar** | `value_state` | Same **`value_state`** pattern as slider. |
 | **UiReactLineEdit** | `text_state` | `text_state` for sync. |
 | **UiReactLabel** | `text_state` | `text_state` for sync. |
 | **UiReactOptionButton** | `selected_state`, `disabled_state` | `selected_state` for sync (usually string item text). |
@@ -105,16 +105,57 @@ Paths are under **`res://addons/ui_react/`**.
 | Animation defaults (numeric) | `UiAnimConstants` | `scripts/internal/anim/ui_anim_constants.gd` |
 | Chained animations (optional) | `UiAnimSequence` | `scripts/internal/anim/ui_anim_sequence.gd` |
 | State (abstract base) | `UiState` | `scripts/api/models/ui_state.gd` |
-| State (concrete) | `UiBoolState`, `UiIntState`, `UiFloatState`, `UiStringState`, `UiArrayState` | `scripts/api/models/ui_*_state.gd` |
+| State (concrete) | `UiBoolState`, `UiIntState`, `UiFloatState`, `UiStringState`, `UiArrayState`, `UiTransactionalState`, `UiTransactionalGroup` | `scripts/api/models/ui_*_state.gd`, `scripts/api/models/ui_transactional_state.gd`, `scripts/api/models/ui_transactional_group.gd` |
 | Inspector animation row | `UiAnimTarget` | `scripts/api/models/ui_anim_target.gd` |
 | Tab / container config | `UiTabContainerCfg` | `scripts/api/models/ui_tab_container_cfg.gd` |
-| Attachable controls | `UiReact*` | `scripts/controls/` |
+| Attachable controls | `UiReact*`, `UiReactTransactionalActions` | `scripts/controls/` |
 
 Prefer **`UiAnimUtils`** for tweens from code; prefer **`UiAnimTarget`** arrays on controls for no-code animation.
 
-**`UiState` is abstract:** do not instantiate it directly. Each control export uses a concrete **`Ui*State`** (or the abstract slot only where noted above). Read and write payload data with **`get_value()`** / **`set_value()`** (subclasses expose a typed **`value`** property in the Inspector). Older projects that used a single concrete `UiState` resource with a `Variant` export must migrate to the matching concrete class and resave resources.
+**`UiState` is abstract:** do not instantiate it directly. Each control export uses a concrete **`Ui*State`**, **`UiTransactionalState`**, or the polymorphic **`UiState`** slot where noted. Read and write the **bound** payload with **`get_value()`** / **`set_value()`** (typed states expose a **`value`** property; **`UiTransactionalState`** exposes **`committed_value`** plus draft via those methods). Older projects that used a single generic `UiState` resource with a `Variant` export must migrate to the matching concrete class and resave resources.
 
-**Strict integer indices:** Tab index (`UiReactTabContainer.selected_state`), **`UiIntState`**, and ItemList single-select **`selected_state`** use **`int` only**. **`float` is not accepted** for those bindings (no silent coercion from float or from **`UiFloatState`** there). Reserve **`UiFloatState`** for sliders, spin boxes, and progress bars.
+**Strict integer indices:** Tab index (`UiReactTabContainer.selected_state`), **`UiIntState`**, and ItemList single-select **`selected_state`** use **`int` only**. **`float` is not accepted** for those bindings (no silent coercion from float or from **`UiFloatState`** / float-shaped **`UiTransactionalState`** there). Reserve **`UiFloatState`** (or transactional **float** payload) for sliders, spin boxes, and progress bars.
+
+---
+
+## Transactional state (draft / commit / cancel)
+
+Use **`UiTransactionalState`** when you want **working-copy** values on an options-style screen that only persist after **Apply**, and **Cancel** restores controls from **`committed_value`**.
+
+| Method / field | Role |
+|----------------|------|
+| **`committed_value`** | Last **committed** payload (`@export` in the Inspector). |
+| **`get_value()` / `set_value()`** | Read/write the **draft** — this is what **`UiReact*`** controls sync with. |
+| **`begin_edit()`** | Refresh draft from **`committed_value`** when opening the sheet (or after external commits). |
+| **`apply_draft()`** | Copy draft → **`committed_value`** (commit). |
+| **`cancel_draft()`** / **`reset_to_committed()`** | Copy **`committed_value`** → draft (revert UI). |
+| **`has_pending_changes()`** | `true` when draft and committed differ (see **`UiTransactionalState`** tooltips / script). |
+
+**Runnable example:** **`res://addons/ui_react/examples/options_transactional_demo.tscn`** — master volume (**`HSlider`** + **`UiReactSlider`**) and mute (**`CheckBox`** + **`UiReactCheckBox`**) share transactional resources; **Apply** / **Cancel** are wired through **`UiReactTransactionalActions`** to a **`UiTransactionalGroup`** (no per-scene apply/cancel loops). The demo status line uses **`UiReactLabel`** + **`UiStringState`** updated from the root script (reactive binding). This is **not** “computed state” (see **`docs/ROADMAP.md`** glossary): no dependency graph—just draft vs committed.
+
+### Transactional batch orchestration (`UiTransactionalGroup` + `UiReactTransactionalActions`)
+
+When one screen has **several** `UiTransactionalState` resources and a single **Apply** / **Cancel** bar:
+
+1. Create a **`UiTransactionalGroup`** resource (`scripts/api/models/ui_transactional_group.gd`).
+2. Set its **`states`** array to those `UiTransactionalState` instances **in commit order** (null entries are skipped at runtime).
+3. Add a **`Control`** node in the scene, attach **`UiReactTransactionalActions`** (`scripts/controls/ui_react_transactional_actions.gd`).
+4. Assign **`group`** to that `UiTransactionalGroup`.
+5. Set **`apply_button_path`** and **`cancel_button_path`** as `NodePath`s **relative to the `UiReactTransactionalActions` node** (example: `../VBox/ButtonRow/ApplyButton`).
+6. Leave **`begin_on_ready`** `true` to call **`begin_edit_all()`** once when the scene enters the tree, unless you start the edit session from code.
+7. **Read-only summary line (demo pattern):** add a **`UiStringState`**, assign it to **`UiReactLabel.text_state`**, and call **`set_value()`** on that string state from the same scene script that holds your transactional exports (or from a small dedicated script). Do **not** assign **`Label.text`** directly if the label uses **`UiReactLabel`**. No extra addon types are required.
+
+**API — `UiTransactionalGroup`:** `begin_edit_all()`, `apply_all()`, `cancel_all()`, `has_pending_changes()`.
+
+**API — `UiReactTransactionalActions`:** connects **`BaseButton.pressed`** on the two paths to **`apply_all()`** / **`cancel_all()`** on the group. No undo, no autoload, no extra bindings on other `UiReact*` controls.
+
+### P1 scope vs P2 (computed state)
+
+- **P1 includes:** **`UiTransactionalState`**, **`UiTransactionalGroup`**, **`UiReactTransactionalActions`**, direct **`UiReact*`** bindings to transactional payloads, and **`res://addons/ui_react/examples/options_transactional_demo.tscn`**.
+- **P1 does not include:** multi-source **computed** text as a first-class core type; that is **P2** per **[`docs/ROADMAP.md`](docs/ROADMAP.md)**.
+- **Until P2:** a screen may update a **`UiStringState`** (bound to **`UiReactLabel`**) from scene code when summarizing several transactional states—**demo-oriented pattern**, not a framework promise.
+
+First-class **computed state** resources or helpers, **autoload** orchestration services, and **per-control connection metadata** on every **`UiReact*`** node are **not** started until **P2+** per phased roadmap work—this release documents intent only; it does not implement those systems.
 
 ---
 
@@ -149,7 +190,7 @@ These may change between template versions; **do not rely on them from game code
 | `scripts/controls/` | Attachable **UiReact\*** scripts. |
 | `scripts/internal/anim/` | Animation implementation (unstable for direct use). |
 | `scripts/internal/react/` | Reactive helpers (unstable for direct use). |
-| `examples/` | `demo.tscn` smoke demo. |
+| `examples/` | `demo.tscn` smoke demo; `options_transactional_demo.tscn` (transactional **Apply / Cancel** via `UiTransactionalGroup` + `UiReactTransactionalActions`). |
 | `docs/` | **README**, **CHANGELOG**, and addon **ROADMAP** (this folder). |
 | `editor_plugin/` | Optional Godot editor plugin (dock, validation, quick state creation). |
 | `ui_resources/` | Sample `.tres` for the example scene; `plugin_generated/` holds plugin-created states (optional). |
@@ -192,7 +233,7 @@ The plugin **version** is declared in [`editor_plugin/plugin.cfg`](editor_plugin
 
 - The **upper issue list** shows **compact summary lines** per issue (severity prefix + short text). Full “Fix:” prose stays in the **report** area below so narrow docks stay readable.
 - **Click an issue summary** to load the **report**: full issue text, fix hint, component/node/path, **Resource** (`res://` path when the issue carries `resource_path`), property metadata when applicable, and—when present—scan-time **Value type** / **Effective value** (truncated for long strings).
-- **Toolbar:** **Rescan**, **Copy report**, **Fix All** (binding issues only; eligible filtered rows), and **Ignore All** (applies session **Ignore** to binding issues; adds unused-file paths to the **persisted** ignore list). **Row actions:** binding rows—**Fix**, **Focus**, **Ignore**; unused-file rows—**Reveal**, **Ignore**. Use **Copy report** to copy the filtered list using the same summary text as each row (and fix hints when present).
+- **Toolbar:** **Rescan**, **Copy report**, **Fix All** (binding issues only; eligible filtered rows), and **Ignore All** (applies session **Ignore** to binding issues; adds **edited-scene** unused-file paths to the **persisted** ignore list). **Row actions:** binding rows—**Fix**, **Focus**, **Ignore**; unused-file rows (see step 4 scope)—**Reveal**, **Ignore**. Use **Copy report** to copy the filtered list using the same summary text as each row (and fix hints when present).
 
 **Persisted per project:** scan mode, **Group** mode, severity filters, auto-refresh, state output folder, and ignored unused file paths (**`ui_react/plugin_ignored_unused_state_paths`**) are saved in **Project Settings** and restored when you reopen the project (no need to reconfigure each session).
 
@@ -205,17 +246,17 @@ The plugin **version** is declared in [`editor_plugin/plugin.cfg`](editor_plugin
 | Control | Purpose |
 |--------|---------|
 | **Scan** | **Selection** — selected nodes and their subtree `UiReact*` controls. **Entire scene** — all `UiReact*` nodes under the edited scene root. |
-| **Group** | **Flat list**, **By node**, or **By severity** (collapsible groups). **By node:** unused `.tres` diagnostics group under **Unused state files**. |
+| **Group** | **Flat list**, **By node**, or **By severity** (collapsible groups). **By node:** unused-file (scene-file-scoped) `.tres` diagnostics group under **Unused state files**. |
 | **Show** | Filter diagnostics by severity (Errors / Warnings / Info). |
 | **Filter** | Text filter across node name, path, property, component, messages, fix hints, **resource path** (`res://` for unused-file rows), and value-type hints (debounced). Value preview body text is not searched. |
 | **State output folder** | Where quick-create saves new `.tres` files. Default: `res://addons/ui_react/ui_resources/plugin_generated/`. Collision-safe names: `<NodeName>_<property>_2.tres`, `_3.tres`, … |
 | **Rescan** | Run diagnostics now using the current **Scan** mode and filters; clears **session** **Ignore** on binding issues only. |
 | **Copy report** | Copy the **filtered** list to the clipboard: same summary line as each row, plus **Fix:** hint when present. |
-| **Reveal** | Unused-file rows only: FileSystem dock **`navigate_to_path`** for that `.tres`. |
+| **Reveal** | Unused-file rows only (edited saved scene scope): FileSystem dock **`navigate_to_path`** for that `.tres`. |
 | **Focus** | Binding rows only: select the scene node for that issue (disabled when the row has no `node_path`). |
 | **Fix** | Binding rows only: for an unassigned `*_state` with a suggested type (**Info** optional slots or **Warning** required slots), creates the typed state, saves it, assigns with **undo/redo**. |
 | **Fix All** | Same as **Fix** for **every** eligible **binding** row in the **current filtered** list. |
-| **Ignore** / **Ignore All** | Binding issues: hide until **Rescan**. Unused-file issues: append path to **`plugin_ignored_unused_state_paths`** (persisted). |
+| **Ignore** / **Ignore All** | Binding issues: hide until **Rescan**. Unused-file issues (edited scene file + output folder rule): append path to **`plugin_ignored_unused_state_paths`** (persisted). |
 
 ## Project settings
 
@@ -228,11 +269,11 @@ The plugin **version** is declared in [`editor_plugin/plugin.cfg`](editor_plugin
 | `ui_react/plugin_show_info` | `true` | Show **Info** in the list. |
 | `ui_react/plugin_auto_refresh` | `true` | Auto-refresh when selection changes (Selection scan only). |
 | `ui_react/plugin_group_mode` | `0` | `0` = Flat list, `1` = By node, `2` = By severity. |
-| `ui_react/plugin_ignored_unused_state_paths` | `PackedStringArray()` (empty) | `res://` paths of unused-file diagnostics hidden until removed from this list. |
+| `ui_react/plugin_ignored_unused_state_paths` | `PackedStringArray()` (empty) | `res://` paths of **scene-file-scoped** unused-file diagnostics hidden until removed from this list. |
 
 ## Binding metadata & validation
 
-The scanner (`ui_react_scanner_service.gd`) records which exports each `UiReact*` control expects, including a **kind** hint (`bool`, `int`, `float`, `string`, `array`, ...). The validator (`ui_react_validator_service.gd`) reports **errors** when the assigned resource is not the expected concrete `Ui*State` subclass for that slot.
+The scanner (`ui_react_scanner_service.gd`) records which exports each `UiReact*` control expects, including a **kind** hint (`bool`, `int`, `float`, `string`, `array`, ...). The validator (`ui_react_validator_service.gd`) reports **errors** when the assigned resource does not match that slot — including **`UiTransactionalState`** when its **`committed_value`** has a compatible **Variant** type for the binding (**`UiBoolState`**, **`UiFloatState`**, etc.).
 
 ### `UiReactItemList` bindings
 
@@ -252,7 +293,8 @@ Use **`UiArrayState`** for `items_state` so inspector intent and diagnostics lin
 - `services/ui_react_scanner_service.gd` — Finds `UiReact*` nodes and binding metadata.
 - `services/ui_react_validator_service.gd` — Emits binding `DiagnosticIssue` rows (mirrors runtime validation rules where practical).
 - `services/ui_react_state_reference_collector.gd` — Collects `res://` paths of `UiState` resources referenced by bindings (including `tab_config`).
-- `services/ui_react_unused_state_service.gd` — Emits **unused** `.tres` issues for the configured output folder vs the current scene.
+- `services/ui_react_scene_file_resource_paths.gd` — Parses the edited scene’s saved `.tscn` text for `res://` substrings (candidate paths for unused-state detection).
+- `services/ui_react_unused_state_service.gd` — Emits **unused** `.tres` INFO rows: **intersection** of output-folder `UiState` files, paths present in the saved scene file, and **not** referenced by Ui React on the edited tree.
 - `services/ui_react_state_factory_service.gd` — Creates typed states and saves them to disk.
 - `ui_react_dock_config.gd` — ProjectSettings keys and load/save for dock preferences.
 - `controllers/ui_react_action_controller.gd` — Wraps `EditorUndoRedoManager` property changes.

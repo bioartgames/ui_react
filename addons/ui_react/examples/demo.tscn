@@ -1,7 +1,7 @@
 [gd_scene load_steps=38 format=3 uid="uid://1ctyp6anyhbh"]
 
 [ext_resource type="Script" uid="uid://3m8buhv674ja" path="res://addons/ui_react/scripts/controls/ui_react_check_box.gd" id="1_732tq"]
-[ext_resource type="Resource" uid="uid://dyiybrrey3gto" path="res://addons/ui_react/ui_resources/plugin_generated/DisableActionsToggle_checked_state.tres" id="2_1gbb3"]
+[ext_resource type="Resource" uid="uid://b7tebgscp7rms" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveButton_disabled_state.tres" id="2_1gbb3"]
 [ext_resource type="Script" uid="uid://lv5ixpw5hlvp" path="res://addons/ui_react/scripts/controls/ui_react_button.gd" id="2_mlp57"]
 [ext_resource type="Script" uid="uid://cxg5hj6ihqtue" path="res://addons/ui_react/scripts/api/models/ui_bool_state.gd" id="2_yv7u2"]
 [ext_resource type="Script" uid="uid://diigywt0dm170" path="res://addons/ui_react/scripts/api/models/ui_anim_target.gd" id="3_yauoy"]

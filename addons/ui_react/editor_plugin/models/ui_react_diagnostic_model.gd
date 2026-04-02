@@ -9,7 +9,9 @@ enum Severity {
 }
 
 enum IssueKind {
+	## Binding / validator rows; not tied to a standalone `.tres` path row.
 	GENERIC,
+	## [UiState] `.tres` listed when its [code]res://[/code] appears in the **saved** edited scene file but is not assigned on any [UiReact*] export. **Not** a project-wide “globally unused” check.
 	UNUSED_STATE_FILE,
 }
 
@@ -18,7 +20,7 @@ class DiagnosticIssue:
 	extends RefCounted
 	var severity: int = UiReactDiagnosticModel.Severity.INFO
 	var issue_kind: UiReactDiagnosticModel.IssueKind = UiReactDiagnosticModel.IssueKind.GENERIC
-	## [code]res://[/code] path when [member issue_kind] is [enum IssueKind.UNUSED_STATE_FILE].
+	## [code]res://[/code] path for [enum IssueKind.UNUSED_STATE_FILE] rows (scene-file-scoped unused [UiState] files only).
 	var resource_path: String = ""
 	## Legacy full line (export / copy report). Prefer [member issue_text] + structured fields for UI.
 	var message: String = ""

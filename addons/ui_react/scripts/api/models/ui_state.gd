@@ -1,6 +1,6 @@
 @tool
 ## Abstract base for reactive state resources used with [UiReact*] controls.
-## Instantiate a concrete subclass ([UiBoolState], [UiIntState], [UiFloatState], [UiStringState], [UiArrayState]) only.
+## Instantiate a concrete subclass ([UiBoolState], [UiIntState], [UiFloatState], [UiStringState], [UiArrayState], or [UiTransactionalState]) only.
 ## [code]@tool[/code] lets editor plugins call instance methods (e.g. scan-time preview). Subclasses skip [signal value_changed] while [method Engine.is_editor_hint] is true.
 @abstract
 class_name UiState

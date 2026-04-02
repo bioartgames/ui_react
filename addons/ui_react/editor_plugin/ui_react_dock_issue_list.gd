@@ -172,13 +172,13 @@ func _make_issue_row(issue: UiReactDiagnosticModel.DiagnosticIssue, flat_index: 
 		var btn_reveal := Button.new()
 		btn_reveal.text = "Reveal"
 		btn_reveal.pressed.connect(func(): _dock._on_row_reveal(fi))
-		btn_reveal.tooltip_text = "Show and focus this file in the FileSystem dock."
+		btn_reveal.tooltip_text = "Show this file in the FileSystem dock. Unused-state rows only consider the edited, saved scene—not the whole project."
 		row.add_child(btn_reveal)
 
 		var btn_ignore_u := Button.new()
 		btn_ignore_u.text = "Ignore"
 		btn_ignore_u.pressed.connect(func(): _dock._on_row_ignore(fi))
-		btn_ignore_u.tooltip_text = "Hide this unused file diagnostic for this project (stored in Project Settings)."
+		btn_ignore_u.tooltip_text = "Hide this unused-file diagnostic for this project (edited-scene scope; stored in Project Settings)."
 		row.add_child(btn_ignore_u)
 	else:
 		var btn_fix := Button.new()

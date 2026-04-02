@@ -31,7 +31,14 @@ static func _expected_binding_state_class(component: String, prop: StringName, k
 
 static func _binding_type_ok(ui_state: UiState, expected: StringName, component: String, prop: StringName) -> bool:
 	if component == "UiReactLabel" and prop == &"text_state":
-		return ui_state is UiStringState or ui_state is UiArrayState
+		if ui_state is UiStringState or ui_state is UiArrayState:
+			return true
+		return ui_state is UiTransactionalState and (
+			(ui_state as UiTransactionalState).matches_expected_binding_class(&"UiStringState")
+			or (ui_state as UiTransactionalState).matches_expected_binding_class(&"UiArrayState")
+		)
+	if ui_state is UiTransactionalState:
+		return (ui_state as UiTransactionalState).matches_expected_binding_class(expected)
 	if expected.is_empty():
 		return true
 	match String(expected):
@@ -60,7 +67,7 @@ static func _append_binding_issue_with_preview(
 
 static func _expected_type_phrase(component: String, prop: StringName, expected: StringName) -> String:
 	if component == "UiReactLabel" and prop == &"text_state":
-		return "UiStringState or UiArrayState"
+		return "UiStringState, UiArrayState, or UiTransactionalState (string/array payload)"
 	if expected.is_empty():
 		return "a concrete UiState subclass"
 	return str(expected)
@@ -121,7 +128,7 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 					component,
 					str(owner.name),
 					"%s must be a UiState subclass (got %s)." % [prop, _variant_type_name(property_value)],
-					"Assign a concrete UiBoolState, UiIntState, UiFloatState, UiStringState, or UiArrayState resource.",
+					"Assign a concrete UiBoolState, UiIntState, UiFloatState, UiStringState, UiArrayState, or UiTransactionalState resource.",
 					node_path,
 					prop,
 					suggested,
@@ -132,7 +139,11 @@ static func _validate_bindings(component: String, owner: Control, node_path: Nod
 			continue
 		var ui_state := property_value as UiState
 		if component == "UiReactItemList" and prop == &"selected_state" and owner is ItemList:
-			if (owner as ItemList).select_mode == ItemList.SELECT_SINGLE and ui_state is UiFloatState:
+			var is_single := (owner as ItemList).select_mode == ItemList.SELECT_SINGLE
+			var is_float_like := ui_state is UiFloatState
+			if not is_float_like and ui_state is UiTransactionalState:
+				is_float_like = (ui_state as UiTransactionalState).matches_expected_binding_class(&"UiFloatState")
+			if is_single and is_float_like:
 				var issue_il := UiReactDiagnosticModel.DiagnosticIssue.make_structured(
 					UiReactDiagnosticModel.Severity.ERROR,
 					component,
