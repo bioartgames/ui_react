@@ -97,6 +97,7 @@ layout_mode = 2
 text = "Shop (computed state demo)"
 
 [node name="Help" type="Label" parent="VBox"]
+custom_minimum_size = Vector2(1, 1)
 layout_mode = 2
 text = "Adjust gold, price, and quantity. Status line is UiReactRichTextLabel + BBCode from ShopComputedStatus; Buy subtracts gold via shop_computed_demo.gd (CB-006)."
 autowrap_mode = 3

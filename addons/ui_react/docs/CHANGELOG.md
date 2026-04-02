@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 No unreleased changes yet.
 
+## [2.5.1] - 2026-04-02
+
+### Added
+
+- **Example:** **`examples/anim_targets_catalog_demo.tscn`** + **`anim_targets_catalog_demo.gd`** — scrollable list plays every **`UiAnimTarget.AnimationAction`** on a shared **`PreviewPanel`** after an instant **`RESET`**; trigger playground covers every **`UiAnimTarget.Trigger`** with **`POP`** targets on the same preview.
+
+### Notes
+
+- **Patch** release: new example files and docs only; no API changes.
+
 ## [2.5.0] - 2026-04-02
 
 ### Added

@@ -1,0 +1,420 @@
+[gd_scene load_steps=39 format=3 uid="uid://bmhxq7v0p4nw1"]
+
+[ext_resource type="Script" path="res://addons/ui_react/examples/anim_targets_catalog_demo.gd" id="1_root"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_float_state.gd" id="2_float"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_string_state.gd" id="3_str"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_bool_state.gd" id="4_bool"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_array_state.gd" id="5_arr"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_int_state.gd" id="6_int"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_button.gd" id="7_btn"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_check_box.gd" id="8_cb"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_line_edit.gd" id="9_le"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_slider.gd" id="10_sl"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_progress_bar.gd" id="11_pb"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_item_list.gd" id="12_il"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_anim_target.gd" id="13_at"]
+
+[sub_resource type="Resource" id="fslider"]
+script = ExtResource("2_float")
+value = 33.0
+
+[sub_resource type="Resource" id="fprog"]
+script = ExtResource("2_float")
+value = 0.0
+
+[sub_resource type="Resource" id="stline"]
+script = ExtResource("3_str")
+
+[sub_resource type="Resource" id="boolsel"]
+script = ExtResource("4_bool")
+
+[sub_resource type="Resource" id="itemsrows"]
+script = ExtResource("5_arr")
+value = [&"Alpha", &"Beta"]
+
+[sub_resource type="Resource" id="sellist"]
+script = ExtResource("6_int")
+
+[sub_resource type="Resource" id="at_btn_press"]
+script = ExtResource("13_at")
+target = NodePath("../../../../PreviewPanel")
+trigger = 0
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="at_btn_hi"]
+script = ExtResource("13_at")
+target = NodePath("../../../../PreviewPanel")
+trigger = 1
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="at_btn_ho"]
+script = ExtResource("13_at")
+target = NodePath("../../../../PreviewPanel")
+trigger = 2
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="at_cb_on"]
+script = ExtResource("13_at")
+target = NodePath("../../../../PreviewPanel")
+trigger = 3
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="at_cb_off"]
+script = ExtResource("13_at")
+target = NodePath("../../../../PreviewPanel")
+trigger = 4
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="at_le_tc"]
+script = ExtResource("13_at")
+target = NodePath("../../../../PreviewPanel")
+trigger = 5
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="at_le_te"]
+script = ExtResource("13_at")
+target = NodePath("../../../../PreviewPanel")
+trigger = 13
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="at_le_fe"]
+script = ExtResource("13_at")
+target = NodePath("../../../../PreviewPanel")
+trigger = 14
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="at_le_fx"]
+script = ExtResource("13_at")
+target = NodePath("../../../../PreviewPanel")
+trigger = 15
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="at_sl_vc"]
+script = ExtResource("13_at")
+target = NodePath("../../../../PreviewPanel")
+trigger = 7
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="at_sl_vi"]
+script = ExtResource("13_at")
+target = NodePath("../../../../PreviewPanel")
+trigger = 8
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="at_sl_vd"]
+script = ExtResource("13_at")
+target = NodePath("../../../../PreviewPanel")
+trigger = 9
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="at_sl_ds"]
+script = ExtResource("13_at")
+target = NodePath("../../../../PreviewPanel")
+trigger = 10
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="at_sl_de"]
+script = ExtResource("13_at")
+target = NodePath("../../../../PreviewPanel")
+trigger = 11
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="at_pb_comp"]
+script = ExtResource("13_at")
+target = NodePath("../../../../../PreviewPanel")
+trigger = 12
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="at_pb_hi"]
+script = ExtResource("13_at")
+target = NodePath("../../../../../PreviewPanel")
+trigger = 1
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="at_pb_ho"]
+script = ExtResource("13_at")
+target = NodePath("../../../../../PreviewPanel")
+trigger = 2
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="at_il_sel"]
+script = ExtResource("13_at")
+target = NodePath("../../../../PreviewPanel")
+trigger = 6
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="at_il_hi"]
+script = ExtResource("13_at")
+target = NodePath("../../../../PreviewPanel")
+trigger = 1
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[sub_resource type="Resource" id="at_il_ho"]
+script = ExtResource("13_at")
+target = NodePath("../../../../PreviewPanel")
+trigger = 2
+animation = 15
+duration = 0.25
+easing = 1
+repeat_count = 0
+pop_overshoot = 1.2
+
+[node name="AnimTargetsCatalogDemo" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_root")
+progress_bar_value_state = SubResource("fprog")
+
+[node name="HSplit" type="HSplitContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+split_offset = 280
+
+[node name="LeftColumn" type="VBoxContainer" parent="HSplit"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="CatalogTitle" type="Label" parent="HSplit/LeftColumn"]
+layout_mode = 2
+text = "UiAnimTarget.AnimationAction"
+
+[node name="CatalogList" type="ItemList" parent="HSplit/LeftColumn"]
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+size_flags_vertical = 3
+fixed_icon_size = Vector2i(0, 0)
+
+[node name="PlayButton" type="Button" parent="HSplit/LeftColumn"]
+layout_mode = 2
+text = "Play selected"
+
+[node name="ResetButton" type="Button" parent="HSplit/LeftColumn"]
+layout_mode = 2
+text = "Manual reset preview"
+
+[node name="CatalogHelp" type="Label" parent="HSplit/LeftColumn"]
+layout_mode = 2
+text = "RESET runs before each play (instant restore). Pick an action, then Play. RESET list entry + Manual reset only restore the preview."
+autowrap_mode = 3
+
+[node name="RightColumn" type="VBoxContainer" parent="HSplit"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.5
+theme_override_constants/separation = 10
+
+[node name="PreviewPanel" type="Panel" parent="HSplit/RightColumn"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 160)
+layout_mode = 2
+
+[node name="PlaygroundTitle" type="Label" parent="HSplit/RightColumn"]
+layout_mode = 2
+text = "Trigger playground — each row uses POP (0.25s) on the preview. ItemList/ProgressBar: hover the control. Slider: drag the grabber (not only the track) for DRAG_*."
+autowrap_mode = 3
+
+[node name="ScrollContainer" type="ScrollContainer" parent="HSplit/RightColumn"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="PlaygroundVBox" type="VBoxContainer" parent="HSplit/RightColumn/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="RowAnimButton" type="HBoxContainer" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="CapAnimBtn" type="Label" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox/RowAnimButton"]
+layout_mode = 2
+text = "Button: PRESSED + HOVER"
+
+[node name="AnimDemoButton" type="Button" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox/RowAnimButton"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Click & hover me"
+script = ExtResource("7_btn")
+animation_targets = Array[ExtResource("13_at")]([SubResource("at_btn_press"), SubResource("at_btn_hi"), SubResource("at_btn_ho")])
+
+[node name="RowCheck" type="HBoxContainer" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="CapCheck" type="Label" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox/RowCheck"]
+layout_mode = 2
+text = "CheckBox: TOGGLED"
+
+[node name="AnimDemoCheck" type="CheckBox" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox/RowCheck"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Toggle"
+script = ExtResource("8_cb")
+checked_state = SubResource("boolsel")
+animation_targets = Array[ExtResource("13_at")]([SubResource("at_cb_on"), SubResource("at_cb_off")])
+
+[node name="RowLine" type="HBoxContainer" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="CapLine" type="Label" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox/RowLine"]
+layout_mode = 2
+text = "LineEdit: TEXT + Enter + focus"
+
+[node name="AnimDemoLine" type="LineEdit" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox/RowLine"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Type, Enter for TEXT_ENTERED; Tab to focus in/out"
+script = ExtResource("9_le")
+text_state = SubResource("stline")
+animation_targets = Array[ExtResource("13_at")]([SubResource("at_le_tc"), SubResource("at_le_te"), SubResource("at_le_fe"), SubResource("at_le_fx")])
+
+[node name="RowSlider" type="HBoxContainer" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="CapSlider" type="Label" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox/RowSlider"]
+layout_mode = 2
+text = "Slider: VALUE + DRAG"
+
+[node name="AnimDemoSlider" type="HSlider" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox/RowSlider"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 100.0
+value = 33.0
+script = ExtResource("10_sl")
+value_state = SubResource("fslider")
+animation_targets = Array[ExtResource("13_at")]([SubResource("at_sl_vc"), SubResource("at_sl_vi"), SubResource("at_sl_vd"), SubResource("at_sl_ds"), SubResource("at_sl_de")])
+
+[node name="ProgressRow" type="VBoxContainer" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ProgressHBox" type="HBoxContainer" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox/ProgressRow"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="CapProg" type="Label" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox/ProgressRow/ProgressHBox"]
+layout_mode = 2
+text = "ProgressBar: COMPLETED + HOVER"
+
+[node name="AnimDemoProgress" type="ProgressBar" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox/ProgressRow/ProgressHBox"]
+custom_minimum_size = Vector2(120, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 100.0
+mouse_filter = 0
+script = ExtResource("11_pb")
+value_state = SubResource("fprog")
+animation_targets = Array[ExtResource("13_at")]([SubResource("at_pb_comp"), SubResource("at_pb_hi"), SubResource("at_pb_ho")])
+
+[node name="FireCompletedButton" type="Button" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox/ProgressRow"]
+layout_mode = 2
+text = "Fire COMPLETED (set bar value state to max)"
+
+[node name="RowItemList" type="VBoxContainer" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="CapList" type="Label" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox/RowItemList"]
+layout_mode = 2
+text = "ItemList: SELECTION_CHANGED + HOVER"
+
+[node name="AnimDemoList" type="ItemList" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox/RowItemList"]
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+mouse_filter = 0
+script = ExtResource("12_il")
+items_state = SubResource("itemsrows")
+selected_state = SubResource("sellist")
+animation_targets = Array[ExtResource("13_at")]([SubResource("at_il_sel"), SubResource("at_il_hi"), SubResource("at_il_ho")])
