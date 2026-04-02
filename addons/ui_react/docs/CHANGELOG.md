@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 No unreleased changes yet.
 
+## [2.2.1] - 2026-04-01
+
+### Added
+
+- **Example:** **`examples/inventory_list_demo.tscn`** + **`inventory_list_demo.gd`** — text filter, **`UiReactItemList`** bound to string rows in **`UiArrayState`**, detail label, selection **`UiIntState`**, and **CB-015** pointer gating via full-rect overlay + **`mouse_filter`**.
+
+### Changed
+
+- **README:** new **List patterns (P3)** section ( **`str(entry)`** row text, filter recipe, gating workaround); quickstart + layout table + common-mistake rows updated.
+
+### Notes
+
+- **No** change to public **`class_name`** / **`UiReact*`** export shapes (**patch** release).
+
 ## [2.2.0] - 2026-04-01
 
 ### Added

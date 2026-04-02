@@ -31,7 +31,7 @@ Copy `addons/ui_react/` into your Godot project at **`addons/ui_react/`**. Open 
 
 ### 2) Run the example
 
-Open **`res://addons/ui_react/examples/demo.tscn`** (smoke demo), **`res://addons/ui_react/examples/options_transactional_demo.tscn`** (options-style **Apply / Cancel** with **`UiTransactionalState`** plus computed status), or **`res://addons/ui_react/examples/shop_computed_demo.tscn`** (shop-style **computed** string + bool) and press **Play** (or set either as **Main Scene**). Use the scene tree to see how states and targets are wired.
+Open **`res://addons/ui_react/examples/demo.tscn`** (smoke demo), **`res://addons/ui_react/examples/options_transactional_demo.tscn`** (options-style **Apply / Cancel** with **`UiTransactionalState`** plus computed status), **`res://addons/ui_react/examples/shop_computed_demo.tscn`** (shop-style **computed** string + bool), or **`res://addons/ui_react/examples/inventory_list_demo.tscn`** (**P3** — filtered **`UiReactItemList`**) and press **Play** (or set either as **Main Scene**). Use the scene tree to see how states and targets are wired.
 
 ### 3) Minimal recipes (editor-first, no code required)
 
@@ -168,6 +168,31 @@ Use a **`UiComputedStringState`** or **`UiComputedBoolState`** **subclass** when
 
 ---
 
+## List patterns (P3)
+
+**`UiReactItemList`** rebuilds rows from **`items_state`** by calling **`add_item(str(entry))`** for each element of the bound **`Array`**. That means:
+
+- **Prefer each `entry` to already be a readable string** for the row label. Numbers and other types work but are formatted with **`str()`**.
+- **Avoid assigning raw `Dictionary` (or other complex) values** as `items_state` elements unless you want the default **`str(dictionary)`** appearance—usually you keep a **catalog** (e.g. in game data or a small script) and write **display strings** into **`UiArrayState.value`** yourself.
+
+**Bindings (single-select):** assign **`items_state`** → **`UiArrayState`**, **`selected_state`** → **`UiIntState`**. The stored index is **the row index in the current list** (after any filter). See **Strict integer indices** under **Public API**—no floats for selection.
+
+**Filter / inventory recipe (typical):**
+
+1. Keep authoritative item data where your game prefers (resources, dictionaries in a script, etc.).
+2. Use a **`UiStringState`** (with **`UiReactLineEdit.text_state`**) or similar as the **filter query**.
+3. When the filter changes, rebuild an **`Array` of strings** and call **`items_state.set_value(...)`** so the list reflects the filtered rows.
+4. Reset **`selected_state`** to **`-1`** (or clamp) when the filter changes so the selection does not point at the wrong item.
+5. Drive any **detail label** from **`selected_state`** + the same catalog mapping (see **`res://addons/ui_react/examples/inventory_list_demo.gd`**).
+
+This pattern is **game-layer** glue; the addon does not ship a generic virtualized list or a graph solver (**[`docs/ROADMAP.md`](docs/ROADMAP.md)** — **CB-010** deferred).
+
+**Disabled / modal gating (CB-015):** Godot’s **`ItemList`** has no real **disabled** mode, and **`UiReactItemList.disabled_state`** is not wired to engine list disabling. **Canonical workaround:** place the list inside a **`Control`**, add a **full-rect sibling overlay** (`Control` or `ColorRect` with **transparent** color) **above** the list in tree order, and drive **`Control.mouse_filter`**: **`MOUSE_FILTER_IGNORE`** when interaction is allowed (clicks pass through to the list), **`MOUSE_FILTER_STOP`** when the list should not receive pointer input. Optionally toggle **`visible`** on the overlay or list host instead. **`inventory_list_demo.tscn`** demonstrates overlay + **`UiBoolState`** (checkbox).
+
+**Runnable example:** **`res://addons/ui_react/examples/inventory_list_demo.tscn`**.
+
+---
+
 ## Used by controls (avoid importing unless advanced)
 
 - Internal animation modules: `scripts/internal/anim/*` (runners, families, snapshot store).
@@ -186,7 +211,8 @@ These may change between template versions; **do not rely on them from game code
 | “Target not found” warning | NodePath not under this node | Use a path relative to the control, or drag the node into the Target field. |
 | Tab arrays don’t apply | `tabs_state` / `disabled_tabs_state` / `visible_tabs_state` not an **Array** | Those `UiState` values must be `Array` (see Output warning). |
 | Item list rows don’t update | `items_state` missing or not an **Array** | Assign `items_state` to a `UiState` / `UiArrayState` whose `value` is an `Array` (e.g. `["A", "B", 1]` — each entry is stringified for display). |
-| Need a “disabled” list | **`UiReactItemList` has no `disabled_state`** (ItemList has no engine disabled flag) | Use a parent **Control**, `mouse_filter`, or focus rules to block interaction; keep list visibility/text driven by state as usual. |
+| List rows look ugly (`{ ... }`) | `items_state` holds **Dictionary** entries | Build **display strings** into the array (see **List patterns (P3)**) or map data in game code before **`set_value`**. |
+| Need a “disabled” list | **`UiReactItemList` has no `disabled_state`** (ItemList has no engine disabled flag) | Use a parent **Control**, **`mouse_filter`** overlay (**List patterns (P3)** / **CB-015**), or focus rules to block interaction; keep list visibility/text driven by state as usual. |
 
 ---
 
@@ -199,7 +225,7 @@ These may change between template versions; **do not rely on them from game code
 | `scripts/controls/` | Attachable **UiReact\*** scripts. |
 | `scripts/internal/anim/` | Animation implementation (unstable for direct use). |
 | `scripts/internal/react/` | Reactive helpers (unstable for direct use). |
-| `examples/` | `demo.tscn` smoke demo; `options_transactional_demo.tscn` (transactional **Apply / Cancel** + computed status); `shop_computed_demo.tscn` (computed string + bool). |
+| `examples/` | `demo.tscn` smoke demo; `options_transactional_demo.tscn` (transactional **Apply / Cancel** + computed status); `shop_computed_demo.tscn` (computed string + bool); `inventory_list_demo.tscn` (**P3** filtered **`UiReactItemList`**). |
 | `docs/` | **README**, **CHANGELOG**, and addon **ROADMAP** (this folder). |
 | `editor_plugin/` | Optional Godot editor plugin (dock, validation, quick state creation). |
 | `ui_resources/` | Sample `.tres` for the example scene; `plugin_generated/` holds plugin-created states (optional). |

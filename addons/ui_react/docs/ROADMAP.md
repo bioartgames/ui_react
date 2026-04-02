@@ -92,15 +92,15 @@ Not every row is a v1.0 promise; this maps **Megaman-style** UI goals to **phase
 
 - [x] Implementation merged with documented dependency limits (no “solver” claim).
 - [x] README + glossary cross-link.
-- [x] Example: shop or inventory-filter scenario (scene path in Appendix **Notes**).
+- [x] Example: shop or inventory-filter scenario (**`shop_computed_demo.tscn`**, **`inventory_list_demo.tscn`** — see Appendix **Notes**).
 - [x] `CHANGELOG.md` entry.
 - [x] Dock/scanner updates **if** new state classes are first-class in diagnostics.
 
 **P3 — List richness and templates**
 
-- [ ] README recipe + runnable example scene.
-- [ ] Optional `UiReactItemList` changes merged only via scoped issue.
-- [ ] `CHANGELOG.md` entry when code or notable docs ship.
+- [x] README recipe + runnable example scene.
+- [x] Optional `UiReactItemList` changes merged only via scoped issue (none in **2.2.1**; additive list work remains issue-scoped).
+- [x] `CHANGELOG.md` entry when code or notable docs ship.
 
 ### Review process
 
@@ -117,19 +117,19 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 |----|-------------------|-----------------|--------------|--------|-------|
 | CB-001 | Core: `UiState`, `UiReact*`, `UiAnimUtils`, `UiAnimTarget`, editor dock | All | P0 | Done | Baseline shipped; maintain compat per SemVer. Includes typed diagnostics (`IssueKind`/`resource_path`), scene-file-scoped unused `UiState` `.tres` diagnostics (no cross-scene clutter), Reveal + persisted ignore flows, and filesystem-triggered dock refresh. |
 | CB-002 | Transactional / draft state (apply, cancel, revert) | Options, key remap drafts | P1 | Done | **`UiTransactionalState`** + **`UiTransactionalGroup`** + **`UiReactTransactionalActions`**; README + **`options_transactional_demo.tscn`**. Status line uses **`UiComputedStringState`** + **`UiReactComputedSync`** (**2.2.0**). |
-| CB-003 | Computed state (explicit dependencies, documented limits) | Shop totals, afford flags, filtered inventory | P2 | Done | **`UiComputedStringState`**, **`UiComputedBoolState`**, **`UiReactComputedSync`**; README; **`shop_computed_demo.tscn`**; **`options_transactional_demo.tscn`**. **2.2.0**. |
+| CB-003 | Computed state (explicit dependencies, documented limits) | Shop totals, afford flags, filtered inventory | P2 | Done | **`UiComputedStringState`**, **`UiComputedBoolState`**, **`UiReactComputedSync`**; README; **`shop_computed_demo.tscn`**; **`options_transactional_demo.tscn`**. **2.2.0**. Text-filter list demo (**`inventory_list_demo.tscn`**, **2.2.1**) complements inventory filtering without new computed-array core. |
 | CB-004 | Explicit dependency / recalc rules (documented) | Same as CB-003 | P2 | Done | Same release as CB-003; cap **32** **`sources`**, no solver (README **Computed state**). |
 | CB-005 | Undo stack / nested transactions | Advanced options | P5+ | Deferred | Not v1.0 scope; promote if needed. |
 | CB-006 | Command pattern **as docs + example** (not mandatory core API) | Shop buy/sell, equip confirm | P1–P2 | Planned | Sidecar to P1/P2 docs; see Charter command scope. |
 | CB-007 | First-class command resource (e.g. `UiCommand`) | Same | P5+ | Deferred | Only after doc pattern proves shape. |
-| CB-008 | Richer `ItemList` / icons | Inventory, shop list | P3 | Planned | Optional code; issue-scoped. |
-| CB-009 | Row template / static body pattern (docs + example) | Inventory, shop, loot | P3 | Planned | Prefer docs + scene before heavy API. |
+| CB-008 | Richer `ItemList` / icons | Inventory, shop list | P3 | Planned | Optional code; issue-scoped. Not part of **2.2.1**. |
+| CB-009 | Row template / static body pattern (docs + example) | Inventory, shop, loot | P3 | Done | README **List patterns (P3)** + **`inventory_list_demo.tscn`** / **`inventory_list_demo.gd`**. **2.2.1**. |
 | CB-010 | Virtualization / paging | Huge inventories | P5+ | Deferred | Measure need first. |
-| CB-011 | Filtering and sorting recipes (documentation) | Inventory | P2 | Planned | Often uses computed state (CB-003). |
+| CB-011 | Filtering and sorting recipes (documentation) | Inventory | P2 | Done | Filter recipe in README **List patterns (P3)**; sort left as game-layer exercise. **2.2.1**. |
 | CB-012 | `UiReactTextureButton` or slot helper | Equipment grid, hotbar | P4 | Planned | 3× rule or two example scenes. |
 | CB-013 | `UiReactTree` | Categorized shop, hierarchical lists | P4 | Planned | Same inclusion rule as CB-012. |
 | CB-014 | `UiReactTextEdit` / `UiReactRichTextLabel` | Journal, long text | P4 | Deferred | Low priority unless repeated binding need. |
-| CB-015 | `ItemList` `disabled_state` no-op — documented workaround | Any list that needs gating | P3 | Planned | Core uses workaround (wrap Control / `mouse_filter`); document in README. |
+| CB-015 | `ItemList` `disabled_state` no-op — documented workaround | Any list that needs gating | P3 | Done | README **List patterns (P3)** + **`inventory_list_demo.tscn`** overlay + **`UiBoolState`**. **2.2.1**. |
 | CB-016 | Screen transition presets (documentation / thin helper) | Main menu, pause | P2–P3 | Planned | Align with existing `UiAnimUtils` presets where possible. |
 | CB-017 | Modal / focus-trap recipe | Confirm dialogs, popups | P3 | Planned | Docs + Godot focus API links. |
 | CB-018 | State graph / debug overlay (editor or runtime) | Development | P5+ | Deferred | Productivity tool; after core phases. |
@@ -137,8 +137,8 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-020 | Scanner + validator updates for new bindings | All new controls/states | Ongoing | Planned | Mirror `UiReactScannerService` / `BINDINGS_BY_COMPONENT` per control. |
 | CB-021 | Semver + CHANGELOG discipline | Releases | Ongoing | InProgress | Keep `CHANGELOG.md` aligned with releases. |
 | CB-022 | Example: options draft / apply | Options | P1 | Done | **`res://addons/ui_react/examples/options_transactional_demo.tscn`**. |
-| CB-023 | Example: shop math / afford | Shop | P2 | Planned | Tied to CB-003. |
-| CB-024 | Example: inventory filter | Inventory | P2 | Planned | Tied to CB-003 / CB-011. |
+| CB-023 | Example: shop math / afford | Shop | P2 | Done | **`res://addons/ui_react/examples/shop_computed_demo.tscn`** (**2.2.0**). |
+| CB-024 | Example: inventory filter | Inventory | P2 | Done | **`res://addons/ui_react/examples/inventory_list_demo.tscn`** (**2.2.1**). |
 | CB-025 | Escape hatch documentation (plain `Control` + `UiState`) | Complex one-off UI | P3 | Planned | Reduce support burden for edge layouts. |
 | CB-026 | Full RPG “no scripting” guarantee | — | Wont | Wont | Conflicts with Non-goals. |
 | CB-027 | MMO / social UI framework | — | Wont | Wont | Out of scope. |
@@ -148,4 +148,4 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 
 ---
 
-*Last updated: 2026-04-01 — P2 closure: computed state (**2.2.0**), shop + options examples; update quarterly or when phases close.*
+*Last updated: 2026-04-01 — **2.2.1** ships P3 list patterns + **`inventory_list_demo`**; **2.2.0** shipped computed state + shop/options; update quarterly or when phases close.*

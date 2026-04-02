@@ -1,7 +1,6 @@
-[gd_scene load_steps=38 format=3 uid="uid://1ctyp6anyhbh"]
+[gd_scene load_steps=37 format=3 uid="uid://1ctyp6anyhbh"]
 
 [ext_resource type="Script" uid="uid://3m8buhv674ja" path="res://addons/ui_react/scripts/controls/ui_react_check_box.gd" id="1_732tq"]
-[ext_resource type="Resource" uid="uid://b7tebgscp7rms" path="res://addons/ui_react/ui_resources/plugin_generated/ReactiveButton_disabled_state.tres" id="2_1gbb3"]
 [ext_resource type="Script" uid="uid://lv5ixpw5hlvp" path="res://addons/ui_react/scripts/controls/ui_react_button.gd" id="2_mlp57"]
 [ext_resource type="Script" uid="uid://cxg5hj6ihqtue" path="res://addons/ui_react/scripts/api/models/ui_bool_state.gd" id="2_yv7u2"]
 [ext_resource type="Script" uid="uid://diigywt0dm170" path="res://addons/ui_react/scripts/api/models/ui_anim_target.gd" id="3_yauoy"]
@@ -132,7 +131,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 text = "Disable actions"
 script = ExtResource("1_732tq")
-checked_state = ExtResource("2_1gbb3")
+checked_state = ExtResource("24_1gbb3")
 disabled_state = SubResource("Resource_732tq")
 metadata/_custom_type_script = "uid://3m8buhv674ja"
 
@@ -143,7 +142,7 @@ size_flags_vertical = 4
 text = "Press this thing."
 script = ExtResource("2_mlp57")
 pressed_state = ExtResource("5_mlp57")
-disabled_state = ExtResource("2_1gbb3")
+disabled_state = ExtResource("24_1gbb3")
 animation_targets = Array[ExtResource("3_yauoy")]([SubResource("Resource_p7nh0")])
 metadata/_custom_type_script = "uid://lv5ixpw5hlvp"
 
