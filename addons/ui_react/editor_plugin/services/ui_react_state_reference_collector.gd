@@ -19,7 +19,7 @@ static func add_bound_state_paths_from_react_node(node: Node, out_paths: Diction
 	var component := UiReactScannerService.get_component_name_from_script(owner.get_script() as Script)
 	if component.is_empty():
 		return
-	var bindings: Array = UiReactScannerService.BINDINGS_BY_COMPONENT.get(component, [])
+	var bindings: Array = UiReactComponentRegistry.BINDINGS_BY_COMPONENT.get(component, [])
 	for b in bindings:
 		var prop: StringName = b.get("property", &"")
 		if prop == &"" or not prop in owner:

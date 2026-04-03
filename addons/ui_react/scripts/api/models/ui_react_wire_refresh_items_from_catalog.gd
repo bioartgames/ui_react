@@ -8,6 +8,7 @@ extends UiReactWireRule
 @export var catalog: UiReactWireCatalogData
 @export var items_state: UiArrayState
 @export var selected_state: UiIntState
+## Optional icon for the **first row that passes filter** (not necessarily catalog row 0).
 @export var first_row_icon_path: String = ""
 
 
@@ -37,11 +38,13 @@ func apply(_source: Node) -> void:
 		):
 			continue
 		var line_text := "%s (%s) × %s" % [item_name, kind, str(row.get("qty", 1))]
-		if i == 0 and not first_row_icon_path.strip_edges().is_empty():
+		var icon_stripped := first_row_icon_path.strip_edges()
+		var use_icon := lines.is_empty() and not icon_stripped.is_empty()
+		if use_icon:
 			lines.append(
 				{
 					"label": line_text,
-					"icon": first_row_icon_path.strip_edges(),
+					"icon": icon_stripped,
 					"name": row.get("name", ""),
 					"kind": row.get("kind", ""),
 					"qty": row.get("qty", 1),

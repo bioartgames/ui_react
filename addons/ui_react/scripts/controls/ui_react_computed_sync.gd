@@ -1,5 +1,5 @@
 @tool
-## Subscribes to [member UiComputedStringState.sources] / [member UiComputedBoolState.sources] on [member computed] and calls [method UiComputedStringState.recompute] / [method UiComputedBoolState.recompute] when any dependency emits [signal UiState.value_changed] or [signal Resource.changed].
+## Subscribes to [member UiComputedStringState.sources] / [member UiComputedBoolState.sources] on [member computed] and calls [method UiComputedStringState.recompute] / [method UiComputedBoolState.recompute] when any dependency emits [signal Resource.changed] (all concrete [UiState] mutations call [method Resource.emit_changed]).
 ## Owns connection lifetime only; keep [member sources] on the computed resource (do not duplicate dep lists here).
 class_name UiReactComputedSync
 extends Control
@@ -40,8 +40,6 @@ func _wire() -> void:
 		var dep: UiState = raw[i]
 		if dep == null:
 			continue
-		if not dep.value_changed.is_connected(cb):
-			dep.value_changed.connect(cb)
 		if not dep.changed.is_connected(cb):
 			dep.changed.connect(cb)
 		_deps.append(dep)
@@ -52,8 +50,6 @@ func _unwire() -> void:
 	var cb := Callable(self, &"_on_dep_changed")
 	for dep in _deps:
 		if dep != null and is_instance_valid(dep):
-			if dep.value_changed.is_connected(cb):
-				dep.value_changed.disconnect(cb)
 			if dep.changed.is_connected(cb):
 				dep.changed.disconnect(cb)
 	_deps.clear()

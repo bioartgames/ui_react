@@ -1,8 +1,21 @@
 extends Tree
 class_name UiReactTree
 
+var _bind := UiReactTwoWayBindingDriver.new()
+var _selected_state: UiIntState
+
 ## Two-way binding for single selection: pre-order index over **visible** rows (see class doc). **-1** means nothing selected.
-@export var selected_state: UiIntState
+@export var selected_state: UiIntState:
+	get:
+		return _selected_state
+	set(v):
+		if _selected_state == v:
+			return
+		if is_node_ready():
+			_disconnect_all_states()
+		_selected_state = v
+		if is_node_ready():
+			_connect_all_states()
 
 ## **Optional** — Inspector-driven tweens (selection, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
@@ -13,18 +26,26 @@ class_name UiReactTree
 ## **Optional** — Wiring rules ([code]docs/WIRING_LAYER.md[/code] §5).
 @export var wire_rules: Array[UiReactWireRule] = []
 
-var _updating: bool = false
-var _is_initializing: bool = true
-
 func _ready() -> void:
 	select_mode = SELECT_SINGLE
 	item_selected.connect(_on_tree_item_selected)
 	nothing_selected.connect(_on_tree_nothing_selected)
-	if selected_state:
-		selected_state.value_changed.connect(_on_selected_state_changed)
-		_on_selected_state_changed(selected_state.get_value(), selected_state.get_value())
+	_disconnect_all_states()
+	_connect_all_states()
 	_validate_animation_targets()
 	UiReactStateBindingHelper.deferred_finish_initialization(self)
+
+
+func _disconnect_all_states() -> void:
+	if _selected_state != null and _selected_state.value_changed.is_connected(_on_selected_state_changed):
+		_selected_state.value_changed.disconnect(_on_selected_state_changed)
+
+
+func _connect_all_states() -> void:
+	if _selected_state != null:
+		_selected_state.value_changed.connect(_on_selected_state_changed)
+		_on_selected_state_changed(_selected_state.get_value(), _selected_state.get_value())
+
 
 ## Validates animation targets and filters out invalid ones.
 func _validate_animation_targets() -> void:
@@ -41,28 +62,35 @@ func _validate_animation_targets() -> void:
 
 	UiReactActionTargetHelper.sync_initial_state(self, "UiReactTree", action_targets)
 
+
 func _finish_initialization() -> void:
-	_is_initializing = false
+	_bind.finish_initialization()
+
 
 func _on_trigger_selection_changed() -> void:
-	if _is_initializing:
+	if _bind.initializing:
 		return
 	_trigger_animations(UiAnimTarget.Trigger.SELECTION_CHANGED)
 
+
 func _on_trigger_selection_nothing() -> void:
-	if _is_initializing:
+	if _bind.initializing:
 		return
 	_trigger_animations(UiAnimTarget.Trigger.SELECTION_CHANGED)
+
 
 func _on_trigger_hover_enter() -> void:
 	_trigger_animations(UiAnimTarget.Trigger.HOVER_ENTER)
 
+
 func _on_trigger_hover_exit() -> void:
 	_trigger_animations(UiAnimTarget.Trigger.HOVER_EXIT)
+
 
 func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 	UiReactAnimTargetHelper.trigger_animations(self, animation_targets, trigger_type)
 	UiReactActionTargetHelper.run_actions(self, "UiReactTree", action_targets, trigger_type)
+
 
 ## Visible pre-order: depth-first using [method TreeItem.get_next_visible]. If [member hide_root] is [code]true[/code], the engine root is omitted; counting starts at its first child.
 func _flatten_visible_preorder() -> Array[TreeItem]:
@@ -83,6 +111,7 @@ func _flatten_visible_preorder() -> Array[TreeItem]:
 		cur = cur.get_next_visible(false)
 	return out
 
+
 func _flat_index_for_item(item: TreeItem) -> int:
 	if item == null:
 		return -1
@@ -92,6 +121,7 @@ func _flat_index_for_item(item: TreeItem) -> int:
 			return i
 	return -1
 
+
 func _item_for_flat_index(idx: int) -> TreeItem:
 	if idx < 0:
 		return null
@@ -100,48 +130,52 @@ func _item_for_flat_index(idx: int) -> TreeItem:
 		return null
 	return flat[idx]
 
+
 func _sync_state_from_tree_selection() -> void:
-	if not selected_state or _updating:
+	if not _selected_state or _bind.updating:
 		return
 	var sel := get_selected()
 	var idx := _flat_index_for_item(sel)
-	if selected_state.get_value() == idx:
+	if _selected_state.get_value() == idx:
 		return
-	_updating = true
-	selected_state.set_value(idx)
-	_updating = false
+	_bind.updating = true
+	_selected_state.set_value(idx)
+	_bind.updating = false
+
 
 func _on_tree_item_selected() -> void:
 	_sync_state_from_tree_selection()
 
+
 func _on_tree_nothing_selected() -> void:
-	if not selected_state or _updating:
+	if not _selected_state or _bind.updating:
 		return
-	if selected_state.get_value() == -1:
+	if _selected_state.get_value() == -1:
 		return
-	_updating = true
-	selected_state.set_value(-1)
-	_updating = false
+	_bind.updating = true
+	_selected_state.set_value(-1)
+	_bind.updating = false
+
 
 func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void:
-	if _updating:
+	if _bind.updating:
 		return
-	if not selected_state:
+	if not _selected_state:
 		return
 	var idx := int(new_value)
 	if idx == -1:
-		_updating = true
+		_bind.updating = true
 		deselect_all()
-		_updating = false
+		_bind.updating = false
 		return
 	var item := _item_for_flat_index(idx)
 	if item == null:
-		_updating = true
+		_bind.updating = true
 		deselect_all()
-		if selected_state.get_value() != -1:
-			selected_state.set_value(-1)
-		_updating = false
+		if _selected_state.get_value() != -1:
+			_selected_state.set_value(-1)
+		_bind.updating = false
 		return
-	_updating = true
+	_bind.updating = true
 	set_selected(item, 0)
-	_updating = false
+	_bind.updating = false

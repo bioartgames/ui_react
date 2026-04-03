@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Reactivity:** `UiReactComputedSync` and `UiReactWireRunner` listen to **`Resource.changed` only** on `UiState` dependencies (avoids double work from `value_changed` + `emit_changed` on the same update).
+- **Wiring:** `UiReactWireRule.trigger` uses **`UiReactWireRule.TriggerKind`** (`TEXT_CHANGED = 5`, `SELECTION_CHANGED = 6`, `TEXT_ENTERED = 13`) so wiring does not depend on `UiAnimTarget.Trigger`; existing saved ints stay valid.
+- **Catalog rule:** `UiReactWireRefreshItemsFromCatalog.first_row_icon_path` applies to the **first row after filters**, not catalog row 0 only.
+- **`UiTransactionalState`:** `set_value` / `set_silent` clone array/dictionary drafts like other states.
+- **Actions:** `UiReactActionTargetHelper._with_reentry_guard` still uses sequential unlock after `fn.call()` (same behavior as before this batch; full **`try` / `finally`** is optional if you target an engine/toolchain that parses it reliably).
+- **Controls:** Shared **`UiReactTwoWayBindingDriver`**; exported `UiState` bindings use **getters/setters** with reconnect when the resource is swapped at runtime.
+- **Editor:** `UiReactComponentRegistry` is the single binding/stem registry; **`UiReactValidatorService`** delegates to split validators; **`UiReactUnusedStateService`** caches loads by `mtime` (full cache clear on dock **Rescan**).
+- **Hygiene:** Removed unreferenced plugin-generated sample `.tres` files; README notes not committing stray plugin output.
+
 ## [2.7.0] - 2026-04-04
 
 ### Added

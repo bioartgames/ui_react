@@ -2,7 +2,7 @@
 
 **Purpose:** Doc-driven pass/fail checklist for **P5.1** exit honesty and gates for **P5.1.b** / **P5.2**. Authority: [`WIRING_LAYER.md`](WIRING_LAYER.md) → [`ROADMAP.md`](ROADMAP.md) → [`CHANGELOG.md`](../CHANGELOG.md).
 
-**Last run:** 2026-04-04 (post–**2.7.0** CB-034 rollout).
+**Last run:** 2026-04-03 (post–**2.7.0** CB-034 + ui_react hardening batch).
 
 Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 

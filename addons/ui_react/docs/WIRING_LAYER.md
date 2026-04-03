@@ -70,13 +70,13 @@ Each `UiReact*` that can **source** wires exposes **at most one** additional exp
 
 **P5.1 minimum control set** (first implementation wave only; other controls **lack** `wire_rules` until promoted via a new Appendix row):
 
-| Control | Allowed wire triggers (align with `UiAnimTarget.Trigger` where signals match) |
+| Control | Allowed wire rule triggers ([`UiReactWireRule.TriggerKind`](../scripts/api/models/ui_react_wire_rule.gd); values match legacy `UiAnimTarget` ordinals for serialization) |
 |---------|-------------------------------------------------------------------------------|
-| `UiReactItemList` | `SELECTION_CHANGED`, `HOVER_ENTER`, `HOVER_EXIT` |
-| `UiReactTree` | `SELECTION_CHANGED`, `HOVER_ENTER`, `HOVER_EXIT` |
-| `UiReactLineEdit` | `TEXT_CHANGED`, `TEXT_ENTERED`, `FOCUS_ENTERED`, `FOCUS_EXITED`, `HOVER_ENTER`, `HOVER_EXIT` |
-| `UiReactCheckBox` | Match existing checkbox / toggle semantics used for `UiAnimTarget` (`TOGGLED_ON`, `TOGGLED_OFF`, hover, focus as implemented on that control). |
-| `UiReactTransactionalActions` | Match button / transactional triggers implemented on that control (`PRESSED`, etc.). |
+| `UiReactItemList` | `SELECTION_CHANGED` (`6`) for §5 rules that bind list selection (`HOVER_*` remain animation-only on the control). |
+| `UiReactTree` | `SELECTION_CHANGED` (`6`) for tree-sourced rules. |
+| `UiReactLineEdit` | `TEXT_CHANGED` (`5`), `TEXT_ENTERED` (`13`) for line-edit–sourced rules (`FOCUS_*` / `HOVER_*` remain animation-only unless promoted later). |
+| `UiReactCheckBox` | Checkbox/toggle as implemented for wiring (see control script). |
+| `UiReactTransactionalActions` | As implemented on that control. |
 
 ---
 

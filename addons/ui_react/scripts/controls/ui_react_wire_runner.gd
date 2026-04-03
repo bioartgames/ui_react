@@ -121,7 +121,7 @@ func _safe_connect(sig: Signal, cb: Callable) -> void:
 
 func _bind_map_int_to_string(n: Node, rule: UiReactWireMapIntToString) -> void:
 	var cb := _make_rule_cb(rule, n)
-	if rule.trigger != UiAnimTarget.Trigger.SELECTION_CHANGED:
+	if rule.trigger != UiReactWireRule.TriggerKind.SELECTION_CHANGED:
 		push_warning(
 			"UiReactWireRunner: MapIntToString rule '%s' should use SELECTION_CHANGED for tree wiring."
 			% rule.rule_id
@@ -131,20 +131,19 @@ func _bind_map_int_to_string(n: Node, rule: UiReactWireMapIntToString) -> void:
 		_safe_connect(tree.item_selected, cb)
 		_safe_connect(tree.nothing_selected, cb)
 	if rule.source_int_state != null:
-		_safe_connect(rule.source_int_state.value_changed, cb)
 		_safe_connect(rule.source_int_state.changed, cb)
 
 
 func _bind_refresh_items(n: Node, rule: UiReactWireRefreshItemsFromCatalog) -> void:
 	var cb := _make_rule_cb(rule, n)
 	match rule.trigger:
-		UiAnimTarget.Trigger.TEXT_CHANGED:
+		UiReactWireRule.TriggerKind.TEXT_CHANGED:
 			if n is LineEdit:
 				_safe_connect((n as LineEdit).text_changed, cb)
-		UiAnimTarget.Trigger.TEXT_ENTERED:
+		UiReactWireRule.TriggerKind.TEXT_ENTERED:
 			if n is LineEdit:
 				_safe_connect((n as LineEdit).text_submitted, cb)
-		UiAnimTarget.Trigger.SELECTION_CHANGED:
+		UiReactWireRule.TriggerKind.SELECTION_CHANGED:
 			if n is Tree:
 				var tree := n as Tree
 				_safe_connect(tree.item_selected, cb)
@@ -157,23 +156,18 @@ func _bind_refresh_items(n: Node, rule: UiReactWireRefreshItemsFromCatalog) -> v
 				% [rule.rule_id, rule.trigger, n.get_path()]
 			)
 	if rule.filter_text_state != null:
-		_safe_connect(rule.filter_text_state.value_changed, cb)
 		_safe_connect(rule.filter_text_state.changed, cb)
 	if rule.category_kind_state != null:
-		_safe_connect(rule.category_kind_state.value_changed, cb)
 		_safe_connect(rule.category_kind_state.changed, cb)
 
 
 func _bind_copy_detail(n: Node, rule: UiReactWireCopySelectionDetail) -> void:
 	var cb := _make_rule_cb(rule, n)
-	if rule.trigger == UiAnimTarget.Trigger.SELECTION_CHANGED and n is ItemList:
+	if rule.trigger == UiReactWireRule.TriggerKind.SELECTION_CHANGED and n is ItemList:
 		_safe_connect((n as ItemList).item_selected, cb)
 	if rule.items_state != null:
-		_safe_connect(rule.items_state.value_changed, cb)
 		_safe_connect(rule.items_state.changed, cb)
 	if rule.selected_state != null:
-		_safe_connect(rule.selected_state.value_changed, cb)
 		_safe_connect(rule.selected_state.changed, cb)
 	if rule.suffix_note_state != null:
-		_safe_connect(rule.suffix_note_state.value_changed, cb)
 		_safe_connect(rule.suffix_note_state.changed, cb)

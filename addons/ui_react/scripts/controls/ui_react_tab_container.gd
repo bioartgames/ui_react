@@ -1,40 +1,87 @@
 extends TabContainer
 class_name UiReactTabContainer
 
+var _bind := UiReactTwoWayBindingDriver.new()
+var _selected_state: UiIntState
+var _tab_config: UiTabContainerCfg
+
 ## Two-way binding for current tab index ([int]). **Optional** — assign for external control of selection.
-@export var selected_state: UiIntState
+@export var selected_state: UiIntState:
+	get:
+		return _selected_state
+	set(v):
+		if _selected_state == v:
+			return
+		if is_node_ready():
+			_disconnect_all_states()
+		_selected_state = v
+		if is_node_ready():
+			_connect_all_states()
 
 ## **Optional** — Advanced tabs: dynamic tab list, per-tab content [UiState]s, disabled/visible arrays ([UiTabContainerCfg]).
-@export var tab_config: UiTabContainerCfg
+@export var tab_config: UiTabContainerCfg:
+	get:
+		return _tab_config
+	set(v):
+		if _tab_config == v:
+			return
+		if is_node_ready():
+			_disconnect_tab_config_signals()
+		_tab_config = v
+		if is_node_ready():
+			_connect_tab_config_signals()
 
 ## **Optional** — Inspector-driven tweens (selection changed, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
-var _updating: bool = false
 var _previous_tab_index: int = -1
-var _is_initializing: bool = true
 
 func _ready() -> void:
 	tab_selected.connect(_on_tab_selected)
 	_previous_tab_index = current_tab
-
-	if selected_state:
-		selected_state.value_changed.connect(_on_selected_state_changed)
-		_on_selected_state_changed(selected_state.get_value(), selected_state.get_value())
-
-	if tab_config:
-		if tab_config.tabs_state:
-			tab_config.tabs_state.value_changed.connect(_on_tabs_state_changed)
-			_on_tabs_state_changed(tab_config.tabs_state.get_value(), null)
-		if tab_config.disabled_tabs_state:
-			tab_config.disabled_tabs_state.value_changed.connect(_on_disabled_tabs_state_changed)
-			_on_disabled_tabs_state_changed(tab_config.disabled_tabs_state.get_value(), null)
-		if tab_config.visible_tabs_state:
-			tab_config.visible_tabs_state.value_changed.connect(_on_visible_tabs_state_changed)
-			_on_visible_tabs_state_changed(tab_config.visible_tabs_state.get_value(), null)
-
+	_disconnect_all_states()
+	_connect_all_states()
 	_validate_animation_targets()
 	UiReactStateBindingHelper.deferred_finish_initialization(self)
+
+
+func _disconnect_all_states() -> void:
+	if _selected_state != null and _selected_state.value_changed.is_connected(_on_selected_state_changed):
+		_selected_state.value_changed.disconnect(_on_selected_state_changed)
+	_disconnect_tab_config_signals()
+
+
+func _connect_all_states() -> void:
+	if _selected_state != null:
+		_selected_state.value_changed.connect(_on_selected_state_changed)
+		_on_selected_state_changed(_selected_state.get_value(), _selected_state.get_value())
+	_connect_tab_config_signals()
+
+
+func _disconnect_tab_config_signals() -> void:
+	if _tab_config == null:
+		return
+	if _tab_config.tabs_state != null and _tab_config.tabs_state.value_changed.is_connected(_on_tabs_state_changed):
+		_tab_config.tabs_state.value_changed.disconnect(_on_tabs_state_changed)
+	if _tab_config.disabled_tabs_state != null and _tab_config.disabled_tabs_state.value_changed.is_connected(_on_disabled_tabs_state_changed):
+		_tab_config.disabled_tabs_state.value_changed.disconnect(_on_disabled_tabs_state_changed)
+	if _tab_config.visible_tabs_state != null and _tab_config.visible_tabs_state.value_changed.is_connected(_on_visible_tabs_state_changed):
+		_tab_config.visible_tabs_state.value_changed.disconnect(_on_visible_tabs_state_changed)
+
+
+func _connect_tab_config_signals() -> void:
+	if _tab_config == null:
+		return
+	if _tab_config.tabs_state != null:
+		_tab_config.tabs_state.value_changed.connect(_on_tabs_state_changed)
+		_on_tabs_state_changed(_tab_config.tabs_state.get_value(), null)
+	if _tab_config.disabled_tabs_state != null:
+		_tab_config.disabled_tabs_state.value_changed.connect(_on_disabled_tabs_state_changed)
+		_on_disabled_tabs_state_changed(_tab_config.disabled_tabs_state.get_value(), null)
+	if _tab_config.visible_tabs_state != null:
+		_tab_config.visible_tabs_state.value_changed.connect(_on_visible_tabs_state_changed)
+		_on_visible_tabs_state_changed(_tab_config.visible_tabs_state.get_value(), null)
+
 
 func _validate_animation_targets() -> void:
 	var trigger_map: Dictionary = UiReactAnimTargetHelper.apply_validated_targets(
@@ -50,22 +97,28 @@ func _validate_animation_targets() -> void:
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
 		UiReactAnimTargetHelper.connect_if_absent(mouse_exited, _on_trigger_hover_exit)
 
+
 func _finish_initialization() -> void:
-	_is_initializing = false
+	_bind.finish_initialization()
+
 
 func _on_trigger_selection_changed(_tab_index: int) -> void:
-	if _is_initializing:
+	if _bind.initializing:
 		return
 	_trigger_animations(UiAnimTarget.Trigger.SELECTION_CHANGED)
+
 
 func _on_trigger_hover_enter() -> void:
 	_trigger_animations(UiAnimTarget.Trigger.HOVER_ENTER)
 
+
 func _on_trigger_hover_exit() -> void:
 	_trigger_animations(UiAnimTarget.Trigger.HOVER_EXIT)
 
+
 func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 	UiReactAnimTargetHelper.trigger_animations(self, animation_targets, trigger_type)
+
 
 func _on_tab_selected(tab_index: int) -> void:
 	if _previous_tab_index >= 0 and _previous_tab_index != tab_index:
@@ -73,22 +126,23 @@ func _on_tab_selected(tab_index: int) -> void:
 
 	_previous_tab_index = tab_index
 
-	UiTabContentStateBinder.bind_tab_content(self, tab_config, tab_index, Callable(self, "_on_tab_content_state_changed"))
+	UiTabContentStateBinder.bind_tab_content(self, _tab_config, tab_index, Callable(self, "_on_tab_content_state_changed"))
 
 	if animation_targets.size() > 0:
 		_on_trigger_selection_changed(tab_index)
 
-	if not selected_state or _updating:
+	if not _selected_state or _bind.updating:
 		return
 	var new_value: Variant = tab_index
-	if selected_state.get_value() == new_value:
+	if _selected_state.get_value() == new_value:
 		return
-	_updating = true
-	selected_state.set_value(new_value)
-	_updating = false
+	_bind.updating = true
+	_selected_state.set_value(new_value)
+	_bind.updating = false
+
 
 func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void:
-	if _updating:
+	if _bind.updating:
 		return
 	var index: int = UiTabSelectionBinding.resolve_tab_index(self, new_value)
 	if index < 0 or index >= get_tab_count():
@@ -98,15 +152,16 @@ func _on_selected_state_changed(new_value: Variant, _old_value: Variant) -> void
 
 	if _previous_tab_index >= 0 and _previous_tab_index != index:
 		UiTabTransitionAnimator.animate_tab_switch(self, _previous_tab_index, index, animation_targets)
-	UiTabContentStateBinder.bind_tab_content(self, tab_config, index, Callable(self, "_on_tab_content_state_changed"))
+	UiTabContentStateBinder.bind_tab_content(self, _tab_config, index, Callable(self, "_on_tab_content_state_changed"))
 
-	_updating = true
+	_bind.updating = true
 	_previous_tab_index = index
 	current_tab = index
-	_updating = false
+	_bind.updating = false
+
 
 func _on_tabs_state_changed(new_value: Variant, _old_value: Variant) -> void:
-	if _updating:
+	if _bind.updating:
 		return
 
 	var coerced_tabs: Variant = _expect_array_state(new_value, "tabs_state")
@@ -114,19 +169,21 @@ func _on_tabs_state_changed(new_value: Variant, _old_value: Variant) -> void:
 		return
 	var tabs_array: Array = coerced_tabs
 
-	_updating = true
+	_bind.updating = true
 
-	var prev_update = UiTabCollectionSync.apply_tabs_from_array(self, tabs_array, tab_config)
+	var prev_update = UiTabCollectionSync.apply_tabs_from_array(self, tabs_array, _tab_config)
 	if prev_update != null:
 		_previous_tab_index = int(prev_update)
 
-	_updating = false
+	_bind.updating = false
+
 
 func _on_tab_content_state_changed(tab_index: int, property: StringName, new_value: Variant, _old_value: Variant) -> void:
 	UiTabContentStateBinder.propagate_content_change(self, tab_index, property, new_value)
 
+
 func _on_disabled_tabs_state_changed(new_value: Variant, _old_value: Variant) -> void:
-	if _updating:
+	if _bind.updating:
 		return
 
 	var coerced_disabled: Variant = _expect_array_state(new_value, "disabled_tabs_state")
@@ -136,16 +193,17 @@ func _on_disabled_tabs_state_changed(new_value: Variant, _old_value: Variant) ->
 
 	var tab_count = get_tab_count()
 
-	_updating = true
+	_bind.updating = true
 
 	for i in range(min(disabled_array.size(), tab_count)):
 		var is_disabled = UiReactStateBindingHelper.coerce_bool(disabled_array[i])
 		set_tab_disabled(i, is_disabled)
 
-	_updating = false
+	_bind.updating = false
+
 
 func _on_visible_tabs_state_changed(new_value: Variant, _old_value: Variant) -> void:
-	if _updating:
+	if _bind.updating:
 		return
 
 	var coerced_visible: Variant = _expect_array_state(new_value, "visible_tabs_state")
@@ -155,13 +213,13 @@ func _on_visible_tabs_state_changed(new_value: Variant, _old_value: Variant) -> 
 
 	var tab_count = get_tab_count()
 
-	_updating = true
+	_bind.updating = true
 
 	for i in range(min(visible_array.size(), tab_count)):
 		var tab_visible = UiReactStateBindingHelper.coerce_bool(visible_array[i])
 		set_tab_hidden(i, not tab_visible)
 
-	_updating = false
+	_bind.updating = false
 
 
 func _expect_array_state(value: Variant, field_name: String) -> Variant:

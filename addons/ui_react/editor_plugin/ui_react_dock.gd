@@ -10,6 +10,8 @@ var _suppress_pref_save: bool = false
 
 ## Coalesces multiple refresh requests into one deferred [method refresh] call per frame.
 var _coalesced_refresh_pending: bool = false
+## When true, next [method refresh] clears unused-state file cache ([code]UiReactUnusedStateService[/code]).
+var _unused_cache_invalidate_pending: bool = false
 ## Set by [method _run_startup_refresh]; cleared after first successful root or one no-scene retry.
 var _expect_startup_scene_retry: bool = false
 
@@ -66,6 +68,8 @@ func setup(plugin: EditorPlugin) -> void:
 
 
 func request_refresh(_reason: StringName = &"manual") -> void:
+	if _reason == &"manual":
+		_unused_cache_invalidate_pending = true
 	if _coalesced_refresh_pending:
 		return
 	_coalesced_refresh_pending = true
@@ -465,6 +469,10 @@ func _update_bottom_action_buttons() -> void:
 func refresh() -> void:
 	_issues_all.clear()
 	_ignored_issue_keys.clear()
+	var clear_unused_cache := _unused_cache_invalidate_pending
+	_unused_cache_invalidate_pending = false
+	if clear_unused_cache:
+		UiReactUnusedStateService.clear_load_cache()
 	var ei := _plugin.get_editor_interface()
 	var root := ei.get_edited_scene_root()
 	if root == null:
@@ -523,9 +531,7 @@ func refresh() -> void:
 	if root:
 		_issues_all.append_array(UiReactValidatorService.validate_wiring_under_root(root))
 
-	_issues_all.append_array(
-		UiReactUnusedStateService.build_issues(_dock_actions.resolve_output_dir(), root)
-	)
+	_issues_all.append_array(UiReactUnusedStateService.build_issues(_dock_actions.resolve_output_dir(), root))
 
 	_apply_filters()
 

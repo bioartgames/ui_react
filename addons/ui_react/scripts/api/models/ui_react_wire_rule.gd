@@ -3,10 +3,13 @@
 class_name UiReactWireRule
 extends Resource
 
+## Integer values match legacy [enum UiAnimTarget.Trigger] ordinals so existing `.tres` / `.tscn` data stays valid.
+enum TriggerKind { TEXT_CHANGED = 5, SELECTION_CHANGED = 6, TEXT_ENTERED = 13 }
+
 @export var rule_id: String = ""
 @export var enabled: bool = true
-## Trigger token aligned with [member UiAnimTarget.Trigger] for this rule’s source control ([code]docs/WIRING_LAYER.md[/code] §5).
-@export var trigger: UiAnimTarget.Trigger = UiAnimTarget.Trigger.SELECTION_CHANGED
+## When this rule’s source widget fires; see [code]docs/WIRING_LAYER.md[/code] §5.
+@export var trigger: TriggerKind = TriggerKind.SELECTION_CHANGED
 
 
 func apply(_source: Node) -> void:

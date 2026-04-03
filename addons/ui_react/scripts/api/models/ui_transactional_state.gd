@@ -37,14 +37,14 @@ func set_value(new_value: Variant) -> void:
 	if _variants_equal(_draft_value, new_value):
 		return
 	var old: Variant = _draft_value
-	_draft_value = new_value
+	_draft_value = _clone_variant(new_value)
 	if not Engine.is_editor_hint():
 		value_changed.emit(_draft_value, old)
 	emit_changed()
 
 
 func set_silent(new_value: Variant) -> void:
-	_draft_value = new_value
+	_draft_value = _clone_variant(new_value)
 	emit_changed()
 
 

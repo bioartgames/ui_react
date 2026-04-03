@@ -11,6 +11,13 @@ const _FIX_HINT := (
 	+ "Assign it on a [UiReact*] export, remove it from the scene if unused, or ignore this row; do not assume it is safe to delete without checking Godot's dependency warning."
 )
 
+## path_norm -> { mtime: int, is_ui_state: bool }
+static var _load_cache: Dictionary = {}
+
+
+static func clear_load_cache() -> void:
+	_load_cache.clear()
+
 
 static func build_issues(output_dir: String, root: Node) -> Array[UiReactDiagnosticModel.DiagnosticIssue]:
 	var issues: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
@@ -57,8 +64,29 @@ static func build_issues(output_dir: String, root: Node) -> Array[UiReactDiagnos
 			continue
 		if referenced_norm.has(path_norm):
 			continue
-		var res := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE) as Resource
-		if res != null and res is UiState:
+
+		var mt: int = FileAccess.get_modified_time(path)
+		if mt == 0:
+			mt = -1
+
+		var cached: Variant = _load_cache.get(path_norm, null)
+		if cached is Dictionary:
+			var cd: Dictionary = cached
+			if int(cd.get("mtime", -2)) == mt:
+				if cd.get("is_ui_state", false):
+					issues.append(
+						UiReactDiagnosticModel.DiagnosticIssue.make_unused_state_file_issue(
+							path,
+							"UiState in this scene file, not on Ui React: %s" % path,
+							_FIX_HINT,
+						)
+					)
+				continue
+
+		var res := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_REUSE) as Resource
+		var is_ui := res != null and res is UiState
+		_load_cache[path_norm] = {"mtime": mt, "is_ui_state": is_ui}
+		if is_ui:
 			issues.append(
 				UiReactDiagnosticModel.DiagnosticIssue.make_unused_state_file_issue(
 					path,
