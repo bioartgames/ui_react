@@ -1,0 +1,48 @@
+[gd_scene load_steps=5 format=3 uid="uid://bc37hbyqopcui"]
+
+[ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_check_box.gd" id="1_cb"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_line_edit.gd" id="2_le"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_action_target.gd" id="3_action"]
+
+[sub_resource type="Resource" id="grab_focus_row"]
+script = ExtResource("3_action")
+trigger = 3
+action = 0
+target = NodePath("../LineEditFocusTarget")
+
+[node name="ActionLayerDemo" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Hint" type="Label" parent="VBox"]
+layout_mode = 2
+text = "Action layer (P6.1): toggling the checkbox on runs a UiReactActionTarget GRAB_FOCUS row (TOGGLED_ON) on the LineEdit. See docs/ACTION_LAYER.md."
+autowrap_mode = 3
+
+[node name="FocusHintCheckBox" type="CheckBox" parent="VBox"]
+layout_mode = 2
+toggle_mode = true
+text = "Toggle on → grab focus on LineEdit (UiReactActionTarget)"
+script = ExtResource("1_cb")
+action_targets = Array[ExtResource("3_action")]([SubResource("grab_focus_row")])
+
+[node name="LineEditFocusTarget" type="LineEdit" parent="VBox"]
+layout_mode = 2
+placeholder_text = "Focus lands here when the checkbox is toggled on"
+script = ExtResource("2_le")

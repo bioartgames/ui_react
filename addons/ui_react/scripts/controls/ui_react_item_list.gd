@@ -10,6 +10,9 @@ class_name UiReactItemList
 ## **Optional** — Inspector-driven tweens (selection, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
+## **Optional** — Action layer rows (focus, visibility, [code]mouse_filter[/code], UI bool flags). See [code]docs/ACTION_LAYER.md[/code].
+@export var action_targets: Array[UiReactActionTarget] = []
+
 const _WARN_SINGLE_SELECT_EXPECT_INT := "UiReactItemList: expected int for single-select selected_state"
 
 var _updating: bool = false
@@ -31,6 +34,7 @@ func _ready() -> void:
 ## Called automatically in [method _ready].
 func _validate_animation_targets() -> void:
 	var trigger_map: Dictionary = UiReactAnimTargetHelper.apply_validated_targets(self, "UiReactItemList")
+	UiReactActionTargetHelper.apply_validated_actions_and_merge_triggers(self, "UiReactItemList", trigger_map)
 
 	# Connect signals based on which triggers are used
 	if trigger_map.has(UiAnimTarget.Trigger.SELECTION_CHANGED):
@@ -39,6 +43,8 @@ func _validate_animation_targets() -> void:
 		UiReactAnimTargetHelper.connect_if_absent(mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
 		UiReactAnimTargetHelper.connect_if_absent(mouse_exited, _on_trigger_hover_exit)
+
+	UiReactActionTargetHelper.sync_initial_state(self, "UiReactItemList", action_targets)
 
 ## Finishes initialization, allowing animations to trigger on selection changes.
 func _finish_initialization() -> void:
@@ -64,6 +70,7 @@ func _on_trigger_hover_exit() -> void:
 ## [param trigger_type]: The trigger type to match.
 func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 	UiReactAnimTargetHelper.trigger_animations(self, animation_targets, trigger_type)
+	UiReactActionTargetHelper.run_actions(self, "UiReactItemList", action_targets, trigger_type)
 
 
 func _add_item_from_entry(entry: Variant) -> void:

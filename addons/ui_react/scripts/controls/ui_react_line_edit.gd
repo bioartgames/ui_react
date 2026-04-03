@@ -7,6 +7,9 @@ class_name UiReactLineEdit
 ## **Optional** — Inspector-driven tweens (text, focus, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
+## **Optional** — Action layer presets ([code]docs/ACTION_LAYER.md[/code]).
+@export var action_targets: Array[UiReactActionTarget] = []
+
 var _updating: bool = false
 var _is_initializing: bool = true
 
@@ -24,6 +27,7 @@ func _ready() -> void:
 ## Called automatically in [method _ready].
 func _validate_animation_targets() -> void:
 	var trigger_map: Dictionary = UiReactAnimTargetHelper.apply_validated_targets(self, "UiReactLineEdit")
+	UiReactActionTargetHelper.apply_validated_actions_and_merge_triggers(self, "UiReactLineEdit", trigger_map)
 
 	# Connect signals based on which triggers are used
 	if trigger_map.has(UiAnimTarget.Trigger.TEXT_ENTERED):
@@ -69,10 +73,11 @@ func _on_trigger_hover_exit() -> void:
 ## [param trigger_type]: The trigger type to match.
 func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 	UiReactAnimTargetHelper.trigger_animations(self, animation_targets, trigger_type)
+	UiReactActionTargetHelper.run_actions(self, "UiReactLineEdit", action_targets, trigger_type)
 
 func _on_text_changed(new_text: String) -> void:
-	# Trigger animations if configured
-	if animation_targets.size() > 0:
+	# Trigger animations / actions if configured
+	if animation_targets.size() > 0 or action_targets.size() > 0:
 		_on_trigger_text_changed(new_text)
 	
 	if not text_state or _updating:

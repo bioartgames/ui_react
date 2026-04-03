@@ -9,6 +9,9 @@ class_name UiReactCheckBox
 ## **Optional** — Inspector-driven tweens (toggled, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
+## **Optional** — Action layer presets ([code]docs/ACTION_LAYER.md[/code]).
+@export var action_targets: Array[UiReactActionTarget] = []
+
 var _updating: bool = false
 var _is_initializing: bool = true
 
@@ -27,6 +30,7 @@ func _ready() -> void:
 ## Called automatically in [method _ready].
 func _validate_animation_targets() -> void:
 	var trigger_map: Dictionary = UiReactAnimTargetHelper.apply_validated_targets(self, "UiReactCheckBox")
+	UiReactActionTargetHelper.apply_validated_actions_and_merge_triggers(self, "UiReactCheckBox", trigger_map)
 
 	# Connect signals based on which triggers are used
 	if trigger_map.has(UiAnimTarget.Trigger.TOGGLED_ON) or trigger_map.has(UiAnimTarget.Trigger.TOGGLED_OFF):
@@ -63,6 +67,7 @@ func _on_trigger_hover_exit() -> void:
 ## [param trigger_type]: The trigger type to match.
 func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 	UiReactAnimTargetHelper.trigger_animations(self, animation_targets, trigger_type, true, disabled)
+	UiReactActionTargetHelper.run_actions(self, "UiReactCheckBox", action_targets, trigger_type, true, disabled)
 
 func _on_toggled(active: bool) -> void:
 	if not checked_state or _updating:

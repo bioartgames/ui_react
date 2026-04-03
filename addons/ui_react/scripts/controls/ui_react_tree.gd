@@ -7,6 +7,9 @@ class_name UiReactTree
 ## **Optional** — Inspector-driven tweens (selection, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
+## **Optional** — Action layer presets ([code]docs/ACTION_LAYER.md[/code]).
+@export var action_targets: Array[UiReactActionTarget] = []
+
 var _updating: bool = false
 var _is_initializing: bool = true
 
@@ -23,6 +26,7 @@ func _ready() -> void:
 ## Validates animation targets and filters out invalid ones.
 func _validate_animation_targets() -> void:
 	var trigger_map: Dictionary = UiReactAnimTargetHelper.apply_validated_targets(self, "UiReactTree")
+	UiReactActionTargetHelper.apply_validated_actions_and_merge_triggers(self, "UiReactTree", trigger_map)
 
 	if trigger_map.has(UiAnimTarget.Trigger.SELECTION_CHANGED):
 		UiReactAnimTargetHelper.connect_if_absent(item_selected, _on_trigger_selection_changed)
@@ -31,6 +35,8 @@ func _validate_animation_targets() -> void:
 		UiReactAnimTargetHelper.connect_if_absent(mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
 		UiReactAnimTargetHelper.connect_if_absent(mouse_exited, _on_trigger_hover_exit)
+
+	UiReactActionTargetHelper.sync_initial_state(self, "UiReactTree", action_targets)
 
 func _finish_initialization() -> void:
 	_is_initializing = false
@@ -53,6 +59,7 @@ func _on_trigger_hover_exit() -> void:
 
 func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 	UiReactAnimTargetHelper.trigger_animations(self, animation_targets, trigger_type)
+	UiReactActionTargetHelper.run_actions(self, "UiReactTree", action_targets, trigger_type)
 
 ## Visible pre-order: depth-first using [method TreeItem.get_next_visible]. If [member hide_root] is [code]true[/code], the engine root is omitted; counting starts at its first child.
 func _flatten_visible_preorder() -> Array[TreeItem]:

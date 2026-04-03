@@ -4,7 +4,17 @@ Self-contained UI building blocks for Godot 4.x: attach **UiReact\*** scripts fo
 
 ### Roadmap
 
-Public direction, phased delivery, and a full **capability backlog** (so deferred work stays visible) live in **[`docs/ROADMAP.md`](docs/ROADMAP.md)**—charter, phases **P0–P5+**, screen matrix, exit criteria, and Appendix table **CB-001–CB-030**.
+Public direction, phased delivery, and a full **capability backlog** (so deferred work stays visible) live in **[`docs/ROADMAP.md`](docs/ROADMAP.md)**—charter, phases **P0–P6+**, screen matrix, exit criteria, and Appendix **CB-001–CB-047**.
+
+### Wiring layer (P5)
+
+**P5** adds inspector-authored **wiring**: a scene **`UiReactWireRunner`**, **`UiReactWireRule`** resources, and per-control **`wire_rules`** (optional **`UiReactWireHub`** after **P5.1** for central rule lists). The **normative** contract lives in **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)**; phase gates and backlog IDs (**CB-031**+) are in **ROADMAP** Part I and Appendix.
+
+### Action layer (P6.1)
+
+**P6.1** adds inspector-authored **`action_targets`** (**`UiReactActionTarget`** rows) on the **same P5.1 control set** as **`wire_rules`** ([`WIRING_LAYER.md`](docs/WIRING_LAYER.md) §5)—**non-motion** reactions only; tweens stay on **`animation_targets`**. The **normative** spec is **[`docs/ACTION_LAYER.md`](docs/ACTION_LAYER.md)**; backlog **CB-042–CB-047** is in **ROADMAP** Appendix only. Action code may ship before P5.1 wiring is complete ([`ACTION_LAYER.md`](docs/ACTION_LAYER.md) §7 note).
+
+**Docs layout:** [`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md) (wiring), [`docs/ACTION_LAYER.md`](docs/ACTION_LAYER.md) (actions), [`docs/ROADMAP.md`](docs/ROADMAP.md) (phases + Appendix).
 
 ---
 
@@ -31,7 +41,7 @@ Copy `addons/ui_react/` into your Godot project at **`addons/ui_react/`**. Open 
 
 ### 2) Run the example
 
-Open **`res://addons/ui_react/examples/demo.tscn`** (smoke demo), **`res://addons/ui_react/examples/options_transactional_demo.tscn`** (options-style **Apply / Cancel** with **`UiTransactionalState`** plus computed status), **`res://addons/ui_react/examples/shop_computed_demo.tscn`** (computed afford/status on **`UiReactRichTextLabel`** + BBCode from **`ShopComputedStatus`**; **Buy** subtracts gold via **`shop_computed_demo.gd`** — **CB-006**), **`res://addons/ui_react/examples/inventory_screen_demo.tscn`** (single **inventory-style** screen: **`UiReactTree`** categories + filtered **`UiReactItemList`** + **`UiReactTextureButton`** actions, plus sample **`UiAnimTarget`** fades/POP; micro-demos below stay for focused CB coverage), **`res://addons/ui_react/examples/inventory_list_demo.tscn`** (filtered **`UiReactItemList`**, optional row **icons**), **`res://addons/ui_react/examples/texture_button_demo.tscn`** (**`UiReactTextureButton`** + **`UiBoolState`**), **`res://addons/ui_react/examples/tree_demo.tscn`** (**`UiReactTree`** selection index demo), **`res://addons/ui_react/examples/rich_text_label_demo.tscn`** (**`UiReactRichTextLabel`** + BBCode from **`text_state`**), or **`res://addons/ui_react/examples/anim_targets_catalog_demo.tscn`** (**every** **`UiAnimTarget.AnimationAction`** from a list + **every** **`UiAnimTarget.Trigger`** on a shared preview via **`UiAnimTarget` POP** rows) and press **Play** (or set either as **Main Scene**). Use the scene tree to see how states and targets are wired.
+Open **`res://addons/ui_react/examples/demo.tscn`** (smoke demo), **`res://addons/ui_react/examples/options_transactional_demo.tscn`** (options-style **Apply / Cancel** with **`UiTransactionalState`** plus computed status), **`res://addons/ui_react/examples/shop_computed_demo.tscn`** (computed afford/status on **`UiReactRichTextLabel`** + BBCode from **`ShopComputedStatus`**; **Buy** subtracts gold via **`shop_computed_demo.gd`** — **CB-006**), **`res://addons/ui_react/examples/inventory_screen_demo.tscn`** (single **inventory-style** screen: **`UiReactTree`** categories + filtered **`UiReactItemList`** + **`UiReactTextureButton`** actions, plus sample **`UiAnimTarget`** fades/POP; micro-demos below stay for focused CB coverage), **`res://addons/ui_react/examples/inventory_list_demo.tscn`** (filtered **`UiReactItemList`**, optional row **icons**), **`res://addons/ui_react/examples/texture_button_demo.tscn`** (**`UiReactTextureButton`** + **`UiBoolState`**), **`res://addons/ui_react/examples/tree_demo.tscn`** (**`UiReactTree`** selection index demo), **`res://addons/ui_react/examples/rich_text_label_demo.tscn`** (**`UiReactRichTextLabel`** + BBCode from **`text_state`**), **`res://addons/ui_react/examples/anim_targets_catalog_demo.tscn`** (**every** **`UiAnimTarget.AnimationAction`** from a list + **every** **`UiAnimTarget.Trigger`** on a shared preview via **`UiAnimTarget` POP** rows), or **`res://addons/ui_react/examples/action_layer_demo.tscn`** (**`UiReactActionTarget`** **GRAB_FOCUS** row on **`UiReactCheckBox`**) and press **Play** (or set either as **Main Scene**). Use the scene tree to see how states and targets are wired.
 
 ### 3) Minimal recipes (editor-first, no code required)
 
@@ -87,18 +97,19 @@ All plugin usage details are documented in this README.
 | Control | Bindings (typical) | Required for “reactive” behavior |
 |--------|--------------------|----------------------------------|
 | **UiReactButton** | `pressed_state`, `disabled_state` | At least one state if you want sync with `UiState`; neither required for a plain Button. **`disabled_state`** accepts **`UiBoolState`** or a **`UiComputedBoolState`** subclass. |
-| **UiReactCheckBox** | `checked_state`, `disabled_state` | Assign `checked_state` (**`UiState`**: **`UiBoolState`** or bool-shaped **`UiTransactionalState`**) for two-way sync. |
+| **UiReactCheckBox** | `checked_state`, `disabled_state`, optional `action_targets` | Assign `checked_state` (**`UiState`**: **`UiBoolState`** or bool-shaped **`UiTransactionalState`**) for two-way sync. |
 | **UiReactSlider** | `value_state` | Assign **`value_state`** (**`UiState`**: **`UiFloatState`** or float/int-shaped **`UiTransactionalState`**) for two-way sync; else behaves like a normal slider. |
 | **UiReactSpinBox** | `value_state`, `disabled_state` | Same **`value_state`** pattern as slider; `disabled_state` optional (**`UiBoolState`** or **`UiComputedBoolState`** subclass). |
 | **UiReactProgressBar** | `value_state` | Same **`value_state`** pattern as slider. |
-| **UiReactLineEdit** | `text_state` | `text_state` for sync. |
+| **UiReactLineEdit** | `text_state`, optional `action_targets` | `text_state` for sync. |
 | **UiReactLabel** | `text_state` | `text_state` for sync. |
 | **UiReactRichTextLabel** | `text_state` | **`text_state`** for **display-only** sync (BBCode string → **`RichTextLabel.text`**); wrapper forces **`bbcode_enabled`**. Same payload family as **`UiReactLabel`**; **no** UI→state writeback. |
 | **UiReactOptionButton** | `selected_state`, `disabled_state` | `selected_state` for sync (usually string item text). |
-| **UiReactItemList** | `items_state`, `selected_state` | **`items_state`**: **`UiArrayState`** (`Array` of strings/variants or **`label`/`icon`** dicts per **List patterns**). **`selected_state`**: **`UiIntState`** (single-select) or **`UiArrayState`** (multi-select indices). Godot’s **ItemList** has no built-in disabled state—wrap or gate input with a parent **Control** / `mouse_filter` / focus policy in game code if you need “disabled” behavior. |
+| **UiReactItemList** | `items_state`, `selected_state`, optional `action_targets` | **`items_state`**: **`UiArrayState`** (`Array` of strings/variants or **`label`/`icon`** dicts per **List patterns**). **`selected_state`**: **`UiIntState`** (single-select) or **`UiArrayState`** (multi-select indices). Godot’s **ItemList** has no built-in disabled state—wrap or gate input with a parent **Control** / `mouse_filter` / focus policy in game code if you need “disabled” behavior. |
 | **UiReactTabContainer** | `selected_state`, `tab_config` | **`selected_state`**: **`UiIntState`**. **`tab_config`**: optional **`UiTabContainerCfg`** (use **`UiArrayState`** for tab/disabled/visibility arrays). |
 | **UiReactTextureButton** | `pressed_state`, `disabled_state` | Same semantics as **`UiReactButton`** on **`BaseButton`** (`pressed` vs `toggle_mode` / `toggled`, **`disabled_state`** may use **`UiBoolState`** or **`UiComputedBoolState`**). Assign **`texture_normal`** (and optional hover/pressed textures) in the Inspector. |
-| **UiReactTree** | `selected_state` | **`selected_state`**: **`UiIntState`**. Wrapper forces **single selection** (`Tree.SELECT_SINGLE`). See **UiReactTree binding semantics** below. |
+| **UiReactTree** | `selected_state`, optional `action_targets` | **`selected_state`**: **`UiIntState`**. Wrapper forces **single selection** (`Tree.SELECT_SINGLE`). See **UiReactTree binding semantics** below. |
+| **`UiReactTransactionalActions`** | `group`, button paths, optional `action_targets` | **`action_targets`** must be **state-driven** only ([`ACTION_LAYER.md`](docs/ACTION_LAYER.md))—this host does not emit **`UiAnimTarget`** triggers. |
 
 ### UiReactTree binding semantics (P4)
 
@@ -107,7 +118,7 @@ All plugin usage details are documented in this README.
 - **State → UI:** Valid indices call **`Tree.set_selected(item, 0)`**; **`-1`** calls **`deselect_all()`**. Out-of-range indices deselect and snap the state to **`-1`**.
 - **Populating rows:** Build or update **`TreeItem`**s from code or editor as usual; if you add or remove rows after bind time, re-assign **`selected_state`** (or set **`-1`**) so the index still matches the visible order.
 
-**`animation_targets`** is always **optional**: leave empty if you don’t want automatic tweens.
+**`animation_targets`** is always **optional**: leave empty if you don’t want automatic tweens. **`action_targets`** (where exposed) is optional; see **`docs/ACTION_LAYER.md`** and the **Action layer (P6.1)** section above.
 
 ### UiAnimTarget: unified baseline and RESET
 
@@ -322,7 +333,7 @@ These may change between template versions; **do not rely on them from game code
 | `scripts/internal/anim/` | Animation implementation (unstable for direct use). |
 | `scripts/internal/react/` | Reactive helpers (unstable for direct use). |
 | `examples/` | `demo.tscn` smoke demo; `options_transactional_demo.tscn` (transactional **Apply / Cancel** + computed status); `shop_computed_demo.tscn` + `shop_computed_demo.gd` (computed + **CB-006** Buy; **`UiReactRichTextLabel`** status + **`ShopComputedStatus`** BBCode); `inventory_screen_demo.tscn` + `inventory_screen_demo.gd` + `inventory_demo_catalog.gd` (combined tree + list + texture actions + sample **`UiAnimTarget`** fades/POP); `inventory_list_demo.tscn` (filtered list + optional row **icons** / **CB-008**); `texture_button_demo.tscn` + `texture_button_demo.gd` (**CB-012**); `tree_demo.tscn` + `tree_demo.gd` (**CB-013**); `rich_text_label_demo.tscn` + `rich_text_label_demo.gd` (**CB-014** **`UiReactRichTextLabel`**); `anim_targets_catalog_demo.tscn` + `anim_targets_catalog_demo.gd` (catalog of all **`UiAnimTarget.AnimationAction`** + playground for all **`UiAnimTarget.Trigger`** on one preview). |
-| `docs/` | **README**, **CHANGELOG**, and addon **ROADMAP** (this folder). |
+| `docs/` | **README**, **CHANGELOG**, **[`ROADMAP.md`](docs/ROADMAP.md)**, **[`WIRING_LAYER.md`](docs/WIRING_LAYER.md)** (normative **P5** wiring spec). |
 | `editor_plugin/` | Optional Godot editor plugin (dock, validation, quick state creation). |
 | `ui_resources/` | Sample `.tres` for the example scene; `plugin_generated/` holds plugin-created states (optional). |
 
@@ -430,7 +441,7 @@ Use **`UiArrayState`** for `items_state` so inspector intent and diagnostics lin
 - `ui_react_dock_config.gd` — ProjectSettings keys and load/save for dock preferences.
 - `controllers/ui_react_action_controller.gd` — Wraps `EditorUndoRedoManager` property changes.
 
-**Planning docs:** phased capability backlog for this addon lives in **[`docs/ROADMAP.md`](docs/ROADMAP.md)**. A hosting repository may add its own root roadmap separately.
+**Planning docs:** phased capability backlog for this addon lives in **[`docs/ROADMAP.md`](docs/ROADMAP.md)**; the **P5** wiring contract is **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)**. A hosting repository may add its own root roadmap separately.
 
 Runtime addon code under `scripts/internal/*` remains **unstable** for direct game use; the plugin may depend on it only for parity with future refactors—prefer mirroring rules inside `services/` if drift becomes a problem.
 

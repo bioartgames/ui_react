@@ -10,12 +10,16 @@ extends Control
 @export var cancel_button_path: NodePath = NodePath("")
 @export var begin_on_ready: bool = true
 
+## **Optional** — [b]State-driven[/b] action rows only (no [UiAnimTarget] triggers on this node). See [code]docs/ACTION_LAYER.md[/code].
+@export var action_targets: Array[UiReactActionTarget] = []
+
 
 func _ready() -> void:
 	if begin_on_ready and group != null:
 		group.begin_edit_all()
 	_wire_button(apply_button_path, _on_apply_pressed)
 	_wire_button(cancel_button_path, _on_cancel_pressed)
+	_setup_action_targets()
 
 
 func _exit_tree() -> void:
@@ -57,3 +61,11 @@ func _on_apply_pressed() -> void:
 func _on_cancel_pressed() -> void:
 	if group != null:
 		group.cancel_all()
+
+
+func _setup_action_targets() -> void:
+	var trigger_map: Dictionary = {}
+	UiReactActionTargetHelper.apply_validated_actions_and_merge_triggers(
+		self, "UiReactTransactionalActions", trigger_map
+	)
+	UiReactActionTargetHelper.sync_initial_state(self, "UiReactTransactionalActions", action_targets)

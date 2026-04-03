@@ -8,6 +8,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 No unreleased changes yet.
 
+## [2.6.5] - 2026-04-02
+
+### Fixed
+
+- **`UiReactTree`:** **`action_targets`** now runs **`UiReactActionTargetHelper.apply_validated_actions_and_merge_triggers`** (same as other §5 controls) so control-triggered rows connect signals and **`state_watch`** rows get **`value_changed`** + initial sync.
+- **`UiReactActionTarget`:** Inspector **`trigger`** is hidden (storage-only) when **`state_watch`** is set; **`PROPERTY_USAGE_DEFAULT`** when control-driven.
+- **`UiReactActionTargetHelper`:** duplicate **`bool_flag_state`** / **`state_watch`** on **`SET_UI_BOOL_FLAG`** uses **`push_error`** at runtime (aligned with §3.1.1 and dock **ERROR**).
+
+### Changed
+
+- **Editor:** dock **`action_targets`** validation — **WARNING** when **`state_watch`** is set and **`trigger`** is not **`PRESSED`**.
+
+### Documentation
+
+- **`docs/ACTION_LAYER.md`:** §7 note on Action implementation vs P5.1 wiring sequencing.
+- **`README.md`:** one-line pointer to that note.
+
+## [2.6.4] - 2026-04-02
+
+### Added
+
+- **Action layer (P6.1):** normative **[`docs/ACTION_LAYER.md`](ACTION_LAYER.md)**; **`UiReactActionTarget`** + **`UiReactActionKind`** (`scripts/api/models/ui_react_action_target.gd`); **`UiReactActionTargetHelper`** (`scripts/internal/react/ui_react_action_target_helper.gd`); **`action_targets`** on **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** controls (**`UiReactItemList`**, **`UiReactTree`**, **`UiReactLineEdit`**, **`UiReactCheckBox`**, **`UiReactTransactionalActions`** — state-driven rows only on the transactional host).
+- **Example:** **`examples/action_layer_demo.tscn`** — **`GRAB_FOCUS`** row on **`UiReactCheckBox`** (**CB-047**).
+- **Editor:** **`UiReactValidatorService`** validates **`action_targets`** paths and **`UiReactTransactionalActions`** constraints (**CB-046**).
+
+### Documentation
+
+- **`docs/ROADMAP.md`:** phase **P6.1**, glossary **Action layer**, Appendix **CB-042–CB-047**, review process + **CB-020** note.
+- **`docs/WIRING_LAYER.md`:** Actions cross-paragraph in §2.
+- **`README.md`:** Action layer subsection, **`action_targets`** in setup + control table + examples list.
+
+## [2.6.3] - 2026-04-02
+
+### Documentation
+
+- **Roadmap:** phase model **P5** (wiring layer) and **P6+** (deferred parking, replacing the old **P5**-plus parking row); glossary **Wiring**; screen matrix **P5** column; exit criteria for **P5.1**, **P5.1.b** (optional **`UiReactWireHub`**), **P5.2**; review process **CB-031–CB-041** + [`WIRING_LAYER.md`](WIRING_LAYER.md) drift.
+- **[`WIRING_LAYER.md`](WIRING_LAYER.md):** normative **P5** spec—**`UiReactWireRunner`**, **`UiReactWireRule`**, **`wire_rules`**, MVP rule types, diagnostics, phasing, optional hub (**P5.1.b**).
+- **Appendix:** **CB-031–CB-041** (wiring backlog + **`UiReactWireHub`** **CB-041**); historical rows **CB-005/007/010/018/019** retargeted **P6+**.
+- **README:** roadmap blurb **P0–P6+** / **CB-001–CB-041**; **Wiring layer (P5)** subsection; layout + planning links to **ROADMAP** and **WIRING_LAYER**.
+
 ## [2.6.2] - 2026-04-02
 
 ### Changed
