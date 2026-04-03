@@ -8,13 +8,13 @@ Public direction, phased delivery, and a full **capability backlog** (so deferre
 
 ### Wiring layer (P5)
 
-**P5** adds inspector-authored **wiring**: a scene **`UiReactWireRunner`**, **`UiReactWireRule`** resources, and per-control **`wire_rules`** (optional **`UiReactWireHub`** after **P5.1** for central rule lists). The **normative** contract lives in **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)**; phase gates and backlog IDs (**CB-031**+) are in **ROADMAP** Part I and Appendix.
+**P5** adds inspector-authored **wiring**: a scene **`UiReactWireRunner`**, **`UiReactWireRule`** resources, and per-control **`wire_rules`** (optional **`UiReactWireHub`** after **P5.1** for central rule lists). The **normative** contract lives in **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)**; phase gates and backlog IDs (**CB-031**+) are in **ROADMAP** Part I and Appendix. **Stock-take / readiness checklist:** **[`docs/P5_CURRENT_STATE_AUDIT.md`](docs/P5_CURRENT_STATE_AUDIT.md)**.
 
 ### Action layer (P6.1)
 
 **P6.1** adds inspector-authored **`action_targets`** (**`UiReactActionTarget`** rows) on the **same P5.1 control set** as **`wire_rules`** ([`WIRING_LAYER.md`](docs/WIRING_LAYER.md) §5)—**non-motion** reactions only; tweens stay on **`animation_targets`**. The **normative** spec is **[`docs/ACTION_LAYER.md`](docs/ACTION_LAYER.md)**; backlog **CB-042–CB-047** is in **ROADMAP** Appendix only. Action code may ship before P5.1 wiring is complete ([`ACTION_LAYER.md`](docs/ACTION_LAYER.md) §7 note).
 
-**Docs layout:** [`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md) (wiring), [`docs/ACTION_LAYER.md`](docs/ACTION_LAYER.md) (actions), [`docs/ROADMAP.md`](docs/ROADMAP.md) (phases + Appendix).
+**Docs layout:** [`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md) (wiring), [`docs/ACTION_LAYER.md`](docs/ACTION_LAYER.md) (actions), [`docs/ROADMAP.md`](docs/ROADMAP.md) (phases + Appendix), [`docs/P5_CURRENT_STATE_AUDIT.md`](docs/P5_CURRENT_STATE_AUDIT.md) (P5 gates).
 
 ---
 
@@ -43,7 +43,7 @@ Copy `addons/ui_react/` into your Godot project at **`addons/ui_react/`**. Open 
 
 The addon ships **four** runnable examples under **`res://addons/ui_react/examples/`** (game-screen style + one animation catalog). Open any of these and press **Play** (default **Main Scene** is **`inventory_screen_demo.tscn`**):
 
-- **`res://addons/ui_react/examples/inventory_screen_demo.tscn`** — **`UiReactTree`** + filtered **`UiReactItemList`** + **`UiReactTextureButton`** / **`UiReactOptionButton`**; list lock via overlay + **`action_targets`** (**CB-015** / **P6.1**); sample **`UiAnimTarget`** fades/POP.
+- **`res://addons/ui_react/examples/inventory_screen_demo.tscn`** — **`UiReactWireRunner`** + **`wire_rules`** (map / refresh / copy detail per **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)**); **`UiReactTree`** + filtered **`UiReactItemList`** + actions; list lock via overlay + **`action_targets`** (**CB-015** / **P6.1**); sample **`UiAnimTarget`** fades/POP.
 - **`res://addons/ui_react/examples/options_transactional_demo.tscn`** — transactional **Apply / Cancel** + **`UiReactTabContainer`** showcase tab.
 - **`res://addons/ui_react/examples/shop_computed_demo.tscn`** — computed afford/status on **`UiReactRichTextLabel`**; **`UiReactProgressBar`** / **`UiReactSpinBox`** bindings; **Buy** via **`shop_computed_demo.gd`** (**CB-006**).
 - **`res://addons/ui_react/examples/anim_targets_catalog_demo.tscn`** — catalog of **`UiAnimTarget.AnimationAction`** + trigger playground.
@@ -157,6 +157,7 @@ Paths are under **`res://addons/ui_react/`**.
 | State (computed base) | `UiComputedStringState`, `UiComputedBoolState` | `scripts/api/models/ui_computed_string_state.gd`, `scripts/api/models/ui_computed_bool_state.gd` |
 | Inspector animation row | `UiAnimTarget` | `scripts/api/models/ui_anim_target.gd` |
 | Tab / container config | `UiTabContainerCfg` | `scripts/api/models/ui_tab_container_cfg.gd` |
+| Wiring (P5) | `UiReactWireRunner`, `UiReactWireRule` + map / refresh / copy rules, `UiReactWireCatalogData` | `scripts/controls/ui_react_wire_runner.gd`, `scripts/api/models/ui_react_wire_*.gd` |
 | Attachable controls | `UiReact*`, `UiReactTransactionalActions`, `UiReactComputedSync` | `scripts/controls/` |
 
 Prefer **`UiAnimUtils`** for tweens from code; prefer **`UiAnimTarget`** arrays on controls for no-code animation.
@@ -233,7 +234,7 @@ Use a **`UiComputedStringState`** or **`UiComputedBoolState`** **subclass** when
 2. Use a **`UiStringState`** (with **`UiReactLineEdit.text_state`**) or similar as the **filter query**.
 3. When the filter changes, rebuild an **`Array`** (strings and/or **`label`/`icon` dictionaries**) and call **`items_state.set_value(...)`** so the list reflects the filtered rows.
 4. Reset **`selected_state`** to **`-1`** (or clamp) when the filter changes so the selection does not point at the wrong item.
-5. Drive any **detail label** from **`selected_state`** + the same catalog mapping (see **`res://addons/ui_react/examples/inventory_screen_demo.gd`**).
+5. Drive any **detail label** from **`selected_state`** + row payloads — prefer **`wire_rules`** + **`UiReactWireCopySelectionDetail`** (see **`res://addons/ui_react/examples/inventory_screen_demo.tscn`**), or game-layer glue in a small script.
 
 This pattern is **game-layer** glue; the addon does not ship a generic virtualized list or a graph solver (**[`docs/ROADMAP.md`](docs/ROADMAP.md)** — **CB-010** deferred).
 
@@ -339,7 +340,7 @@ These may change between template versions; **do not rely on them from game code
 | `scripts/controls/` | Attachable **UiReact\*** scripts. |
 | `scripts/internal/anim/` | Animation implementation (unstable for direct use). |
 | `scripts/internal/react/` | Reactive helpers (unstable for direct use). |
-| `examples/` | **`inventory_screen_demo.tscn`** + **`inventory_screen_demo.gd`** + **`inventory_demo_catalog.gd`** (tree + filtered list + texture/option actions + **`action_targets`** list lock + **`UiAnimTarget`**); **`options_transactional_demo.tscn`** (transactional **Apply / Cancel** + **`UiReactTabContainer`**); **`shop_computed_demo.tscn`** + **`shop_computed_demo.gd`** (computed + **CB-006**; rich status; progress/spin showcase); **`anim_targets_catalog_demo.tscn`** + **`anim_targets_catalog_demo.gd`** (animation catalog + trigger playground). |
+| `examples/` | **`inventory_screen_demo.tscn`** + **`inventory_screen_demo.gd`** + **`inventory_demo_catalog.gd`** / **`inventory_demo_catalog_wire_data.gd`** (**`UiReactWireRunner`**, **`wire_rules`**, texture/option actions, **`action_targets`** list lock, **`UiAnimTarget`**); **`options_transactional_demo.tscn`** (transactional **Apply / Cancel** + **`UiReactTabContainer`**); **`shop_computed_demo.tscn`** + **`shop_computed_demo.gd`** (computed + **CB-006**; rich status; progress/spin showcase); **`anim_targets_catalog_demo.tscn`** + **`anim_targets_catalog_demo.gd`** (animation catalog + trigger playground). |
 | `docs/` | **README**, **CHANGELOG**, **[`ROADMAP.md`](docs/ROADMAP.md)**, **[`WIRING_LAYER.md`](docs/WIRING_LAYER.md)** (normative **P5** wiring spec). |
 | `editor_plugin/` | Optional Godot editor plugin (dock, validation, quick state creation). |
 | `ui_resources/` | Sample `.tres` for the example scene; `plugin_generated/` holds plugin-created states (optional). |
@@ -376,7 +377,7 @@ If you copy `addons/ui_react/` into another project, re-enable the plugin there 
 
 ## Versioning
 
-The plugin **version** is declared in [`editor_plugin/plugin.cfg`](editor_plugin/plugin.cfg) (`version=`). Release history and notable changes are tracked in **[`docs/CHANGELOG.md`](docs/CHANGELOG.md)** in this addon folder (so it travels when you copy `addons/ui_react/`).
+The plugin **version** is declared in [`editor_plugin/plugin.cfg`](editor_plugin/plugin.cfg) (`version=`, currently **2.7.0**). Release history and notable changes are tracked in **[`docs/CHANGELOG.md`](docs/CHANGELOG.md)** in this addon folder (so it travels when you copy `addons/ui_react/`).
 
 ## Diagnostics layout
 

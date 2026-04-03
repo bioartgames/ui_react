@@ -19,6 +19,7 @@ const SCRIPT_STEM_TO_COMPONENT: Dictionary = {
 	"ui_react_tab_container": "UiReactTabContainer",
 	"ui_react_texture_button": "UiReactTextureButton",
 	"ui_react_tree": "UiReactTree",
+	"ui_react_transactional_actions": "UiReactTransactionalActions",
 }
 
 ## Binding slots: [code]property[/code], [code]kind[/code] for suggested typed state, [code]optional[/code].
@@ -68,6 +69,7 @@ const BINDINGS_BY_COMPONENT: Dictionary = {
 	"UiReactTree": [
 		{"property": &"selected_state", "kind": "int", "optional": true},
 	],
+	"UiReactTransactionalActions": [],
 }
 
 

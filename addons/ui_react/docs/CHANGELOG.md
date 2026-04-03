@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-04-04
+
+### Added
+
+- **Wiring layer (P5.1 core):** [`docs/WIRING_LAYER.md`](WIRING_LAYER.md) — **`UiReactWireRunner`**, **`UiReactWireRule`** + **`UiReactWireMapIntToString`**, **`UiReactWireRefreshItemsFromCatalog`**, **`UiReactWireCopySelectionDetail`**, **`UiReactWireCatalogData`**; **`wire_rules`** on **`UiReactItemList`**, **`UiReactTree`**, **`UiReactLineEdit`**, **`UiReactCheckBox`**, **`UiReactTransactionalActions`**.
+- **Editor diagnostics (CB-034):** dock **WARNING** when **`wire_rules`** exist without **`UiReactWireRunner`** or when multiple runners are in the edited scene; **per-rule** validation of MVP **`wire_rules`** exports (`UiReactValidatorService`); **`UiReactTransactionalActions`** registered in **`UiReactScannerService`**; unused **`UiState` .tres** scan includes **`UiState`** refs inside **`wire_rules`** (`UiReactStateReferenceCollector`).
+- **`inventory_screen_demo`:** **`UiReactWireRunner`** + inspector **`wire_rules`**; **`InventoryDemoCatalogWireData`**; category hint via **`UiReactLabel`** + state; root script trimmed to tree build + demo-only **Use/Sort** notes + debug labels.
+
 ### Changed
 
 - **Examples:** Consolidated to **four** scenes under `examples/`: **`inventory_screen_demo.tscn`**, **`options_transactional_demo.tscn`**, **`shop_computed_demo.tscn`**, **`anim_targets_catalog_demo.tscn`**. Removed **`demo.tscn`**, **`action_layer_demo.tscn`**, **`inventory_list_demo`**, **`texture_button_demo`**, **`tree_demo`**, **`rich_text_label_demo`** (and paired `*.gd` where applicable). **Main Scene** (`project.godot`) defaults to **`inventory_screen_demo.tscn`**.
@@ -15,7 +23,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Documentation
 
-- **`README.md`**, **`docs/ROADMAP.md`**, **`docs/WIRING_LAYER.md`:** Example paths and Appendix notes updated for removed scenes.
+- **`docs/P5_CURRENT_STATE_AUDIT.md`:** Stock-take for P5.1, **CB-034**, and P5.1.b / P5.2 gates.
+- **`docs/WIRING_LAYER.md`:** §3 collection scope + ordering note; §9 **CB-034** shipped vs extensions.
+- **`docs/ROADMAP.md`:** P5.1 checklist + Appendix; **CB-034** **Done** for P5.1 editor scope.
+- **`README.md`**, **`docs/ROADMAP.md`**, **`docs/WIRING_LAYER.md`:** Example paths and Appendix notes for removed / consolidated scenes.
 
 ## [2.6.5] - 2026-04-02
 

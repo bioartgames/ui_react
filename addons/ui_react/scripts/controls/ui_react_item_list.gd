@@ -13,6 +13,9 @@ class_name UiReactItemList
 ## **Optional** — Action layer rows (focus, visibility, [code]mouse_filter[/code], UI bool flags). See [code]docs/ACTION_LAYER.md[/code].
 @export var action_targets: Array[UiReactActionTarget] = []
 
+## **Optional** — Wiring rules ([code]docs/WIRING_LAYER.md[/code] §5). Applied by [UiReactWireRunner] in the scene.
+@export var wire_rules: Array[UiReactWireRule] = []
+
 const _WARN_SINGLE_SELECT_EXPECT_INT := "UiReactItemList: expected int for single-select selected_state"
 
 var _updating: bool = false

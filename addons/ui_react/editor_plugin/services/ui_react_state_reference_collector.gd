@@ -31,6 +31,32 @@ static func add_bound_state_paths_from_react_node(node: Node, out_paths: Diction
 		var cfg: Variant = owner.get(&"tab_config")
 		if cfg is UiTabContainerCfg:
 			_add_tab_container_cfg_paths(cfg as UiTabContainerCfg, out_paths)
+	if &"wire_rules" in owner:
+		var wr_variant: Variant = owner.get(&"wire_rules")
+		if wr_variant is Array:
+			for item in wr_variant as Array:
+				if item is UiReactWireRule:
+					_register_states_from_wire_rule(item as UiReactWireRule, out_paths)
+
+
+static func _register_states_from_wire_rule(rule: UiReactWireRule, out_paths: Dictionary) -> void:
+	if rule is UiReactWireMapIntToString:
+		var r := rule as UiReactWireMapIntToString
+		_register_state_path(r.source_int_state, out_paths)
+		_register_state_path(r.target_string_state, out_paths)
+		_register_state_path(r.hint_state, out_paths)
+	elif rule is UiReactWireRefreshItemsFromCatalog:
+		var r2 := rule as UiReactWireRefreshItemsFromCatalog
+		_register_state_path(r2.filter_text_state, out_paths)
+		_register_state_path(r2.category_kind_state, out_paths)
+		_register_state_path(r2.items_state, out_paths)
+		_register_state_path(r2.selected_state, out_paths)
+	elif rule is UiReactWireCopySelectionDetail:
+		var r3 := rule as UiReactWireCopySelectionDetail
+		_register_state_path(r3.selected_state, out_paths)
+		_register_state_path(r3.items_state, out_paths)
+		_register_state_path(r3.detail_state, out_paths)
+		_register_state_path(r3.suffix_note_state, out_paths)
 
 
 static func _register_state_path(state: UiState, out_paths: Dictionary) -> void:

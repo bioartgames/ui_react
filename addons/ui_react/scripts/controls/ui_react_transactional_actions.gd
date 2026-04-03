@@ -13,6 +13,9 @@ extends Control
 ## **Optional** — [b]State-driven[/b] action rows only (no [UiAnimTarget] triggers on this node). See [code]docs/ACTION_LAYER.md[/code].
 @export var action_targets: Array[UiReactActionTarget] = []
 
+## **Optional** — Wiring rules ([code]docs/WIRING_LAYER.md[/code] §5).
+@export var wire_rules: Array[UiReactWireRule] = []
+
 
 func _ready() -> void:
 	if begin_on_ready and group != null:

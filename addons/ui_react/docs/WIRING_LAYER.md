@@ -44,7 +44,8 @@ flowchart TB
 - **Collection:** On `_enter_tree`, the runner **collects** all `UiReactWireRule` instances from:
   1. Every **`wire_rules`** array on descendant **`UiReact*`** nodes in its scene subtree, and
   2. Every **`UiReactWireHub`** node in the same subtree (**P5.1.b**), described in §7.
-- **Ordering:** Rules are applied in **deterministic sort order** by a stable tuple string: `(source_path_string, rule_index_within_array, resource_path_or_uid)`.
+- **Collection scope (P5.1 implementation):** The runner walks the subtree rooted at **`get_parent()`** when non-null (typical: **screen root** with the runner as its child). Every node carrying **`wire_rules`** must sit under that parent. **P5.1.b** hubs use the same subtree relative to the runner.
+- **Ordering:** Rules are applied in **deterministic sort order** by a stable tuple string: `(source_path_string, rule_index_within_array, resource_path_or_uid)`. **P5.1 implementation** uses node path + index within the source array + `rule_id` (or fallback), which satisfies the same **stability** intent.
 - **Teardown:** On `_exit_tree`, **disconnect** all signals registered by wiring; **no** leaks.
 - **Logging:** On failure: `UiReactWireRunner: rule N failed: <reason> path=<res_path> source=<node> target=<node>` (or equivalent structured message).
 
@@ -114,7 +115,14 @@ Exactly **three** concrete subclasses ship in the first wiring implementation (*
 
 When **any** descendant `UiReact*` has `wire_rules.size() > 0` **or** an `UiReactWireHub` has `rules.size() > 0`, and **no** `UiReactWireRunner` exists in that edited scene’s wiring scope → **dock warning or error** (**CB-034**).
 
-**CB-034** **must** (once implemented) include rules for: duplicate runners; invalid `NodePath` targets; **P5.1.b** hub without runner / invalid hub placement (**CB-041**).
+**CB-034 — shipped in P5.1 (editor dock):**
+
+- Duplicate **`UiReactWireRunner`** nodes in the edited scene → **warning**; **`wire_rules`** present with **no** runner → **warning**.
+- **`wire_rules` row validation** (MVP rule types §6): missing / wrong-type **`@export`** state or **`catalog`** refs → **warning** (`UiReactValidatorService`).
+- **Unused `UiState` `.tres` diagnostics:** `UiState` resources referenced **only** inside `wire_rules` subresources are counted as used (`UiReactStateReferenceCollector`).
+- **`UiReactTransactionalActions`** is registered in `UiReactScannerService` so §5 hosts participate in the same dock passes as other `UiReact*` controls.
+
+**CB-034 extensions** (same backlog IDs `CB-034` / `CB-020`; optional / follow-up): invalid `NodePath` targets when future rules use paths; **P5.1.b** hub without runner / invalid hub placement (**CB-041**). Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md).
 
 ---
 

@@ -10,6 +10,9 @@ class_name UiReactTree
 ## **Optional** — Action layer presets ([code]docs/ACTION_LAYER.md[/code]).
 @export var action_targets: Array[UiReactActionTarget] = []
 
+## **Optional** — Wiring rules ([code]docs/WIRING_LAYER.md[/code] §5).
+@export var wire_rules: Array[UiReactWireRule] = []
+
 var _updating: bool = false
 var _is_initializing: bool = true
 

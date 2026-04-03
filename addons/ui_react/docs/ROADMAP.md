@@ -115,18 +115,18 @@ Not every row is a v1.0 promise; this maps **Megaman-style** UI goals to **phase
 
 **P5.1 — Wiring core**
 
-- [ ] **`UiReactWireRunner`** implemented; **one runner per scene** rule enforced; duplicate-runner **warning or error** in dock (**CB-034**).
-- [ ] **`UiReactWireRule`** abstract base + **three** concrete rules named in [`WIRING_LAYER.md`](WIRING_LAYER.md) (MVP rule types §6) shipped.
-- [ ] **`wire_rules`** export on **P5.1 control set** defined in [`WIRING_LAYER.md`](WIRING_LAYER.md) (§5).
-- [ ] **`inventory_screen_demo`** migrated: **root script removed or reduced to zero lines of orchestration** (only `@tool` or empty `extends Control` allowed if Godot requires script); if impossible without code, **document exception once** in ROADMAP Appendix **Notes** for that row only—**not** a general exception. *(Micro-demo **`inventory_list_demo`** removed; **`inventory_screen_demo`** is the canonical inventory example.)*
-- [ ] README **List patterns** / inventory pointers reference **wiring** for filter+selection patterns.
-- [ ] **`CHANGELOG.md`** minor (or patch per SemVer) documenting P5.1.
-- [ ] **Scanner/validator** updated for `wire_rules` paths (**CB-034**).
+- [x] **`UiReactWireRunner`** implemented; **one runner per scene** rule enforced; duplicate-runner **warning** in dock when multiple runners detected (**CB-034**).
+- [x] **`UiReactWireRule`** abstract base + **three** concrete rules named in [`WIRING_LAYER.md`](WIRING_LAYER.md) (MVP rule types §6) shipped.
+- [x] **`wire_rules`** export on **P5.1 control set** defined in [`WIRING_LAYER.md`](WIRING_LAYER.md) (§5).
+- [x] **`inventory_screen_demo`** migrated per **exception (documented here):** root script retains **tree construction** (engine `TreeItem` population), **demo-only** pressed-state debug labels, and **optional** `detail_note_state` suffix for **Use/Sort** notes (`inventory_screen_demo.gd`). **All filter / list / detail data wiring** is **`wire_rules` + `UiReactWireRunner`** (stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) §B).
+- [x] README **List patterns** / inventory pointers reference **wiring** for filter+selection patterns.
+- [x] **`CHANGELOG.md`** documents P5.1 + **CB-034** completion in **`[2.7.0]`** (see SemVer policy).
+- [x] **Dock validator** for wired scenes: missing **`UiReactWireRunner`** + duplicate runners; per-rule **wire_rules** export validation (MVP types); **`UiReactTransactionalActions`** in **`UiReactScannerService`**; **wire_rules** **`UiState`** refs in unused-file collector (**CB-034** complete for P5.1 scope; hub checks remain **CB-041**). See [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) §C.
 
 **P5.1.b — Optional wire hub** (after P5.1 exit)
 
 - [ ] **`UiReactWireHub`** node with `rules: Array[UiReactWireRule]`; runner collects rules from **both** per-control **`wire_rules`** and hub(s); **deduplication** when the same rule subresource is referenced twice (**CB-041**).
-- [ ] Validator (**CB-034** / **CB-041**) flags invalid hub/runner placement (hub outside runner subtree, hub with no runner, etc.).
+- [ ] Validator (**CB-041**) flags invalid hub/runner placement (hub outside runner subtree, hub with no runner, etc.).
 
 **P5.2 — Dock wire editor**
 
@@ -145,7 +145,7 @@ Not every row is a v1.0 promise; this maps **Megaman-style** UI goals to **phase
 ### Review process
 
 - **Quarterly:** Re-read Charter and Non-goals; still accurate? Promote or demote Appendix rows; close or open phases.
-- **Quarterly:** Reconcile **`CB-031`–`CB-047`**, [`WIRING_LAYER.md`](WIRING_LAYER.md), and [`ACTION_LAYER.md`](ACTION_LAYER.md) with implementation drift.
+- **Quarterly:** Reconcile **`CB-031`–`CB-047`**, [`WIRING_LAYER.md`](WIRING_LAYER.md), and [`ACTION_LAYER.md`](ACTION_LAYER.md) with implementation drift; re-run stock-take [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) when wiring diagnostics or rules change materially.
 - **Releases:** Version bumps follow **CHANGELOG.md**; this file does not duplicate SemVer rules beyond the Charter.
 
 ---
@@ -186,13 +186,13 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-028 | C#-first API | — | Wont | Wont | GDScript-only Charter. |
 | CB-029 | Enterprise support SLA | — | Wont | Wont | Indie/small-team focus. |
 | CB-030 | Game-specific domain rules in core (prices, recipes) | — | Wont | Wont | Belongs in game layer. |
-| CB-031 | Normative [`WIRING_LAYER.md`](WIRING_LAYER.md) + roadmap P5 | All | P5 | Planned | Authoritative spec; implementation must match. |
-| CB-032 | **`UiReactWireRunner`** (scene node, non-autoload) | Any wired scene | P5 | Planned | One per scene; registration + teardown + ordering. |
-| CB-033 | **`UiReactWireRule`** abstract base + concrete MVP rules (three named in [`WIRING_LAYER.md`](WIRING_LAYER.md)) | Inventory, filters | P5 | Planned | Polymorphic resources only. |
-| CB-034 | **`wire_rules`** export on P5.1 control set + dock/validator (missing runner, invalid paths, duplicate runner; hub placement when **CB-041** ships) | Same | P5 | Planned | Extends **CB-020** discipline. |
+| CB-031 | Normative [`WIRING_LAYER.md`](WIRING_LAYER.md) + roadmap P5 | All | P5 | Done | Normative spec maintained; stock-take [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). |
+| CB-032 | **`UiReactWireRunner`** (scene node, non-autoload) | Any wired scene | P5 | Done | `scripts/controls/ui_react_wire_runner.gd`; see audit §A. |
+| CB-033 | **`UiReactWireRule`** abstract base + concrete MVP rules (three named in [`WIRING_LAYER.md`](WIRING_LAYER.md)) | Inventory, filters | P5 | Done | `scripts/api/models/ui_react_wire_*.gd`; see audit §A. |
+| CB-034 | **`wire_rules`** export on P5.1 control set + dock/validator + editor parity | Same | P5 | Done | **Shipped:** missing/duplicate runner; MVP **rule export** validation; unused-**`UiState`** scan includes **`wire_rules`** refs; **`UiReactTransactionalActions`** scanner registration (**2.7.0**). **Hub / placement:** **CB-041**. See [`WIRING_LAYER.md`](WIRING_LAYER.md) §9. |
 | CB-035 | Dock **graph or form** editor for wire rules (edits same resources) | N/A | P5.2 | Planned | **After** P5.1; **no** alternate format. |
 | CB-036 | Migrate **`inventory_list_demo`** off orchestration glue | Inventory | Wont | Wont | Scene removed; **`inventory_screen_demo.tscn`** is the canonical inventory example (**CB-037**). |
-| CB-037 | Migrate **`inventory_screen_demo`** off orchestration glue | Inventory | P5 | Planned | Exit criterion (follows removed **`inventory_list_demo`**). |
+| CB-037 | Migrate **`inventory_screen_demo`** off orchestration glue | Inventory | P5 | Done | Filter/list/detail via **`wire_rules`** + **`UiReactWireRunner`**; root script keeps tree build + demo-only notes/labels (ROADMAP P5.1 exception). Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) §B. |
 | CB-038 | Migrate remaining examples with root glue (**`shop_computed_demo.gd`**, etc.) only where wiring **replaces** glue without losing teaching value | Demos | P5 | Planned | Standalone **`tree_demo`** / **`texture_button_demo`** removed; coverage lives on **`inventory_screen_demo`**. |
 | CB-039 | **Semantic versioning** policy: wiring API (`UiReactWireRunner`, `UiReactWireRule` subclasses, `wire_rules` shape) is **public**; breaking changes **major** | Releases | P5 | Planned | CHANGELOG + Charter cross-link. |
 | CB-040 | Remove or archive legacy **P5**-plus phase wording repo-wide; **P6+** is only deferred bucket | Docs | P5 | Planned | Grep pass in `addons/ui_react` for the legacy token (no `5` + `+` contiguous in docs). |
@@ -206,4 +206,4 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 
 ---
 
-*Last updated: 2026-04-03 — Examples consolidated to **four** scenes (`inventory_screen_demo`, `options_transactional_demo`, `shop_computed_demo`, `anim_targets_catalog_demo`); **CB-047** / **CB-015** / etc. point at **`inventory_screen_demo`**. Prior: **2.6.4** Action layer + **`action_layer_demo`** (removed in consolidation).*
+*Last updated: 2026-04-04 — **CB-034** (P5.1 dock scope) **Done** (**2.7.0**); **CB-041** hub validator still **Planned**. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Examples remain **four** scenes.*
