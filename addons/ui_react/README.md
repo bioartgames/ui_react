@@ -343,7 +343,8 @@ These may change between template versions; **do not rely on them from game code
 | `scripts/internal/react/` | Reactive helpers (unstable for direct use). |
 | `examples/` | **`inventory_screen_demo.tscn`** + **`inventory_screen_demo.gd`** + **`inventory_demo_catalog.gd`** / **`inventory_demo_catalog_wire_data.gd`** (**`UiReactWireRunner`**, **`wire_rules`**, texture/option actions, **`action_targets`** list lock, **`UiAnimTarget`**); **`options_transactional_demo.tscn`** (transactional **Apply / Cancel** + **`UiReactTabContainer`**); **`shop_computed_demo.tscn`** + **`shop_computed_demo.gd`** (computed + **CB-006**; rich status; progress/spin showcase); **`anim_targets_catalog_demo.tscn`** + **`anim_targets_catalog_demo.gd`** (animation catalog + trigger playground). |
 | `docs/` | **README**, **CHANGELOG**, **[`ROADMAP.md`](docs/ROADMAP.md)**, **[`WIRING_LAYER.md`](docs/WIRING_LAYER.md)** (normative **P5** wiring spec). |
-| `editor_plugin/` | Optional Godot editor plugin (dock, validation, quick state creation). |
+| `editor_plugin/ui_react_component_registry.gd` | Single source of truth for script-stem → **`UiReact*`** name and per-control **`BINDINGS_BY_COMPONENT`** (edit here when adding a control; **`UiReactScannerService`** and validators consume it). |
+| `editor_plugin/` | Optional Godot editor plugin: bottom dock, split **`ui_react_*_validator.gd`** modules + **`ui_react_validator_service`** façade, quick state creation. |
 | `ui_resources/` | Sample `.tres` for the example scene; `plugin_generated/` holds plugin-created states (optional). |
 
 ---

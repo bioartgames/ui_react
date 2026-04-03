@@ -39,8 +39,8 @@ Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 |---|--------|-------|
 | C1 Missing runner | **PASS** | `_validate_wiring_scope`: WARN when `wire_rules` present and no runner. |
 | C2 Duplicate runner | **PASS** | Same: WARN when `runners > 1`. |
-| C3 Rule export validation | **PASS** | Dock validates MVP rule types: required refs + expected `UiState` / `UiReactWireCatalogData` types (`UiReactValidatorService._validate_wire_rules`). |
-| C4 Scanner / unused-file parity | **PASS** | **`UiReactTransactionalActions`** registered in `UiReactScannerService`; `UiReactStateReferenceCollector` registers `UiState` paths from `wire_rules`. Future **NodePath**-on-rules (if any) remains follow-up. |
+| C3 Rule export validation | **PASS** | Dock validates MVP rule types: required refs + expected `UiState` / `UiReactWireCatalogData` types (`UiReactWiringValidator.validate_wire_rules`, invoked from the **`UiReactValidatorService`** façade). |
+| C4 Scanner / unused-file parity | **PASS** | Stem map + **`BINDINGS_BY_COMPONENT`** live in **`UiReactComponentRegistry`**; **`UiReactScannerService`** resolves component names on nodes. **`UiReactTransactionalActions`** is listed in the registry like other **`UiReact*`** controls. **`UiReactStateReferenceCollector`** uses the same registry for binding paths and registers `UiState` refs from **`wire_rules`**. Future **NodePath**-on-rules (if any) remains follow-up. |
 | C5 Runtime vs editor | **PASS** | Both paths surface duplicate-runner concerns; missing runner is editor-first. |
 
 **Interpretation:** **CB-034** (P5.1 editor scope) is **Done**; **CB-041** hub placement is the remaining wiring diagnostic milestone before optional hub authoring.
