@@ -1,0 +1,261 @@
+[gd_scene load_steps=26 format=3]
+
+[ext_resource type="Script" path="res://addons/ui_react/examples/inventory_screen_demo.gd" id="1_screen"]
+[ext_resource type="Script" uid="uid://dd4kr4kdd6cnc" path="res://addons/ui_react/scripts/controls/ui_react_tree.gd" id="2_tree"]
+[ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://addons/ui_react/scripts/controls/ui_react_line_edit.gd" id="3_le"]
+[ext_resource type="Script" uid="uid://duphbaan8pk5f" path="res://addons/ui_react/scripts/controls/ui_react_item_list.gd" id="4_il"]
+[ext_resource type="Script" uid="uid://bw7gojuop1hic" path="res://addons/ui_react/scripts/controls/ui_react_label.gd" id="5_lbl"]
+[ext_resource type="Script" uid="uid://3m8buhv674ja" path="res://addons/ui_react/scripts/controls/ui_react_check_box.gd" id="6_cb"]
+[ext_resource type="Script" uid="uid://3a3144h5usfc" path="res://addons/ui_react/scripts/api/models/ui_string_state.gd" id="7_str"]
+[ext_resource type="Script" uid="uid://dwwa3tekslkjw" path="res://addons/ui_react/scripts/api/models/ui_array_state.gd" id="8_arr"]
+[ext_resource type="Script" uid="uid://dxvrutpo1gjxg" path="res://addons/ui_react/scripts/api/models/ui_int_state.gd" id="9_int"]
+[ext_resource type="Script" uid="uid://cxg5hj6ihqtue" path="res://addons/ui_react/scripts/api/models/ui_bool_state.gd" id="10_bool"]
+[ext_resource type="Script" uid="uid://b21fgnaf6xp7" path="res://addons/ui_react/scripts/controls/ui_react_texture_button.gd" id="11_tex"]
+[ext_resource type="Texture2D" uid="uid://dqdnr3bne60mc" path="res://icon.svg" id="12_icon"]
+[ext_resource type="Script" uid="uid://diigywt0dm170" path="res://addons/ui_react/scripts/api/models/ui_anim_target.gd" id="13_anim"]
+
+[sub_resource type="Resource" id="filter_str"]
+script = ExtResource("7_str")
+
+[sub_resource type="Resource" id="items_arr"]
+script = ExtResource("8_arr")
+
+[sub_resource type="Resource" id="sel_int"]
+script = ExtResource("9_int")
+value = -1
+
+[sub_resource type="Resource" id="tree_sel"]
+script = ExtResource("9_int")
+value = 0
+
+[sub_resource type="Resource" id="detail_str"]
+script = ExtResource("7_str")
+value = "No selection."
+
+[sub_resource type="Resource" id="locked_bool"]
+script = ExtResource("10_bool")
+
+[sub_resource type="Resource" id="actions_disabled"]
+script = ExtResource("10_bool")
+
+[sub_resource type="Resource" id="use_pressed"]
+script = ExtResource("10_bool")
+
+[sub_resource type="Resource" id="sort_pressed"]
+script = ExtResource("10_bool")
+
+[sub_resource type="Resource" id="anim_pop_use"]
+script = ExtResource("13_anim")
+target = NodePath(".")
+animation = 17
+
+[sub_resource type="Resource" id="anim_list_detail_fade"]
+script = ExtResource("13_anim")
+target = NodePath("../../Detail")
+trigger = 6
+animation = 3
+duration = 0.22
+easing = 1
+
+[sub_resource type="Resource" id="anim_tree_hint_fade"]
+script = ExtResource("13_anim")
+target = NodePath("../CategoryHint")
+trigger = 6
+animation = 3
+duration = 0.2
+easing = 1
+
+[sub_resource type="Resource" id="anim_pop_sort"]
+script = ExtResource("13_anim")
+target = NodePath(".")
+animation = 17
+duration = 0.16
+
+[node name="InventoryScreenDemo" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_screen")
+filter_text_state = SubResource("filter_str")
+items_state = SubResource("items_arr")
+selected_state = SubResource("sel_int")
+detail_text_state = SubResource("detail_str")
+list_locked_state = SubResource("locked_bool")
+tree_selected_state = SubResource("tree_sel")
+actions_disabled_state = SubResource("actions_disabled")
+use_pressed_state = SubResource("use_pressed")
+sort_pressed_state = SubResource("sort_pressed")
+
+[node name="MainHBox" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 16
+
+[node name="LeftColumn" type="VBoxContainer" parent="MainHBox"]
+custom_minimum_size = Vector2(240, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="MainHBox/LeftColumn"]
+layout_mode = 2
+text = "Categories"
+
+[node name="Help" type="Label" parent="MainHBox/LeftColumn"]
+layout_mode = 2
+text = "UiReactTree: pick All items, Weapons, Consumables, or Materials. Indices 0–3 (hide_root). List filters by kind + text filter. Category change FADE_IN on hint (UiAnimTarget)."
+autowrap_mode = 3
+
+[node name="CategoryTree" type="Tree" parent="MainHBox/LeftColumn"]
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+size_flags_vertical = 3
+hide_root = true
+script = ExtResource("2_tree")
+selected_state = SubResource("tree_sel")
+animation_targets = Array[ExtResource("13_anim")]([SubResource("anim_tree_hint_fade")])
+
+[node name="CategoryHint" type="Label" parent="MainHBox/LeftColumn"]
+layout_mode = 2
+text = "Category: —"
+autowrap_mode = 3
+
+[node name="CenterColumn" type="VBoxContainer" parent="MainHBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="MainHBox/CenterColumn"]
+layout_mode = 2
+text = "Items"
+
+[node name="Help" type="Label" parent="MainHBox/CenterColumn"]
+layout_mode = 2
+text = "UiReactItemList + filter (name/kind). Lock uses overlay pointer block (CB-015). Selection runs a short FADE_IN on Detail (UiAnimTarget)."
+autowrap_mode = 3
+
+[node name="FilterLabel" type="Label" parent="MainHBox/CenterColumn"]
+layout_mode = 2
+text = "Filter"
+
+[node name="FilterEdit" type="LineEdit" parent="MainHBox/CenterColumn"]
+layout_mode = 2
+placeholder_text = "e.g. wood, potion…"
+script = ExtResource("3_le")
+text_state = SubResource("filter_str")
+
+[node name="LockRow" type="HBoxContainer" parent="MainHBox/CenterColumn"]
+layout_mode = 2
+
+[node name="LockList" type="CheckBox" parent="MainHBox/CenterColumn/LockRow"]
+layout_mode = 2
+text = "Lock list"
+script = ExtResource("6_cb")
+checked_state = SubResource("locked_bool")
+
+[node name="ListLabel" type="Label" parent="MainHBox/CenterColumn"]
+layout_mode = 2
+text = "Item list"
+
+[node name="ListSlot" type="Control" parent="MainHBox/CenterColumn"]
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ItemList" type="ItemList" parent="MainHBox/CenterColumn/ListSlot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("4_il")
+selected_state = SubResource("sel_int")
+items_state = SubResource("items_arr")
+animation_targets = Array[ExtResource("13_anim")]([SubResource("anim_list_detail_fade")])
+
+[node name="InputBlocker" type="Control" parent="MainHBox/CenterColumn/ListSlot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="DetailLabel" type="Label" parent="MainHBox/CenterColumn"]
+layout_mode = 2
+text = "Detail"
+
+[node name="Detail" type="Label" parent="MainHBox/CenterColumn"]
+custom_minimum_size = Vector2(1, 1)
+layout_mode = 2
+autowrap_mode = 2
+script = ExtResource("5_lbl")
+text_state = SubResource("detail_str")
+
+[node name="RightColumn" type="VBoxContainer" parent="MainHBox"]
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="MainHBox/RightColumn"]
+layout_mode = 2
+text = "Actions"
+
+[node name="Help" type="Label" parent="MainHBox/RightColumn"]
+layout_mode = 2
+text = "UiReactTextureButton: Use and Sort use POP on press. Disable actions blocks both."
+autowrap_mode = 3
+
+[node name="ActionButtons" type="HBoxContainer" parent="MainHBox/RightColumn"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="UseButton" type="TextureButton" parent="MainHBox/RightColumn/ActionButtons"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+texture_normal = ExtResource("12_icon")
+script = ExtResource("11_tex")
+pressed_state = SubResource("use_pressed")
+disabled_state = SubResource("actions_disabled")
+animation_targets = Array[ExtResource("13_anim")]([SubResource("anim_pop_use")])
+
+[node name="SortButton" type="TextureButton" parent="MainHBox/RightColumn/ActionButtons"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+texture_normal = ExtResource("12_icon")
+script = ExtResource("11_tex")
+pressed_state = SubResource("sort_pressed")
+disabled_state = SubResource("actions_disabled")
+animation_targets = Array[ExtResource("13_anim")]([SubResource("anim_pop_sort")])
+
+[node name="DisableActions" type="CheckBox" parent="MainHBox/RightColumn"]
+layout_mode = 2
+text = "Disable actions"
+script = ExtResource("6_cb")
+checked_state = SubResource("actions_disabled")
+
+[node name="PressedUseLabel" type="Label" parent="MainHBox/RightColumn"]
+layout_mode = 2
+text = "use pressed_state: —"
+
+[node name="PressedSortLabel" type="Label" parent="MainHBox/RightColumn"]
+layout_mode = 2
+text = "sort pressed_state: —"
+
+[node name="DisabledActionsLabel" type="Label" parent="MainHBox/RightColumn"]
+layout_mode = 2
+text = "actions disabled_state: —"

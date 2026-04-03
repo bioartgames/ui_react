@@ -1,15 +1,9 @@
 extends Control
 ## P3 example: filter text drives [UiArrayState]; [UiReactItemList] rows are strings or { **label**, **icon** } dicts (see README **List patterns**).
-## Catalog rows are dictionaries in code only; the first visible row uses the project icon for CB-008 demo.
+## Catalog: [InventoryDemoCatalog] via [member _CATALOG_SCRIPT]; the first catalog row uses the project icon for CB-008 demo.
 ## [member list_input_blocker_path]: full-rect overlay with [member Control.mouse_filter] STOP when [member list_locked_state] is [code]true[/code] (CB-015 workaround).
 
-const _CATALOG: Array[Dictionary] = [
-	{"id": &"iron_sword", "name": "Iron Sword", "kind": "weapon", "qty": 1},
-	{"id": &"heal_pot", "name": "Health Potion", "kind": "consumable", "qty": 3},
-	{"id": &"oak_wood", "name": "Oak Wood", "kind": "material", "qty": 12},
-	{"id": &"leather", "name": "Leather Scraps", "kind": "material", "qty": 5},
-	{"id": &"steel_dagger", "name": "Steel Dagger", "kind": "weapon", "qty": 1},
-]
+const _CATALOG_SCRIPT := preload("res://addons/ui_react/examples/inventory_demo_catalog.gd")
 
 @export var filter_text_state: UiStringState
 @export var items_state: UiArrayState
@@ -71,8 +65,8 @@ func _refresh_list() -> void:
 		needle = str(filter_text_state.get_value()).strip_edges().to_lower()
 	var lines: Array = []
 	_filtered_catalog_indices.clear()
-	for i in _CATALOG.size():
-		var row: Dictionary = _CATALOG[i]
+	for i in _CATALOG_SCRIPT.CATALOG.size():
+		var row: Dictionary = _CATALOG_SCRIPT.CATALOG[i]
 		var item_name := str(row.get("name", ""))
 		var kind := str(row.get("kind", ""))
 		if (
@@ -103,7 +97,7 @@ func _update_detail() -> void:
 		detail_text_state.set_value("No selection.")
 		return
 	var cat_i: int = _filtered_catalog_indices[idx]
-	var row: Dictionary = _CATALOG[cat_i]
+	var row: Dictionary = _CATALOG_SCRIPT.CATALOG[cat_i]
 	detail_text_state.set_value(
 		"Selected: %s — %s (qty %s)" % [row.get("name", ""), row.get("kind", ""), str(row.get("qty", 1))]
 	)

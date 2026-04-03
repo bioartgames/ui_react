@@ -8,6 +8,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 No unreleased changes yet.
 
+## [2.6.2] - 2026-04-02
+
+### Changed
+
+- **`examples/inventory_screen_demo.tscn`:** **`UiAnimTarget`** rows — **FADE_IN** on **Detail** when the item list selection changes, **FADE_IN** on the category hint when the tree selection changes, **POP** on **Sort** (matching **Use**); help labels updated.
+
+## [2.6.1] - 2026-04-02
+
+### Added
+
+- **Example:** **`examples/inventory_screen_demo.tscn`** + **`inventory_screen_demo.gd`** — one **inventory-style** layout combining **`UiReactTree`** (category/kind filter), **`UiReactItemList`** (filter, detail, lock overlay), and **`UiReactTextureButton`** action row (**Use** + **Sort**, shared **Disable actions**).
+- **`examples/inventory_demo_catalog.gd`** (**`InventoryDemoCatalog`**): shared demo item rows used by **`inventory_screen_demo`** and **`inventory_list_demo`**.
+
+### Notes
+
+- **Patch** release: new example + shared catalog helper; **`inventory_list_demo`** now references **`InventoryDemoCatalog.CATALOG`** (same data as before).
+
 ## [2.6.0] - 2026-04-02
 
 ### Added
