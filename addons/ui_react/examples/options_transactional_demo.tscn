@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://lp6x0p7wqckg"]
+[gd_scene load_steps=17 format=3 uid="uid://lp6x0p7wqckg"]
 
 [ext_resource type="Script" uid="uid://c1jlkpahxxnpi" path="res://addons/ui_react/scripts/api/models/ui_transactional_state.gd" id="1_txn"]
 [ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://addons/ui_react/scripts/controls/ui_react_slider.gd" id="2_sl"]
@@ -10,6 +10,8 @@
 [ext_resource type="Script" uid="uid://dy5qoe773fdne" path="res://addons/ui_react/scripts/controls/ui_react_computed_sync.gd" id="7_sync"]
 [ext_resource type="Script" uid="uid://bw7gojuop1hic" path="res://addons/ui_react/scripts/controls/ui_react_label.gd" id="8_lbl"]
 [ext_resource type="Resource" uid="uid://b4gdunujg6evw" path="res://addons/ui_react/ui_resources/plugin_generated/MuteToggle_disabled_state_3.tres" id="9_6xi6r"]
+[ext_resource type="Script" uid="uid://dohh71knb8vid" path="res://addons/ui_react/scripts/controls/ui_react_tab_container.gd" id="10_tabs"]
+[ext_resource type="Script" uid="uid://dxvrutpo1gjxg" path="res://addons/ui_react/scripts/api/models/ui_int_state.gd" id="11_int"]
 
 [sub_resource type="Resource" id="txn_vol"]
 script = ExtResource("1_txn")
@@ -27,6 +29,9 @@ value = "Draft: volume=0.65 mute=false | Committed: volume=0.65 mute=false"
 [sub_resource type="Resource" id="txn_group"]
 script = ExtResource("4_grp")
 states = Array[ExtResource("1_txn")]([SubResource("txn_vol"), SubResource("txn_mute")])
+
+[sub_resource type="Resource" id="tab_index"]
+script = ExtResource("11_int")
 
 [node name="OptionsTransactionalDemo" type="Control"]
 layout_mode = 3
@@ -47,8 +52,8 @@ anchors_preset = 0
 mouse_filter = 2
 script = ExtResource("5_act")
 group = SubResource("txn_group")
-apply_button_path = NodePath("../VBox/ButtonRow/ApplyButton")
-cancel_button_path = NodePath("../VBox/ButtonRow/CancelButton")
+apply_button_path = NodePath("../VBox/OptionsTabs/AudioPanel/AudioVBox/ButtonRow/ApplyButton")
+cancel_button_path = NodePath("../VBox/OptionsTabs/AudioPanel/AudioVBox/ButtonRow/CancelButton")
 
 [node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -69,13 +74,37 @@ text = "Options (transactional demo — audio)"
 
 [node name="Help" type="Label" parent="VBox"]
 layout_mode = 2
-text = "Adjust volume and mute, then Apply (commit) or Cancel (revert draft)."
+text = "Audio settings are on the first tab. Second tab is a static UiReactTabContainer showcase. Apply / Cancel commit or revert draft volume + mute."
 
-[node name="VolumeLabel" type="Label" parent="VBox"]
+[node name="OptionsTabs" type="TabContainer" parent="VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+current_tab = 0
+script = ExtResource("10_tabs")
+selected_state = SubResource("tab_index")
+
+[node name="AudioPanel" type="Panel" parent="VBox/OptionsTabs"]
+layout_mode = 2
+metadata/_tab_index = 0
+
+[node name="AudioVBox" type="VBoxContainer" parent="VBox/OptionsTabs/AudioPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+
+[node name="VolumeLabel" type="Label" parent="VBox/OptionsTabs/AudioPanel/AudioVBox"]
 layout_mode = 2
 text = "Master volume (linear 0–1)"
 
-[node name="MasterVolume" type="HSlider" parent="VBox"]
+[node name="MasterVolume" type="HSlider" parent="VBox/OptionsTabs/AudioPanel/AudioVBox"]
 layout_mode = 2
 size_flags_horizontal = 3
 max_value = 1.0
@@ -84,24 +113,43 @@ value = 0.65
 script = ExtResource("2_sl")
 value_state = SubResource("txn_vol")
 
-[node name="MuteToggle" type="CheckBox" parent="VBox"]
+[node name="MuteToggle" type="CheckBox" parent="VBox/OptionsTabs/AudioPanel/AudioVBox"]
 layout_mode = 2
 text = "Mute audio"
 script = ExtResource("3_cb")
 checked_state = SubResource("txn_mute")
 disabled_state = ExtResource("9_6xi6r")
 
-[node name="ButtonRow" type="HBoxContainer" parent="VBox"]
+[node name="ButtonRow" type="HBoxContainer" parent="VBox/OptionsTabs/AudioPanel/AudioVBox"]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="ApplyButton" type="Button" parent="VBox/ButtonRow"]
+[node name="ApplyButton" type="Button" parent="VBox/OptionsTabs/AudioPanel/AudioVBox/ButtonRow"]
 layout_mode = 2
 text = "Apply"
 
-[node name="CancelButton" type="Button" parent="VBox/ButtonRow"]
+[node name="CancelButton" type="Button" parent="VBox/OptionsTabs/AudioPanel/AudioVBox/ButtonRow"]
 layout_mode = 2
 text = "Cancel"
+
+[node name="GameplayPanel" type="Panel" parent="VBox/OptionsTabs"]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 1
+
+[node name="GameplayHint" type="Label" parent="VBox/OptionsTabs/GameplayPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Second tab: static content for UiReactTabContainer + UiIntState.selected_state binding (showcase only)."
+autowrap_mode = 3
 
 [node name="StatusLabel" type="Label" parent="VBox"]
 custom_minimum_size = Vector2(1, 1)

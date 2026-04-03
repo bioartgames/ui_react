@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://bhrsm6wi0v4s"]
+[gd_scene load_steps=21 format=3 uid="uid://bhrsm6wi0v4s"]
 
 [ext_resource type="Script" uid="uid://c23k4pmtnl3sm" path="res://addons/ui_react/examples/shop_computed_demo.gd" id="0_shop"]
 [ext_resource type="Script" uid="uid://cy1vsor6ek3xr" path="res://addons/ui_react/scripts/api/models/ui_float_state.gd" id="1_fl"]
@@ -11,6 +11,8 @@
 [ext_resource type="Script" uid="uid://dbh65kk1hltrx" path="res://addons/ui_react/examples/shop_computed_buy_disabled.gd" id="8_dis"]
 [ext_resource type="Script" uid="uid://cbi7k8j508tvj" path="res://addons/ui_react/examples/shop_computed_status.gd" id="9_stat"]
 [ext_resource type="Script" uid="uid://diigywt0dm170" path="res://addons/ui_react/scripts/api/models/ui_anim_target.gd" id="10_anim"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_progress_bar.gd" id="11_pb"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_spin_box.gd" id="12_sp"]
 
 [sub_resource type="Resource" id="gold"]
 script = ExtResource("1_fl")
@@ -99,7 +101,7 @@ text = "Shop (computed state demo)"
 [node name="Help" type="Label" parent="VBox"]
 custom_minimum_size = Vector2(1, 1)
 layout_mode = 2
-text = "Adjust gold, price, and quantity. Status line is UiReactRichTextLabel + BBCode from ShopComputedStatus; Buy subtracts gold via shop_computed_demo.gd (CB-006)."
+text = "Adjust gold, price, and quantity. Gold meter + quantity spin box are showcase bindings (shared gold/qty state). Status line is UiReactRichTextLabel + BBCode from ShopComputedStatus; Buy subtracts gold via shop_computed_demo.gd (CB-006)."
 autowrap_mode = 3
 
 [node name="GoldLabel" type="Label" parent="VBox"]
@@ -112,6 +114,18 @@ size_flags_horizontal = 3
 max_value = 200.0
 value = 100.0
 script = ExtResource("3_sl")
+value_state = SubResource("gold")
+
+[node name="GoldMeterLabel" type="Label" parent="VBox"]
+layout_mode = 2
+text = "Gold meter (UiReactProgressBar — same UiFloatState as slider)"
+
+[node name="GoldMeter" type="ProgressBar" parent="VBox"]
+layout_mode = 2
+max_value = 200.0
+value = 100.0
+show_percentage = false
+script = ExtResource("11_pb")
 value_state = SubResource("gold")
 
 [node name="PriceLabel" type="Label" parent="VBox"]
@@ -137,6 +151,20 @@ max_value = 10.0
 value = 1.0
 script = ExtResource("3_sl")
 value_state = SubResource("qty")
+
+[node name="QtySpinLabel" type="Label" parent="VBox"]
+layout_mode = 2
+text = "Quantity (UiReactSpinBox — same state as slider; disabled when Buy disabled)"
+
+[node name="QtySpin" type="SpinBox" parent="VBox"]
+layout_mode = 2
+min_value = 0.0
+max_value = 10.0
+step = 1.0
+value = 1.0
+script = ExtResource("12_sp")
+value_state = SubResource("qty")
+disabled_state = SubResource("buy_dis")
 
 [node name="StatusLine" type="RichTextLabel" parent="VBox"]
 custom_minimum_size = Vector2(1, 1)

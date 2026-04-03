@@ -1,4 +1,4 @@
-[gd_scene load_steps=26 format=3]
+[gd_scene load_steps=31 format=3]
 
 [ext_resource type="Script" path="res://addons/ui_react/examples/inventory_screen_demo.gd" id="1_screen"]
 [ext_resource type="Script" uid="uid://dd4kr4kdd6cnc" path="res://addons/ui_react/scripts/controls/ui_react_tree.gd" id="2_tree"]
@@ -13,6 +13,8 @@
 [ext_resource type="Script" uid="uid://b21fgnaf6xp7" path="res://addons/ui_react/scripts/controls/ui_react_texture_button.gd" id="11_tex"]
 [ext_resource type="Texture2D" uid="uid://dqdnr3bne60mc" path="res://icon.svg" id="12_icon"]
 [ext_resource type="Script" uid="uid://diigywt0dm170" path="res://addons/ui_react/scripts/api/models/ui_anim_target.gd" id="13_anim"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_action_target.gd" id="14_action"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_option_button.gd" id="15_opt"]
 
 [sub_resource type="Resource" id="filter_str"]
 script = ExtResource("7_str")
@@ -43,6 +45,24 @@ script = ExtResource("10_bool")
 
 [sub_resource type="Resource" id="sort_pressed"]
 script = ExtResource("10_bool")
+
+[sub_resource type="Resource" id="sort_preset_str"]
+script = ExtResource("7_str")
+value = "By name"
+
+[sub_resource type="Resource" id="action_lock_mousefilter"]
+script = ExtResource("14_action")
+action = 3
+state_watch = SubResource("locked_bool")
+target = NodePath("../InputBlocker")
+mouse_filter_when_true = 0
+mouse_filter_when_false = 2
+
+[sub_resource type="Resource" id="action_grab_filter"]
+script = ExtResource("14_action")
+action = 0
+trigger = 4
+target = NodePath("../../FilterEdit")
 
 [sub_resource type="Resource" id="anim_pop_use"]
 script = ExtResource("13_anim")
@@ -142,7 +162,7 @@ text = "Items"
 
 [node name="Help" type="Label" parent="MainHBox/CenterColumn"]
 layout_mode = 2
-text = "UiReactItemList + filter (name/kind). Lock uses overlay pointer block (CB-015). Selection runs a short FADE_IN on Detail (UiAnimTarget)."
+text = "UiReactItemList + filter. Lock: CB-015 overlay + action_targets SET_MOUSE_FILTER (P6.1) on the list. Uncheck Lock → GRAB_FOCUS on filter (showcase). Selection FADE_IN on Detail (UiAnimTarget)."
 autowrap_mode = 3
 
 [node name="FilterLabel" type="Label" parent="MainHBox/CenterColumn"]
@@ -163,6 +183,7 @@ layout_mode = 2
 text = "Lock list"
 script = ExtResource("6_cb")
 checked_state = SubResource("locked_bool")
+action_targets = Array[ExtResource("14_action")]([SubResource("action_grab_filter")])
 
 [node name="ListLabel" type="Label" parent="MainHBox/CenterColumn"]
 layout_mode = 2
@@ -184,6 +205,7 @@ script = ExtResource("4_il")
 selected_state = SubResource("sel_int")
 items_state = SubResource("items_arr")
 animation_targets = Array[ExtResource("13_anim")]([SubResource("anim_list_detail_fade")])
+action_targets = Array[ExtResource("14_action")]([SubResource("action_lock_mousefilter")])
 
 [node name="InputBlocker" type="Control" parent="MainHBox/CenterColumn/ListSlot"]
 layout_mode = 1
@@ -217,8 +239,25 @@ text = "Actions"
 
 [node name="Help" type="Label" parent="MainHBox/RightColumn"]
 layout_mode = 2
-text = "UiReactTextureButton: Use and Sort use POP on press. Disable actions blocks both."
+text = "UiReactTextureButton: Use and Sort use POP on press. Disable actions blocks both + Sort preset OptionButton (showcase)."
 autowrap_mode = 3
+
+[node name="SortPresetLabel" type="Label" parent="MainHBox/RightColumn"]
+layout_mode = 2
+text = "Sort preset"
+
+[node name="SortPreset" type="OptionButton" parent="MainHBox/RightColumn"]
+layout_mode = 2
+item_count = 3
+popup/item_0/text = "By name"
+popup/item_0/id = 0
+popup/item_1/text = "By kind"
+popup/item_1/id = 1
+popup/item_2/text = "By quantity"
+popup/item_2/id = 2
+script = ExtResource("15_opt")
+selected_state = SubResource("sort_preset_str")
+disabled_state = SubResource("actions_disabled")
 
 [node name="ActionButtons" type="HBoxContainer" parent="MainHBox/RightColumn"]
 layout_mode = 2

@@ -122,7 +122,7 @@ When **any** descendant `UiReact*` has `wire_rules.size() > 0` **or** an `UiReac
 
 | Milestone | Contents |
 |-----------|----------|
-| **P5.1** | `UiReactWireRunner`; `UiReactWireRule` + **three** concrete rules (§6); `wire_rules` on §5 control set; dock diagnostics for missing runner; migrate **`inventory_list_demo`** then **`inventory_screen_demo`** off orchestration glue (**CB-036**, **CB-037**). |
+| **P5.1** | `UiReactWireRunner`; `UiReactWireRule` + **three** concrete rules (§6); `wire_rules` on §5 control set; dock diagnostics for missing runner; migrate **`inventory_screen_demo`** off orchestration glue (**CB-037**; **CB-036** referred to removed **`inventory_list_demo`**). |
 | **P5.1.b** | Optional **`UiReactWireHub`** + runner aggregation + dedup + validator (**CB-041**). |
 | **P5.2** | Dock **form or graph** UI that edits **only** existing `UiReactWireRule` subresources—**no second on-disk format** (**CB-035**). |
 

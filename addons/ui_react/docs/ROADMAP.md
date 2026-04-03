@@ -50,7 +50,7 @@ This document is the **committal** plan for **dogfooding the addon in a real gam
 | **P3** | List richness and templates | README recipe + example for row templates / icon lists; optional incremental changes to `UiReactItemList` **only if** scoped in an issue. **Delivery complete** (historical). |
 | **P4** | Selective new react controls | e.g. `UiReactTextureButton` / slot pattern, `UiReactTree`—**only** when the **3× rule** (Charter) fires; each new control aligns **scanner** (`UiReactScannerService`) and **validator** (`BINDINGS_BY_COMPONENT`) when new bindings are introduced. **Delivery complete** (historical). |
 | **P5** | Wiring layer | **`UiReactWireRunner`**, **`UiReactWireRule`** family, **`wire_rules`** on P5.1 control set, diagnostics, example migration per [`WIRING_LAYER.md`](WIRING_LAYER.md). Sub-milestones: **P5.1** (core), **P5.1.b** (optional **`UiReactWireHub`**), **P5.2** (dock wire editor, **CB-035**). |
-| **P6.1** | Declarative Actions | **`action_targets`**, **`UiReactActionTarget`**, **`UiReactActionTargetHelper`** on **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** control set; validator/scanner; example **`action_layer_demo.tscn`**. **Normative** [`ACTION_LAYER.md`](ACTION_LAYER.md). Ships **after** P5.1 wiring core. |
+| **P6.1** | Declarative Actions | **`action_targets`**, **`UiReactActionTarget`**, **`UiReactActionTargetHelper`** on **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** control set; validator/scanner; runnable example merged into **`inventory_screen_demo.tscn`**. **Normative** [`ACTION_LAYER.md`](ACTION_LAYER.md). Ships **after** P5.1 wiring core. |
 | **P6+** | Deferred parking | Virtualization, state debug overlay, major dock modularization, first-class command resource, deep undo stacks—**not sequenced** until promoted from the Appendix; see **CB-005**, **CB-007**, **CB-010**, **CB-018**, **CB-019**, and other rows with Target phase **P6+**. |
 
 ```mermaid
@@ -101,7 +101,7 @@ Not every row is a v1.0 promise; this maps **Megaman-style** UI goals to **phase
 
 - [x] Implementation merged with documented dependency limits (no “solver” claim).
 - [x] README + glossary cross-link.
-- [x] Example: shop or inventory-filter scenario (**`shop_computed_demo.tscn`**, **`inventory_list_demo.tscn`** — see Appendix **Notes**).
+- [x] Example: shop or inventory-filter scenario (**`shop_computed_demo.tscn`**, **`inventory_screen_demo.tscn`**).
 - [x] `CHANGELOG.md` entry.
 - [x] Dock/scanner updates **if** new state classes are first-class in diagnostics.
 
@@ -118,8 +118,7 @@ Not every row is a v1.0 promise; this maps **Megaman-style** UI goals to **phase
 - [ ] **`UiReactWireRunner`** implemented; **one runner per scene** rule enforced; duplicate-runner **warning or error** in dock (**CB-034**).
 - [ ] **`UiReactWireRule`** abstract base + **three** concrete rules named in [`WIRING_LAYER.md`](WIRING_LAYER.md) (MVP rule types §6) shipped.
 - [ ] **`wire_rules`** export on **P5.1 control set** defined in [`WIRING_LAYER.md`](WIRING_LAYER.md) (§5).
-- [ ] **`inventory_list_demo`** migrated: **root script removed or reduced to zero lines of orchestration** (only `@tool` or empty `extends Control` allowed if Godot requires script); if impossible without code, **document exception once** in ROADMAP Appendix **Notes** for that row only—**not** a general exception.
-- [ ] **`inventory_screen_demo`** migrated same way **immediately after** list demo.
+- [ ] **`inventory_screen_demo`** migrated: **root script removed or reduced to zero lines of orchestration** (only `@tool` or empty `extends Control` allowed if Godot requires script); if impossible without code, **document exception once** in ROADMAP Appendix **Notes** for that row only—**not** a general exception. *(Micro-demo **`inventory_list_demo`** removed; **`inventory_screen_demo`** is the canonical inventory example.)*
 - [ ] README **List patterns** / inventory pointers reference **wiring** for filter+selection patterns.
 - [ ] **`CHANGELOG.md`** minor (or patch per SemVer) documenting P5.1.
 - [ ] **Scanner/validator** updated for `wire_rules` paths (**CB-034**).
@@ -140,7 +139,7 @@ Not every row is a v1.0 promise; this maps **Megaman-style** UI goals to **phase
 - [x] **`UiReactActionTarget`** + **`UiReactActionKind`**, P5.1 control **`action_targets`** exports (**CB-043** / **CB-045**).
 - [x] **`UiReactActionTargetHelper`** (`run_actions`, `sync_initial_state`, state-watch wiring) (**CB-044**).
 - [x] Dock validator: **`action_targets`** rows (**CB-046**, extends **CB-020**).
-- [x] Example **`action_layer_demo.tscn`** (**CB-047**).
+- [x] Example **`inventory_screen_demo.tscn`**: **`action_targets`** list lock (**`SET_MOUSE_FILTER`**) + **`GRAB_FOCUS`** on unlock (**CB-047**); standalone **`action_layer_demo.tscn`** removed in favor of merged screen.
 - [x] **CHANGELOG** + **README** + **plugin.cfg** version bump for additive surface.
 
 ### Review process
@@ -159,19 +158,19 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 |----|-------------------|-----------------|--------------|--------|-------|
 | CB-001 | Core: `UiState`, `UiReact*`, `UiAnimUtils`, `UiAnimTarget`, editor dock | All | P0 | Done | Baseline shipped; maintain compat per SemVer. Includes typed diagnostics (`IssueKind`/`resource_path`), scene-file-scoped unused `UiState` `.tres` diagnostics (no cross-scene clutter), Reveal + persisted ignore flows, and filesystem-triggered dock refresh. |
 | CB-002 | Transactional / draft state (apply, cancel, revert) | Options, key remap drafts | P1 | Done | **`UiTransactionalState`** + **`UiTransactionalGroup`** + **`UiReactTransactionalActions`**; README + **`options_transactional_demo.tscn`**. Status line uses **`UiComputedStringState`** + **`UiReactComputedSync`** (**2.2.0**). |
-| CB-003 | Computed state (explicit dependencies, documented limits) | Shop totals, afford flags, filtered inventory | P2 | Done | **`UiComputedStringState`**, **`UiComputedBoolState`**, **`UiReactComputedSync`**; README; **`shop_computed_demo.tscn`**; **`options_transactional_demo.tscn`**. **2.2.0**. Text-filter list demo (**`inventory_list_demo.tscn`**, **2.2.1**) complements inventory filtering without new computed-array core. |
+| CB-003 | Computed state (explicit dependencies, documented limits) | Shop totals, afford flags, filtered inventory | P2 | Done | **`UiComputedStringState`**, **`UiComputedBoolState`**, **`UiReactComputedSync`**; README; **`shop_computed_demo.tscn`**; **`options_transactional_demo.tscn`**. **2.2.0**. Inventory filtering lives on **`inventory_screen_demo.tscn`** (successor to removed **`inventory_list_demo`**). |
 | CB-004 | Explicit dependency / recalc rules (documented) | Same as CB-003 | P2 | Done | Same release as CB-003; cap **32** **`sources`**, no solver (README **Computed state**). |
 | CB-005 | Undo stack / nested transactions | Advanced options | P6+ | Deferred | Not v1.0 scope; promote if needed. |
 | CB-006 | Command pattern **as docs + example** (not mandatory core API) | Shop buy/sell, equip confirm | P1–P2 | Done | README **Imperative actions**; **`shop_computed_demo.gd`** + **`shop_computed_demo.tscn`**. **2.3.0**. No **`UiCommand`** in core. |
 | CB-007 | First-class command resource (e.g. `UiCommand`) | Same | P6+ | Deferred | Only after doc pattern proves shape. |
-| CB-008 | Richer `ItemList` / icons | Inventory, shop list | P3 | Done | **`UiReactItemList`** dictionary rows **`label`/`text`** + optional **`icon`**; **`inventory_list_demo`** uses **`res://icon.svg`**. **2.3.0**. |
-| CB-009 | Row template / static body pattern (docs + example) | Inventory, shop, loot | P3 | Done | README **List patterns (P3)** + **`inventory_list_demo.tscn`** / **`inventory_list_demo.gd`**. **2.2.1**. |
+| CB-008 | Richer `ItemList` / icons | Inventory, shop list | P3 | Done | **`UiReactItemList`** dictionary rows **`label`/`text`** + optional **`icon`**; **`inventory_screen_demo.tscn`** uses **`res://icon.svg`** on a sample row. **2.3.0**. |
+| CB-009 | Row template / static body pattern (docs + example) | Inventory, shop, loot | P3 | Done | README **List patterns (P3)** + **`inventory_screen_demo.tscn`** / **`inventory_screen_demo.gd`**. **2.2.1**. |
 | CB-010 | Virtualization / paging | Huge inventories | P6+ | Deferred | Measure need first. |
 | CB-011 | Filtering and sorting recipes (documentation) | Inventory | P2 | Done | Filter recipe in README **List patterns (P3)**; sort left as game-layer exercise. **2.2.1**. |
-| CB-012 | `UiReactTextureButton` or slot helper | Equipment grid, hotbar | P4 | Done | **`UiReactTextureButton`** (`scripts/controls/ui_react_texture_button.gd`); README; **`texture_button_demo.tscn`**. **2.4.0**. |
-| CB-013 | `UiReactTree` | Categorized shop, hierarchical lists | P4 | Done | **`UiReactTree`** (`scripts/controls/ui_react_tree.gd`); README **UiReactTree binding semantics**; **`tree_demo.tscn`**. **2.4.0**. |
-| CB-014 | **`UiReactRichTextLabel`** (BBCode display binding); **`UiReactTextEdit`** deferred | Journal, long text | P4 | Done | **`UiReactRichTextLabel`** + **`rich_text_label_demo`** + scanner/validator (**CB-020**) in **2.5.0**. Multi-line **editable** **`UiReactTextEdit`** not in this release. |
-| CB-015 | `ItemList` `disabled_state` no-op — documented workaround | Any list that needs gating | P3 | Done | README **List patterns (P3)** + **`inventory_list_demo.tscn`** overlay + **`UiBoolState`**. **2.2.1**. |
+| CB-012 | `UiReactTextureButton` or slot helper | Equipment grid, hotbar | P4 | Done | **`UiReactTextureButton`** (`scripts/controls/ui_react_texture_button.gd`); README; **`inventory_screen_demo.tscn`**. **`texture_button_demo`** removed in example consolidation. **2.4.0**. |
+| CB-013 | `UiReactTree` | Categorized shop, hierarchical lists | P4 | Done | **`UiReactTree`** (`scripts/controls/ui_react_tree.gd`); README **UiReactTree binding semantics**; **`inventory_screen_demo.tscn`**. **`tree_demo`** removed in consolidation. **2.4.0**. |
+| CB-014 | **`UiReactRichTextLabel`** (BBCode display binding); **`UiReactTextEdit`** deferred | Journal, long text | P4 | Done | **`UiReactRichTextLabel`** + **`shop_computed_demo.tscn`** + scanner/validator (**CB-020**) in **2.5.0**. **`rich_text_label_demo`** removed in consolidation. Multi-line **editable** **`UiReactTextEdit`** not in this release. |
+| CB-015 | `ItemList` `disabled_state` no-op — documented workaround | Any list that needs gating | P3 | Done | README **List patterns (P3)** + **`inventory_screen_demo.tscn`** overlay + **`action_targets`** **`SET_MOUSE_FILTER`**. **2.2.1**. |
 | CB-016 | Screen transition presets (documentation / thin helper) | Main menu, pause | P2–P3 | Done | README **Screen transitions**; **`UiAnimUtils.Preset`**. **2.3.0**. |
 | CB-017 | Modal / focus-trap recipe | Confirm dialogs, popups | P3 | Done | README **Modals, popups, and focus** + Godot doc links. **2.3.0**. |
 | CB-018 | State graph / debug overlay (editor or runtime) | Development | P6+ | Deferred | Productivity tool; after core phases. |
@@ -180,7 +179,7 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-021 | Semver + CHANGELOG discipline | Releases | Ongoing | InProgress | Keep `CHANGELOG.md` aligned with releases. |
 | CB-022 | Example: options draft / apply | Options | P1 | Done | **`res://addons/ui_react/examples/options_transactional_demo.tscn`**. |
 | CB-023 | Example: shop math / afford | Shop | P2 | Done | **`res://addons/ui_react/examples/shop_computed_demo.tscn`**; **Buy** mutation **2.3.0** (**`shop_computed_demo.gd`**). |
-| CB-024 | Example: inventory filter | Inventory | P2 | Done | **`res://addons/ui_react/examples/inventory_list_demo.tscn`** (**2.2.1**). |
+| CB-024 | Example: inventory filter | Inventory | P2 | Done | **`res://addons/ui_react/examples/inventory_screen_demo.tscn`** (successor to **`inventory_list_demo`**, **2.2.1** + consolidation). |
 | CB-025 | Escape hatch documentation (plain `Control` + `UiState`) | Complex one-off UI | P3 | Done | README **When not to use a `UiReact*` wrapper**. **2.3.0**. |
 | CB-026 | Full RPG “no scripting” guarantee | — | Wont | Wont | Conflicts with Non-goals. |
 | CB-027 | MMO / social UI framework | — | Wont | Wont | Out of scope. |
@@ -192,9 +191,9 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-033 | **`UiReactWireRule`** abstract base + concrete MVP rules (three named in [`WIRING_LAYER.md`](WIRING_LAYER.md)) | Inventory, filters | P5 | Planned | Polymorphic resources only. |
 | CB-034 | **`wire_rules`** export on P5.1 control set + dock/validator (missing runner, invalid paths, duplicate runner; hub placement when **CB-041** ships) | Same | P5 | Planned | Extends **CB-020** discipline. |
 | CB-035 | Dock **graph or form** editor for wire rules (edits same resources) | N/A | P5.2 | Planned | **After** P5.1; **no** alternate format. |
-| CB-036 | Migrate **`inventory_list_demo`** off orchestration glue | Inventory | P5 | Planned | Exit criterion. |
-| CB-037 | Migrate **`inventory_screen_demo`** off orchestration glue | Inventory | P5 | Planned | Exit criterion; follows CB-036. |
-| CB-038 | Migrate remaining examples with root glue (**`tree_demo`**, **`texture_button_demo`**, **`shop_computed_demo.gd`**) only where wiring **replaces** glue without losing teaching value; **micro-demos may keep minimal script** if Appendix note documents **pedagogical exception** | Demos | P5 | Planned | **If** a demo’s sole purpose is one control, **zero migration** required—document per-demo decision in **Notes** once per row. |
+| CB-036 | Migrate **`inventory_list_demo`** off orchestration glue | Inventory | Wont | Wont | Scene removed; **`inventory_screen_demo.tscn`** is the canonical inventory example (**CB-037**). |
+| CB-037 | Migrate **`inventory_screen_demo`** off orchestration glue | Inventory | P5 | Planned | Exit criterion (follows removed **`inventory_list_demo`**). |
+| CB-038 | Migrate remaining examples with root glue (**`shop_computed_demo.gd`**, etc.) only where wiring **replaces** glue without losing teaching value | Demos | P5 | Planned | Standalone **`tree_demo`** / **`texture_button_demo`** removed; coverage lives on **`inventory_screen_demo`**. |
 | CB-039 | **Semantic versioning** policy: wiring API (`UiReactWireRunner`, `UiReactWireRule` subclasses, `wire_rules` shape) is **public**; breaking changes **major** | Releases | P5 | Planned | CHANGELOG + Charter cross-link. |
 | CB-040 | Remove or archive legacy **P5**-plus phase wording repo-wide; **P6+** is only deferred bucket | Docs | P5 | Planned | Grep pass in `addons/ui_react` for the legacy token (no `5` + `+` contiguous in docs). |
 | CB-041 | **`UiReactWireHub`** optional node; central **`rules`** array; runner aggregates hub + per-control **`wire_rules`** with **dedup**; validator expectations for bad hub/runner setups | Dense inventory/shop screens | P5.1.b | Planned | Normative in [`WIRING_LAYER.md`](WIRING_LAYER.md) §7; **after** P5.1 exit; extends **CB-034**. |
@@ -203,8 +202,8 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-044 | **`UiReactActionTargetHelper`** (`run_actions`, `sync_initial_state`, `state_watch` wiring) | Same | P6.1 | Done | `scripts/internal/react/ui_react_action_target_helper.gd`; **2.6.4**. |
 | CB-045 | **`action_targets`** export on **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** control set | P5.1 controls + transactional actions host | P6.1 | Done | **2.6.4**: ItemList, Tree, LineEdit, CheckBox, `UiReactTransactionalActions` (state-driven rows only on transactional host). |
 | CB-046 | Dock validator for **`action_targets`** (paths, loops, transactional constraint) | Editor | P6.1 | Done | **`UiReactValidatorService`**; extends **CB-020**; **2.6.4**. |
-| CB-047 | Example **`action_layer_demo.tscn`** | Demos | P6.1 | Done | **`UiReactCheckBox`** + **GRAB_FOCUS** row; **2.6.4**. |
+| CB-047 | Action layer runnable example | Demos | P6.1 | Done | **`inventory_screen_demo.tscn`**: **`SET_MOUSE_FILTER`** list lock + **`GRAB_FOCUS`** on unlock; **2.6.4** (standalone **`action_layer_demo`** removed in consolidation). |
 
 ---
 
-*Last updated: 2026-04-02 — **2.6.4**: Action layer [`ACTION_LAYER.md`](ACTION_LAYER.md), phase **P6.1**, Appendix **CB-042–CB-047**, glossary **Action layer**, **`UiReactActionTarget`** + helper + P5.1 **`action_targets`**, validator + **`action_layer_demo`**. Prior: **2.6.3** wiring docs + **CB-031–CB-041**.*
+*Last updated: 2026-04-03 — Examples consolidated to **four** scenes (`inventory_screen_demo`, `options_transactional_demo`, `shop_computed_demo`, `anim_targets_catalog_demo`); **CB-047** / **CB-015** / etc. point at **`inventory_screen_demo`**. Prior: **2.6.4** Action layer + **`action_layer_demo`** (removed in consolidation).*

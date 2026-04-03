@@ -41,7 +41,14 @@ Copy `addons/ui_react/` into your Godot project at **`addons/ui_react/`**. Open 
 
 ### 2) Run the example
 
-Open **`res://addons/ui_react/examples/demo.tscn`** (smoke demo), **`res://addons/ui_react/examples/options_transactional_demo.tscn`** (options-style **Apply / Cancel** with **`UiTransactionalState`** plus computed status), **`res://addons/ui_react/examples/shop_computed_demo.tscn`** (computed afford/status on **`UiReactRichTextLabel`** + BBCode from **`ShopComputedStatus`**; **Buy** subtracts gold via **`shop_computed_demo.gd`** — **CB-006**), **`res://addons/ui_react/examples/inventory_screen_demo.tscn`** (single **inventory-style** screen: **`UiReactTree`** categories + filtered **`UiReactItemList`** + **`UiReactTextureButton`** actions, plus sample **`UiAnimTarget`** fades/POP; micro-demos below stay for focused CB coverage), **`res://addons/ui_react/examples/inventory_list_demo.tscn`** (filtered **`UiReactItemList`**, optional row **icons**), **`res://addons/ui_react/examples/texture_button_demo.tscn`** (**`UiReactTextureButton`** + **`UiBoolState`**), **`res://addons/ui_react/examples/tree_demo.tscn`** (**`UiReactTree`** selection index demo), **`res://addons/ui_react/examples/rich_text_label_demo.tscn`** (**`UiReactRichTextLabel`** + BBCode from **`text_state`**), **`res://addons/ui_react/examples/anim_targets_catalog_demo.tscn`** (**every** **`UiAnimTarget.AnimationAction`** from a list + **every** **`UiAnimTarget.Trigger`** on a shared preview via **`UiAnimTarget` POP** rows), or **`res://addons/ui_react/examples/action_layer_demo.tscn`** (**`UiReactActionTarget`** **GRAB_FOCUS** row on **`UiReactCheckBox`**) and press **Play** (or set either as **Main Scene**). Use the scene tree to see how states and targets are wired.
+The addon ships **four** runnable examples under **`res://addons/ui_react/examples/`** (game-screen style + one animation catalog). Open any of these and press **Play** (default **Main Scene** is **`inventory_screen_demo.tscn`**):
+
+- **`res://addons/ui_react/examples/inventory_screen_demo.tscn`** — **`UiReactTree`** + filtered **`UiReactItemList`** + **`UiReactTextureButton`** / **`UiReactOptionButton`**; list lock via overlay + **`action_targets`** (**CB-015** / **P6.1**); sample **`UiAnimTarget`** fades/POP.
+- **`res://addons/ui_react/examples/options_transactional_demo.tscn`** — transactional **Apply / Cancel** + **`UiReactTabContainer`** showcase tab.
+- **`res://addons/ui_react/examples/shop_computed_demo.tscn`** — computed afford/status on **`UiReactRichTextLabel`**; **`UiReactProgressBar`** / **`UiReactSpinBox`** bindings; **Buy** via **`shop_computed_demo.gd`** (**CB-006**).
+- **`res://addons/ui_react/examples/anim_targets_catalog_demo.tscn`** — catalog of **`UiAnimTarget.AnimationAction`** + trigger playground.
+
+Use the scene tree to see how states and targets are wired.
 
 ### 3) Minimal recipes (editor-first, no code required)
 
@@ -183,7 +190,7 @@ When one screen has **several** `UiTransactionalState` resources and a single **
 2. Set its **`states`** array to those `UiTransactionalState` instances **in commit order** (null entries are skipped at runtime).
 3. Add a **`Control`** node in the scene, attach **`UiReactTransactionalActions`** (`scripts/controls/ui_react_transactional_actions.gd`).
 4. Assign **`group`** to that `UiTransactionalGroup`.
-5. Set **`apply_button_path`** and **`cancel_button_path`** as `NodePath`s **relative to the `UiReactTransactionalActions` node** (example: `../VBox/ButtonRow/ApplyButton`).
+5. Set **`apply_button_path`** and **`cancel_button_path`** as `NodePath`s **relative to the `UiReactTransactionalActions` node** (example: `../VBox/OptionsTabs/AudioPanel/AudioVBox/ButtonRow/ApplyButton` in **`options_transactional_demo.tscn`**).
 6. Leave **`begin_on_ready`** `true` to call **`begin_edit_all()`** once when the scene enters the tree, unless you start the edit session from code.
 7. **Read-only summary line:** prefer a **`UiComputedStringState`** subclass plus **`UiReactComputedSync`** (see **Computed state**) so the label tracks draft / committed transactional values without scene glue. Alternatively, use a **`UiStringState`** and call **`set_value()`** from code. Do **not** assign **`Label.text`** directly if the label uses **`UiReactLabel`**, or **`RichTextLabel.text`** if it uses **`UiReactRichTextLabel`**.
 
@@ -226,13 +233,13 @@ Use a **`UiComputedStringState`** or **`UiComputedBoolState`** **subclass** when
 2. Use a **`UiStringState`** (with **`UiReactLineEdit.text_state`**) or similar as the **filter query**.
 3. When the filter changes, rebuild an **`Array`** (strings and/or **`label`/`icon` dictionaries**) and call **`items_state.set_value(...)`** so the list reflects the filtered rows.
 4. Reset **`selected_state`** to **`-1`** (or clamp) when the filter changes so the selection does not point at the wrong item.
-5. Drive any **detail label** from **`selected_state`** + the same catalog mapping (see **`res://addons/ui_react/examples/inventory_list_demo.gd`**).
+5. Drive any **detail label** from **`selected_state`** + the same catalog mapping (see **`res://addons/ui_react/examples/inventory_screen_demo.gd`**).
 
 This pattern is **game-layer** glue; the addon does not ship a generic virtualized list or a graph solver (**[`docs/ROADMAP.md`](docs/ROADMAP.md)** — **CB-010** deferred).
 
-**Disabled / modal gating (CB-015):** Godot’s **`ItemList`** has no real **disabled** mode, and **`UiReactItemList.disabled_state`** is not wired to engine list disabling. **Canonical workaround:** place the list inside a **`Control`**, add a **full-rect sibling overlay** (`Control` or `ColorRect` with **transparent** color) **above** the list in tree order, and drive **`Control.mouse_filter`**: **`MOUSE_FILTER_IGNORE`** when interaction is allowed (clicks pass through to the list), **`MOUSE_FILTER_STOP`** when the list should not receive pointer input. Optionally toggle **`visible`** on the overlay or list host instead. **`inventory_list_demo.tscn`** demonstrates overlay + **`UiBoolState`** (checkbox).
+**Disabled / modal gating (CB-015):** Godot’s **`ItemList`** has no real **disabled** mode, and **`UiReactItemList.disabled_state`** is not wired to engine list disabling. **Canonical workaround:** place the list inside a **`Control`**, add a **full-rect transparent sibling overlay** **above** the list in tree order, and drive **`Control.mouse_filter`**: **`MOUSE_FILTER_IGNORE`** when interaction is allowed (clicks pass through), **`MOUSE_FILTER_STOP`** when the list should not receive pointer input. Prefer inspector **`action_targets`** **`SET_MOUSE_FILTER`** with **`state_watch`** on the lock bool (**`inventory_screen_demo.tscn`**).
 
-**Runnable example:** **`res://addons/ui_react/examples/inventory_list_demo.tscn`**.
+**Runnable example:** **`res://addons/ui_react/examples/inventory_screen_demo.tscn`**.
 
 ---
 
@@ -332,7 +339,7 @@ These may change between template versions; **do not rely on them from game code
 | `scripts/controls/` | Attachable **UiReact\*** scripts. |
 | `scripts/internal/anim/` | Animation implementation (unstable for direct use). |
 | `scripts/internal/react/` | Reactive helpers (unstable for direct use). |
-| `examples/` | `demo.tscn` smoke demo; `options_transactional_demo.tscn` (transactional **Apply / Cancel** + computed status); `shop_computed_demo.tscn` + `shop_computed_demo.gd` (computed + **CB-006** Buy; **`UiReactRichTextLabel`** status + **`ShopComputedStatus`** BBCode); `inventory_screen_demo.tscn` + `inventory_screen_demo.gd` + `inventory_demo_catalog.gd` (combined tree + list + texture actions + sample **`UiAnimTarget`** fades/POP); `inventory_list_demo.tscn` (filtered list + optional row **icons** / **CB-008**); `texture_button_demo.tscn` + `texture_button_demo.gd` (**CB-012**); `tree_demo.tscn` + `tree_demo.gd` (**CB-013**); `rich_text_label_demo.tscn` + `rich_text_label_demo.gd` (**CB-014** **`UiReactRichTextLabel`**); `anim_targets_catalog_demo.tscn` + `anim_targets_catalog_demo.gd` (catalog of all **`UiAnimTarget.AnimationAction`** + playground for all **`UiAnimTarget.Trigger`** on one preview). |
+| `examples/` | **`inventory_screen_demo.tscn`** + **`inventory_screen_demo.gd`** + **`inventory_demo_catalog.gd`** (tree + filtered list + texture/option actions + **`action_targets`** list lock + **`UiAnimTarget`**); **`options_transactional_demo.tscn`** (transactional **Apply / Cancel** + **`UiReactTabContainer`**); **`shop_computed_demo.tscn`** + **`shop_computed_demo.gd`** (computed + **CB-006**; rich status; progress/spin showcase); **`anim_targets_catalog_demo.tscn`** + **`anim_targets_catalog_demo.gd`** (animation catalog + trigger playground). |
 | `docs/` | **README**, **CHANGELOG**, **[`ROADMAP.md`](docs/ROADMAP.md)**, **[`WIRING_LAYER.md`](docs/WIRING_LAYER.md)** (normative **P5** wiring spec). |
 | `editor_plugin/` | Optional Godot editor plugin (dock, validation, quick state creation). |
 | `ui_resources/` | Sample `.tres` for the example scene; `plugin_generated/` holds plugin-created states (optional). |

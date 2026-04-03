@@ -6,7 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-No unreleased changes yet.
+### Changed
+
+- **Examples:** Consolidated to **four** scenes under `examples/`: **`inventory_screen_demo.tscn`**, **`options_transactional_demo.tscn`**, **`shop_computed_demo.tscn`**, **`anim_targets_catalog_demo.tscn`**. Removed **`demo.tscn`**, **`action_layer_demo.tscn`**, **`inventory_list_demo`**, **`texture_button_demo`**, **`tree_demo`**, **`rich_text_label_demo`** (and paired `*.gd` where applicable). **Main Scene** (`project.godot`) defaults to **`inventory_screen_demo.tscn`**.
+- **`inventory_screen_demo`:** List lock uses **`action_targets`** **`SET_MOUSE_FILTER`** on **`UiReactItemList`**; **`LockList`** **`GRAB_FOCUS`** on unlock. Folded former micro-demo widgets: **`UiReactOptionButton`** (sort preset showcase).
+- **`options_transactional_demo`:** Added **`UiReactTabContainer`** with audio controls on tab 0.
+- **`shop_computed_demo`:** Added **`UiReactProgressBar`** (gold) and **`UiReactSpinBox`** (quantity; **`disabled_state`** mirrors Buy when unaffordable).
+
+### Documentation
+
+- **`README.md`**, **`docs/ROADMAP.md`**, **`docs/WIRING_LAYER.md`:** Example paths and Appendix notes updated for removed scenes.
 
 ## [2.6.5] - 2026-04-02
 
@@ -59,7 +68,7 @@ No unreleased changes yet.
 ### Added
 
 - **Example:** **`examples/inventory_screen_demo.tscn`** + **`inventory_screen_demo.gd`** — one **inventory-style** layout combining **`UiReactTree`** (category/kind filter), **`UiReactItemList`** (filter, detail, lock overlay), and **`UiReactTextureButton`** action row (**Use** + **Sort**, shared **Disable actions**).
-- **`examples/inventory_demo_catalog.gd`** (**`InventoryDemoCatalog`**): shared demo item rows used by **`inventory_screen_demo`** and **`inventory_list_demo`**.
+- **`examples/inventory_demo_catalog.gd`** (**`InventoryDemoCatalog`**): shared demo item rows used by **`inventory_screen_demo`**.
 
 ### Notes
 

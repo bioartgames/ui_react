@@ -1,4 +1,4 @@
-## Shared catalog rows for inventory-style examples ([code]inventory_list_demo[/code], [code]inventory_screen_demo[/code]).
+## Shared catalog rows for [code]inventory_screen_demo[/code].
 class_name InventoryDemoCatalog
 extends RefCounted
 
