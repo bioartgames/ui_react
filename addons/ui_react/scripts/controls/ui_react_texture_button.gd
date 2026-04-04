@@ -35,9 +35,6 @@ var _disabled_state: UiBoolState
 ## Each [UiAnimTarget] sets Trigger, Target NodePath, and animation type; no extra resource files required.
 @export var animation_targets: Array[UiAnimTarget] = []
 
-## Optional node implementing [code]get_animation_selection_index() -> int[/code] for [member UiAnimTarget.selection_slot] filtering.
-@export var animation_selection_provider: NodePath = NodePath()
-
 ## Optional one-way write to a [UiFloatState] on [signal BaseButton.pressed].
 @export var press_writes_float_state: UiFloatState
 @export var press_writes_float_value: float = 100.0

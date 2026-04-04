@@ -6,18 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Breaking
+
+- **`UiReact*`** controls: removed **`animation_selection_provider`**. **`selection_slot`** filtering uses **`get_animation_selection_index()`** on the **same** host when any **`animation_targets`** row uses **`selection_slot >= 0`**.
+- **`UiReactItemList`:** removed **`row_play_preamble_reset`**, **`row_play_soft_reset_duration`**, **`preamble_reset_target`**. Use **`UiAnimTarget.preamble_reset_duration`** / **`await_preamble_before_main`** per row instead.
+- **`UiReactItemList`:** removed **`row_animation_targets`**. Use **`animation_targets`** with **`selection_slot`** set per row for **`play_selected_row_animation`** / **`play_preamble_reset_only`**.
+
 ### Added
 
-- **`UiAnimTarget`:** **`selection_slot`** — optional index filter when **`animation_selection_provider`** on a **`UiReact*`** control points at a node with **`get_animation_selection_index()`**.
-- **`UiReactAnimTargetHelper`:** **`_run_animation_targets`** / **`run_manual_targets`**; **`trigger_animations`** resolves **`animation_selection_provider`** and filters by **`selection_slot`**.
-- **`UiReact*`** (all controls with **`animation_targets`**): **`animation_selection_provider`** export.
-- **`UiReactItemList`:** **`row_animation_targets`**, **`row_play_preamble_reset`**, **`row_play_soft_reset_duration`**, **`preamble_reset_target`**, **`play_selected_row_animation()`**, **`play_preamble_reset_only()`**, **`get_animation_selection_index()`**.
+- **`UiAnimTarget`:** **`preamble_reset_duration`**, **`await_preamble_before_main`**; **`apply_with_preamble()`**, **`apply_preamble_reset_only()`**.
+- **`UiReactTree`:** **`get_animation_selection_index()`** (visible pre-order index) for **`selection_slot`** filtering.
 - **`UiReactButton`** / **`UiReactTextureButton`:** **`press_writes_float_state`** + **`press_writes_float_value`** for one-way float writes on press.
-- **Editor:** dock **`row_animation_targets` size vs `item_count`** and SOFT duration checks (**`UiReactAnimValidator`**).
-- **`anim_targets_catalog_demo.tscn`:** scriptless left column (**`items_state`**, **`row_animation_targets`**, signal connections); **`FireCompletedButton`** uses **`press_writes_float_state`**.
+- **Editor:** dock **`animation_targets`** **`selection_slot`** vs **`item_count`** on **`UiReactItemList`** (**`UiReactAnimValidator`**).
+- **`anim_targets_catalog_demo.tscn`:** scriptless left column (**`items_state`**, **`animation_targets`** + **`selection_slot`**, signal connections); **`FireCompletedButton`** uses **`press_writes_float_state`**.
 
 ### Changed
 
+- **`UiReactAnimTargetHelper`:** **`collect_animation_targets_for_row_slot`**; **`UiReactItemList`** row play uses **`animation_targets`** + **`selection_slot`** only.
+- **`UiReactAnimTargetHelper.trigger_animations`:** resolves selection index from the host when slot gating is used (no external provider node).
 - **Reactivity:** `UiReactComputedSync` and `UiReactWireRunner` listen to **`Resource.changed` only** on `UiState` dependencies (avoids double work from `value_changed` + `emit_changed` on the same update).
 - **Wiring:** `UiReactWireRule.trigger` uses **`UiReactWireRule.TriggerKind`** (`TEXT_CHANGED = 5`, `SELECTION_CHANGED = 6`, `TEXT_ENTERED = 13`) so wiring does not depend on `UiAnimTarget.Trigger`; existing saved ints stay valid.
 - **Catalog rule:** `UiReactWireRefreshItemsFromCatalog.first_row_icon_path` applies to the **first row after filters**, not catalog row 0 only.

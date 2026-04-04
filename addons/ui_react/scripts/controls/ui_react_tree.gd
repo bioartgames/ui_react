@@ -20,9 +20,6 @@ var _selected_state: UiIntState
 ## **Optional** — Inspector-driven tweens (selection, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
-## Optional node implementing [code]get_animation_selection_index() -> int[/code] for [member UiAnimTarget.selection_slot] filtering.
-@export var animation_selection_provider: NodePath = NodePath()
-
 ## **Optional** — Action layer presets ([code]docs/ACTION_LAYER.md[/code]).
 @export var action_targets: Array[UiReactActionTarget] = []
 
@@ -123,6 +120,11 @@ func _flat_index_for_item(item: TreeItem) -> int:
 		if flat[i] == item:
 			return i
 	return -1
+
+
+## Visible pre-order index for [member UiAnimTarget.selection_slot] filtering on this tree's [member animation_targets].
+func get_animation_selection_index() -> int:
+	return _flat_index_for_item(get_selected())
 
 
 func _item_for_flat_index(idx: int) -> TreeItem:

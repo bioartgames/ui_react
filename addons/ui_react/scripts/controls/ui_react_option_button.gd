@@ -34,9 +34,6 @@ var _disabled_state: UiBoolState
 ## **Optional** — Inspector-driven tweens (selection, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
-## Optional node implementing [code]get_animation_selection_index() -> int[/code] for [member UiAnimTarget.selection_slot] filtering.
-@export var animation_selection_provider: NodePath = NodePath()
-
 func _ready() -> void:
 	item_selected.connect(_on_item_selected)
 	_disconnect_all_states()

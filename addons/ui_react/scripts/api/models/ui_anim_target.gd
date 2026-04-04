@@ -130,11 +130,20 @@ func _is_pivot_visible_for(action: AnimationAction) -> bool:
 @export_node_path("Control") var target: NodePath = NodePath()
 
 ## When to trigger this animation (dropdown selection in Inspector).
-@export var trigger: Trigger = Trigger.PRESSED
+@export var trigger: Trigger = Trigger.PRESSED:
+	set(value):
+		if trigger == value:
+			return
+		trigger = value
+		notify_property_list_changed()
 
-## When [code]>= 0[/code] and the host [code]UiReact*[/code] control has [code]animation_selection_provider[/code] set,
-## this target runs only if the provider's [method Node.get_animation_selection_index] matches this slot.
-## [code]-1[/code] disables selection gating (default, legacy behavior).
+## Row / selection index for this row in the **host** [UiAnimTarget] array (not the animated [member target]'s node type).
+## [code]-1[/code] (default): not row-scoped; always participates in [member trigger] dispatch when applicable.
+## [code]>= 0[/code]: on hosts that implement [method Node.get_animation_selection_index] (e.g. [UiReactItemList], [UiReactTree]),
+## [UiReactAnimTargetHelper.trigger_animations] only runs this row when the index matches (if any row uses slot gating).
+## On [UiReactItemList], [method UiReactItemList.play_selected_row_animation] / [method UiReactItemList.play_preamble_reset_only]
+## run every [UiAnimTarget] whose slot equals the selected row, in array order.
+## If the host has no [code]get_animation_selection_index()[/code] but slot gating is requested, only [code]selection_slot == -1[/code] rows run (see helper warning).
 @export var selection_slot: int = -1
 
 ## Animation type to perform (dropdown selection in Inspector).
@@ -174,6 +183,19 @@ func _is_pivot_visible_for(action: AnimationAction) -> bool:
 ## When true (default), animations that support it capture a unified baseline snapshot and release it when the tween completes (see slide, expand, shake, etc.).
 ## When false, baseline capture is skipped for those animations so motion can persist without a matching release—legacy escape hatch; [enum AnimationAction.RESET] still requires an existing snapshot.
 @export var use_unified_baseline: bool = true
+
+## Before the main [member animation], optionally run [enum AnimationAction.RESET] on the same [member target].
+## [code]-1[/code] = no preamble. [code]0[/code] = instant reset; [code]> 0[/code] = soft reset over that many seconds (no upper cap in code).
+@export_range(-1.0, 3600.0, 0.001, "or_greater", "or_less") var preamble_reset_duration: float = -1.0:
+	set(value):
+		if preamble_reset_duration == value:
+			return
+		preamble_reset_duration = value
+		notify_property_list_changed()
+
+## If [code]true[/code] (default), the main animation starts after the preamble [code]RESET[/code] finishes (async).
+## If [code]false[/code], the main animation starts immediately after the preamble is scheduled; both may overlap on the same [member target].
+@export var await_preamble_before_main: bool = true
 
 ## ============================================
 ## ADVANCED SETTINGS
@@ -222,10 +244,16 @@ func _validate_property(property: Dictionary) -> void:
 	var pname: StringName = property.name
 	if pname == &"animation":
 		return
+	if pname == &"await_preamble_before_main":
+		if preamble_reset_duration < 0.0:
+			property.usage = PROPERTY_USAGE_STORAGE
+		else:
+			property.usage = PROPERTY_USAGE_DEFAULT
+		return
 	# Core + timing + behavior: always visible in the Inspector.
 	var always_visible: Array[StringName] = [
 		&"target", &"trigger", &"selection_slot", &"duration", &"easing", &"repeat_count",
-		&"reverse", &"respect_disabled",
+		&"reverse", &"respect_disabled", &"preamble_reset_duration",
 	]
 	if pname in always_visible:
 		return
@@ -263,6 +291,53 @@ func apply(owner: Node) -> Signal:
 		return Signal()
 
 	return apply_to_control(owner, target_node as Control)
+
+
+func _create_preamble_reset_resource() -> UiAnimTarget:
+	var t := UiAnimTarget.new()
+	t.animation = AnimationAction.RESET
+	t.target = target
+	t.duration = preamble_reset_duration
+	t.easing = easing
+	t.use_unified_baseline = use_unified_baseline
+	return t
+
+
+## Runs optional preamble [enum AnimationAction.RESET] on [member target], then the main [member animation].
+## When [member preamble_reset_duration] is [code]< 0[/code], only the main animation runs (awaited to completion when a tween exists).
+func apply_with_preamble(owner: Node) -> void:
+	if target.is_empty():
+		return
+	if preamble_reset_duration < 0.0:
+		if animation == AnimationAction.RESET:
+			var only_sig := apply(owner)
+			if not only_sig.is_null():
+				await only_sig
+			return
+		var ms0 := apply(owner)
+		if not ms0.is_null():
+			await ms0
+		return
+	var reset_res := _create_preamble_reset_resource()
+	var preamble_sig := reset_res.apply(owner)
+	if await_preamble_before_main and not preamble_sig.is_null():
+		await preamble_sig
+	if animation == AnimationAction.RESET:
+		return
+	var main_sig := apply(owner)
+	if not main_sig.is_null():
+		await main_sig
+
+
+## Runs only the preamble [code]RESET[/code] when [member preamble_reset_duration] is [code]>= 0[/code].
+func apply_preamble_reset_only(owner: Node) -> void:
+	if preamble_reset_duration < 0.0:
+		return
+	var reset_res := _create_preamble_reset_resource()
+	var preamble_sig := reset_res.apply(owner)
+	if not preamble_sig.is_null():
+		await preamble_sig
+
 
 ## Applies this animation to a specific control target.
 ## [param owner]: The node that owns the animation (for creating tweens).
