@@ -132,6 +132,11 @@ func _is_pivot_visible_for(action: AnimationAction) -> bool:
 ## When to trigger this animation (dropdown selection in Inspector).
 @export var trigger: Trigger = Trigger.PRESSED
 
+## When [code]>= 0[/code] and the host [code]UiReact*[/code] control has [code]animation_selection_provider[/code] set,
+## this target runs only if the provider's [method Node.get_animation_selection_index] matches this slot.
+## [code]-1[/code] disables selection gating (default, legacy behavior).
+@export var selection_slot: int = -1
+
 ## Animation type to perform (dropdown selection in Inspector).
 ## Changing this refreshes which advanced fields are visible in the Inspector.
 @export var animation: AnimationAction = AnimationAction.EXPAND:
@@ -219,7 +224,7 @@ func _validate_property(property: Dictionary) -> void:
 		return
 	# Core + timing + behavior: always visible in the Inspector.
 	var always_visible: Array[StringName] = [
-		&"target", &"trigger", &"duration", &"easing", &"repeat_count",
+		&"target", &"trigger", &"selection_slot", &"duration", &"easing", &"repeat_count",
 		&"reverse", &"respect_disabled",
 	]
 	if pname in always_visible:

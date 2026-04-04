@@ -82,4 +82,44 @@ static func validate_anim_targets(
 					"",
 				)
 			)
+	if component == "UiReactItemList" and owner is ItemList:
+		var il := owner as ItemList
+		if &"row_animation_targets" in owner:
+			var rows_v: Variant = owner.get(&"row_animation_targets")
+			if rows_v is Array:
+				var ra: Array = rows_v as Array
+				if ra.size() > 0 and ra.size() != il.item_count:
+					out.append(
+						UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+							UiReactDiagnosticModel.Severity.ERROR,
+							component,
+							str(owner.name),
+							"row_animation_targets size (%d) != item_count (%d)." % [ra.size(), il.item_count],
+							"Match one UiAnimTarget per list row or clear row_animation_targets.",
+							node_path,
+							&"row_animation_targets",
+							&"",
+							UiReactDiagnosticModel.IssueKind.GENERIC,
+							"",
+						)
+					)
+		if &"row_play_preamble_reset" in owner and &"row_play_soft_reset_duration" in owner:
+			var pr: int = int(owner.get(&"row_play_preamble_reset"))
+			if pr == UiReactItemList.RowPlayPreambleReset.SOFT:
+				var dur: float = float(owner.get(&"row_play_soft_reset_duration"))
+				if dur <= 0.0:
+					out.append(
+						UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+							UiReactDiagnosticModel.Severity.ERROR,
+							component,
+							str(owner.name),
+							"row_play_soft_reset_duration must be > 0 when row_play_preamble_reset is SOFT.",
+							"Set a positive duration or use HARD/NONE.",
+							node_path,
+							&"row_play_soft_reset_duration",
+							&"",
+							UiReactDiagnosticModel.IssueKind.GENERIC,
+							"",
+						)
+					)
 	return out

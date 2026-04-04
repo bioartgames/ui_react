@@ -25,6 +25,7 @@ const BINDINGS_BY_COMPONENT: Dictionary = {
 	"UiReactButton": [
 		{"property": &"pressed_state", "kind": "bool", "optional": true},
 		{"property": &"disabled_state", "kind": "bool", "optional": true},
+		{"property": &"press_writes_float_state", "kind": "float", "optional": true},
 	],
 	"UiReactCheckBox": [
 		{"property": &"checked_state", "kind": "bool", "optional": true},
@@ -63,6 +64,7 @@ const BINDINGS_BY_COMPONENT: Dictionary = {
 	"UiReactTextureButton": [
 		{"property": &"pressed_state", "kind": "bool", "optional": true},
 		{"property": &"disabled_state", "kind": "bool", "optional": true},
+		{"property": &"press_writes_float_state", "kind": "float", "optional": true},
 	],
 	"UiReactTree": [
 		{"property": &"selected_state", "kind": "int", "optional": true},

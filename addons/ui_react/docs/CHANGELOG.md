@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **`UiAnimTarget`:** **`selection_slot`** — optional index filter when **`animation_selection_provider`** on a **`UiReact*`** control points at a node with **`get_animation_selection_index()`**.
+- **`UiReactAnimTargetHelper`:** **`_run_animation_targets`** / **`run_manual_targets`**; **`trigger_animations`** resolves **`animation_selection_provider`** and filters by **`selection_slot`**.
+- **`UiReact*`** (all controls with **`animation_targets`**): **`animation_selection_provider`** export.
+- **`UiReactItemList`:** **`row_animation_targets`**, **`row_play_preamble_reset`**, **`row_play_soft_reset_duration`**, **`preamble_reset_target`**, **`play_selected_row_animation()`**, **`play_preamble_reset_only()`**, **`get_animation_selection_index()`**.
+- **`UiReactButton`** / **`UiReactTextureButton`:** **`press_writes_float_state`** + **`press_writes_float_value`** for one-way float writes on press.
+- **Editor:** dock **`row_animation_targets` size vs `item_count`** and SOFT duration checks (**`UiReactAnimValidator`**).
+- **`anim_targets_catalog_demo.tscn`:** scriptless left column (**`items_state`**, **`row_animation_targets`**, signal connections); **`FireCompletedButton`** uses **`press_writes_float_state`**.
+
 ### Changed
 
 - **Reactivity:** `UiReactComputedSync` and `UiReactWireRunner` listen to **`Resource.changed` only** on `UiState` dependencies (avoids double work from `value_changed` + `emit_changed` on the same update).

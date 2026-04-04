@@ -46,7 +46,7 @@ The addon ships **four** runnable examples under **`res://addons/ui_react/exampl
 - **`res://addons/ui_react/examples/inventory_screen_demo.tscn`** — **`UiReactWireRunner`** + **`wire_rules`** (map / refresh / copy detail per **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)**); **`UiReactTree`** + filtered **`UiReactItemList`** + actions; list lock via overlay + **`action_targets`** (**CB-015** / **P6.1**); sample **`UiAnimTarget`** fades/POP.
 - **`res://addons/ui_react/examples/options_transactional_demo.tscn`** — transactional **Apply / Cancel** + **`UiReactTabContainer`** showcase tab.
 - **`res://addons/ui_react/examples/shop_computed_demo.tscn`** — computed afford/status on **`UiReactRichTextLabel`**; **`UiReactProgressBar`** / **`UiReactSpinBox`** bindings; **Buy** via **`shop_computed_demo.gd`** (**CB-006**).
-- **`res://addons/ui_react/examples/anim_targets_catalog_demo.tscn`** — catalog of **`UiAnimTarget.AnimationAction`** + trigger playground.
+- **`res://addons/ui_react/examples/anim_targets_catalog_demo.tscn`** — catalog of **`UiAnimTarget.AnimationAction`** ( **`row_animation_targets`** + **`play_selected_row_animation`**) + trigger playground; no root script.
 
 Use the scene tree to see how states and targets are wired.
 
@@ -133,6 +133,16 @@ All plugin usage details are documented in this README.
 - **`use_unified_baseline`** defaults to **on**. Supported motions (slides, center slides, **`EXPAND`/`EXPAND_X`/`EXPAND_Y`**, shake, float, color flash, etc.) **capture** a unified baseline for the tween and **release** it when the animation completes, so the control returns to the snapshot baseline (and **RESET** can restore it later).
 - Set **`use_unified_baseline`** to **off** on a row when you intentionally want motion to **persist** (legacy “slide stays offset” behavior).
 - **`RESET`** honors **`duration`**: **`0`** is an **instant** (**hard**) restore to the stored snapshot; **values above zero** tween (**soft** reset) using **`easing`**. **RESET** still needs a snapshot in **`UiAnimSnapshotStore`** from a prior captured animation (unchanged).
+- **`selection_slot`** (default **`-1`**) on each **`UiAnimTarget`**: when **`animation_selection_provider`** on the host **`UiReact*`** control points at a node that implements **`get_animation_selection_index() -> int`** (e.g. **`UiReactItemList`**), only targets whose **`selection_slot`** is **`-1`** or matches that index run for that trigger. **`UiReactAnimTargetHelper`** centralizes this; **`run_manual_targets`** is used for explicit row play (no trigger matching).
+
+### UiReactItemList: `row_animation_targets` and play API
+
+- **`row_animation_targets`**: one **`UiAnimTarget` per list row** (same order as items). **`play_selected_row_animation()`** runs the target for the current selection after an optional preamble **`RESET`** (**`row_play_preamble_reset`**: **NONE** / **HARD** / **SOFT**; **`preamble_reset_target`** overrides the reset Control path, else the selected row’s **`target`** is used). Connect **`Button.pressed`** to **`play_selected_row_animation`** in the editor for scriptless catalog-style demos.
+- **`get_animation_selection_index()`** is implemented for **`animation_selection_provider`** on other **`UiReact*`** controls.
+
+### `UiReactButton` / `UiReactTextureButton`: `press_writes_float_state`
+
+- Optional **`press_writes_float_state`** + **`press_writes_float_value`**: one-way **`set_value`** on **`BaseButton.pressed`** (e.g. set a **`UiFloatState`** to **100** for a progress demo). Not part of the Action layer; keep to UI/test harness patterns.
 
 ### Text controls (`UiReactLineEdit`, `UiReactLabel`, `UiReactRichTextLabel`)
 
@@ -341,7 +351,7 @@ These may change between template versions; **do not rely on them from game code
 | `scripts/controls/` | Attachable **UiReact\*** scripts. |
 | `scripts/internal/anim/` | Animation implementation (unstable for direct use). |
 | `scripts/internal/react/` | Reactive helpers (unstable for direct use). |
-| `examples/` | **`inventory_screen_demo.tscn`** + **`inventory_screen_demo.gd`** + **`inventory_demo_catalog.gd`** / **`inventory_demo_catalog_wire_data.gd`** (**`UiReactWireRunner`**, **`wire_rules`**, texture/option actions, **`action_targets`** list lock, **`UiAnimTarget`**); **`options_transactional_demo.tscn`** (transactional **Apply / Cancel** + **`UiReactTabContainer`**); **`shop_computed_demo.tscn`** + **`shop_computed_demo.gd`** (computed + **CB-006**; rich status; progress/spin showcase); **`anim_targets_catalog_demo.tscn`** + **`anim_targets_catalog_demo.gd`** (animation catalog + trigger playground). |
+| `examples/` | **`inventory_screen_demo.tscn`** + **`inventory_screen_demo.gd`** + **`inventory_demo_catalog.gd`** / **`inventory_demo_catalog_wire_data.gd`** (**`UiReactWireRunner`**, **`wire_rules`**, texture/option actions, **`action_targets`** list lock, **`UiAnimTarget`**); **`options_transactional_demo.tscn`** (transactional **Apply / Cancel** + **`UiReactTabContainer`**); **`shop_computed_demo.tscn`** + **`shop_computed_demo.gd`** (computed + **CB-006**; rich status; progress/spin showcase); **`anim_targets_catalog_demo.tscn`** (animation catalog + trigger playground; inspector-only wiring). |
 | `docs/` | **README**, **CHANGELOG**, **[`ROADMAP.md`](docs/ROADMAP.md)**, **[`WIRING_LAYER.md`](docs/WIRING_LAYER.md)** (normative **P5** wiring spec). |
 | `editor_plugin/ui_react_component_registry.gd` | Single source of truth for script-stem → **`UiReact*`** name and per-control **`BINDINGS_BY_COMPONENT`** (edit here when adding a control; **`UiReactScannerService`** and validators consume it). |
 | `editor_plugin/` | Optional Godot editor plugin: bottom dock, split **`ui_react_*_validator.gd`** modules + **`ui_react_validator_service`** façade, quick state creation. |
@@ -379,7 +389,7 @@ If you copy `addons/ui_react/` into another project, re-enable the plugin there 
 
 ## Versioning
 
-The plugin **version** is declared in [`editor_plugin/plugin.cfg`](editor_plugin/plugin.cfg) (`version=`, currently **2.7.0**). Release history and notable changes are tracked in **[`docs/CHANGELOG.md`](docs/CHANGELOG.md)** in this addon folder (so it travels when you copy `addons/ui_react/`).
+The plugin **version** is declared in [`editor_plugin/plugin.cfg`](editor_plugin/plugin.cfg) (`version=`, currently **2.8.0**). Release history and notable changes are tracked in **[`docs/CHANGELOG.md`](docs/CHANGELOG.md)** in this addon folder (so it travels when you copy `addons/ui_react/`).
 
 ## Diagnostics layout
 

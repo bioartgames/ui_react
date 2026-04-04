@@ -35,8 +35,16 @@ var _disabled_state: UiBoolState
 ## Each [UiAnimTarget] sets Trigger, Target NodePath, and animation type; no extra resource files required.
 @export var animation_targets: Array[UiAnimTarget] = []
 
+## Optional node implementing [code]get_animation_selection_index() -> int[/code] for [member UiAnimTarget.selection_slot] filtering.
+@export var animation_selection_provider: NodePath = NodePath()
+
+## Optional one-way write to a [UiFloatState] on [signal BaseButton.pressed].
+@export var press_writes_float_state: UiFloatState
+@export var press_writes_float_value: float = 100.0
+
 func _ready() -> void:
 	pressed.connect(_on_pressed)
+	pressed.connect(_on_press_writes_float)
 	if has_signal(&"toggled"):
 		toggled.connect(_on_toggled)
 	_disconnect_all_states()
@@ -103,6 +111,12 @@ func _on_trigger_toggled(active: bool) -> void:
 
 func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 	UiReactAnimTargetHelper.trigger_animations(self, animation_targets, trigger_type, true, disabled)
+
+
+func _on_press_writes_float() -> void:
+	if press_writes_float_state == null:
+		return
+	press_writes_float_state.set_value(press_writes_float_value)
 
 
 func _on_pressed() -> void:

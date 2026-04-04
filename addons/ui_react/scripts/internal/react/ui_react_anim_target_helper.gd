@@ -1,6 +1,14 @@
 class_name UiReactAnimTargetHelper
 extends RefCounted
 
+## How [method _run_animation_targets] filters [UiAnimTarget] rows.
+enum AnimDispatchMode {
+	## Match [member UiAnimTarget.trigger] and optional [member UiAnimTarget.selection_slot] (signal-driven).
+	TRIGGER,
+	## Ignore triggers; run listed targets with disabled gating only (e.g. [method UiReactItemList.play_selected_row_animation]).
+	MANUAL,
+}
+
 ## Result of [method validate_and_map_triggers] (typed container; avoids stringly dictionary keys).
 class AnimTargetValidationResult:
 	extends RefCounted
@@ -85,15 +93,107 @@ static func connect_if_absent(sig: Signal, callable: Callable) -> void:
 	if not sig.is_connected(callable):
 		sig.connect(callable)
 
-static func trigger_animations(owner: Node, animation_targets: Array[UiAnimTarget], trigger_type: UiAnimTarget.Trigger, respects_disabled: bool = false, is_disabled: bool = false) -> void:
-	if animation_targets.is_empty():
-		return
 
-	for anim_target in animation_targets:
+static func _read_animation_selection_provider_path(owner: Node) -> NodePath:
+	if not (owner is Control):
+		return NodePath()
+	var c := owner as Control
+	for p in c.get_property_list():
+		if p.get("name") == &"animation_selection_provider":
+			var v: Variant = c.get(&"animation_selection_provider")
+			if v is NodePath:
+				return v as NodePath
+			return NodePath()
+	return NodePath()
+
+
+## Returns [code]{ "use_filter": bool, "index": int }[/code] for [member UiAnimTarget.selection_slot] filtering.
+static func _resolve_selection_index(owner: Node) -> Dictionary:
+	var out := {"use_filter": false, "index": -1}
+	var path := _read_animation_selection_provider_path(owner)
+	if path.is_empty():
+		return out
+	var provider := owner.get_node_or_null(path)
+	if provider == null:
+		if not owner.has_meta(&"_ui_react_anim_sel_warn_missing"):
+			owner.set_meta(&"_ui_react_anim_sel_warn_missing", true)
+			push_warning(
+				"UiReactAnimTargetHelper: animation_selection_provider path '%s' could not be resolved from '%s'."
+				% [path, owner.name]
+			)
+		return out
+	if not provider.has_method(&"get_animation_selection_index"):
+		if not owner.has_meta(&"_ui_react_anim_sel_warn_method"):
+			owner.set_meta(&"_ui_react_anim_sel_warn_method", true)
+			push_warning(
+				"UiReactAnimTargetHelper: node at '%s' has no get_animation_selection_index() for animation_selection_provider."
+				% path
+			)
+		return out
+	out.use_filter = true
+	out.index = int(provider.call(&"get_animation_selection_index"))
+	return out
+
+
+static func _run_animation_targets(
+	owner: Node,
+	candidates: Array[UiAnimTarget],
+	mode: AnimDispatchMode,
+	trigger_type: UiAnimTarget.Trigger,
+	selection_index: int,
+	use_selection_filter: bool,
+	respects_disabled: bool,
+	is_disabled: bool,
+) -> void:
+	for anim_target in candidates:
 		if anim_target == null:
 			continue
-		if anim_target.trigger != trigger_type:
-			continue
+		if mode == AnimDispatchMode.TRIGGER:
+			if anim_target.trigger != trigger_type:
+				continue
+			if use_selection_filter:
+				var slot: int = anim_target.selection_slot
+				if slot >= 0 and slot != selection_index:
+					continue
 		if respects_disabled and anim_target.respect_disabled and is_disabled:
 			continue
 		anim_target.apply(owner)
+
+
+## Runs [param candidates] without matching [member UiAnimTarget.trigger] (manual row play, etc.).
+static func run_manual_targets(
+	owner: Node,
+	candidates: Array[UiAnimTarget],
+	respects_disabled: bool = false,
+	is_disabled: bool = false,
+) -> void:
+	if candidates.is_empty():
+		return
+	_run_animation_targets(
+		owner,
+		candidates,
+		AnimDispatchMode.MANUAL,
+		UiAnimTarget.Trigger.PRESSED,
+		-1,
+		false,
+		respects_disabled,
+		is_disabled,
+	)
+
+
+static func trigger_animations(owner: Node, animation_targets: Array[UiAnimTarget], trigger_type: UiAnimTarget.Trigger, respects_disabled: bool = false, is_disabled: bool = false) -> void:
+	if animation_targets.is_empty():
+		return
+	var sel: Dictionary = _resolve_selection_index(owner)
+	var idx: int = int(sel.get("index", -1))
+	var use_filter: bool = bool(sel.get("use_filter", false))
+	_run_animation_targets(
+		owner,
+		animation_targets,
+		AnimDispatchMode.TRIGGER,
+		trigger_type,
+		idx,
+		use_filter,
+		respects_disabled,
+		is_disabled,
+	)

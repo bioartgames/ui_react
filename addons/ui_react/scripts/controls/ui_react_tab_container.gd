@@ -34,6 +34,9 @@ var _tab_config: UiTabContainerCfg
 ## **Optional** — Inspector-driven tweens (selection changed, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
+## Optional node implementing [code]get_animation_selection_index() -> int[/code] for [member UiAnimTarget.selection_slot] filtering.
+@export var animation_selection_provider: NodePath = NodePath()
+
 var _previous_tab_index: int = -1
 
 func _ready() -> void:
