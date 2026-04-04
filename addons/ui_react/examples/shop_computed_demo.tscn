@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3 uid="uid://bhrsm6wi0v4s"]
+[gd_scene load_steps=20 format=3 uid="uid://bhrsm6wi0v4s"]
 
 [ext_resource type="Script" uid="uid://c23k4pmtnl3sm" path="res://addons/ui_react/examples/shop_computed_demo.gd" id="0_shop"]
 [ext_resource type="Script" uid="uid://cy1vsor6ek3xr" path="res://addons/ui_react/scripts/api/models/ui_float_state.gd" id="1_fl"]
@@ -6,7 +6,6 @@
 [ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://addons/ui_react/scripts/controls/ui_react_slider.gd" id="3_sl"]
 [ext_resource type="Script" uid="uid://dhntoxb5f7chr" path="res://addons/ui_react/scripts/controls/ui_react_rich_text_label.gd" id="4_rich"]
 [ext_resource type="Script" uid="uid://lv5ixpw5hlvp" path="res://addons/ui_react/scripts/controls/ui_react_button.gd" id="5_btn"]
-[ext_resource type="Script" uid="uid://dy5qoe773fdne" path="res://addons/ui_react/scripts/controls/ui_react_computed_sync.gd" id="6_sync"]
 [ext_resource type="Script" uid="uid://ch6m8b48u340x" path="res://addons/ui_react/examples/shop_computed_afford.gd" id="7_aff"]
 [ext_resource type="Script" uid="uid://dbh65kk1hltrx" path="res://addons/ui_react/examples/shop_computed_buy_disabled.gd" id="8_dis"]
 [ext_resource type="Script" uid="uid://cbi7k8j508tvj" path="res://addons/ui_react/examples/shop_computed_status.gd" id="9_stat"]
@@ -62,24 +61,6 @@ script = ExtResource("0_shop")
 gold_state = SubResource("gold")
 price_state = SubResource("price")
 quantity_state = SubResource("qty")
-
-[node name="SyncAfford" type="Control" parent="."]
-anchors_preset = 0
-mouse_filter = 2
-script = ExtResource("6_sync")
-computed = SubResource("afford")
-
-[node name="SyncBuyDisabled" type="Control" parent="."]
-anchors_preset = 0
-mouse_filter = 2
-script = ExtResource("6_sync")
-computed = SubResource("buy_dis")
-
-[node name="SyncStatus" type="Control" parent="."]
-anchors_preset = 0
-mouse_filter = 2
-script = ExtResource("6_sync")
-computed = SubResource("status")
 
 [node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 1

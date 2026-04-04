@@ -49,8 +49,12 @@ func _ready() -> void:
 
 
 func _disconnect_all_states() -> void:
+	if _checked_state != null:
+		UiReactComputedService.hook_unbind(_checked_state, self, &"checked_state")
 	if _checked_state != null and _checked_state.value_changed.is_connected(_on_checked_state_changed):
 		_checked_state.value_changed.disconnect(_on_checked_state_changed)
+	if _disabled_state != null:
+		UiReactComputedService.hook_unbind(_disabled_state, self, &"disabled_state")
 	if _disabled_state != null and _disabled_state.value_changed.is_connected(_on_disabled_state_changed):
 		_disabled_state.value_changed.disconnect(_on_disabled_state_changed)
 
@@ -59,9 +63,11 @@ func _connect_all_states() -> void:
 	if _checked_state != null:
 		_checked_state.value_changed.connect(_on_checked_state_changed)
 		_on_checked_state_changed(_checked_state.get_value(), _checked_state.get_value())
+		UiReactComputedService.hook_bind(_checked_state, self, &"checked_state")
 	if _disabled_state != null:
 		_disabled_state.value_changed.connect(_on_disabled_state_changed)
 		_on_disabled_state_changed(_disabled_state.get_value(), _disabled_state.get_value())
+		UiReactComputedService.hook_bind(_disabled_state, self, &"disabled_state")
 
 
 ## Validates animation targets and filters out invalid ones.

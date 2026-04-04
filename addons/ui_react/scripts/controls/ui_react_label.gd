@@ -30,6 +30,8 @@ func _ready() -> void:
 
 
 func _disconnect_all_states() -> void:
+	if _text_state != null:
+		UiReactComputedService.hook_unbind(_text_state, self, &"text_state")
 	if _text_state != null and _text_state.value_changed.is_connected(_on_text_state_changed):
 		_text_state.value_changed.disconnect(_on_text_state_changed)
 	_rebind_nested_states(null)
@@ -39,6 +41,7 @@ func _connect_all_states() -> void:
 	if _text_state != null:
 		_text_state.value_changed.connect(_on_text_state_changed)
 		_on_text_state_changed(_text_state.get_value(), _text_state.get_value())
+		UiReactComputedService.hook_bind(_text_state, self, &"text_state")
 
 
 ## Validates animation targets and filters out invalid ones.

@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://lp6x0p7wqckg"]
+[gd_scene load_steps=16 format=3 uid="uid://lp6x0p7wqckg"]
 
 [ext_resource type="Script" uid="uid://c1jlkpahxxnpi" path="res://addons/ui_react/scripts/api/models/ui_transactional_state.gd" id="1_txn"]
 [ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://addons/ui_react/scripts/controls/ui_react_slider.gd" id="2_sl"]
@@ -7,7 +7,6 @@
 [ext_resource type="Script" uid="uid://ddkpdoxca60md" path="res://addons/ui_react/scripts/api/models/ui_transactional_group.gd" id="4_grp"]
 [ext_resource type="Script" uid="uid://da03oq3dwj1le" path="res://addons/ui_react/scripts/controls/ui_react_transactional_actions.gd" id="5_act"]
 [ext_resource type="Script" uid="uid://bn8meqr8amxa7" path="res://addons/ui_react/examples/options_status_computed.gd" id="6_status"]
-[ext_resource type="Script" uid="uid://dy5qoe773fdne" path="res://addons/ui_react/scripts/controls/ui_react_computed_sync.gd" id="7_sync"]
 [ext_resource type="Script" uid="uid://bw7gojuop1hic" path="res://addons/ui_react/scripts/controls/ui_react_label.gd" id="8_lbl"]
 [ext_resource type="Resource" uid="uid://b4gdunujg6evw" path="res://addons/ui_react/ui_resources/plugin_generated/MuteToggle_disabled_state_3.tres" id="9_6xi6r"]
 [ext_resource type="Script" uid="uid://dohh71knb8vid" path="res://addons/ui_react/scripts/controls/ui_react_tab_container.gd" id="10_tabs"]
@@ -40,12 +39,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-
-[node name="ComputedSync" type="Control" parent="."]
-anchors_preset = 0
-mouse_filter = 2
-script = ExtResource("7_sync")
-computed = SubResource("status_computed")
 
 [node name="TxnActions" type="Control" parent="."]
 anchors_preset = 0

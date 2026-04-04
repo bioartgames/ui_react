@@ -168,10 +168,11 @@ Paths are under **`res://addons/ui_react/`**.
 | State (abstract base) | `UiState` | `scripts/api/models/ui_state.gd` |
 | State (concrete) | `UiBoolState`, `UiIntState`, `UiFloatState`, `UiStringState`, `UiArrayState`, `UiTransactionalState`, `UiTransactionalGroup` | `scripts/api/models/ui_*_state.gd`, `scripts/api/models/ui_transactional_state.gd`, `scripts/api/models/ui_transactional_group.gd` |
 | State (computed base) | `UiComputedStringState`, `UiComputedBoolState` | `scripts/api/models/ui_computed_string_state.gd`, `scripts/api/models/ui_computed_bool_state.gd` |
+| Computed dependency wiring | `UiReactComputedService` | `scripts/internal/react/ui_react_computed_service.gd` |
 | Inspector animation row | `UiAnimTarget` | `scripts/api/models/ui_anim_target.gd` |
 | Tab / container config | `UiTabContainerCfg` | `scripts/api/models/ui_tab_container_cfg.gd` |
 | Wiring (P5) | `UiReactWireRunner`, `UiReactWireRule` + map / refresh / copy rules, `UiReactWireCatalogData` | `scripts/controls/ui_react_wire_runner.gd`, `scripts/api/models/ui_react_wire_*.gd` |
-| Attachable controls | `UiReact*`, `UiReactTransactionalActions`, `UiReactComputedSync` | `scripts/controls/` |
+| Attachable controls | `UiReact*`, `UiReactTransactionalActions` | `scripts/controls/` |
 
 Prefer **`UiAnimUtils`** for tweens from code; prefer **`UiAnimTarget`** arrays on controls for no-code animation.
 
@@ -194,7 +195,7 @@ Use **`UiTransactionalState`** when you want **working-copy** values on an optio
 | **`cancel_draft()`** / **`reset_to_committed()`** | Copy **`committed_value`** → draft (revert UI). |
 | **`has_pending_changes()`** | `true` when draft and committed differ (see **`UiTransactionalState`** tooltips / script). |
 
-**Runnable example:** **`res://addons/ui_react/examples/options_transactional_demo.tscn`** — master volume (**`HSlider`** + **`UiReactSlider`**) and mute (**`CheckBox`** + **`UiReactCheckBox`**) share transactional resources; **Apply** / **Cancel** are wired through **`UiReactTransactionalActions`** to a **`UiTransactionalGroup`** (no per-scene apply/cancel loops). The demo status line uses **`UiReactLabel`** + a **`UiComputedStringState`** subclass with **`UiReactComputedSync`** so draft / committed / pending text stays in sync (see **Computed state**).
+**Runnable example:** **`res://addons/ui_react/examples/options_transactional_demo.tscn`** — master volume (**`HSlider`** + **`UiReactSlider`**) and mute (**`CheckBox`** + **`UiReactCheckBox`**) share transactional resources; **Apply** / **Cancel** are wired through **`UiReactTransactionalActions`** to a **`UiTransactionalGroup`** (no per-scene apply/cancel loops). The demo status line uses **`UiReactLabel`** + a **`UiComputedStringState`** subclass on **`text_state`** so draft / committed / pending text stays in sync (see **Computed state**).
 
 ### Transactional batch orchestration (`UiTransactionalGroup` + `UiReactTransactionalActions`)
 
@@ -206,7 +207,7 @@ When one screen has **several** `UiTransactionalState` resources and a single **
 4. Assign **`group`** to that `UiTransactionalGroup`.
 5. Set **`apply_button_path`** and **`cancel_button_path`** as `NodePath`s **relative to the `UiReactTransactionalActions` node** (example: `../VBox/OptionsTabs/AudioPanel/AudioVBox/ButtonRow/ApplyButton` in **`options_transactional_demo.tscn`**).
 6. Leave **`begin_on_ready`** `true` to call **`begin_edit_all()`** once when the scene enters the tree, unless you start the edit session from code.
-7. **Read-only summary line:** prefer a **`UiComputedStringState`** subclass plus **`UiReactComputedSync`** (see **Computed state**) so the label tracks draft / committed transactional values without scene glue. Alternatively, use a **`UiStringState`** and call **`set_value()`** from code. Do **not** assign **`Label.text`** directly if the label uses **`UiReactLabel`**, or **`RichTextLabel.text`** if it uses **`UiReactRichTextLabel`**.
+7. **Read-only summary line:** prefer a **`UiComputedStringState`** subclass assigned to the label’s **`text_state`** (see **Computed state**) so the label tracks draft / committed transactional values without scene glue. Alternatively, use a **`UiStringState`** and call **`set_value()`** from code. Do **not** assign **`Label.text`** directly if the label uses **`UiReactLabel`**, or **`RichTextLabel.text`** if it uses **`UiReactRichTextLabel`**.
 
 **API — `UiTransactionalGroup`:** `begin_edit_all()`, `apply_all()`, `cancel_all()`, `has_pending_changes()`.
 
@@ -221,12 +222,14 @@ Use a **`UiComputedStringState`** or **`UiComputedBoolState`** **subclass** when
 | Piece | Role |
 |-------|------|
 | **`UiComputedStringState`**, **`UiComputedBoolState`** | Base **`@abstract`** resources; implement **`compute_string()`** / **`compute_bool()`** and call **`recompute()`** to **`set_value()`** from the result. |
-| **`UiReactComputedSync`** | **`Control`** placed in the scene; assign its **`computed`** export to your subclass instance. It connects each non-null **`sources`** entry’s **`value_changed`** and **`changed`** signals and calls **`recompute()`**, and disconnects in **`_exit_tree()`**. |
-| **Dependency cap** | At most **32** **`sources`** entries are subscribed; extras are ignored with an editor warning. |
+| **`UiReactComputedService`** | Runtime wiring when a computed resource is assigned to a **`UiReact*`** binding (e.g. **`text_state`**, **`checked_state`**): subscribes to **`Resource.changed`** on each non-null **`sources`** entry (and nested computeds), coalesces **`recompute()`** to once per frame. Editor: no runtime wiring. |
+| **Dependency cap** | At most **32** **`sources`** entries are subscribed; extras are ignored with a warning. |
 
 **Transactional + computed:** inside **`compute_*`**, read **`UiTransactionalState`** with **`get_draft_value()`**, **`get_committed_value()`**, and **`has_pending_changes()`** as needed—use **one** transactional resource per field in **`sources`**, not separate “draft” vs “committed” nodes.
 
 **Examples:** **`res://addons/ui_react/examples/shop_computed_demo.tscn`** (+ **`shop_computed_demo.gd`** — Buy / **CB-006**; status line **`UiReactRichTextLabel`** + **`ShopComputedStatus`** BBCode); **`res://addons/ui_react/examples/options_transactional_demo.tscn`** (status line).
+
+**Dock:** a **WARNING** appears when a **`UiComputed*`** has **`sources`** but is not assigned to a registry **`UiReact*`** binding and is not only used as a nested source of another computed (**`UiReactComputedValidator`**).
 
 ---
 

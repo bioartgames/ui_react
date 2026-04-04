@@ -23,7 +23,7 @@ Normative split (mirror style of [`WIRING_LAYER.md`](WIRING_LAYER.md) §2):
 | **Controls** | `*_state`, `animation_targets`, **`action_targets`** | user input | via bindings to state | — |
 | **State** | payload | — | committed / draft / computed | — |
 | **Wiring (P5)** | `wire_rules` / runner | controls + state | **`UiState`** per narrow wire rules | grab_focus, visibility orchestration, `UiAnimUtils` |
-| **Actions (P6.1)** | **`action_targets`** | host control subtree | **presentation only**: focus, visibility, **`Control.mouse_filter`**, **narrow** `UiBoolState` UI flags per **`UiReactActionKind`** | **Any** animation or tween (`UiAnimTarget`, `UiAnimUtils`), catalog/shop/domain, network, arbitrary scripts, replacing `UiReactComputedSync` / transactional Apply |
+| **Actions (P6.1)** | **`action_targets`** | host control subtree | **presentation only**: focus, visibility, **`Control.mouse_filter`**, **narrow** `UiBoolState` UI flags per **`UiReactActionKind`** | **Any** animation or tween (`UiAnimTarget`, `UiAnimUtils`), catalog/shop/domain, network, arbitrary scripts, transactional Apply, or domain logic outside P6.1 |
 
 **Wiring** answers: “**what data should this screen reflect?**”  
 **Actions** answer: “**what should the UI chrome do right now (non-motion)?**”  

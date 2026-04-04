@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Breaking
 
+- **Computed wiring:** removed **`UiReactComputedSync`**. Assign **`UiComputedStringState`** / **`UiComputedBoolState`** subclasses to **`UiReact*`** exports (e.g. **`text_state`**, **`checked_state`**); **`UiReactComputedService`** wires **`sources`** at runtime. Nested computeds (sources of other computeds) are wired automatically.
 - **`UiAnimTarget`:** renamed **`preamble_reset_duration`** → **`reset_duration`**, **`await_preamble_before_main`** → **`wait_after_reset`**. Re-save scenes/subresources that referenced the old property names.
 - **`UiReact*`** controls: removed **`animation_selection_provider`**. **`selection_slot`** filtering uses **`get_animation_selection_index()`** on the **same** host when any **`animation_targets`** row uses **`selection_slot >= 0`**.
 - **`UiReactItemList`:** removed **`row_play_preamble_reset`**, **`row_play_soft_reset_duration`**, **`preamble_reset_target`**. Use **`UiAnimTarget.reset_duration`** / **`wait_after_reset`** per row instead.
@@ -16,6 +17,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - **`UiAnimTarget`:** **`reset_duration`**, **`wait_after_reset`**; **`apply_with_preamble()`**, **`apply_preamble_reset_only()`**.
+- **`UiReactComputedService`** (`scripts/internal/react/ui_react_computed_service.gd`): refcounted dependency wiring for bound computeds; one **`recompute()`** per computed per frame (deferred).
+- **Editor:** dock **WARNING** via **`UiReactComputedValidator`** when a **`UiComputed*`** has **`sources`** but is neither bound to a registry **`UiReact*`** export nor only nested as another computed’s source.
 - **`UiReactTree`:** **`get_animation_selection_index()`** (visible pre-order index) for **`selection_slot`** filtering.
 - **`UiReactButton`** / **`UiReactTextureButton`:** **`press_writes_float_state`** + **`press_writes_float_value`** for one-way float writes on press.
 - **Editor:** dock **`animation_targets`** **`selection_slot`** vs **`item_count`** on **`UiReactItemList`** (**`UiReactAnimValidator`**).
@@ -26,7 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **`UiAnimTarget`:** Inspector **`@export`** order is **`target`** → **`selection_slot`** → **`trigger`** → **`reset_duration`** / **`wait_after_reset`** → **`animation`**, then timing and behavior.
 - **`UiReactAnimTargetHelper`:** **`collect_animation_targets_for_row_slot`**; **`UiReactItemList`** row play uses **`animation_targets`** + **`selection_slot`** only.
 - **`UiReactAnimTargetHelper.trigger_animations`:** resolves selection index from the host when slot gating is used (no external provider node).
-- **Reactivity:** `UiReactComputedSync` and `UiReactWireRunner` listen to **`Resource.changed` only** on `UiState` dependencies (avoids double work from `value_changed` + `emit_changed` on the same update).
+- **Reactivity:** `UiReactWireRunner` listens to **`Resource.changed` only** on `UiState` dependencies where applicable; **`UiReactComputedService`** uses **`Resource.changed`** on computed **`sources`**.
 - **Wiring:** `UiReactWireRule.trigger` uses **`UiReactWireRule.TriggerKind`** (`TEXT_CHANGED = 5`, `SELECTION_CHANGED = 6`, `TEXT_ENTERED = 13`) so wiring does not depend on `UiAnimTarget.Trigger`; existing saved ints stay valid.
 - **Catalog rule:** `UiReactWireRefreshItemsFromCatalog.first_row_icon_path` applies to the **first row after filters**, not catalog row 0 only.
 - **`UiTransactionalState`:** `set_value` / `set_silent` clone array/dictionary drafts like other states.

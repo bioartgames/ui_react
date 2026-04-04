@@ -105,7 +105,7 @@ Exactly **three** concrete subclasses ship in the first wiring implementation (*
 ## 8. Interaction with computed and transactional
 
 - Wires **may read** computed or transactional **state** values.
-- Wires **must not** replace **`UiReactComputedSync`** or how computed sources are declared.
+- Wires **must not** replace **`UiReactComputedService`** wiring for computed **`sources`** (computed resources are bound via **`UiReact*`** exports, not **`wire_rules`**).
 - Wires **must not** replace **`UiTransactionalGroup`** / **Apply** / **Cancel** semantics.
 - Wires **may** listen to `UiBoolState` (e.g. lock toggles) for **UI-only** side effects.
 
