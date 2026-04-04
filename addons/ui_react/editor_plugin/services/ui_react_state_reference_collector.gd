@@ -57,6 +57,16 @@ static func _register_states_from_wire_rule(rule: UiReactWireRule, out_paths: Di
 		_register_state_path(r3.items_state, out_paths)
 		_register_state_path(r3.detail_state, out_paths)
 		_register_state_path(r3.suffix_note_state, out_paths)
+	elif rule is UiReactWireSetStringOnBoolPulse:
+		var r4 := rule as UiReactWireSetStringOnBoolPulse
+		_register_state_path(r4.pulse_bool, out_paths)
+		_register_state_path(r4.target_string_state, out_paths)
+		_register_state_path(r4.selected_state, out_paths)
+		_register_state_path(r4.items_state, out_paths)
+	elif rule is UiReactWireSyncBoolStateDebugLine:
+		var r5 := rule as UiReactWireSyncBoolStateDebugLine
+		_register_state_path(r5.bool_state, out_paths)
+		_register_state_path(r5.target_string_state, out_paths)
 
 
 static func _register_state_path(state: UiState, out_paths: Dictionary) -> void:

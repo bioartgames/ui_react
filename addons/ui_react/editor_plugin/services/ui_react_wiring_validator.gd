@@ -38,7 +38,7 @@ static func validate_wire_rules(
 					component,
 					str(owner.name),
 					"wire_rules[%d] must be a UiReactWireRule (got %s)." % [i, UiReactValidatorCommon.variant_type_name(item)],
-					"Assign a MapIntToString, RefreshItemsFromCatalog, or CopySelectionDetail rule resource.",
+					"Assign a UiReactWireRule subresource (MapIntToString, RefreshItemsFromCatalog, CopySelectionDetail, SetStringOnBoolPulse, SyncBoolStateDebugLine).",
 					node_path,
 					&"wire_rules",
 					&"",
@@ -61,6 +61,14 @@ static func validate_wire_rules(
 		elif rule is UiReactWireCopySelectionDetail:
 			out.append_array(
 				_validate_wire_rule_copy_detail(rule as UiReactWireCopySelectionDetail, component, owner, node_path, i)
+			)
+		elif rule is UiReactWireSetStringOnBoolPulse:
+			out.append_array(
+				_validate_wire_rule_bool_pulse(rule as UiReactWireSetStringOnBoolPulse, component, owner, node_path, i)
+			)
+		elif rule is UiReactWireSyncBoolStateDebugLine:
+			out.append_array(
+				_validate_wire_rule_bool_debug_line(rule as UiReactWireSyncBoolStateDebugLine, component, owner, node_path, i)
 			)
 	return out
 
@@ -208,6 +216,86 @@ static func _validate_wire_rule_copy_detail(
 			_wire_rules_issue(
 				component, owner, node_path, index_i, "suffix_note_state must be UiStringState when set.", "Assign UiStringState or clear."
 			)
+		)
+	return out
+
+
+static func _validate_wire_rule_bool_pulse(
+	rule: UiReactWireSetStringOnBoolPulse, component: String, owner: Control, node_path: NodePath, index_i: int
+) -> Array[UiReactDiagnosticModel.DiagnosticIssue]:
+	var out: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
+	if rule.pulse_bool == null:
+		out.append(_wire_rules_issue(component, owner, node_path, index_i, "pulse_bool is required.", "Assign UiBoolState."))
+	elif not (rule.pulse_bool is UiBoolState):
+		out.append(
+			_wire_rules_issue(component, owner, node_path, index_i, "pulse_bool must be UiBoolState.", "Assign UiBoolState.")
+		)
+	if rule.target_string_state == null:
+		out.append(_wire_rules_issue(component, owner, node_path, index_i, "target_string_state is required.", "Assign UiStringState."))
+	elif not (rule.target_string_state is UiStringState):
+		out.append(
+			_wire_rules_issue(component, owner, node_path, index_i, "target_string_state must be UiStringState.", "Assign UiStringState.")
+		)
+	var has_no_sel := not rule.template_no_selection.strip_edges().is_empty()
+	var has_rising := not rule.template_rising.strip_edges().is_empty()
+	if not has_no_sel and not has_rising:
+		out.append(
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"SetStringOnBoolPulse needs template_rising and/or template_no_selection.",
+				"Set at least one non-empty template string.",
+			)
+		)
+	if has_no_sel:
+		if rule.selected_state == null:
+			out.append(
+				_wire_rules_issue(
+					component, owner, node_path, index_i, "template_no_selection requires selected_state.", "Assign UiIntState for row lookup."
+				)
+			)
+		elif not (rule.selected_state is UiIntState):
+			out.append(
+				_wire_rules_issue(component, owner, node_path, index_i, "selected_state must be UiIntState.", "Assign UiIntState.")
+			)
+		if rule.items_state == null:
+			out.append(
+				_wire_rules_issue(
+					component, owner, node_path, index_i, "template_no_selection requires items_state.", "Assign UiArrayState for row lookup."
+				)
+			)
+		elif not (rule.items_state is UiArrayState):
+			out.append(
+				_wire_rules_issue(component, owner, node_path, index_i, "items_state must be UiArrayState.", "Assign UiArrayState.")
+			)
+	if rule.selected_state != null and not (rule.selected_state is UiIntState):
+		out.append(
+			_wire_rules_issue(component, owner, node_path, index_i, "selected_state must be UiIntState when set.", "Assign UiIntState or clear.")
+		)
+	if rule.items_state != null and not (rule.items_state is UiArrayState):
+		out.append(
+			_wire_rules_issue(component, owner, node_path, index_i, "items_state must be UiArrayState when set.", "Assign UiArrayState or clear.")
+		)
+	return out
+
+
+static func _validate_wire_rule_bool_debug_line(
+	rule: UiReactWireSyncBoolStateDebugLine, component: String, owner: Control, node_path: NodePath, index_i: int
+) -> Array[UiReactDiagnosticModel.DiagnosticIssue]:
+	var out: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
+	if rule.bool_state == null:
+		out.append(_wire_rules_issue(component, owner, node_path, index_i, "bool_state is required.", "Assign UiBoolState."))
+	elif not (rule.bool_state is UiBoolState):
+		out.append(
+			_wire_rules_issue(component, owner, node_path, index_i, "bool_state must be UiBoolState.", "Assign UiBoolState.")
+		)
+	if rule.target_string_state == null:
+		out.append(_wire_rules_issue(component, owner, node_path, index_i, "target_string_state is required.", "Assign UiStringState."))
+	elif not (rule.target_string_state is UiStringState):
+		out.append(
+			_wire_rules_issue(component, owner, node_path, index_i, "target_string_state must be UiStringState.", "Assign UiStringState.")
 		)
 	return out
 

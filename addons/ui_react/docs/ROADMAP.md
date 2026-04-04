@@ -116,9 +116,9 @@ Not every row is a v1.0 promise; this maps **Megaman-style** UI goals to **phase
 **P5.1 — Wiring core**
 
 - [x] **`UiReactWireRunner`** implemented; **one runner per scene** rule enforced; duplicate-runner **warning** in dock when multiple runners detected (**CB-034**).
-- [x] **`UiReactWireRule`** abstract base + **three** concrete rules named in [`WIRING_LAYER.md`](WIRING_LAYER.md) (MVP rule types §6) shipped.
+- [x] **`UiReactWireRule`** abstract base + concrete rules named in [`WIRING_LAYER.md`](WIRING_LAYER.md) (§6) shipped.
 - [x] **`wire_rules`** export on **P5.1 control set** defined in [`WIRING_LAYER.md`](WIRING_LAYER.md) (§5).
-- [x] **`inventory_screen_demo`** migrated per **exception (documented here):** root script retains **tree construction** (engine `TreeItem` population), **demo-only** pressed-state debug labels, and **optional** `detail_note_state` suffix for **Use/Sort** notes (`inventory_screen_demo.gd`). **All filter / list / detail data wiring** is **`wire_rules` + `UiReactWireRunner`** (stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) §B).
+- [x] **`inventory_screen_demo`** is **fully declarative:** no root script; **tree** from **`tree_items_state`**; filter / list / detail / suffix / debug readouts via **`wire_rules`** + **`UiReactWireRunner`** (stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) §B).
 - [x] README **List patterns** / inventory pointers reference **wiring** for filter+selection patterns.
 - [x] **`CHANGELOG.md`** documents P5.1 + **CB-034** completion in **`[2.7.0]`** (see SemVer policy).
 - [x] **Dock validator** for wired scenes: missing **`UiReactWireRunner`** + duplicate runners; per-rule **wire_rules** export validation (MVP types); **`UiReactTransactionalActions`** in **`UiReactScannerService`**; **wire_rules** **`UiState`** refs in unused-file collector (**CB-034** complete for P5.1 scope; hub checks remain **CB-041**). See [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) §C.
@@ -164,7 +164,7 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-006 | Command pattern **as docs + example** (not mandatory core API) | Shop buy/sell, equip confirm | P1–P2 | Done | README **Imperative actions**; **`shop_computed_demo.gd`** + **`shop_computed_demo.tscn`**. **2.3.0**. No **`UiCommand`** in core. |
 | CB-007 | First-class command resource (e.g. `UiCommand`) | Same | P6+ | Deferred | Only after doc pattern proves shape. |
 | CB-008 | Richer `ItemList` / icons | Inventory, shop list | P3 | Done | **`UiReactItemList`** dictionary rows **`label`/`text`** + optional **`icon`**; **`inventory_screen_demo.tscn`** uses **`res://icon.svg`** on a sample row. **2.3.0**. |
-| CB-009 | Row template / static body pattern (docs + example) | Inventory, shop, loot | P3 | Done | README **List patterns (P3)** + **`inventory_screen_demo.tscn`** / **`inventory_screen_demo.gd`**. **2.2.1**. |
+| CB-009 | Row template / static body pattern (docs + example) | Inventory, shop, loot | P3 | Done | README **List patterns (P3)** + **`inventory_screen_demo.tscn`**. **2.2.1**. |
 | CB-010 | Virtualization / paging | Huge inventories | P6+ | Deferred | Measure need first. |
 | CB-011 | Filtering and sorting recipes (documentation) | Inventory | P2 | Done | Filter recipe in README **List patterns (P3)**; sort left as game-layer exercise. **2.2.1**. |
 | CB-012 | `UiReactTextureButton` or slot helper | Equipment grid, hotbar | P4 | Done | **`UiReactTextureButton`** (`scripts/controls/ui_react_texture_button.gd`); README; **`inventory_screen_demo.tscn`**. **`texture_button_demo`** removed in example consolidation. **2.4.0**. |
@@ -192,7 +192,7 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-034 | **`wire_rules`** export on P5.1 control set + dock/validator + editor parity | Same | P5 | Done | **Shipped:** missing/duplicate runner; MVP **rule export** validation; unused-**`UiState`** scan includes **`wire_rules`** refs; **`UiReactTransactionalActions`** scanner registration (**2.7.0**). **Hub / placement:** **CB-041**. See [`WIRING_LAYER.md`](WIRING_LAYER.md) §9. |
 | CB-035 | Dock **graph or form** editor for wire rules (edits same resources) | N/A | P5.2 | Planned | **After** P5.1; **no** alternate format. |
 | CB-036 | Migrate **`inventory_list_demo`** off orchestration glue | Inventory | Wont | Wont | Scene removed; **`inventory_screen_demo.tscn`** is the canonical inventory example (**CB-037**). |
-| CB-037 | Migrate **`inventory_screen_demo`** off orchestration glue | Inventory | P5 | Done | Filter/list/detail via **`wire_rules`** + **`UiReactWireRunner`**; root script keeps tree build + demo-only notes/labels (ROADMAP P5.1 exception). Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) §B. |
+| CB-037 | Migrate **`inventory_screen_demo`** off orchestration glue | Inventory | P5 | Done | Filter/list/detail/suffix/debug via **`wire_rules`** + **`UiReactWireRunner`**; **no** root script. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) §B. |
 | CB-038 | Migrate remaining examples with root glue (**`shop_computed_demo.gd`**, etc.) only where wiring **replaces** glue without losing teaching value | Demos | P5 | Planned | Standalone **`tree_demo`** / **`texture_button_demo`** removed; coverage lives on **`inventory_screen_demo`**. |
 | CB-039 | **Semantic versioning** policy: wiring API (`UiReactWireRunner`, `UiReactWireRule` subclasses, `wire_rules` shape) is **public**; breaking changes **major** | Releases | P5 | Planned | CHANGELOG + Charter cross-link. |
 | CB-040 | Remove or archive legacy **P5**-plus phase wording repo-wide; **P6+** is only deferred bucket | Docs | P5 | Planned | Grep pass in `addons/ui_react` for the legacy token (no `5` + `+` contiguous in docs). |

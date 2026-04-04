@@ -1,6 +1,5 @@
-[gd_scene load_steps=46 format=3]
+[gd_scene load_steps=56 format=3]
 
-[ext_resource type="Script" path="res://addons/ui_react/examples/inventory_screen_demo.gd" id="1_screen"]
 [ext_resource type="Script" uid="uid://dd4kr4kdd6cnc" path="res://addons/ui_react/scripts/controls/ui_react_tree.gd" id="2_tree"]
 [ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://addons/ui_react/scripts/controls/ui_react_line_edit.gd" id="3_le"]
 [ext_resource type="Script" uid="uid://duphbaan8pk5f" path="res://addons/ui_react/scripts/controls/ui_react_item_list.gd" id="4_il"]
@@ -19,8 +18,10 @@
 [ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_wire_map_int_to_string.gd" id="17_wmap"]
 [ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_wire_refresh_items_from_catalog.gd" id="18_wref"]
 [ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_wire_copy_selection_detail.gd" id="19_wcopy"]
-[ext_resource type="Script" path="res://addons/ui_react/examples/inventory_demo_catalog_wire_data.gd" id="20_catw"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_wire_catalog_data.gd" id="20_wacd"]
 [ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_tree_node.gd" id="21_tnode"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_wire_set_string_on_bool_pulse.gd" id="22_wpulse"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_wire_sync_bool_state_debug_line.gd" id="23_wdbg"]
 
 [sub_resource type="Resource" id="filter_str"]
 script = ExtResource("7_str")
@@ -69,7 +70,8 @@ script = ExtResource("7_str")
 value = ""
 
 [sub_resource type="Resource" id="inv_catalog"]
-script = ExtResource("20_catw")
+script = ExtResource("20_wacd")
+rows = Array[Dictionary]([{ "id": "iron_sword", "name": "Iron Sword", "kind": "weapon", "qty": 1 }, { "id": "heal_pot", "name": "Health Potion", "kind": "consumable", "qty": 3 }, { "id": "oak_wood", "name": "Oak Wood", "kind": "material", "qty": 12 }, { "id": "leather", "name": "Leather Scraps", "kind": "material", "qty": 5 }, { "id": "steel_dagger", "name": "Steel Dagger", "kind": "weapon", "qty": 1 }])
 
 [sub_resource type="Resource" id="tn_all"]
 script = ExtResource("21_tnode")
@@ -137,6 +139,57 @@ selected_state = SubResource("sel_int")
 items_state = SubResource("items_arr")
 detail_state = SubResource("detail_str")
 suffix_note_state = SubResource("detail_suffix_str")
+clear_suffix_on_selection_change = true
+
+[sub_resource type="Resource" id="dbg_use_str"]
+script = ExtResource("7_str")
+value = "use pressed_state: false"
+
+[sub_resource type="Resource" id="dbg_sort_str"]
+script = ExtResource("7_str")
+value = "sort pressed_state: false"
+
+[sub_resource type="Resource" id="dbg_dis_str"]
+script = ExtResource("7_str")
+value = "actions disabled_state: false"
+
+[sub_resource type="Resource" id="wire_use_suffix"]
+script = ExtResource("22_wpulse")
+rule_id = "suffix_on_use"
+pulse_bool = SubResource("use_pressed")
+target_string_state = SubResource("detail_suffix_str")
+selected_state = SubResource("sel_int")
+items_state = SubResource("items_arr")
+template_no_selection = "[Demo] Use — select an item first."
+template_rising = "[Demo] Use — queued for \"{name}\"."
+
+[sub_resource type="Resource" id="wire_sort_suffix"]
+script = ExtResource("22_wpulse")
+rule_id = "suffix_on_sort"
+pulse_bool = SubResource("sort_pressed")
+target_string_state = SubResource("detail_suffix_str")
+template_rising = "[Demo] Sort — no-op (texture button pressed_state)."
+
+[sub_resource type="Resource" id="wire_dbg_use"]
+script = ExtResource("23_wdbg")
+rule_id = "debug_use_pressed"
+bool_state = SubResource("use_pressed")
+target_string_state = SubResource("dbg_use_str")
+line_prefix = "use pressed_state: "
+
+[sub_resource type="Resource" id="wire_dbg_sort"]
+script = ExtResource("23_wdbg")
+rule_id = "debug_sort_pressed"
+bool_state = SubResource("sort_pressed")
+target_string_state = SubResource("dbg_sort_str")
+line_prefix = "sort pressed_state: "
+
+[sub_resource type="Resource" id="wire_dbg_dis"]
+script = ExtResource("23_wdbg")
+rule_id = "debug_actions_disabled"
+bool_state = SubResource("actions_disabled")
+target_string_state = SubResource("dbg_dis_str")
+line_prefix = "actions disabled_state: "
 
 [sub_resource type="Resource" id="action_lock_mousefilter"]
 script = ExtResource("14_action")
@@ -186,13 +239,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_screen")
-selected_state = SubResource("sel_int")
-items_state = SubResource("items_arr")
-detail_note_state = SubResource("detail_suffix_str")
-actions_disabled_state = SubResource("actions_disabled")
-use_pressed_state = SubResource("use_pressed")
-sort_pressed_state = SubResource("sort_pressed")
 
 [node name="WireRunner" type="Node" parent="."]
 script = ExtResource("16_runner")
@@ -298,7 +344,7 @@ selected_state = SubResource("sel_int")
 items_state = SubResource("items_arr")
 animation_targets = Array[ExtResource("13_anim")]([SubResource("anim_list_detail_fade")])
 action_targets = Array[ExtResource("14_action")]([SubResource("action_lock_mousefilter")])
-wire_rules = [SubResource("wire_copy")]
+wire_rules = [SubResource("wire_copy"), SubResource("wire_use_suffix"), SubResource("wire_sort_suffix"), SubResource("wire_dbg_use"), SubResource("wire_dbg_sort"), SubResource("wire_dbg_dis")]
 
 [node name="InputBlocker" type="Control" parent="MainHBox/CenterColumn/ListSlot"]
 layout_mode = 1
@@ -382,12 +428,15 @@ checked_state = SubResource("actions_disabled")
 
 [node name="PressedUseLabel" type="Label" parent="MainHBox/RightColumn"]
 layout_mode = 2
-text = "use pressed_state: —"
+script = ExtResource("5_lbl")
+text_state = SubResource("dbg_use_str")
 
 [node name="PressedSortLabel" type="Label" parent="MainHBox/RightColumn"]
 layout_mode = 2
-text = "sort pressed_state: —"
+script = ExtResource("5_lbl")
+text_state = SubResource("dbg_sort_str")
 
 [node name="DisabledActionsLabel" type="Label" parent="MainHBox/RightColumn"]
 layout_mode = 2
-text = "actions disabled_state: —"
+script = ExtResource("5_lbl")
+text_state = SubResource("dbg_dis_str")

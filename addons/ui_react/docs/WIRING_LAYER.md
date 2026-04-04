@@ -82,11 +82,21 @@ Each `UiReact*` that can **source** wires exposes **at most one** additional exp
 
 ## 6. MVP concrete rule types (P5.1)
 
-Exactly **three** concrete subclasses ship in the first wiring implementation (**capabilities** fixed; field names may vary slightly in code):
+These concrete subclasses ship in the wiring implementation (**capabilities** fixed; field names may vary slightly in code):
 
 1. **`UiReactWireMapIntToString`** — Map an integer source (e.g. tree `selected_state` index) to a **`UiStringState`** via an **editor-authored map** (replaces “tree index → kind” glue).
-2. **`UiReactWireRefreshItemsFromCatalog`** — When filter string + optional category string + **catalog reference** change, write **`UiArrayState`** line payloads. **Catalog data lives in the game project** (Resource or documented constant resource); the addon does **not** ship game catalogs (**Non-goals**).
-3. **`UiReactWireCopySelectionDetail`** — When list selection index changes, format **`UiStringState`** detail text (format string + paths to row data / catalog indices).
+2. **`UiReactWireRefreshItemsFromCatalog`** — When filter string + optional category string + **catalog reference** change, write **`UiArrayState`** line payloads. **Catalog data lives in the game project** (Resource or documented constant resource); the addon does **not** ship game catalogs (**Non-goals**). Official **`inventory_screen_demo`** stores demo rows on **`UiReactWireCatalogData.rows`** in the scene—no separate demo **`RefCounted`** const.
+3. **`UiReactWireCopySelectionDetail`** — When list selection / items / optional suffix change, format **`UiStringState`** detail text. Optional **`suffix_note_state`** merges a second line; **`clear_suffix_on_selection_change`** (default **true**) clears that suffix when **`selected_state`** changes so transient notes do not stick across rows (runner clears before recomputing).
+4. **`UiReactWireSetStringOnBoolPulse`** — On **`UiBoolState.value_changed`**, optionally on a **rising edge** to `true`, writes **`UiStringState`** using **`{name}`**, **`{kind}`**, **`{qty}`** placeholders resolved from **`selected_state`** + **`items_state`** (same row dictionaries as copy-detail). Use **`template_no_selection`** when you need a fallback when no row / no name (e.g. **Use**); use **`template_rising`** alone for a fixed line (e.g. **Sort**).
+5. **`UiReactWireSyncBoolStateDebugLine`** — Writes **`line_prefix` + `str(bool_state.get_value())`** into a **`UiStringState`** when the bool changes (and once when wires register). For **readout** / demo labels; bind a **`UiReactLabel.text_state`** to the same **`UiStringState`**.
+
+### 6.1 Recipes (no root glue script)
+
+- **Transient suffix under detail:** **`UiReactWireCopySelectionDetail`** with **`suffix_note_state`** + **`clear_suffix_on_selection_change`**. Optionally add **`UiReactWireSetStringOnBoolPulse`** rules that write the **same** **`suffix_note_state`** from action **`UiBoolState`**s (rising edge).
+- **Bool pulse feedback:** One **`UiReactWireSetStringOnBoolPulse`** per pulse source; point **`target_string_state`** at the suffix (or any **`UiStringState`**).
+- **Debug bool snapshot:** **`UiReactWireSyncBoolStateDebugLine`** + **`UiReactLabel`** + **`text_state`**.
+
+Official **`inventory_screen_demo`** uses only **`wire_rules`** on **`UiReact*`** nodes and **`UiReactWireRunner`**—**no** scene root script.
 
 ---
 
@@ -130,7 +140,7 @@ When **any** descendant `UiReact*` has `wire_rules.size() > 0` **or** an `UiReac
 
 | Milestone | Contents |
 |-----------|----------|
-| **P5.1** | `UiReactWireRunner`; `UiReactWireRule` + **three** concrete rules (§6); `wire_rules` on §5 control set; dock diagnostics for missing runner; migrate **`inventory_screen_demo`** off orchestration glue (**CB-037**; **CB-036** referred to removed **`inventory_list_demo`**). |
+| **P5.1** | `UiReactWireRunner`; `UiReactWireRule` + concrete rules (§6); `wire_rules` on §5 control set; dock diagnostics for missing runner; **`inventory_screen_demo`** is **inspector-only** (no root glue script). |
 | **P5.1.b** | Optional **`UiReactWireHub`** + runner aggregation + dedup + validator (**CB-041**). |
 | **P5.2** | Dock **form or graph** UI that edits **only** existing `UiReactWireRule` subresources—**no second on-disk format** (**CB-035**). |
 

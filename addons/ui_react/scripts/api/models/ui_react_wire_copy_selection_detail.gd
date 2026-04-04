@@ -8,6 +8,8 @@ extends UiReactWireRule
 ## Optional second line (e.g. demo “Use” note); when it changes, runner re-runs this rule.
 @export var suffix_note_state: UiStringState
 @export var text_no_selection: String = "No selection."
+## When [code]true[/code], the runner clears [member suffix_note_state] whenever [member selected_state] changes, before recomputing the detail line (avoids stale toasts).
+@export var clear_suffix_on_selection_change: bool = true
 
 
 func apply(_source: Node) -> void:
@@ -15,21 +17,7 @@ func apply(_source: Node) -> void:
 		return
 	var idx: int = int(selected_state.get_value())
 	var items: Array = items_state.get_value() if items_state != null else []
-	var base := text_no_selection
-	if idx >= 0 and idx < items.size():
-		var entry: Variant = items[idx]
-		if entry is Dictionary:
-			var d: Dictionary = entry as Dictionary
-			if d.has("name") or d.has("kind"):
-				base = "Selected: %s — %s (qty %s)" % [
-					str(d.get("name", "")),
-					str(d.get("kind", "")),
-					str(d.get("qty", 1)),
-				]
-			else:
-				base = "Selected: %s" % str(d.get("label", d.get("text", str(entry))))
-		else:
-			base = "Selected: %s" % str(entry)
+	var base := UiReactWireTemplate.selection_detail_base(idx, items, text_no_selection)
 	if suffix_note_state != null:
 		var note := str(suffix_note_state.get_value()).strip_edges()
 		if not note.is_empty():

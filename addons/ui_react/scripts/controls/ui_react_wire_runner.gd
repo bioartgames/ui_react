@@ -85,6 +85,10 @@ func _bind_entry(e: Dictionary) -> void:
 		_bind_refresh_items(n, rule as UiReactWireRefreshItemsFromCatalog)
 	elif rule is UiReactWireCopySelectionDetail:
 		_bind_copy_detail(n, rule as UiReactWireCopySelectionDetail)
+	elif rule is UiReactWireSetStringOnBoolPulse:
+		_bind_set_string_on_bool_pulse(n, rule as UiReactWireSetStringOnBoolPulse)
+	elif rule is UiReactWireSyncBoolStateDebugLine:
+		_bind_sync_bool_debug_line(n, rule as UiReactWireSyncBoolStateDebugLine)
 
 
 ## Godot passes **signal arguments first**, then bound args — so do not use [method Callable.bind] with
@@ -162,12 +166,38 @@ func _bind_refresh_items(n: Node, rule: UiReactWireRefreshItemsFromCatalog) -> v
 
 
 func _bind_copy_detail(n: Node, rule: UiReactWireCopySelectionDetail) -> void:
-	var cb := _make_rule_cb(rule, n)
+	var apply_cb := _make_rule_cb(rule, n)
+	var sel_cb := func (_nv: Variant = null, _ov: Variant = null) -> void:
+		if rule.clear_suffix_on_selection_change and rule.suffix_note_state != null:
+			rule.suffix_note_state.set_value("")
+		if not is_inside_tree():
+			return
+		if not is_instance_valid(n):
+			return
+		_apply_rule({"node": n, "rule": rule})
 	if rule.trigger == UiReactWireRule.TriggerKind.SELECTION_CHANGED and n is ItemList:
-		_safe_connect((n as ItemList).item_selected, cb)
+		_safe_connect((n as ItemList).item_selected, sel_cb)
 	if rule.items_state != null:
-		_safe_connect(rule.items_state.changed, cb)
-	if rule.selected_state != null:
-		_safe_connect(rule.selected_state.changed, cb)
+		_safe_connect(rule.items_state.changed, apply_cb)
 	if rule.suffix_note_state != null:
-		_safe_connect(rule.suffix_note_state.changed, cb)
+		_safe_connect(rule.suffix_note_state.changed, apply_cb)
+	if rule.selected_state != null:
+		_safe_connect(rule.selected_state.changed, sel_cb)
+
+
+func _bind_set_string_on_bool_pulse(n: Node, rule: UiReactWireSetStringOnBoolPulse) -> void:
+	if rule.pulse_bool == null:
+		return
+	var cb := func (new_val: Variant, old_val: Variant) -> void:
+		if not is_inside_tree():
+			return
+		if not is_instance_valid(n):
+			return
+		rule.apply_from_pulse(n, new_val, old_val)
+	_safe_connect(rule.pulse_bool.value_changed, cb)
+
+
+func _bind_sync_bool_debug_line(n: Node, rule: UiReactWireSyncBoolStateDebugLine) -> void:
+	var cb := _make_rule_cb(rule, n)
+	if rule.bool_state != null:
+		_safe_connect(rule.bool_state.value_changed, cb)

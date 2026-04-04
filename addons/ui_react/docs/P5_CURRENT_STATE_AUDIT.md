@@ -2,7 +2,7 @@
 
 **Purpose:** Doc-driven pass/fail checklist for **P5.1** exit honesty and gates for **P5.1.b** / **P5.2**. Authority: [`WIRING_LAYER.md`](WIRING_LAYER.md) → [`ROADMAP.md`](ROADMAP.md) → [`CHANGELOG.md`](../CHANGELOG.md).
 
-**Last run:** 2026-04-03 (post–**2.7.0** CB-034 + ui_react hardening batch).
+**Last run:** 2026-04-03 (post–**2.14.0** wiring rules: bool-pulse + debug-line + no inventory root script).
 
 Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 
@@ -13,7 +13,7 @@ Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 | # | Result | Notes |
 |---|--------|-------|
 | A1 Runner exists | **PASS** | `class_name UiReactWireRunner` in `scripts/controls/ui_react_wire_runner.gd`. |
-| A2 Rule base + MVP types | **PASS** | `UiReactWireRule` + map / refresh / copy + `UiReactWireCatalogData` under `scripts/api/models/ui_react_wire_*.gd`. |
+| A2 Rule base + MVP types | **PASS** | `UiReactWireRule` + map / refresh / copy-detail / bool-pulse / debug-line + `UiReactWireCatalogData` under `scripts/api/models/ui_react_wire_*.gd`. |
 | A3 `wire_rules` on §5 set | **PASS** | Five controls export `Array[UiReactWireRule]`: ItemList, Tree, LineEdit, CheckBox, TransactionalActions. |
 | A4 One runner / warnings | **PASS** | Runtime warning if multiple runners under `current_scene`; dock warns on duplicate runners. |
 | A5 Collection scope | **PASS** | [`WIRING_LAYER.md`](WIRING_LAYER.md) §3 documents **parent-of-runner** subtree (aligned with `get_parent()` walk in code). |
@@ -28,7 +28,7 @@ Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 | # | Result | Notes |
 |---|--------|-------|
 | B1 Scene uses runner + rules | **PASS** | `inventory_screen_demo.tscn`: `WireRunner` + `wire_rules` on tree / filter / list. |
-| B2 Root script within exception | **PASS** | `inventory_screen_demo.gd`: tree build, demo Use/Sort + `detail_note_state`, debug labels — no parallel filter/list/detail **data** orchestration. |
+| B2 No root glue script | **PASS** | `inventory_screen_demo.tscn` only: **`wire_rules`** on list (copy-detail, bool-pulse suffix, debug lines) + runner; tree from **`tree_items_state`**. |
 | B3 ROADMAP checkbox drift | **RESOLVED** | See [`ROADMAP.md`](ROADMAP.md) P5.1 — migration line marked complete with same exception note. |
 
 ---
@@ -39,7 +39,7 @@ Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 |---|--------|-------|
 | C1 Missing runner | **PASS** | `_validate_wiring_scope`: WARN when `wire_rules` present and no runner. |
 | C2 Duplicate runner | **PASS** | Same: WARN when `runners > 1`. |
-| C3 Rule export validation | **PASS** | Dock validates MVP rule types: required refs + expected `UiState` / `UiReactWireCatalogData` types (`UiReactWiringValidator.validate_wire_rules`, invoked from the **`UiReactValidatorService`** façade). |
+| C3 Rule export validation | **PASS** | Dock validates concrete rule types (§6): required refs + expected `UiState` / `UiReactWireCatalogData` types (`UiReactWiringValidator.validate_wire_rules`, invoked from the **`UiReactValidatorService`** façade). |
 | C4 Scanner / unused-file parity | **PASS** | Stem map + **`BINDINGS_BY_COMPONENT`** live in **`UiReactComponentRegistry`**; **`UiReactScannerService`** resolves component names on nodes. **`UiReactTransactionalActions`** is listed in the registry like other **`UiReact*`** controls. **`UiReactStateReferenceCollector`** uses the same registry for binding paths and registers `UiState` refs from **`wire_rules`**. Future **NodePath**-on-rules (if any) remains follow-up. |
 | C5 Runtime vs editor | **PASS** | Both paths surface duplicate-runner concerns; missing runner is editor-first. |
 
@@ -78,7 +78,7 @@ Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 | Goal | Status |
 |------|--------|
 | **P5.1 core runtime** | **PASS** |
-| **inventory_screen_demo migration (exception)** | **PASS** |
+| **inventory_screen_demo fully wired** | **PASS** |
 | **Dock wiring diagnostics (CB-034 P5.1)** | **PASS** |
 | **Start P5.1.b** | **Unblocked** (**CB-041**) |
 | **Start P5.2** | **Unblocked**; optional follow-up if new rule shapes add paths |

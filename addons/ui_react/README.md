@@ -43,7 +43,7 @@ Copy `addons/ui_react/` into your Godot project at **`addons/ui_react/`**. Open 
 
 The addon ships **four** runnable examples under **`res://addons/ui_react/examples/`** (game-screen style + one animation catalog). Open any of these and press **Play** (default **Main Scene** is **`inventory_screen_demo.tscn`**):
 
-- **`res://addons/ui_react/examples/inventory_screen_demo.tscn`** — **`UiReactWireRunner`** + **`wire_rules`** (map / refresh / copy detail per **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)**); **`UiReactTree`** + filtered **`UiReactItemList`** + actions; list lock via overlay + **`action_targets`** (**CB-015** / **P6.1**); sample **`UiAnimTarget`** fades/POP.
+- **`res://addons/ui_react/examples/inventory_screen_demo.tscn`** — **`UiReactWireRunner`** + **`wire_rules`** (map / refresh / copy-detail / bool-pulse suffix / debug lines per **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)**); **no** root script; **`UiReactTree`** + filtered **`UiReactItemList`** + actions; list lock via overlay + **`action_targets`** (**CB-015** / **P6.1**); sample **`UiAnimTarget`** fades/POP.
 - **`res://addons/ui_react/examples/options_transactional_demo.tscn`** — transactional **Apply / Cancel** + **`UiReactTabContainer`** showcase tab.
 - **`res://addons/ui_react/examples/shop_computed_demo.tscn`** — computed afford/status on **`UiReactRichTextLabel`**; **`UiReactProgressBar`** / **`UiReactSpinBox`** bindings; **Buy** via **`shop_computed_demo.gd`** (**CB-006**).
 - **`res://addons/ui_react/examples/anim_targets_catalog_demo.tscn`** — catalog of **`UiAnimTarget.AnimationAction`** ( **`animation_targets`** with **`selection_slot`** per row + **`play_selected_row_animation`**) + trigger playground; no root script.
@@ -251,7 +251,7 @@ Use a **`UiComputedStringState`** or **`UiComputedBoolState`** **subclass** when
 2. Use a **`UiStringState`** (with **`UiReactLineEdit.text_state`**) or similar as the **filter query**.
 3. When the filter changes, rebuild an **`Array`** (strings and/or **`label`/`icon` dictionaries**) and call **`items_state.set_value(...)`** so the list reflects the filtered rows.
 4. Reset **`selected_state`** to **`-1`** (or clamp) when the filter changes so the selection does not point at the wrong item.
-5. Drive any **detail label** from **`selected_state`** + row payloads — prefer **`wire_rules`** + **`UiReactWireCopySelectionDetail`** (see **`res://addons/ui_react/examples/inventory_screen_demo.tscn`**), or game-layer glue in a small script.
+5. Drive any **detail label** from **`selected_state`** + row payloads — use **`wire_rules`** + **`UiReactWireCopySelectionDetail`** (and related §6 rules; see **`res://addons/ui_react/examples/inventory_screen_demo.tscn`**).
 
 This pattern is **game-layer** glue; the addon does not ship a generic virtualized list or a graph solver (**[`docs/ROADMAP.md`](docs/ROADMAP.md)** — **CB-010** deferred).
 
@@ -357,7 +357,7 @@ These may change between template versions; **do not rely on them from game code
 | `scripts/controls/` | Attachable **UiReact\*** scripts. |
 | `scripts/internal/anim/` | Animation implementation (unstable for direct use). |
 | `scripts/internal/react/` | Reactive helpers (unstable for direct use). |
-| `examples/` | **`inventory_screen_demo.tscn`** + **`inventory_screen_demo.gd`** + **`inventory_demo_catalog.gd`** / **`inventory_demo_catalog_wire_data.gd`** (**`UiReactWireRunner`**, **`wire_rules`**, texture/option actions, **`action_targets`** list lock, **`UiAnimTarget`**); **`options_transactional_demo.tscn`** (transactional **Apply / Cancel** + **`UiReactTabContainer`**); **`shop_computed_demo.tscn`** + **`shop_computed_demo.gd`** (computed + **CB-006**; rich status; progress/spin showcase); **`anim_targets_catalog_demo.tscn`** (animation catalog + trigger playground; inspector-only wiring). |
+| `examples/` | **`inventory_screen_demo.tscn`** (**`UiReactWireRunner`**, **`wire_rules`** including **`UiReactWireCopySelectionDetail`**, **`UiReactWireSetStringOnBoolPulse`**, **`UiReactWireSyncBoolStateDebugLine`**, **`UiReactWireCatalogData.rows`**, texture/option actions, **`action_targets`** list lock, **`UiAnimTarget`**); no root script. **`options_transactional_demo.tscn`** (transactional **Apply / Cancel** + **`UiReactTabContainer`**); **`shop_computed_demo.tscn`** + **`shop_computed_demo.gd`** (computed + **CB-006**; rich status; progress/spin showcase); **`anim_targets_catalog_demo.tscn`** (animation catalog + trigger playground; inspector-only wiring). |
 | `docs/` | **README**, **CHANGELOG**, **[`ROADMAP.md`](docs/ROADMAP.md)**, **[`WIRING_LAYER.md`](docs/WIRING_LAYER.md)** (normative **P5** wiring spec). |
 | `editor_plugin/ui_react_component_registry.gd` | Single source of truth for script-stem → **`UiReact*`** name and per-control **`BINDINGS_BY_COMPONENT`** (edit here when adding a control; **`UiReactScannerService`** and validators consume it). |
 | `editor_plugin/` | Optional Godot editor plugin: bottom dock, split **`ui_react_*_validator.gd`** modules + **`ui_react_validator_service`** façade, quick state creation. |
