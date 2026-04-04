@@ -8,13 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Breaking
 
+- **`UiAnimTarget`:** renamed **`preamble_reset_duration`** → **`reset_duration`**, **`await_preamble_before_main`** → **`wait_after_reset`**. Re-save scenes/subresources that referenced the old property names.
 - **`UiReact*`** controls: removed **`animation_selection_provider`**. **`selection_slot`** filtering uses **`get_animation_selection_index()`** on the **same** host when any **`animation_targets`** row uses **`selection_slot >= 0`**.
-- **`UiReactItemList`:** removed **`row_play_preamble_reset`**, **`row_play_soft_reset_duration`**, **`preamble_reset_target`**. Use **`UiAnimTarget.preamble_reset_duration`** / **`await_preamble_before_main`** per row instead.
+- **`UiReactItemList`:** removed **`row_play_preamble_reset`**, **`row_play_soft_reset_duration`**, **`preamble_reset_target`**. Use **`UiAnimTarget.reset_duration`** / **`wait_after_reset`** per row instead.
 - **`UiReactItemList`:** removed **`row_animation_targets`**. Use **`animation_targets`** with **`selection_slot`** set per row for **`play_selected_row_animation`** / **`play_preamble_reset_only`**.
 
 ### Added
 
-- **`UiAnimTarget`:** **`preamble_reset_duration`**, **`await_preamble_before_main`**; **`apply_with_preamble()`**, **`apply_preamble_reset_only()`**.
+- **`UiAnimTarget`:** **`reset_duration`**, **`wait_after_reset`**; **`apply_with_preamble()`**, **`apply_preamble_reset_only()`**.
 - **`UiReactTree`:** **`get_animation_selection_index()`** (visible pre-order index) for **`selection_slot`** filtering.
 - **`UiReactButton`** / **`UiReactTextureButton`:** **`press_writes_float_state`** + **`press_writes_float_value`** for one-way float writes on press.
 - **Editor:** dock **`animation_targets`** **`selection_slot`** vs **`item_count`** on **`UiReactItemList`** (**`UiReactAnimValidator`**).
@@ -22,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **`UiAnimTarget`:** Inspector **`@export`** order is **`target`** → **`selection_slot`** → **`trigger`** → **`reset_duration`** / **`wait_after_reset`** → **`animation`**, then timing and behavior.
 - **`UiReactAnimTargetHelper`:** **`collect_animation_targets_for_row_slot`**; **`UiReactItemList`** row play uses **`animation_targets`** + **`selection_slot`** only.
 - **`UiReactAnimTargetHelper.trigger_animations`:** resolves selection index from the host when slot gating is used (no external provider node).
 - **Reactivity:** `UiReactComputedSync` and `UiReactWireRunner` listen to **`Resource.changed` only** on `UiState` dependencies (avoids double work from `value_changed` + `emit_changed` on the same update).

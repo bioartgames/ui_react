@@ -183,7 +183,7 @@ value = 0
 [sub_resource type="Resource" id="cat_row_0"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 0
 trigger = 0
 animation = 0
@@ -195,7 +195,7 @@ reverse = false
 [sub_resource type="Resource" id="cat_row_1"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 1
 trigger = 0
 animation = 1
@@ -207,7 +207,7 @@ reverse = false
 [sub_resource type="Resource" id="cat_row_2"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 2
 trigger = 0
 animation = 2
@@ -219,7 +219,7 @@ reverse = false
 [sub_resource type="Resource" id="cat_row_3"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 3
 trigger = 0
 animation = 3
@@ -231,7 +231,7 @@ reverse = false
 [sub_resource type="Resource" id="cat_row_4"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 4
 trigger = 0
 animation = 4
@@ -243,7 +243,7 @@ reverse = false
 [sub_resource type="Resource" id="cat_row_5"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 5
 trigger = 0
 animation = 5
@@ -255,7 +255,7 @@ reverse = false
 [sub_resource type="Resource" id="cat_row_6"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 6
 trigger = 0
 animation = 6
@@ -267,7 +267,7 @@ reverse = false
 [sub_resource type="Resource" id="cat_row_7"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 7
 trigger = 0
 animation = 7
@@ -279,7 +279,7 @@ reverse = false
 [sub_resource type="Resource" id="cat_row_8"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 8
 trigger = 0
 animation = 8
@@ -291,7 +291,7 @@ reverse = false
 [sub_resource type="Resource" id="cat_row_9"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 9
 trigger = 0
 animation = 9
@@ -303,7 +303,7 @@ reverse = false
 [sub_resource type="Resource" id="cat_row_10"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 10
 trigger = 0
 animation = 10
@@ -315,7 +315,7 @@ reverse = false
 [sub_resource type="Resource" id="cat_row_11"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 11
 trigger = 0
 animation = 11
@@ -327,7 +327,7 @@ reverse = false
 [sub_resource type="Resource" id="cat_row_12"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 12
 trigger = 0
 animation = 12
@@ -339,7 +339,7 @@ reverse = false
 [sub_resource type="Resource" id="cat_row_13"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 13
 trigger = 0
 animation = 13
@@ -351,7 +351,7 @@ reverse = false
 [sub_resource type="Resource" id="cat_row_14"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 14
 trigger = 0
 animation = 14
@@ -364,7 +364,7 @@ rotate_start_angle = -360.0
 [sub_resource type="Resource" id="cat_row_15"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 15
 trigger = 0
 animation = 15
@@ -377,7 +377,7 @@ pop_overshoot = 1.2
 [sub_resource type="Resource" id="cat_row_16"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 16
 trigger = 0
 animation = 16
@@ -391,7 +391,7 @@ pulse_count = 2
 [sub_resource type="Resource" id="cat_row_17"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 17
 trigger = 0
 animation = 17
@@ -405,7 +405,7 @@ shake_count = 5
 [sub_resource type="Resource" id="cat_row_18"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 18
 trigger = 0
 animation = 18
@@ -417,7 +417,7 @@ reverse = false
 [sub_resource type="Resource" id="cat_row_19"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 19
 trigger = 0
 animation = 19
@@ -429,7 +429,7 @@ reverse = false
 [sub_resource type="Resource" id="cat_row_20"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 20
 trigger = 0
 animation = 20
@@ -441,7 +441,7 @@ reverse = false
 [sub_resource type="Resource" id="cat_row_21"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 21
 trigger = 0
 animation = 21
@@ -453,7 +453,7 @@ reverse = false
 [sub_resource type="Resource" id="cat_row_22"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 22
 trigger = 0
 animation = 22
@@ -467,7 +467,7 @@ flash_intensity = 1.5
 [sub_resource type="Resource" id="cat_row_23"]
 script = ExtResource("13_at")
 target = NodePath("../../RightColumn/PreviewPanel")
-preamble_reset_duration = 0.0
+reset_duration = 0.0
 selection_slot = 23
 trigger = 0
 animation = 23
