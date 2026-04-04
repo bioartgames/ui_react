@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Breaking
 
+- **`UiReactTree`:** requires **`tree_items_state`** (**`UiArrayState`** whose value is an **`Array` of `UiReactTreeNode`**). Populate the tree via data, not ad hoc **`create_item`** code on the control.
 - **Computed wiring:** removed **`UiReactComputedSync`**. Assign **`UiComputedStringState`** / **`UiComputedBoolState`** subclasses to **`UiReact*`** exports (e.g. **`text_state`**, **`checked_state`**); **`UiReactComputedService`** wires **`sources`** at runtime. Nested computeds (sources of other computeds) are wired automatically.
 - **`UiAnimTarget`:** renamed **`preamble_reset_duration`** → **`reset_duration`**, **`await_preamble_before_main`** → **`wait_after_reset`**. Re-save scenes/subresources that referenced the old property names.
 - **`UiReact*`** controls: removed **`animation_selection_provider`**. **`selection_slot`** filtering uses **`get_animation_selection_index()`** on the **same** host when any **`animation_targets`** row uses **`selection_slot >= 0`**.
@@ -16,6 +17,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **`UiReactTreeNode`** resource and **`UiReactTree.tree_items_state`**: hierarchical **`Tree`** rows from **`UiArrayState`** (full rebuild on change; **`get_visible_row_count()`** for **`selection_slot`** diagnostics).
+- **Editor:** **`UiReactTreeValidator`** (payload shape) and **`UiReactAnimValidator`** extension for **`UiReactTree`** (**`selection_slot`** vs visible row count).
 - **`UiAnimTarget`:** **`reset_duration`**, **`wait_after_reset`**; **`apply_with_preamble()`**, **`apply_preamble_reset_only()`**.
 - **`UiReactComputedService`** (`scripts/internal/react/ui_react_computed_service.gd`): refcounted dependency wiring for bound computeds; one **`recompute()`** per computed per frame (deferred).
 - **Editor:** dock **WARNING** via **`UiReactComputedValidator`** when a **`UiComputed*`** has **`sources`** but is neither bound to a registry **`UiReact*`** export nor only nested as another computed’s source.
@@ -26,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **`inventory_screen_demo.tscn`:** category **`UiReactTree`** uses scene **`tree_items_state`** + **`UiReactTreeNode`** subresources (no **`_build_tree`** script).
 - **`UiAnimTarget`:** Inspector **`@export`** order is **`target`** → **`selection_slot`** → **`trigger`** → **`reset_duration`** / **`wait_after_reset`** → **`animation`**, then timing and behavior.
 - **`UiReactAnimTargetHelper`:** **`collect_animation_targets_for_row_slot`**; **`UiReactItemList`** row play uses **`animation_targets`** + **`selection_slot`** only.
 - **`UiReactAnimTargetHelper.trigger_animations`:** resolves selection index from the host when slot gating is used (no external provider node).

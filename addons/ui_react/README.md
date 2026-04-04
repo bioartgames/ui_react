@@ -116,15 +116,16 @@ All plugin usage details are documented in this README.
 | **UiReactItemList** | `items_state`, `selected_state`, optional `action_targets` | **`items_state`**: **`UiArrayState`** (`Array` of strings/variants or **`label`/`icon`** dicts per **List patterns**). **`selected_state`**: **`UiIntState`** (single-select) or **`UiArrayState`** (multi-select indices). Godot’s **ItemList** has no built-in disabled state—wrap or gate input with a parent **Control** / `mouse_filter` / focus policy in game code if you need “disabled” behavior. |
 | **UiReactTabContainer** | `selected_state`, `tab_config` | **`selected_state`**: **`UiIntState`**. **`tab_config`**: optional **`UiTabContainerCfg`** (use **`UiArrayState`** for tab/disabled/visibility arrays). |
 | **UiReactTextureButton** | `pressed_state`, `disabled_state` | Same semantics as **`UiReactButton`** on **`BaseButton`** (`pressed` vs `toggle_mode` / `toggled`, **`disabled_state`** may use **`UiBoolState`** or **`UiComputedBoolState`**). Assign **`texture_normal`** (and optional hover/pressed textures) in the Inspector. |
-| **UiReactTree** | `selected_state`, optional `action_targets` | **`selected_state`**: **`UiIntState`**. Wrapper forces **single selection** (`Tree.SELECT_SINGLE`). See **UiReactTree binding semantics** below. |
+| **UiReactTree** | `tree_items_state`, `selected_state`, optional `action_targets` | **`tree_items_state`**: **`UiArrayState`** — value is an **`Array` of `UiReactTreeNode`** (see below). **`selected_state`**: **`UiIntState`**. Wrapper forces **single selection** (`Tree.SELECT_SINGLE`). See **UiReactTree binding semantics** below. |
 | **`UiReactTransactionalActions`** | `group`, button paths, optional `action_targets` | **`action_targets`** must be **state-driven** only ([`ACTION_LAYER.md`](docs/ACTION_LAYER.md))—this host does not emit **`UiAnimTarget`** triggers. |
 
 ### UiReactTree binding semantics (P4)
 
+- **Row data:** Assign **`tree_items_state`** to a **`UiArrayState`** whose **`value`** is an **`Array` of `UiReactTreeNode`**. Each node has **`text`**, **`icon`** (**`Texture2D`**), and **`children`** (**`Array[UiReactTreeNode]`**; use an **empty** array for leaves). The control **clears and rebuilds** the **`Tree`** whenever that array changes. Top-level entries are created as children of the tree’s root item (with **`hide_root`** **`true`**, index **`0`** is the first top-level row).
 - **Payload:** **`UiIntState`** stores the **visible pre-order row index** for the current selection, or **`-1`** when nothing is selected.
 - **Traversal:** Rows are visited in depth-first order using Godot’s visible tree walk (`TreeItem.get_next_visible(false)`). If **`hide_root`** is **`true`**, the engine’s root **`TreeItem` is not counted**—index **`0`** is the first visible child under that root. If **`hide_root`** is **`false`**, the root row is index **`0`**.
-- **State → UI:** Valid indices call **`Tree.set_selected(item, 0)`**; **`-1`** calls **`deselect_all()`**. Out-of-range indices deselect and snap the state to **`-1`**.
-- **Populating rows:** Build or update **`TreeItem`**s from code or editor as usual; if you add or remove rows after bind time, re-assign **`selected_state`** (or set **`-1`**) so the index still matches the visible order.
+- **State → UI:** Valid indices call **`Tree.set_selected(item, 0)`**; **`-1`** calls **`deselect_all()`**. Out-of-range indices deselect and snap the state to **`-1`** after a rebuild.
+- **Editor:** The dock validates **`tree_items_state`** shape (non-null **`icon`**, nested **`UiReactTreeNode`**, max depth) and **`animation_targets`** **`selection_slot`** against **`get_visible_row_count()`** (same idea as **`UiReactItemList`** vs **`item_count`**).
 
 **`animation_targets`** is always **optional**: leave empty if you don’t want automatic tweens. **`action_targets`** (where exposed) is optional; see **`docs/ACTION_LAYER.md`** and the **Action layer (P6.1)** section above.
 

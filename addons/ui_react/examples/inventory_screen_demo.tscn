@@ -1,4 +1,4 @@
-[gd_scene load_steps=40 format=3]
+[gd_scene load_steps=46 format=3]
 
 [ext_resource type="Script" path="res://addons/ui_react/examples/inventory_screen_demo.gd" id="1_screen"]
 [ext_resource type="Script" uid="uid://dd4kr4kdd6cnc" path="res://addons/ui_react/scripts/controls/ui_react_tree.gd" id="2_tree"]
@@ -20,6 +20,7 @@
 [ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_wire_refresh_items_from_catalog.gd" id="18_wref"]
 [ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_wire_copy_selection_detail.gd" id="19_wcopy"]
 [ext_resource type="Script" path="res://addons/ui_react/examples/inventory_demo_catalog_wire_data.gd" id="20_catw"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_tree_node.gd" id="21_tnode"]
 
 [sub_resource type="Resource" id="filter_str"]
 script = ExtResource("7_str")
@@ -69,6 +70,34 @@ value = ""
 
 [sub_resource type="Resource" id="inv_catalog"]
 script = ExtResource("20_catw")
+
+[sub_resource type="Resource" id="tn_all"]
+script = ExtResource("21_tnode")
+text = "All items"
+icon = ExtResource("12_icon")
+children = []
+
+[sub_resource type="Resource" id="tn_weapons"]
+script = ExtResource("21_tnode")
+text = "Weapons"
+icon = ExtResource("12_icon")
+children = []
+
+[sub_resource type="Resource" id="tn_consumables"]
+script = ExtResource("21_tnode")
+text = "Consumables"
+icon = ExtResource("12_icon")
+children = []
+
+[sub_resource type="Resource" id="tn_materials"]
+script = ExtResource("21_tnode")
+text = "Materials"
+icon = ExtResource("12_icon")
+children = []
+
+[sub_resource type="Resource" id="tree_items_st"]
+script = ExtResource("8_arr")
+value = [SubResource("tn_all"), SubResource("tn_weapons"), SubResource("tn_consumables"), SubResource("tn_materials")]
 
 [sub_resource type="Resource" id="wire_map_cat"]
 script = ExtResource("17_wmap")
@@ -202,6 +231,7 @@ layout_mode = 2
 size_flags_vertical = 3
 hide_root = true
 script = ExtResource("2_tree")
+tree_items_state = SubResource("tree_items_st")
 selected_state = SubResource("tree_sel")
 animation_targets = Array[ExtResource("13_anim")]([SubResource("anim_tree_hint_fade")])
 wire_rules = [SubResource("wire_map_cat"), SubResource("wire_refresh_tree")]

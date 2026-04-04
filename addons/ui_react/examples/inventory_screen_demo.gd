@@ -1,5 +1,5 @@
 extends Control
-## Inventory demo: tree + filtered list + [UiReactWireRunner] / [code]wire_rules[/code] (see [code]docs/WIRING_LAYER.md[/code]).
+## Inventory demo: [UiReactTree] ([member UiReactTree.tree_items_state]) + filtered list + [UiReactWireRunner] / [code]wire_rules[/code] (see [code]docs/WIRING_LAYER.md[/code]).
 ## List lock: [code]action_targets[/code] on the item list. Demo-only: action notes + debug labels.
 
 @export var selected_state: UiIntState
@@ -9,7 +9,6 @@ extends Control
 @export var use_pressed_state: UiBoolState
 @export var sort_pressed_state: UiBoolState
 
-@onready var _tree: Tree = $MainHBox/LeftColumn/CategoryTree
 @onready var _texture_use: TextureButton = $MainHBox/RightColumn/ActionButtons/UseButton
 @onready var _texture_sort: TextureButton = $MainHBox/RightColumn/ActionButtons/SortButton
 @onready var _pressed_use_label: Label = $MainHBox/RightColumn/PressedUseLabel
@@ -18,7 +17,6 @@ extends Control
 
 
 func _ready() -> void:
-	_build_tree()
 	if selected_state:
 		if not selected_state.value_changed.is_connected(_on_selected_clear_note):
 			selected_state.value_changed.connect(_on_selected_clear_note)
@@ -32,21 +30,6 @@ func _ready() -> void:
 		if not actions_disabled_state.value_changed.is_connected(_on_actions_disabled_changed):
 			actions_disabled_state.value_changed.connect(_on_actions_disabled_changed)
 	_refresh_action_labels()
-
-
-func _build_tree() -> void:
-	_tree.clear()
-	_tree.hide_root = true
-	var root: TreeItem = _tree.create_item()
-	root.set_text(0, "Inventory")
-	var all_items: TreeItem = _tree.create_item(root)
-	all_items.set_text(0, "All items")
-	var weapons: TreeItem = _tree.create_item(root)
-	weapons.set_text(0, "Weapons")
-	var consumables: TreeItem = _tree.create_item(root)
-	consumables.set_text(0, "Consumables")
-	var materials: TreeItem = _tree.create_item(root)
-	materials.set_text(0, "Materials")
 
 
 func _on_selected_clear_note(_nv: Variant, _ov: Variant) -> void:

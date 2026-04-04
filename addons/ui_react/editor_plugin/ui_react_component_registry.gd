@@ -67,6 +67,7 @@ const BINDINGS_BY_COMPONENT: Dictionary = {
 		{"property": &"press_writes_float_state", "kind": "float", "optional": true},
 	],
 	"UiReactTree": [
+		{"property": &"tree_items_state", "kind": "array", "optional": false},
 		{"property": &"selected_state", "kind": "int", "optional": true},
 	],
 	"UiReactTransactionalActions": [],
