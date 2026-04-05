@@ -33,6 +33,8 @@ If both Wiring and Actions could touch the same `UiStringState`, **Wiring wins**
 
 **Actions vs Wiring — string and data ownership:** Actions **must not** write **`UiStringState`** for catalog lines, filter copy, selection-detail text, or any **data** those three wire-rule types own. **Only Wiring** may perform those transforms.
 
+**Conditional user-visible copy** (labels, BBCode, “if X then string A else B”) belongs in **`UiComputed*`** or **Wiring** rules—not in **`action_targets`** as ad hoc writes to **`UiStringState`** for the same jobs **Wiring** owns on that screen; see README **Conditional strings**.
+
 **State writes from Actions (bounded):**
 
 - **`SET_UI_BOOL_FLAG`** — **`UiBoolState`** **UI chrome flags** only (e.g. “detail panel open”); not transactional truth, inventory counts, or domain invariants.

@@ -2,7 +2,7 @@
 
 **Purpose:** Doc-driven pass/fail checklist for **P5.1** exit honesty and gates for **P5.1.b** / **P5.2**. Authority: [`WIRING_LAYER.md`](WIRING_LAYER.md) → [`ROADMAP.md`](ROADMAP.md) → [`CHANGELOG.md`](../CHANGELOG.md).
 
-**Last run:** 2026-04-03 (post–**2.14.0** wiring rules: bool-pulse + debug-line + no inventory root script).
+**Last run:** 2026-04-03 (post–**2.16.0** per [`plugin.cfg`](../editor_plugin/plugin.cfg): README / ROADMAP / WIRING / ACTION **north-star** doc alignment; same date previously recorded **2.14.0** wiring: bool-pulse + debug-line + no inventory root script).
 
 Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 
@@ -17,7 +17,7 @@ Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 | A3 `wire_rules` on §5 set | **PASS** | Five controls export `Array[UiReactWireRule]`: ItemList, Tree, LineEdit, CheckBox, TransactionalActions. |
 | A4 One runner / warnings | **PASS** | Runtime warning if multiple runners under `current_scene`; dock warns on duplicate runners. |
 | A5 Collection scope | **PASS** | [`WIRING_LAYER.md`](WIRING_LAYER.md) §3 documents **parent-of-runner** subtree (aligned with `get_parent()` walk in code). |
-| A6 Deterministic ordering | **PARTIAL** | Stable sort uses node path + rule index + `rule_id`; spec text mentions `resource_path_or_uid` — equivalent intent, different tuple. |
+| A6 Deterministic ordering | **PARTIAL** | Stable sort uses node path + rule index + `rule_id`; spec text mentions `resource_path_or_uid` — equivalent intent, different tuple. **Related (not wiring ordering):** **`UiReactSpinBox`** **`hook_bind`** for computeds is a **control export** integration ([`CHANGELOG.md`](CHANGELOG.md) **[Changed]**), not a **`UiReactWireRunner`** rule concern. |
 | A7 Teardown | **PASS** | `_exit_tree` disconnects registered callables. |
 | A8 Catalog lazy load | **PASS** | `ensure_rows_loaded()` on catalog; refresh rule calls it before filtering. |
 

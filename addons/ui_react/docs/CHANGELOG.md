@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Documentation
+
+- **North-star alignment:** README (inspector-first **four pillars**, designer/blessed path, **Examples at a glance**, **Conditional strings**, list-patterns lead with **`inventory_screen_demo`** + **`wire_rules`**); [`ROADMAP.md`](ROADMAP.md) (Charter **inspector-first** row, glossary **Action layer** = §5 + **`UiReactButton`** + float ops, **CB-002** / **CB-043** notes, **CB-048** stock-computed backlog, **CB-040** closed); [`WIRING_LAYER.md`](WIRING_LAYER.md) §2 **Actions** + bounded float cross-link; [`ACTION_LAYER.md`](ACTION_LAYER.md) §2 `UiComputed*` vs Actions for conditional copy; [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) **Last run** context. **No** `plugin.cfg` version bump (docs-only).
+
 ### Breaking
 
 - **Examples:** removed **`examples/shop_computed_afford.gd`**, **`shop_computed_buy_disabled.gd`**, **`shop_computed_status.gd`** (replaced by stock **`UiComputed*`** under **`scripts/api/models/`**). **`class_name`** **`ShopComputedAfford`**, **`ShopComputedBuyDisabled`**, **`ShopComputedStatus`** removed.

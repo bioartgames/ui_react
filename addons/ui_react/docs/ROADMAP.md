@@ -13,7 +13,11 @@ This document is the **committal** plan for **dogfooding the addon in a real gam
 | **Computed state** | State whose value is **determined from** other state (e.g. filtered list, “can afford,” label from selection). This is the **only** public term for that idea—avoid “derived state” in API and docs to prevent synonym drift. |
 | **Transaction (transactional state)** | A **draft / working copy** of settings (or similar) separate from **committed** values, with an explicit **apply**, **cancel**, or **revert** path—not the same as computed state. |
 | **Wiring** | Inspector-authored **`UiReactWireRule`** resources + **`UiReactWireRunner`** (and optionally **`UiReactWireHub`** after **P5.1**), replacing ad-hoc root orchestration for supported patterns. Normative detail: [`WIRING_LAYER.md`](WIRING_LAYER.md). |
-| **Action layer** | Inspector-authored **`action_targets`** + **`UiReactActionTarget`** on the P5.1 wiring control set only—**non-motion** UI reactions (focus, visibility, `mouse_filter`, narrow UI **`UiBoolState`** flags). **No** `UiAnimTarget` / `UiAnimUtils` inside Actions. Normative detail: [`ACTION_LAYER.md`](ACTION_LAYER.md). |
+| **Action layer** | Inspector-authored **`action_targets`** + **`UiReactActionTarget`** on the **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** control set **and** **`UiReactButton`** ([`ACTION_LAYER.md`](ACTION_LAYER.md) §4)—**non-motion** UI reactions (focus, visibility, `mouse_filter`, narrow UI **`UiBoolState`** flags) **plus** **bounded** **`UiFloatState`** mutations (**`SUBTRACT_PRODUCT_FROM_FLOAT`**, …). **No** `UiAnimTarget` / `UiAnimUtils` inside Actions. Widening **`action_targets`** to further controls requires a new **WIRING** Appendix row. Normative detail: [`ACTION_LAYER.md`](ACTION_LAYER.md). |
+
+### Stock computed library (future)
+
+Additional **stock** **`UiComputedStringState` / `UiComputedBoolState`** subclasses for repeated **conditional copy** patterns (beyond today’s shop/options stock types) are **backlog**, not API promises—see **Appendix CB-048** and README **Conditional strings**. Ship only when a second screen needs the same shape (**YAGNI**).
 
 ### Charter (lock-in)
 
@@ -21,6 +25,7 @@ This document is the **committal** plan for **dogfooding the addon in a real gam
 |-------|------------|
 | **One-sentence v1.0 promise** | Reactive **UiState** bindings to common Controls, **inspector-driven animations**, and an **editor diagnostics dock**. |
 | **Primary user** | Solo / small-team indie developers using Godot. |
+| **Inspector-first story (docs + examples)** | **Official examples** prioritize **Inspector** resources (**`wire_rules`**, **`UiComputed*`**, **transactional**, **`action_targets`**) over **scene scripts** for the layers the addon models; README states the **four pillars** + **designer path**. **Play** validates runtime; **domain** logic and **non-goals** items remain game code. |
 | **Godot version** | **4.5+** only (see `project.godot` → `config/features`). |
 | **Language** | **GDScript-only** addon. |
 | **Compatibility** | **Semantic Versioning**: minor = additive; major = breaking changes to `class_name`, `@export` shapes, or other **documented public API**. |
@@ -157,7 +162,7 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | ID | Capability / topic | Screen examples | Target phase | Status | Notes |
 |----|-------------------|-----------------|--------------|--------|-------|
 | CB-001 | Core: `UiState`, `UiReact*`, `UiAnimUtils`, `UiAnimTarget`, editor dock | All | P0 | Done | Baseline shipped; maintain compat per SemVer. Includes typed diagnostics (`IssueKind`/`resource_path`), scene-file-scoped unused `UiState` `.tres` diagnostics (no cross-scene clutter), Reveal + persisted ignore flows, and filesystem-triggered dock refresh. |
-| CB-002 | Transactional / draft state (apply, cancel, revert) | Options, key remap drafts | P1 | Done | **`UiTransactionalState`** + **`UiTransactionalGroup`** + **`UiReactTransactionalActions`**; README + **`options_transactional_demo.tscn`**. Status line uses **`UiComputedStringState`** on **`text_state`** (**2.2.0**). |
+| CB-002 | Transactional / draft state (apply, cancel, revert) | Options, key remap drafts | P1 | Done | **`UiTransactionalState`** + **`UiTransactionalGroup`** + **`UiReactTransactionalActions`**; README + **`options_transactional_demo.tscn`**. Status line uses stock **`UiComputedTransactionalStatusString`** on **`text_state`** (supersedes early **2.2.0** “generic **`UiComputedStringState`** subclass” note). |
 | CB-003 | Computed state (explicit dependencies, documented limits) | Shop totals, afford flags, filtered inventory | P2 | Done | **`UiComputedStringState`**, **`UiComputedBoolState`**, **`UiReactComputedService`**; README; **`shop_computed_demo.tscn`**; **`options_transactional_demo.tscn`**. **2.2.0**. Inventory filtering lives on **`inventory_screen_demo.tscn`** (successor to removed **`inventory_list_demo`**). |
 | CB-004 | Explicit dependency / recalc rules (documented) | Same as CB-003 | P2 | Done | Same release as CB-003; cap **32** **`sources`**, no solver (README **Computed state**). |
 | CB-005 | Undo stack / nested transactions | Advanced options | P6+ | Deferred | Not v1.0 scope; promote if needed. |
@@ -195,15 +200,16 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-037 | Migrate **`inventory_screen_demo`** off orchestration glue | Inventory | P5 | Done | Filter/list/detail/suffix/debug via **`wire_rules`** + **`UiReactWireRunner`**; **no** root script. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) §B. |
 | CB-038 | Migrate remaining examples with root glue only where wiring/actions **replace** glue without losing teaching value | Demos | P5 | Done | **`shop_computed_demo`** scriptless: **`action_targets`** buy + stock **`UiComputedFloatGeProductBool`** / **`UiComputedBoolInvert`** / **`UiComputedOrderSummaryThreeFloatString`** (no **`examples/shop_computed_*.gd`**). |
 | CB-039 | **Semantic versioning** policy: wiring API (`UiReactWireRunner`, `UiReactWireRule` subclasses, `wire_rules` shape) is **public**; breaking changes **major** | Releases | P5 | Planned | CHANGELOG + Charter cross-link. |
-| CB-040 | Remove or archive legacy **P5**-plus phase wording repo-wide; **P6+** is only deferred bucket | Docs | P5 | Planned | Grep pass in `addons/ui_react` for the legacy token (no `5` + `+` contiguous in docs). |
+| CB-040 | Remove or archive legacy **P5**-plus phase wording repo-wide; **P6+** is only deferred bucket | Docs | P5 | Done | **2026-04-03** grep under `addons/ui_react/`: no **`P5+`** / **`P5 +`** legacy token; **P6+** remains the Appendix deferred bucket. |
 | CB-041 | **`UiReactWireHub`** optional node; central **`rules`** array; runner aggregates hub + per-control **`wire_rules`** with **dedup**; validator expectations for bad hub/runner setups | Dense inventory/shop screens | P5.1.b | Planned | Normative in [`WIRING_LAYER.md`](WIRING_LAYER.md) §7; **after** P5.1 exit; extends **CB-034**. |
 | CB-042 | Normative **[`ACTION_LAYER.md`](ACTION_LAYER.md)** (Action layer contract) | All inspector-driven UI | P6.1 | Done | Shipped **2.6.4**; cross-links ROADMAP / WIRING / README. |
-| CB-043 | **`UiReactActionTarget`** resource + **`UiReactActionKind`** (four MVP presets) | Focus, visibility, mouse filter, UI flags | P6.1 | Done | `scripts/api/models/ui_react_action_target.gd`; **2.6.4**. |
+| CB-043 | **`UiReactActionTarget`** resource + **`UiReactActionKind`** (five presets: four presentation + one float op) | Focus, visibility, mouse filter, UI flags, bounded float | P6.1 | Done | `scripts/api/models/ui_react_action_target.gd`; **2.6.4** MVP four + later **`SUBTRACT_PRODUCT_FROM_FLOAT`**. |
 | CB-044 | **`UiReactActionTargetHelper`** (`run_actions`, `sync_initial_state`, `state_watch` wiring) | Same | P6.1 | Done | `scripts/internal/react/ui_react_action_target_helper.gd`; **2.6.4**. |
 | CB-045 | **`action_targets`** export on **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** control set | P5.1 controls + transactional actions host | P6.1 | Done | **2.6.4**: ItemList, Tree, LineEdit, CheckBox, `UiReactTransactionalActions` (state-driven rows only on transactional host). |
 | CB-046 | Dock validator for **`action_targets`** (paths, loops, transactional constraint) | Editor | P6.1 | Done | **`UiReactValidatorService`**; extends **CB-020**; **2.6.4**. |
 | CB-047 | Action layer runnable example | Demos | P6.1 | Done | **`inventory_screen_demo.tscn`**: **`SET_MOUSE_FILTER`** list lock + **`GRAB_FOCUS`** on unlock; **2.6.4** (standalone **`action_layer_demo`** removed in consolidation). |
+| CB-048 | Stock **`UiComputed*`** library expansion (conditional strings / labels) | HUD, shop, options | P2 | Planned | Backlog for additional **stock** computeds when the same conditional-copy pattern appears twice (**YAGNI**); extends **CB-003**. See README **Conditional strings**. |
 
 ---
 
-*Last updated: 2026-04-04 — **CB-034** (P5.1 dock scope) **Done** (**2.7.0**); **CB-041** hub validator still **Planned**. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Examples remain **four** scenes.*
+*Last updated: 2026-04-03 — Docs alignment (north star, glossary Action layer, **CB-048**). **CB-034** (P5.1 dock scope) **Done** (**2.7.0**); **CB-041** hub validator still **Planned**. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Examples remain **four** scenes.*

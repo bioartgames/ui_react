@@ -1,32 +1,42 @@
 # Ui React
 
-Self-contained UI building blocks for Godot 4.x: attach **UiReact\*** scripts for two-way **UiState** binding, optional **inspector-driven animations** via **UiAnimTarget**, and a code-friendly **UiAnimUtils** tween facade—so you can build polished UI with little or no game code.
+**Primary story:** Build **reactive UI** in the Godot **editor**—attach **UiReact\*** controls, **bind** **`UiState`**, **animate** with **`animation_targets`**, **wire** data with **`UiReactWireRunner`** + **`wire_rules`**, **derive** labels and flags with **`UiComputed*`**, **draft/commit** with **transactional** state, and run **bounded** **imperative** steps (focus, visibility, shop-style float ops) via **`action_targets`**—**without scene scripts** for those “obvious” layers, wherever the addon covers the pattern. Domain rules, networking, and one-off glue still belong in **game code** when needed ([**Non-goals**](docs/ROADMAP.md#non-goals-explicit) in **ROADMAP**).
 
-### Roadmap
+Self-contained building blocks for Godot 4.x: two-way **UiState** binding, optional **inspector-driven** **`UiAnimTarget`** tweens, and **`UiAnimUtils`** for code-driven motion when you want it.
 
-Public direction, phased delivery, and a full **capability backlog** (so deferred work stays visible) live in **[`docs/ROADMAP.md`](docs/ROADMAP.md)**—charter, phases **P0–P6+**, screen matrix, exit criteria, and Appendix **CB-001–CB-047**.
+### Four pillars (inspector-first)
 
-### Wiring layer (P5)
-
-**P5** adds inspector-authored **wiring**: a scene **`UiReactWireRunner`**, **`UiReactWireRule`** resources, and per-control **`wire_rules`** (optional **`UiReactWireHub`** after **P5.1** for central rule lists). The **normative** contract lives in **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)**; phase gates and backlog IDs (**CB-031**+) are in **ROADMAP** Part I and Appendix. **Stock-take / readiness checklist:** **[`docs/P5_CURRENT_STATE_AUDIT.md`](docs/P5_CURRENT_STATE_AUDIT.md)**.
-
-### Action layer (P6.1)
-
-**P6.1** adds inspector-authored **`action_targets`** (**`UiReactActionTarget`** rows) on the **P5.1 `wire_rules` control set** plus **`UiReactButton`** ([`ACTION_LAYER.md`](docs/ACTION_LAYER.md) §4)—**non-motion** reactions and **bounded** **`UiFloatState`** mutations (**`SUBTRACT_PRODUCT_FROM_FLOAT`** via **`UiReactStateOpService`**); tweens stay on **`animation_targets`**. The **normative** spec is **[`docs/ACTION_LAYER.md`](docs/ACTION_LAYER.md)**; backlog **CB-042–CB-047** is in **ROADMAP** Appendix only. Action code may ship before P5.1 wiring is complete ([`ACTION_LAYER.md`](docs/ACTION_LAYER.md) §7 note).
+| Pillar | Role | Normative / entry |
+|--------|------|-------------------|
+| **Wiring** | When X changes, update Y (filters, list refresh, selection detail, …) | **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)** — scene **`UiReactWireRunner`**, **`UiReactWireRule`**, per-control **`wire_rules`**. |
+| **Computed** | Derive **`UiStringState` / `UiBoolState`** payloads from **`sources`** | **`UiComputedStringState`** / **`UiComputedBoolState`** subclasses, **`UiReactComputedService`** — see **Computed state** below. |
+| **Transactional** | Draft vs committed **Apply / Cancel** | **`UiTransactionalState`**, **`UiTransactionalGroup`**, **`UiReactTransactionalActions`** — see **Transactional state** below. |
+| **Actions** | Non-motion UI steps + **bounded** float mutations | **[`docs/ACTION_LAYER.md`](docs/ACTION_LAYER.md)** — **`UiReactActionTarget`**, **`UiReactStateOpService`** (not a full command DSL). |
 
 **Layers (short):** **Wiring** = reactive data rules; **Computed** = derived **`UiComputed*`** state; **Actions** = focus / visibility / mouse filter / bool UI flags / whitelisted float ops; **`UiReactStateOpService`** = shared float helpers (**DRY**).
 
-**Docs layout:** [`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md) (wiring), [`docs/ACTION_LAYER.md`](docs/ACTION_LAYER.md) (actions), [`docs/ROADMAP.md`](docs/ROADMAP.md) (phases + Appendix), [`docs/P5_CURRENT_STATE_AUDIT.md`](docs/P5_CURRENT_STATE_AUDIT.md) (P5 gates).
+### Roadmap and phases
+
+Public direction, phased delivery, and the full **Appendix backlog** (**CB-001–CB-047**) live in **[`docs/ROADMAP.md`](docs/ROADMAP.md)**. **P5** wiring, **P6.1** actions, exit criteria, and **stock-take** (**[`docs/P5_CURRENT_STATE_AUDIT.md`](docs/P5_CURRENT_STATE_AUDIT.md)**) are linked from there.
+
+### Designer path, blessed defaults, common gaps
+
+- **Who:** UI authors and small teams who want **fast iteration** with **resources in the Inspector** instead of **per-screen glue scripts** for the same patterns.
+- **Manual pain this reduces:** ad hoc **`_ready`** wiring, duplicated filter/list/detail logic, and inconsistent approaches to afford flags, apply/cancel, and list overlays—**where** the addon’s **wiring + computed + transactional + actions** cover the job.
+- **Blessed path (typical full screen):** attach **`UiReact*`** → assign **`*_state`** → optional **`animation_targets`** → optional **`wire_rules`** + **`UiReactWireRunner`** → optional **`UiComputed*`** on bindings → optional **`UiTransactionalGroup`** + **`UiReactTransactionalActions`** → optional **`action_targets`**. Official **examples** (below) mix these layers.
+- **What you still hand-code:** economy/catalog **content**, servers, and anything under [**Non-goals**](docs/ROADMAP.md#non-goals-explicit). **Play** still validates behavior; “no scripting” here means **no GDScript required** for the **inspector-authored** layers on the recommended path—not zero Godot familiarity.
 
 ---
 
 ## The 3-step setup (repeat for every control)
 
+**Mechanical minimum:** the three steps below are the **binding** layer. For **whole screens**, prefer the **four pillars** (wiring → computed → transactional → actions) so behavior stays **declarative** and **validator-friendly**—see **Quickstart** examples.
+
 1. **Attach** the matching `UiReact*` script to a native Control (Button, HSlider, Label, …).
 2. **Assign** the **typed** state resource each export expects (`UiBoolState`, `UiIntState`, `UiFloatState`, `UiStringState`, `UiArrayState`, **`UiTransactionalState`**, or a **subclass** of **`UiComputedStringState` / `UiComputedBoolState`** where noted). Exports typed as **`UiState`** accept any concrete state implementing the binding’s payload shape — including **`UiTransactionalState`** — for `UiReactSlider` / `UiReactSpinBox` / `UiReactProgressBar` **`value_state`**, `UiReactCheckBox` **`checked_state`**, `UiReactLabel.text_state` / **`UiReactRichTextLabel.text_state`** (**`UiStringState` or `UiArrayState`**, **`UiComputedStringState`**, or transactional string/array), and `UiReactItemList.selected_state` (**`UiIntState`** in single-select, **`UiArrayState`** in multi-select).
 3. **Optionally** fill `animation_targets` with `UiAnimTarget` entries to run tweens from the Inspector (no tween code).
 
-That’s it. Game logic reads and writes through **`get_value()`** / **`set_value()`** on those resources; controls stay in sync.
+That’s it. Gameplay and domain code (when you use it) reads and writes through **`get_value()`** / **`set_value()`** on those resources; controls stay in sync. Prefer **Inspector-assigned** resources for everything the addon models above.
 
 ### Inspector hints (Godot 4.x)
 
@@ -49,6 +59,15 @@ The addon ships **four** runnable examples under **`res://addons/ui_react/exampl
 - **`res://addons/ui_react/examples/options_transactional_demo.tscn`** — transactional **Apply / Cancel** + **`UiReactTabContainer`** showcase tab.
 - **`res://addons/ui_react/examples/shop_computed_demo.tscn`** — **`UiComputedFloatGeProductBool`** / **`UiComputedBoolInvert`** / **`UiComputedOrderSummaryThreeFloatString`** + **`UiReactRichTextLabel`**; **`UiReactProgressBar`** / **`UiReactSpinBox`**; **Buy** via **`action_targets`** **`SUBTRACT_PRODUCT_FROM_FLOAT`**; no root script, no **`examples/*.gd`** for shop computeds.
 - **`res://addons/ui_react/examples/anim_targets_catalog_demo.tscn`** — catalog of **`UiAnimTarget.AnimationAction`** ( **`animation_targets`** with **`selection_slot`** per row + **`play_selected_row_animation`**) + trigger playground; no root script.
+
+**Examples at a glance** (which layers each scene stresses):
+
+| Scene | Wiring | Computed | Transactional | Actions |
+|-------|:------:|:--------:|:-------------:|:-------:|
+| **`inventory_screen_demo.tscn`** | yes | — | — | yes |
+| **`options_transactional_demo.tscn`** | — | yes (status line) | yes | — |
+| **`shop_computed_demo.tscn`** | — | yes | — | yes (Buy) |
+| **`anim_targets_catalog_demo.tscn`** | — | — | — | — |
 
 Use the scene tree to see how states and targets are wired.
 
@@ -198,7 +217,7 @@ Use **`UiTransactionalState`** when you want **working-copy** values on an optio
 | **`cancel_draft()`** / **`reset_to_committed()`** | Copy **`committed_value`** → draft (revert UI). |
 | **`has_pending_changes()`** | `true` when draft and committed differ (see **`UiTransactionalState`** tooltips / script). |
 
-**Runnable example:** **`res://addons/ui_react/examples/options_transactional_demo.tscn`** — master volume (**`HSlider`** + **`UiReactSlider`**) and mute (**`CheckBox`** + **`UiReactCheckBox`**) share transactional resources; **Apply** / **Cancel** are wired through **`UiReactTransactionalActions`** to a **`UiTransactionalGroup`** (no per-scene apply/cancel loops). The demo status line uses **`UiReactLabel`** + a **`UiComputedStringState`** subclass on **`text_state`** so draft / committed / pending text stays in sync (see **Computed state**).
+**Runnable example:** **`res://addons/ui_react/examples/options_transactional_demo.tscn`** — master volume (**`HSlider`** + **`UiReactSlider`**) and mute (**`CheckBox`** + **`UiReactCheckBox`**) share transactional resources; **Apply** / **Cancel** are wired through **`UiReactTransactionalActions`** to a **`UiTransactionalGroup`** (no per-scene apply/cancel loops). The demo status line uses **`UiReactLabel`** + **`UiComputedTransactionalStatusString`** on **`text_state`** (stock addon computed; or another **`UiComputedStringState`** subclass) so draft / committed / pending text stays in sync (see **Computed state**).
 
 ### Transactional batch orchestration (`UiTransactionalGroup` + `UiReactTransactionalActions`)
 
@@ -210,7 +229,7 @@ When one screen has **several** `UiTransactionalState` resources and a single **
 4. Assign **`group`** to that `UiTransactionalGroup`.
 5. Set **`apply_button_path`** and **`cancel_button_path`** as `NodePath`s **relative to the `UiReactTransactionalActions` node** (example: `../VBox/OptionsTabs/AudioPanel/AudioVBox/ButtonRow/ApplyButton` in **`options_transactional_demo.tscn`**).
 6. Leave **`begin_on_ready`** `true` to call **`begin_edit_all()`** once when the scene enters the tree, unless you start the edit session from code.
-7. **Read-only summary line:** prefer a **`UiComputedStringState`** subclass assigned to the label’s **`text_state`** (see **Computed state**) so the label tracks draft / committed transactional values without scene glue. Alternatively, use a **`UiStringState`** and call **`set_value()`** from code. Do **not** assign **`Label.text`** directly if the label uses **`UiReactLabel`**, or **`RichTextLabel.text`** if it uses **`UiReactRichTextLabel`**.
+7. **Read-only summary line:** prefer **`UiComputedTransactionalStatusString`** (stock) or another **`UiComputedStringState`** subclass on the label’s **`text_state`** (see **Computed state**) so the label tracks draft / committed transactional values without scene glue. Alternatively, use a **`UiStringState`** and call **`set_value()`** from code. Do **not** assign **`Label.text`** directly if the label uses **`UiReactLabel`**, or **`RichTextLabel.text`** if it uses **`UiReactRichTextLabel`**.
 
 **API — `UiTransactionalGroup`:** `begin_edit_all()`, `apply_all()`, `cancel_all()`, `has_pending_changes()`.
 
@@ -234,6 +253,13 @@ Use a **`UiComputedStringState`** or **`UiComputedBoolState`** **subclass** when
 
 **Dock:** a **WARNING** appears when a **`UiComputed*`** has **`sources`** but is not assigned to a registry **`UiReact*`** binding and is not only used as a nested source of another computed (**`UiReactComputedValidator`**).
 
+### Conditional strings (derived copy vs wiring vs actions)
+
+- **Derived UI copy:** Subclass **`UiComputedStringState`**, list dependencies in **`sources`**, implement **`compute_string()`**, assign to **`text_state`** on **`UiReactLabel`** / **`UiReactRichTextLabel`**. Stock examples: **`UiComputedOrderSummaryThreeFloatString`**, **`UiComputedTransactionalStatusString`**. Use this for “show this BBCode / line when state looks like X.”
+- **Data-shaped strings the wiring layer owns:** Filter keys, catalog-driven rows, selection detail text — implement with **`wire_rules`**, not **`action_targets`** ([**`docs/WIRING_LAYER.md`**](docs/WIRING_LAYER.md) §2; [**`docs/ACTION_LAYER.md`**](docs/ACTION_LAYER.md) §2 — Actions must not duplicate those jobs).
+- **Conditional presentation without new string payloads:** **`SET_VISIBLE`**, **`SET_UI_BOOL_FLAG`**, **`SET_MOUSE_FILTER`** on **`action_targets`** ([**`docs/ACTION_LAYER.md`**](docs/ACTION_LAYER.md)).
+- **More stock computeds** for common conditionals are tracked in **[`docs/ROADMAP.md`](docs/ROADMAP.md)** Appendix (see backlog rows for **stock computed** / **CB-003** extensions)—shipped helpers will be called out in **CHANGELOG** when added.
+
 ---
 
 ## List patterns (P3)
@@ -247,15 +273,17 @@ Use a **`UiComputedStringState`** or **`UiComputedBoolState`** **subclass** when
 
 **Bindings (single-select):** assign **`items_state`** → **`UiArrayState`**, **`selected_state`** → **`UiIntState`**. The stored index is **the row index in the current list** (after any filter). See **Strict integer indices** under **Public API**—no floats for selection.
 
-**Filter / inventory recipe (typical):**
+**Filter / inventory recipe (recommended):** **`res://addons/ui_react/examples/inventory_screen_demo.tscn`** — **`UiReactWireRunner`** + **`wire_rules`** on the tree, filter **`UiReactLineEdit`**, and **`UiReactItemList`** (refresh from catalog, copy selection detail, bool-pulse suffix, debug lines per **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)**). **No** root script; declarative rules only.
+
+**Alternative (game-layer):** If you are **not** using the wiring layer yet:
 
 1. Keep authoritative item data where your game prefers (resources, dictionaries in a script, etc.).
 2. Use a **`UiStringState`** (with **`UiReactLineEdit.text_state`**) or similar as the **filter query**.
 3. When the filter changes, rebuild an **`Array`** (strings and/or **`label`/`icon` dictionaries**) and call **`items_state.set_value(...)`** so the list reflects the filtered rows.
 4. Reset **`selected_state`** to **`-1`** (or clamp) when the filter changes so the selection does not point at the wrong item.
-5. Drive any **detail label** from **`selected_state`** + row payloads — use **`wire_rules`** + **`UiReactWireCopySelectionDetail`** (and related §6 rules; see **`res://addons/ui_react/examples/inventory_screen_demo.tscn`**).
+5. Drive any **detail label** from **`selected_state`** + row payloads manually, or adopt **`wire_rules`** + **`UiReactWireCopySelectionDetail`** when you are ready.
 
-This pattern is **game-layer** glue; the addon does not ship a generic virtualized list or a graph solver (**[`docs/ROADMAP.md`](docs/ROADMAP.md)** — **CB-010** deferred).
+The addon does not ship a generic virtualized list or a graph solver (**[`docs/ROADMAP.md`](docs/ROADMAP.md)** — **CB-010** deferred).
 
 **Disabled / modal gating (CB-015):** Godot’s **`ItemList`** has no real **disabled** mode, and **`UiReactItemList.disabled_state`** is not wired to engine list disabling. **Canonical workaround:** place the list inside a **`Control`**, add a **full-rect transparent sibling overlay** **above** the list in tree order, and drive **`Control.mouse_filter`**: **`MOUSE_FILTER_IGNORE`** when interaction is allowed (clicks pass through), **`MOUSE_FILTER_STOP`** when the list should not receive pointer input. Prefer inspector **`action_targets`** **`SET_MOUSE_FILTER`** with **`state_watch`** on the lock bool (**`inventory_screen_demo.tscn`**).
 
@@ -358,7 +386,7 @@ These may change between template versions; **do not rely on them from game code
 | `scripts/internal/anim/` | Animation implementation (unstable for direct use). |
 | `scripts/internal/react/` | Reactive helpers (unstable for direct use). |
 | `examples/` | **`inventory_screen_demo.tscn`** (**`UiReactWireRunner`**, **`wire_rules`**, **`UiReactWireCatalogData.rows`**, **`action_targets`**, **`UiAnimTarget`**); no root script. **`options_transactional_demo.tscn`** (**`UiComputedTransactionalStatusString`**, transactional **Apply / Cancel** + **`UiReactTabContainer`**). **`shop_computed_demo.tscn`** (**`UiComputedFloatGeProductBool`** / **`UiComputedBoolInvert`** / **`UiComputedOrderSummaryThreeFloatString`**; **`action_targets`** buy; no root script). **`anim_targets_catalog_demo.tscn`** (animation catalog + trigger playground). |
-| `docs/` | **README**, **CHANGELOG**, **[`ROADMAP.md`](docs/ROADMAP.md)**, **[`WIRING_LAYER.md`](docs/WIRING_LAYER.md)** (normative **P5** wiring spec). |
+| `docs/` | **README**, **CHANGELOG**, **[`ROADMAP.md`](docs/ROADMAP.md)**, **[`WIRING_LAYER.md`](docs/WIRING_LAYER.md)** (normative **P5** wiring), **[`ACTION_LAYER.md`](docs/ACTION_LAYER.md)** (normative **P6.1** actions). |
 | `editor_plugin/ui_react_component_registry.gd` | Single source of truth for script-stem → **`UiReact*`** name and per-control **`BINDINGS_BY_COMPONENT`** (edit here when adding a control; **`UiReactScannerService`** and validators consume it). |
 | `editor_plugin/` | Optional Godot editor plugin: bottom dock, split **`ui_react_*_validator.gd`** modules + **`ui_react_validator_service`** façade, quick state creation. |
 | `ui_resources/` | Sample `.tres` for the example scene; `plugin_generated/` holds plugin-created states (optional). |
@@ -368,8 +396,6 @@ These may change between template versions; **do not rely on them from game code
 ## Importing into another project
 
 Copy the entire **`addons/ui_react/`** folder into the host project’s **`addons/`** directory, reimport, then attach scripts from **`scripts/controls/`** or call **`UiAnimUtils`** from your game code.
-
-Extended path mapping (old tree → addon) lives in **`docs/migration.md`** if present.
 
 ---
 
@@ -395,7 +421,7 @@ If you copy `addons/ui_react/` into another project, re-enable the plugin there 
 
 ## Versioning
 
-The plugin **version** is declared in [`editor_plugin/plugin.cfg`](editor_plugin/plugin.cfg) (`version=`, currently **2.10.0**). Release history and notable changes are tracked in **[`docs/CHANGELOG.md`](docs/CHANGELOG.md)** in this addon folder (so it travels when you copy `addons/ui_react/`).
+The plugin **version** is declared in [`editor_plugin/plugin.cfg`](editor_plugin/plugin.cfg) (`version=` — see that file for the current number). Release history and notable changes are tracked in **[`docs/CHANGELOG.md`](docs/CHANGELOG.md)** in this addon folder (so it travels when you copy `addons/ui_react/`).
 
 ## Diagnostics layout
 
@@ -467,7 +493,7 @@ Use **`UiArrayState`** for `items_state` so inspector intent and diagnostics lin
 - `ui_react_dock_config.gd` — ProjectSettings keys and load/save for dock preferences.
 - `controllers/ui_react_action_controller.gd` — Wraps `EditorUndoRedoManager` property changes.
 
-**Planning docs:** phased capability backlog for this addon lives in **[`docs/ROADMAP.md`](docs/ROADMAP.md)**; the **P5** wiring contract is **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)**. A hosting repository may add its own root roadmap separately.
+**Planning docs:** phased capability backlog for this addon lives in **[`docs/ROADMAP.md`](docs/ROADMAP.md)**; the **P5** wiring contract is **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)**; the **P6.1** action contract is **[`docs/ACTION_LAYER.md`](docs/ACTION_LAYER.md)**. A hosting repository may add its own root roadmap separately.
 
 Runtime addon code under `scripts/internal/*` remains **unstable** for direct game use; the plugin may depend on it only for parity with future refactors—prefer mirroring rules inside `services/` if drift becomes a problem.
 

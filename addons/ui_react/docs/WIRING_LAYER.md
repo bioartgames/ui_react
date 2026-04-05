@@ -32,7 +32,7 @@ flowchart TB
   Wiring -.->|"observe trigger sources"| Controls
 ```
 
-**Actions (P6.1):** Inspector **`action_targets`** on the **§5** P5.1 control set drives **non-motion** UI behavior only (focus, visibility, **`Control.mouse_filter`**, narrow UI **`UiBoolState`** flags). Normative contract: [`ACTION_LAYER.md`](ACTION_LAYER.md). **Wiring** still owns **`UiStringState`** catalog/filter/detail data transforms (**§2**); **Actions** must not duplicate those jobs.
+**Actions (P6.1):** Inspector **`action_targets`** on the **§5** P5.1 control set (and **`UiReactButton`** per [`ACTION_LAYER.md`](ACTION_LAYER.md) §4) drives **non-motion** UI behavior: **presentation** (focus, visibility, **`Control.mouse_filter`**, narrow UI **`UiBoolState`** flags) **and bounded** **`UiFloatState`** mutations (e.g. **`SUBTRACT_PRODUCT_FROM_FLOAT`** — see [`ACTION_LAYER.md`](ACTION_LAYER.md)). Normative contract: [`ACTION_LAYER.md`](ACTION_LAYER.md). **Wiring** still owns **`UiStringState`** catalog/filter/detail data transforms (**§2**); **Actions** must not duplicate those jobs.
 
 ---
 
