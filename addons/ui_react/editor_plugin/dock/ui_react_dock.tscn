@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://ui_react_tools_dock"]
 
-[ext_resource type="Script" path="res://addons/ui_react/editor_plugin/ui_react_dock.gd" id="1"]
+[ext_resource type="Script" path="res://addons/ui_react/editor_plugin/dock/ui_react_dock.gd" id="1"]
 
 [node name="UiReactDock" type="Control"]
 layout_mode = 3

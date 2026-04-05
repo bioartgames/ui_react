@@ -53,6 +53,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Actions:** `UiReactActionTargetHelper._with_reentry_guard` still uses sequential unlock after `fn.call()` (same behavior as before this batch; full **`try` / `finally`** is optional if you target an engine/toolchain that parses it reliably).
 - **Controls:** Shared **`UiReactTwoWayBindingDriver`**; exported `UiState` bindings use **getters/setters** with reconnect when the resource is swapped at runtime.
 - **Editor:** `UiReactComponentRegistry` is the single binding/stem registry; **`UiReactValidatorService`** delegates to split validators; **`UiReactUnusedStateService`** caches loads by `mtime` (full cache clear on dock **Rescan**).
+- **Editor:** dock UI scripts live under **`editor_plugin/dock/`** (`ui_react_dock.tscn`, `ui_react_dock*.gd`); **`ui_react_editor_plugin.gd`** loads **`res://addons/ui_react/editor_plugin/dock/ui_react_dock.tscn`**.
 - **Hygiene:** Removed unreferenced plugin-generated sample `.tres` files; README notes not committing stray plugin output.
 
 ## [2.7.0] - 2026-04-04

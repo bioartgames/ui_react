@@ -482,7 +482,7 @@ Use **`UiArrayState`** for `items_state` so inspector intent and diagnostics lin
 ## Architecture (for contributors)
 
 - `ui_react_editor_plugin.gd` — `EditorPlugin` entry; registers the dock.
-- `ui_react_dock.gd` — Dock UI, refresh orchestration, editor signal wiring.
+- `dock/ui_react_dock.gd` — Dock UI, refresh orchestration, editor signal wiring.
 - `models/ui_react_diagnostic_model.gd` — `DiagnosticIssue`, **IssueKind** (`GENERIC` vs `UNUSED_STATE_FILE`), **`resource_path`** for file-scoped rows.
 - `services/ui_react_scanner_service.gd` — Finds `UiReact*` nodes and binding metadata.
 - `services/ui_react_validator_service.gd` — Emits binding `DiagnosticIssue` rows (mirrors runtime validation rules where practical).
@@ -490,7 +490,7 @@ Use **`UiArrayState`** for `items_state` so inspector intent and diagnostics lin
 - `services/ui_react_scene_file_resource_paths.gd` — Parses the edited scene’s saved `.tscn` text for `res://` substrings (candidate paths for unused-state detection).
 - `services/ui_react_unused_state_service.gd` — Emits **unused** `.tres` INFO rows: **intersection** of output-folder `UiState` files, paths present in the saved scene file, and **not** referenced by Ui React on the edited tree.
 - `services/ui_react_state_factory_service.gd` — Creates typed states and saves them to disk.
-- `ui_react_dock_config.gd` — ProjectSettings keys and load/save for dock preferences.
+- `dock/ui_react_dock_config.gd` — ProjectSettings keys and load/save for dock preferences.
 - `controllers/ui_react_action_controller.gd` — Wraps `EditorUndoRedoManager` property changes.
 
 **Planning docs:** phased capability backlog for this addon lives in **[`docs/ROADMAP.md`](docs/ROADMAP.md)**; the **P5** wiring contract is **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)**; the **P6.1** action contract is **[`docs/ACTION_LAYER.md`](docs/ACTION_LAYER.md)**. A hosting repository may add its own root roadmap separately.

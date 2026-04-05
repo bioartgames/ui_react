@@ -1,7 +1,7 @@
 @tool
 extends EditorPlugin
 
-const _DOCK_SCENE_PATH := "res://addons/ui_react/editor_plugin/ui_react_dock.tscn"
+const _DOCK_SCENE_PATH := "res://addons/ui_react/editor_plugin/dock/ui_react_dock.tscn"
 
 var _dock: Control
 
