@@ -302,3 +302,7 @@ static func _apply_row(owner: Control, row: UiReactActionTarget, row_index: int,
 				ctl.mouse_filter = row.mouse_filter_when_true if b else row.mouse_filter_when_false
 			else:
 				ctl.mouse_filter = row.mouse_filter
+		UiReactActionTarget.UiReactActionKind.SUBTRACT_PRODUCT_FROM_FLOAT:
+			UiReactStateOpService.subtract_product_from_accumulator(
+				row.float_accumulator, row.float_factor_a, row.float_factor_b
+			)

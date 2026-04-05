@@ -9,6 +9,8 @@ enum UiReactActionKind {
 	SET_VISIBLE,
 	SET_UI_BOOL_FLAG,
 	SET_MOUSE_FILTER,
+	## [code]accumulator -= factor_a * factor_b[/code] when affordable ([code]UiReactStateOpService[/code]).
+	SUBTRACT_PRODUCT_FROM_FLOAT,
 }
 
 @export var enabled: bool = true
@@ -37,6 +39,10 @@ enum UiReactActionKind {
 @export var mouse_filter: Control.MouseFilter = Control.MOUSE_FILTER_STOP
 @export var mouse_filter_when_true: Control.MouseFilter = Control.MOUSE_FILTER_STOP
 @export var mouse_filter_when_false: Control.MouseFilter = Control.MOUSE_FILTER_IGNORE
+
+@export var float_accumulator: UiFloatState
+@export var float_factor_a: UiFloatState
+@export var float_factor_b: UiFloatState
 
 
 func _validate_property(property: Dictionary) -> void:
@@ -70,4 +76,7 @@ func _validate_property(property: Dictionary) -> void:
 			else:
 				if pname == &"mouse_filter":
 					return
+		UiReactActionKind.SUBTRACT_PRODUCT_FROM_FLOAT:
+			if pname in [&"float_accumulator", &"float_factor_a", &"float_factor_b"]:
+				return
 	property.usage = PROPERTY_USAGE_STORAGE

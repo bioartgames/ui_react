@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Breaking
 
+- **Examples:** removed **`examples/shop_computed_afford.gd`**, **`shop_computed_buy_disabled.gd`**, **`shop_computed_status.gd`** (replaced by stock **`UiComputed*`** under **`scripts/api/models/`**). **`class_name`** **`ShopComputedAfford`**, **`ShopComputedBuyDisabled`**, **`ShopComputedStatus`** removed.
+- **Examples:** removed **`examples/shop_computed_demo.gd`** and **`examples/options_status_computed.gd`**. Shop **Buy** is **`UiReactButton.action_targets`** **`SUBTRACT_PRODUCT_FROM_FLOAT`**; options status uses **`UiComputedTransactionalStatusString`**.
 - **Wiring:** removed **`examples/inventory_screen_demo.gd`**. **`inventory_screen_demo.tscn`** is **inspector-only** (**`wire_rules`** + **`UiReactWireRunner`**). New rules: **`UiReactWireSetStringOnBoolPulse`**, **`UiReactWireSyncBoolStateDebugLine`**. **`UiReactWireCopySelectionDetail`** defaults **`clear_suffix_on_selection_change`** to **true** (runner clears **`suffix_note_state`** when **`selected_state`** changes before recomputing detail).
 - **`UiReactTree`:** requires **`tree_items_state`** (**`UiArrayState`** whose value is an **`Array` of `UiReactTreeNode`**). Populate the tree via data, not ad hoc **`create_item`** code on the control.
 - **Computed wiring:** removed **`UiReactComputedSync`**. Assign **`UiComputedStringState`** / **`UiComputedBoolState`** subclasses to **`UiReact*`** exports (e.g. **`text_state`**, **`checked_state`**); **`UiReactComputedService`** wires **`sources`** at runtime. Nested computeds (sources of other computeds) are wired automatically.
@@ -18,6 +20,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **`UiReactStateOpService.afford_floats`**; stock computeds **`UiComputedFloatGeProductBool`**, **`UiComputedBoolInvert`**, **`UiComputedOrderSummaryThreeFloatString`** (shop demo afford / buy-disabled / order-summary BBCode; no **`examples/*.gd`**).
+- **`UiReactStateOpService`** (`scripts/internal/react/ui_react_state_op_service.gd`); **`UiReactActionKind.SUBTRACT_PRODUCT_FROM_FLOAT`** on **`UiReactActionTarget`**; **`UiReactButton.action_targets`** + **`run_actions`** on **`PRESSED`** (merged trigger map with **`animation_targets`**).
+- **`UiComputedTransactionalStatusString`** for draft/committed transactional status lines.
 - **`UiReactWireSetStringOnBoolPulse`**, **`UiReactWireSyncBoolStateDebugLine`**; internal **`UiReactWireTemplate`** helpers for **`{name}`** / **`{kind}`** / **`{qty}`** substitution shared with **`UiReactWireCopySelectionDetail`**.
 - **`UiReactTreeNode`** resource and **`UiReactTree.tree_items_state`**: hierarchical **`Tree`** rows from **`UiArrayState`** (full rebuild on change; **`get_visible_row_count()`** for **`selection_slot`** diagnostics).
 - **Editor:** **`UiReactTreeValidator`** (payload shape) and **`UiReactAnimValidator`** extension for **`UiReactTree`** (**`selection_slot`** vs visible row count).
@@ -31,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **`UiReactSpinBox`:** **`UiReactComputedService.hook_bind`** / **`hook_unbind`** for **`value_state`** and **`disabled_state`** so bound **`UiComputed*`** (including nested sources, e.g. shop **`disabled_state`**) recompute like other **`UiReact*`** controls.
 - **`inventory_screen_demo.tscn`:** wire catalog rows live on **`UiReactWireCatalogData.rows`** in the scene (removed **`inventory_demo_catalog.gd`** / **`inventory_demo_catalog_wire_data.gd`**).
 - **`inventory_screen_demo.tscn`:** category **`UiReactTree`** uses scene **`tree_items_state`** + **`UiReactTreeNode`** subresources (no **`_build_tree`** script).
 - **`UiAnimTarget`:** Inspector **`@export`** order is **`target`** → **`selection_slot`** → **`trigger`** → **`reset_duration`** / **`wait_after_reset`** → **`animation`**, then timing and behavior.

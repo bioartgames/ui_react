@@ -72,6 +72,114 @@ static func validate_action_targets(
 				)
 			)
 
+		if row.action == UiReactActionTarget.UiReactActionKind.SUBTRACT_PRODUCT_FROM_FLOAT:
+			if row.state_watch != null:
+				out.append(
+					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+						UiReactDiagnosticModel.Severity.ERROR,
+						component,
+						str(owner.name),
+						"action_targets[%d]: SUBTRACT_PRODUCT_FROM_FLOAT is control-triggered only (clear state_watch)." % i,
+						"Remove state_watch or use a different action kind.",
+						node_path,
+						&"action_targets",
+						&"",
+						UiReactDiagnosticModel.IssueKind.GENERIC,
+						"",
+					)
+				)
+			if row.float_accumulator == null:
+				out.append(
+					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+						UiReactDiagnosticModel.Severity.WARNING,
+						component,
+						str(owner.name),
+						"action_targets[%d] SUBTRACT_PRODUCT_FROM_FLOAT needs float_accumulator." % i,
+						"Assign UiFloatState (e.g. gold).",
+						node_path,
+						&"action_targets",
+						&"",
+						UiReactDiagnosticModel.IssueKind.GENERIC,
+						"",
+					)
+				)
+			elif not (row.float_accumulator is UiFloatState):
+				out.append(
+					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+						UiReactDiagnosticModel.Severity.WARNING,
+						component,
+						str(owner.name),
+						"action_targets[%d] float_accumulator must be UiFloatState." % i,
+						"Assign UiFloatState.",
+						node_path,
+						&"action_targets",
+						&"",
+						UiReactDiagnosticModel.IssueKind.GENERIC,
+						"",
+					)
+				)
+			if row.float_factor_a == null:
+				out.append(
+					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+						UiReactDiagnosticModel.Severity.WARNING,
+						component,
+						str(owner.name),
+						"action_targets[%d] SUBTRACT_PRODUCT_FROM_FLOAT needs float_factor_a." % i,
+						"Assign UiFloatState (e.g. price).",
+						node_path,
+						&"action_targets",
+						&"",
+						UiReactDiagnosticModel.IssueKind.GENERIC,
+						"",
+					)
+				)
+			elif not (row.float_factor_a is UiFloatState):
+				out.append(
+					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+						UiReactDiagnosticModel.Severity.WARNING,
+						component,
+						str(owner.name),
+						"action_targets[%d] float_factor_a must be UiFloatState." % i,
+						"Assign UiFloatState.",
+						node_path,
+						&"action_targets",
+						&"",
+						UiReactDiagnosticModel.IssueKind.GENERIC,
+						"",
+					)
+				)
+			if row.float_factor_b == null:
+				out.append(
+					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+						UiReactDiagnosticModel.Severity.WARNING,
+						component,
+						str(owner.name),
+						"action_targets[%d] SUBTRACT_PRODUCT_FROM_FLOAT needs float_factor_b." % i,
+						"Assign UiFloatState (e.g. quantity).",
+						node_path,
+						&"action_targets",
+						&"",
+						UiReactDiagnosticModel.IssueKind.GENERIC,
+						"",
+					)
+				)
+			elif not (row.float_factor_b is UiFloatState):
+				out.append(
+					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+						UiReactDiagnosticModel.Severity.WARNING,
+						component,
+						str(owner.name),
+						"action_targets[%d] float_factor_b must be UiFloatState." % i,
+						"Assign UiFloatState.",
+						node_path,
+						&"action_targets",
+						&"",
+						UiReactDiagnosticModel.IssueKind.GENERIC,
+						"",
+					)
+				)
+			continue
+
 		if row.state_watch != null and row.bool_flag_state != null:
 			if (
 				row.action == UiReactActionTarget.UiReactActionKind.SET_UI_BOOL_FLAG

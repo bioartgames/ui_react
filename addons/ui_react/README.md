@@ -12,7 +12,9 @@ Public direction, phased delivery, and a full **capability backlog** (so deferre
 
 ### Action layer (P6.1)
 
-**P6.1** adds inspector-authored **`action_targets`** (**`UiReactActionTarget`** rows) on the **same P5.1 control set** as **`wire_rules`** ([`WIRING_LAYER.md`](docs/WIRING_LAYER.md) §5)—**non-motion** reactions only; tweens stay on **`animation_targets`**. The **normative** spec is **[`docs/ACTION_LAYER.md`](docs/ACTION_LAYER.md)**; backlog **CB-042–CB-047** is in **ROADMAP** Appendix only. Action code may ship before P5.1 wiring is complete ([`ACTION_LAYER.md`](docs/ACTION_LAYER.md) §7 note).
+**P6.1** adds inspector-authored **`action_targets`** (**`UiReactActionTarget`** rows) on the **P5.1 `wire_rules` control set** plus **`UiReactButton`** ([`ACTION_LAYER.md`](docs/ACTION_LAYER.md) §4)—**non-motion** reactions and **bounded** **`UiFloatState`** mutations (**`SUBTRACT_PRODUCT_FROM_FLOAT`** via **`UiReactStateOpService`**); tweens stay on **`animation_targets`**. The **normative** spec is **[`docs/ACTION_LAYER.md`](docs/ACTION_LAYER.md)**; backlog **CB-042–CB-047** is in **ROADMAP** Appendix only. Action code may ship before P5.1 wiring is complete ([`ACTION_LAYER.md`](docs/ACTION_LAYER.md) §7 note).
+
+**Layers (short):** **Wiring** = reactive data rules; **Computed** = derived **`UiComputed*`** state; **Actions** = focus / visibility / mouse filter / bool UI flags / whitelisted float ops; **`UiReactStateOpService`** = shared float helpers (**DRY**).
 
 **Docs layout:** [`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md) (wiring), [`docs/ACTION_LAYER.md`](docs/ACTION_LAYER.md) (actions), [`docs/ROADMAP.md`](docs/ROADMAP.md) (phases + Appendix), [`docs/P5_CURRENT_STATE_AUDIT.md`](docs/P5_CURRENT_STATE_AUDIT.md) (P5 gates).
 
@@ -45,7 +47,7 @@ The addon ships **four** runnable examples under **`res://addons/ui_react/exampl
 
 - **`res://addons/ui_react/examples/inventory_screen_demo.tscn`** — **`UiReactWireRunner`** + **`wire_rules`** (map / refresh / copy-detail / bool-pulse suffix / debug lines per **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)**); **no** root script; **`UiReactTree`** + filtered **`UiReactItemList`** + actions; list lock via overlay + **`action_targets`** (**CB-015** / **P6.1**); sample **`UiAnimTarget`** fades/POP.
 - **`res://addons/ui_react/examples/options_transactional_demo.tscn`** — transactional **Apply / Cancel** + **`UiReactTabContainer`** showcase tab.
-- **`res://addons/ui_react/examples/shop_computed_demo.tscn`** — computed afford/status on **`UiReactRichTextLabel`**; **`UiReactProgressBar`** / **`UiReactSpinBox`** bindings; **Buy** via **`shop_computed_demo.gd`** (**CB-006**).
+- **`res://addons/ui_react/examples/shop_computed_demo.tscn`** — **`UiComputedFloatGeProductBool`** / **`UiComputedBoolInvert`** / **`UiComputedOrderSummaryThreeFloatString`** + **`UiReactRichTextLabel`**; **`UiReactProgressBar`** / **`UiReactSpinBox`**; **Buy** via **`action_targets`** **`SUBTRACT_PRODUCT_FROM_FLOAT`**; no root script, no **`examples/*.gd`** for shop computeds.
 - **`res://addons/ui_react/examples/anim_targets_catalog_demo.tscn`** — catalog of **`UiAnimTarget.AnimationAction`** ( **`animation_targets`** with **`selection_slot`** per row + **`play_selected_row_animation`**) + trigger playground; no root script.
 
 Use the scene tree to see how states and targets are wired.
@@ -228,7 +230,7 @@ Use a **`UiComputedStringState`** or **`UiComputedBoolState`** **subclass** when
 
 **Transactional + computed:** inside **`compute_*`**, read **`UiTransactionalState`** with **`get_draft_value()`**, **`get_committed_value()`**, and **`has_pending_changes()`** as needed—use **one** transactional resource per field in **`sources`**, not separate “draft” vs “committed” nodes.
 
-**Examples:** **`res://addons/ui_react/examples/shop_computed_demo.tscn`** (+ **`shop_computed_demo.gd`** — Buy / **CB-006**; status line **`UiReactRichTextLabel`** + **`ShopComputedStatus`** BBCode); **`res://addons/ui_react/examples/options_transactional_demo.tscn`** (status line).
+**Examples:** **`res://addons/ui_react/examples/shop_computed_demo.tscn`** (Buy via **`action_targets`** **`SUBTRACT_PRODUCT_FROM_FLOAT`**; status **`UiReactRichTextLabel`** + **`UiComputedOrderSummaryThreeFloatString`**); **`res://addons/ui_react/examples/options_transactional_demo.tscn`** (**`UiComputedTransactionalStatusString`**).
 
 **Dock:** a **WARNING** appears when a **`UiComputed*`** has **`sources`** but is not assigned to a registry **`UiReact*`** binding and is not only used as a nested source of another computed (**`UiReactComputedValidator`**).
 
@@ -263,17 +265,15 @@ This pattern is **game-layer** glue; the addon does not ship a generic virtualiz
 
 ## Imperative actions (command-style, CB-006)
 
-The addon does **not** ship a **`UiCommand`** resource (**[`docs/ROADMAP.md`](docs/ROADMAP.md)** — **CB-007** deferred). For **one-shot** actions (**Buy**, **equip**, **delete**), use **game-layer** code:
+The addon does **not** ship a generic **`UiCommand`** graph (**[`docs/ROADMAP.md`](docs/ROADMAP.md)** — **CB-007** deferred). For **bounded** shop-style math (**accumulator −= a × b** when affordable), use **`UiReactButton`** **`action_targets`** **`SUBTRACT_PRODUCT_FROM_FLOAT`** ([**`ACTION_LAYER.md`**](docs/ACTION_LAYER.md) §3.2) — implementation **`UiReactStateOpService`**.
 
-1. Connect the control’s signal (**`pressed`**, **`item_activated`**, …).
-2. Read any inputs from **`UiState`** via **`get_value()`**.
-3. Validate, then call **`set_value()`** on the authoritative state (gold, inventory, …). **`UiReact*`** and **computed** resources will react to the new values.
+For **other** one-shot domain actions (**equip**, **delete**, server calls), use **game-layer** code: connect **`pressed`**, read **`UiState`**, **`set_value()`** on authoritative state.
 
-**Pitfall:** **`UiReactButton.pressed_state`** syncs the button’s pressed flag with a **`UiBoolState`**; it is **not** a general “run this command” hook. Keep purchase logic in **`pressed`** (or a named handler) as in **`shop_computed_demo.gd`**.
+**Pitfall:** **`UiReactButton.pressed_state`** syncs the button’s pressed flag with a **`UiBoolState`**; it is **not** a general “run this command” hook.
 
-**Confirm / equip variants** often pair this pattern with a **modal** (**CB-017**): same **`set_value` / mutation** on the confirm button inside a popup.
+**Confirm / equip variants** often pair with a **modal** (**CB-017**).
 
-**Example:** **`res://addons/ui_react/examples/shop_computed_demo.tscn`** + **`shop_computed_demo.gd`**.
+**Example (declarative buy):** **`res://addons/ui_react/examples/shop_computed_demo.tscn`**.
 
 ---
 
@@ -357,7 +357,7 @@ These may change between template versions; **do not rely on them from game code
 | `scripts/controls/` | Attachable **UiReact\*** scripts. |
 | `scripts/internal/anim/` | Animation implementation (unstable for direct use). |
 | `scripts/internal/react/` | Reactive helpers (unstable for direct use). |
-| `examples/` | **`inventory_screen_demo.tscn`** (**`UiReactWireRunner`**, **`wire_rules`** including **`UiReactWireCopySelectionDetail`**, **`UiReactWireSetStringOnBoolPulse`**, **`UiReactWireSyncBoolStateDebugLine`**, **`UiReactWireCatalogData.rows`**, texture/option actions, **`action_targets`** list lock, **`UiAnimTarget`**); no root script. **`options_transactional_demo.tscn`** (transactional **Apply / Cancel** + **`UiReactTabContainer`**); **`shop_computed_demo.tscn`** + **`shop_computed_demo.gd`** (computed + **CB-006**; rich status; progress/spin showcase); **`anim_targets_catalog_demo.tscn`** (animation catalog + trigger playground; inspector-only wiring). |
+| `examples/` | **`inventory_screen_demo.tscn`** (**`UiReactWireRunner`**, **`wire_rules`**, **`UiReactWireCatalogData.rows`**, **`action_targets`**, **`UiAnimTarget`**); no root script. **`options_transactional_demo.tscn`** (**`UiComputedTransactionalStatusString`**, transactional **Apply / Cancel** + **`UiReactTabContainer`**). **`shop_computed_demo.tscn`** (**`UiComputedFloatGeProductBool`** / **`UiComputedBoolInvert`** / **`UiComputedOrderSummaryThreeFloatString`**; **`action_targets`** buy; no root script). **`anim_targets_catalog_demo.tscn`** (animation catalog + trigger playground). |
 | `docs/` | **README**, **CHANGELOG**, **[`ROADMAP.md`](docs/ROADMAP.md)**, **[`WIRING_LAYER.md`](docs/WIRING_LAYER.md)** (normative **P5** wiring spec). |
 | `editor_plugin/ui_react_component_registry.gd` | Single source of truth for script-stem → **`UiReact*`** name and per-control **`BINDINGS_BY_COMPONENT`** (edit here when adding a control; **`UiReactScannerService`** and validators consume it). |
 | `editor_plugin/` | Optional Godot editor plugin: bottom dock, split **`ui_react_*_validator.gd`** modules + **`ui_react_validator_service`** façade, quick state creation. |

@@ -1,17 +1,17 @@
-[gd_scene load_steps=20 format=3 uid="uid://bhrsm6wi0v4s"]
+[gd_scene load_steps=21 format=3 uid="uid://bhrsm6wi0v4s"]
 
-[ext_resource type="Script" uid="uid://c23k4pmtnl3sm" path="res://addons/ui_react/examples/shop_computed_demo.gd" id="0_shop"]
 [ext_resource type="Script" uid="uid://cy1vsor6ek3xr" path="res://addons/ui_react/scripts/api/models/ui_float_state.gd" id="1_fl"]
 [ext_resource type="Script" uid="uid://st55qiias3cb" path="res://addons/ui_react/scripts/api/models/ui_state.gd" id="2_st"]
 [ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://addons/ui_react/scripts/controls/ui_react_slider.gd" id="3_sl"]
 [ext_resource type="Script" uid="uid://dhntoxb5f7chr" path="res://addons/ui_react/scripts/controls/ui_react_rich_text_label.gd" id="4_rich"]
 [ext_resource type="Script" uid="uid://lv5ixpw5hlvp" path="res://addons/ui_react/scripts/controls/ui_react_button.gd" id="5_btn"]
-[ext_resource type="Script" uid="uid://ch6m8b48u340x" path="res://addons/ui_react/examples/shop_computed_afford.gd" id="7_aff"]
-[ext_resource type="Script" uid="uid://dbh65kk1hltrx" path="res://addons/ui_react/examples/shop_computed_buy_disabled.gd" id="8_dis"]
-[ext_resource type="Script" uid="uid://cbi7k8j508tvj" path="res://addons/ui_react/examples/shop_computed_status.gd" id="9_stat"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_computed_float_ge_product_bool.gd" id="7_aff"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_computed_bool_invert.gd" id="8_dis"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_computed_order_summary_three_float_string.gd" id="9_stat"]
 [ext_resource type="Script" uid="uid://diigywt0dm170" path="res://addons/ui_react/scripts/api/models/ui_anim_target.gd" id="10_anim"]
 [ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_progress_bar.gd" id="11_pb"]
 [ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_spin_box.gd" id="12_sp"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_action_target.gd" id="13_at"]
 
 [sub_resource type="Resource" id="gold"]
 script = ExtResource("1_fl")
@@ -50,6 +50,15 @@ duration = 0.22
 pulse_amount = 1.06
 pulse_count = 1
 
+[sub_resource type="Resource" id="buy_action"]
+script = ExtResource("13_at")
+rule_id = "buy_subtract_gold"
+action = 4
+trigger = 0
+float_accumulator = SubResource("gold")
+float_factor_a = SubResource("price")
+float_factor_b = SubResource("qty")
+
 [node name="ShopComputedDemo" type="Control"]
 layout_mode = 3
 anchors_preset = 15
@@ -57,10 +66,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("0_shop")
-gold_state = SubResource("gold")
-price_state = SubResource("price")
-quantity_state = SubResource("qty")
 
 [node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -82,7 +87,7 @@ text = "Shop (computed state demo)"
 [node name="Help" type="Label" parent="VBox"]
 custom_minimum_size = Vector2(1, 1)
 layout_mode = 2
-text = "Adjust gold, price, and quantity. Gold meter + quantity spin box are showcase bindings (shared gold/qty state). Status line is UiReactRichTextLabel + BBCode from ShopComputedStatus; Buy subtracts gold via shop_computed_demo.gd (CB-006)."
+text = "Adjust gold, price, and quantity. Gold meter + quantity spin box are showcase bindings (shared gold/qty state). Status line is UiReactRichTextLabel + BBCode from UiComputedOrderSummaryThreeFloatString; afford/disabled use UiComputedFloatGeProductBool + UiComputedBoolInvert. Buy subtracts gold via action_targets SUBTRACT_PRODUCT_FROM_FLOAT (UiReactStateOpService)."
 autowrap_mode = 3
 
 [node name="GoldLabel" type="Label" parent="VBox"]
@@ -166,3 +171,4 @@ layout_mode = 2
 text = "Buy"
 script = ExtResource("5_btn")
 disabled_state = SubResource("buy_dis")
+action_targets = [SubResource("buy_action")]

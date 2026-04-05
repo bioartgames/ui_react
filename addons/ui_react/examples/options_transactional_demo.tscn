@@ -6,7 +6,7 @@
 [ext_resource type="Script" uid="uid://st55qiias3cb" path="res://addons/ui_react/scripts/api/models/ui_state.gd" id="3_cux1w"]
 [ext_resource type="Script" uid="uid://ddkpdoxca60md" path="res://addons/ui_react/scripts/api/models/ui_transactional_group.gd" id="4_grp"]
 [ext_resource type="Script" uid="uid://da03oq3dwj1le" path="res://addons/ui_react/scripts/controls/ui_react_transactional_actions.gd" id="5_act"]
-[ext_resource type="Script" uid="uid://bn8meqr8amxa7" path="res://addons/ui_react/examples/options_status_computed.gd" id="6_status"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_computed_transactional_status_string.gd" id="6_status"]
 [ext_resource type="Script" uid="uid://bw7gojuop1hic" path="res://addons/ui_react/scripts/controls/ui_react_label.gd" id="8_lbl"]
 [ext_resource type="Resource" uid="uid://b4gdunujg6evw" path="res://addons/ui_react/ui_resources/plugin_generated/MuteToggle_disabled_state_3.tres" id="9_6xi6r"]
 [ext_resource type="Script" uid="uid://dohh71knb8vid" path="res://addons/ui_react/scripts/controls/ui_react_tab_container.gd" id="10_tabs"]

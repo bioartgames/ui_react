@@ -1,6 +1,7 @@
 @tool
-## Demo-only [UiComputedStringState] for [code]options_transactional_demo.tscn[/code]. [member sources] order: [code][volume_txn, mute_txn][/code] ([UiTransactionalState]).
-extends "res://addons/ui_react/scripts/api/models/ui_computed_string_state.gd"
+## [UiComputedStringState] that formats draft vs committed [UiTransactionalState] rows ([code]sources[0][/code], [code]sources[1][/code]).
+class_name UiComputedTransactionalStatusString
+extends UiComputedStringState
 
 
 func compute_string() -> String:

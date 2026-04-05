@@ -2,7 +2,7 @@
 
 **Status:** Normative specification for **Phase P6.1** (declarative **Action** layer). Runtime implementation **must** conform to this document until a superseding revision is recorded in [`CHANGELOG.md`](CHANGELOG.md) and Charter in [`ROADMAP.md`](ROADMAP.md).
 
-**Charter (one line):** Ui React adds inspector-authored **`action_targets`** on supported **`UiReact*`** controls—one **`UiReactActionTarget`** resource per row—so **non-motion** UI reactions (focus, visibility, `mouse_filter`, narrow **`UiBoolState`** UI flags) are serializable and validator-friendly **without** `UiAnimTarget` / `UiAnimUtils` inside Actions. Motion stays on **`animation_targets`**.
+**Charter (one line):** Ui React adds inspector-authored **`action_targets`** on supported **`UiReact*`** controls—one **`UiReactActionTarget`** resource per row—so **non-motion** UI reactions (focus, visibility, `mouse_filter`, narrow **`UiBoolState`** UI flags, and **bounded** **`UiFloatState`** mutations via **`UiReactStateOpService`**) are serializable and validator-friendly **without** `UiAnimTarget` / `UiAnimUtils` inside Actions. Motion stays on **`animation_targets`**.
 
 ---
 
@@ -23,7 +23,7 @@ Normative split (mirror style of [`WIRING_LAYER.md`](WIRING_LAYER.md) §2):
 | **Controls** | `*_state`, `animation_targets`, **`action_targets`** | user input | via bindings to state | — |
 | **State** | payload | — | committed / draft / computed | — |
 | **Wiring (P5)** | `wire_rules` / runner | controls + state | **`UiState`** per narrow wire rules | grab_focus, visibility orchestration, `UiAnimUtils` |
-| **Actions (P6.1)** | **`action_targets`** | host control subtree | **presentation only**: focus, visibility, **`Control.mouse_filter`**, **narrow** `UiBoolState` UI flags per **`UiReactActionKind`** | **Any** animation or tween (`UiAnimTarget`, `UiAnimUtils`), catalog/shop/domain, network, arbitrary scripts, transactional Apply, or domain logic outside P6.1 |
+| **Actions (P6.1)** | **`action_targets`** | host control subtree | **presentation**: focus, visibility, **`Control.mouse_filter`**, **narrow** `UiBoolState` UI flags; **bounded** `UiFloatState` writes **only** via **`SUBTRACT_PRODUCT_FROM_FLOAT`** ([`UiReactStateOpService`](../../scripts/internal/react/ui_react_state_op_service.gd)) | **Any** animation or tween (`UiAnimTarget`, `UiAnimUtils`), **unbounded** / arbitrary scripts, network, replacing **transactional** Apply/Cancel, **or** duplicating **Wiring** MVP string rules |
 
 **Wiring** answers: “**what data should this screen reflect?**”  
 **Actions** answer: “**what should the UI chrome do right now (non-motion)?**”  
@@ -31,9 +31,14 @@ Normative split (mirror style of [`WIRING_LAYER.md`](WIRING_LAYER.md) §2):
 
 If both Wiring and Actions could touch the same `UiStringState`, **Wiring wins** for that state: Actions **must not** duplicate wiring’s three MVP wire-rule jobs (map int→string for filter keys, refresh list from catalog, copy selection detail).
 
-**Actions vs Wiring — string and data ownership:** Actions **must not** write **`UiStringState`** for catalog lines, filter copy, selection-detail text, or any **data** those three wire-rule types own. **Only Wiring** may perform those transforms. **`SET_UI_BOOL_FLAG`** is the **sole** Action preset that writes **`UiState`** in v1, and **only** to **`UiBoolState`** used as **UI chrome flags**—never transactional truth, inventory counts, or domain invariants.
+**Actions vs Wiring — string and data ownership:** Actions **must not** write **`UiStringState`** for catalog lines, filter copy, selection-detail text, or any **data** those three wire-rule types own. **Only Wiring** may perform those transforms.
 
-**Narrow exception:** **`UiBoolState` UI flags** (e.g. “detail panel open”) **may** be written **only** through **`SET_UI_BOOL_FLAG`** (canonical name; renames are **SemVer major**).
+**State writes from Actions (bounded):**
+
+- **`SET_UI_BOOL_FLAG`** — **`UiBoolState`** **UI chrome flags** only (e.g. “detail panel open”); not transactional truth, inventory counts, or domain invariants.
+- **`SUBTRACT_PRODUCT_FROM_FLOAT`** — **`UiFloatState`** **only**; **control-triggered** (`state_watch` **null**); implementation **`UiReactStateOpService.subtract_product_from_accumulator`** (accumulator −= factor_a × factor_b when affordable). **No** arbitrary expressions; **no** `UiStringState` writes.
+
+**Cross-layer:** **Computed** (`**UiComputed*`**) **derives** display state; **Actions** **mutate** allowed state on triggers; both may call the **same** op helpers internally (**DRY**). **Wiring** does **not** own shop gold math. Example **`shop_computed_demo.tscn`** uses stock **`UiComputedFloatGeProductBool`** / **`UiComputedBoolInvert`** / **`UiComputedOrderSummaryThreeFloatString`** (no demo-only computed scripts).
 
 ---
 
@@ -57,6 +62,7 @@ Fields:
   - **`bool_flag_state`**, **`bool_flag_value`**: for **`SET_UI_BOOL_FLAG`**.
   - **`mouse_filter`**: `Control.MouseFilter` for **control-triggered** **`SET_MOUSE_FILTER`** (`state_watch` null).
   - **`mouse_filter_when_true`**, **`mouse_filter_when_false`**: for **state-driven** **`SET_MOUSE_FILTER`**.
+  - **`float_accumulator`**, **`float_factor_a`**, **`float_factor_b`**: **`UiFloatState`** refs for **`SUBTRACT_PRODUCT_FROM_FLOAT`** only.
 
 **Mutual exclusion (runtime):** If **`state_watch`** is **non-null**, **`trigger`** **does not** dispatch the row. If **`state_watch`** is **null**, dispatch uses **`trigger`** + host control signals only.
 
@@ -67,9 +73,9 @@ Fields:
 - **`SET_MOUSE_FILTER`:** For the two-branch path, the bool **must** come **only** from **`state_watch.get_value()`**, not from other preset fields.
 - **`UiReactTransactionalActions`:** **Control-triggered** action rows (`state_watch` null) **are not supported**; only **state-driven** rows are valid on this host (validator **error**).
 
-### 3.2 MVP enum: `UiReactActionKind` (exactly four values in v1)
+### 3.2 MVP enum: `UiReactActionKind`
 
-Capabilities **frozen**. **Adding** a value requires a **new Appendix row**, **CHANGELOG** entry, and **SemVer minor** (additive), per Charter.
+**Adding** a value requires **CHANGELOG** entry and **SemVer minor** (additive), per Charter.
 
 1. **`GRAB_FOCUS`** — resolve **`target`** as `Control`, `grab_focus()` if `is_inside_tree()`.
 2. **`SET_VISIBLE`** — resolve **`target`** as **`CanvasItem` or `Control`**; set **`visible_value`**. Validator enforces node type.
@@ -77,8 +83,9 @@ Capabilities **frozen**. **Adding** a value requires a **new Appendix row**, **C
 4. **`SET_MOUSE_FILTER`** — resolve **`target`** as **`Control`**.
    - **State-driven** (`state_watch` non-null; list-lock / **CB-015**): **`mouse_filter_when_true`** / **`mouse_filter_when_false`**, `Control.MouseFilter`; read bool from **`state_watch.get_value()`**; **initial sync** §5.1.
    - **Control-triggered** (`state_watch` null): single **`mouse_filter`** on each matching **`trigger`**.
+5. **`SUBTRACT_PRODUCT_FROM_FLOAT`** — **`state_watch` must be null** (validator **error** otherwise). On **`trigger`**, call **`UiReactStateOpService.subtract_product_from_accumulator(float_accumulator, float_factor_a, float_factor_b)`**. No-op when **unaffordable** (accumulator &lt; price × qty).
 
-**Out of v1 (non-goals):** presets invoking `UiAnimTarget.apply`, `UiAnimUtils`, parallel row groups, `emit_signal` / `call` by name/string, `UiReactActionRunner`, action hub, dock graph editor, watching **non-bool** state as dispatch sources—defer **P6.2+**. (**`state_watch: UiBoolState`** **is** in v1.)
+**Out of scope (non-goals):** presets invoking `UiAnimTarget.apply`, `UiAnimUtils`, parallel row groups, `emit_signal` / `call` by name/string, `UiReactActionRunner`, action hub, dock graph editor, watching **non-bool** state as dispatch sources—defer **P6.2+**. (**`state_watch: UiBoolState`** **is** in v1 for the four **presentation** presets.)
 
 ### 3.3 No separate “chain” or step subclass types (v1)
 
@@ -90,7 +97,7 @@ Capabilities **frozen**. **Adding** a value requires a **new Appendix row**, **C
 
 ## 4. Authoring surface (per control)
 
-- **`action_targets`** on each **`UiReact*`** in the **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** **P5.1 minimum control set**; **widening** requires a **new Appendix row**.
+- **`action_targets`** on each **`UiReact*`** in the **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** **P5.1 minimum control set**, plus **`UiReactButton`** (same **`action_targets`** / **`animation_targets`** merge pattern; **shop Buy** / **`SUBTRACT_PRODUCT_FROM_FLOAT`**); **widening** to further controls requires a **new Appendix row**.
 - **No** `UiReactActionRunner`. **No** autoload.
 - **`_ready` (implementation):** validate rows; connect **control** triggers (merged map with **`animation_targets`** where applicable); connect **`state_watch.value_changed`**; **`sync_initial_state`** once **`owner.is_inside_tree()`** (§5.1).
 
@@ -178,7 +185,7 @@ flowchart TB
 
 ## 9. Verification checklist
 
-- Docs match §§1–8: coupling, **`UiStringState`**, **`state_watch`/`trigger`**, §3.1.1, four presets, **`SET_MOUSE_FILTER`** branches, **`sync_initial_state`**, diagram.
+- Docs match §§1–8: coupling, **`UiStringState`**, **`state_watch`/`trigger`**, §3.1.1, **`UiReactActionKind`** list, **`SET_MOUSE_FILTER`** branches, **`SUBTRACT_PRODUCT_FROM_FLOAT`** constraints, **`sync_initial_state`**, diagram.
 - Normative sections contain **no** unresolved “maybe / or” **forks**; **nullable `state_watch`** is explicit API.
 - **ROADMAP** Appendix **CB-042–CB-047** only; no duplicate definitions elsewhere.
 
