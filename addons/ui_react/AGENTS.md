@@ -46,6 +46,7 @@ This file is the **checklist** before large refactors. The **documentation map**
 ## Change policy
 
 - **`class_name`**, **`@export`** shapes, or **documented public** wiring/action API: follow [ROADMAP.md](docs/ROADMAP.md) Charter (SemVer) and record in [CHANGELOG.md](docs/CHANGELOG.md).
+- **New or widened `UiReact*` inspector surface:** Charter **evidence bar**—**official examples** (README **Quickstart**) + **Appendix** / **Inspector surface matrix (CB-052)** tracking; **not** private-game dogfood. See [ROADMAP.md](docs/ROADMAP.md) glossary (**Official example**).
 - **Normative** spec edits: mention in CHANGELOG under **Documentation** or **Changed** as appropriate.
 
 ---
@@ -53,5 +54,5 @@ This file is the **checklist** before large refactors. The **documentation map**
 ## Non-goals for automated edits
 
 - No drive-by refactors of unrelated files or game projects consuming the addon.
-- No new capability without a **ROADMAP** Appendix row or explicit user approval (solo scope guard).
+- No new capability without a **ROADMAP** Appendix row or explicit user approval (solo scope guard); widening **`@export`** surface must meet Charter **evidence bar** (examples + matrix/Appendix).
 - Do not delete or replace normative **WIRING** / **ACTION** docs without a superseding revision and CHANGELOG entry.

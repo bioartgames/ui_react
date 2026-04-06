@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-04-06 — Charter evidence bar: official examples + symmetry (not dogfood)
+
+**Context:** The maintainer will **not** rely on private-game dogfood; the old **3×** “same pattern in shipped game code” gate is unavailable.
+
+**Decision:** **ROADMAP** **Charter** makes **official examples** (`addons/ui_react/examples/`, README **Quickstart**) the **objective** proof surface. **New** `UiReact*` wrappers ship only when **two** official examples **need** them. **Widened** inspector exports on existing controls ship only when the **Inspector surface matrix (CB-052)** or **Appendix** records the intent **and** at least **one** official example **exercises** the new surface—unless the change is validator-only / bugfix without public export shape change, or the matrix marks **—** with documented no-change.
+
+**Consequences:** **CB-052** **†** / **○** → **●** work is justified by **symmetry** + **example updates**, not game repetition. ROADMAP intro, glossary (**Official example**, **Evidence bar**), P4 historical line, and matrix notes updated.
+
+**Links:** [ROADMAP.md](ROADMAP.md) Charter + glossary, Part I **Inspector surface matrix (CB-052)**
+
+---
+
 ## 2026-04-03 — Documentation spine for solo + agents
 
 **Context:** The addon README grew large; normative behavior already lives in WIRING/ACTION specs. Solo dev and AI helpers need a small map and stable boundaries without a single “god doc.”

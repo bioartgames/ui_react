@@ -19,7 +19,7 @@ Self-contained building blocks for Godot 4.x: two-way **UiState** binding, optio
 
 ### Roadmap and phases
 
-Public direction, phased delivery, and the full **Appendix backlog** (**CB-001–CB-047**) live in **[`docs/ROADMAP.md`](docs/ROADMAP.md)**. **P5** wiring, **P6.1** actions, exit criteria, and **stock-take** (**[`docs/P5_CURRENT_STATE_AUDIT.md`](docs/P5_CURRENT_STATE_AUDIT.md)**) are linked from there.
+Public direction, phased delivery, and the full **Appendix backlog** (**CB-001–CB-047**) live in **[`docs/ROADMAP.md`](docs/ROADMAP.md)**—including the **Charter** **evidence bar** (**official examples** here in **`examples/`** + **symmetry** / matrix tracking for new or widened exports) and the **Inspector surface matrix (CB-052)** (**`animation_targets`** / **`action_targets`** / **`wire_rules`** per control). **P5** wiring, **P6.1** actions, exit criteria, and **stock-take** (**[`docs/P5_CURRENT_STATE_AUDIT.md`](docs/P5_CURRENT_STATE_AUDIT.md)**) are linked from there.
 
 ### Designer path, blessed defaults, common gaps
 

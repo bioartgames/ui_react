@@ -12,7 +12,7 @@ Quick index for **solo maintenance** and **AI agents**. Authoring narrative and 
 |------|---------|----------------|
 | [**README.md**](README.md) | This map — routing and rules of engagement | author, agent |
 | [**CHANGELOG.md**](CHANGELOG.md) | Release history and breaking changes | author, maintainer |
-| [**ROADMAP.md**](ROADMAP.md) | Charter, phases, Appendix backlog (**CB-***), glossary | author, maintainer |
+| [**ROADMAP.md**](ROADMAP.md) | Charter, phases, **Inspector surface matrix (CB-052)**, Appendix backlog (**CB-***), glossary | author, maintainer |
 | [**WIRING_LAYER.md**](WIRING_LAYER.md) | Normative **P5** wiring contract (`UiReactWireRuleHelper`, `wire_rules`, …) | maintainer, agent |
 | [**ACTION_LAYER.md**](ACTION_LAYER.md) | Normative **P6.1** action contract (`action_targets`, `UiReactActionKind`, …) | maintainer, agent |
 | [**P5_CURRENT_STATE_AUDIT.md**](P5_CURRENT_STATE_AUDIT.md) | Stock-take checklist for wiring readiness (**P5.1.b** / **CB-041**) | maintainer |
@@ -30,6 +30,8 @@ Quick index for **solo maintenance** and **AI agents**. Authoring narrative and 
 | **Dock diagnostics** (anim, actions, wiring, tree, computed) | `editor_plugin/services/ui_react_validator_service.gd` façade → `ui_react_*_validator.gd` |
 | **Animation triggers** vs host control | `editor_plugin/ui_react_component_registry.gd` (**ANIM_TRIGGERS_BY_COMPONENT**); [README animation triggers table](../README.md) (search “supported triggers per host”) |
 | **Phased capability** / backlog / CB IDs | [ROADMAP.md](ROADMAP.md) Appendix |
+| **Charter** evidence bar (new wrappers, widened **`@export`**) | [ROADMAP.md](ROADMAP.md) **Charter** + glossary (**Official example**); scenes in [`../examples/`](../examples/) |
+| **`UiReact*`** **`animation_targets`** / **`action_targets`** / **`wire_rules`** parity | [ROADMAP.md](ROADMAP.md) Part I — **Inspector surface matrix (CB-052)**; **CB-052** Notes in Appendix |
 | **P5 exit / hub** readiness | [P5_CURRENT_STATE_AUDIT.md](P5_CURRENT_STATE_AUDIT.md), ROADMAP **CB-034** / **CB-041** |
 | **Why** a design choice was made (not only *what*) | [DECISIONS.md](DECISIONS.md) |
 

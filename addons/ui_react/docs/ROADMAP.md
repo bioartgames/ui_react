@@ -1,6 +1,6 @@
 # Ui React — Roadmap
 
-This document is the **committal** plan for **dogfooding the addon in a real game** and for **public releases**. It is reviewed **quarterly**; the **Appendix** lists every tracked capability with a phase and status so deferred work is not forgotten.
+This document is the **committal** plan for **public releases** and **maintained official examples** (`addons/ui_react/examples/`). Proof of new UI surface is **example-driven** (README-indexed scenes), not private-game dogfood—see **Charter**. It is reviewed **quarterly**; the **Appendix** lists every tracked capability with a phase and status so deferred work is not forgotten.
 
 ---
 
@@ -14,6 +14,8 @@ This document is the **committal** plan for **dogfooding the addon in a real gam
 | **Transaction (transactional state)** | A **draft / working copy** of settings (or similar) separate from **committed** values, with an explicit **apply**, **cancel**, or **revert** path—not the same as computed state. |
 | **Wiring** | Inspector-authored **`UiReactWireRule`** resources + **`UiReactWireRuleHelper`** on each **`UiReact*`** host (**`wire_rules`**), replacing ad-hoc root orchestration for supported patterns. Normative detail: [`WIRING_LAYER.md`](WIRING_LAYER.md). |
 | **Action layer** | Inspector-authored **`action_targets`** + **`UiReactActionTarget`** on the **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** control set **and** **`UiReactButton`** / **`UiReactTextureButton`** ([`ACTION_LAYER.md`](ACTION_LAYER.md) §4)—**non-motion** UI reactions (focus, visibility, `mouse_filter`, narrow UI **`UiBoolState`** flags) **plus** **bounded** **`UiFloatState`** mutations (**`SUBTRACT_PRODUCT_FROM_FLOAT`**, …). **No** `UiAnimTarget` / `UiAnimUtils` inside Actions. Widening **`action_targets`** to further controls requires a new **WIRING** Appendix row. Normative detail: [`ACTION_LAYER.md`](ACTION_LAYER.md). |
+| **Official example** | A **committed** scene under **`res://addons/ui_react/examples/`**, **Play**-runnable, listed in addon [**README**](../README.md) **Quickstart** (or otherwise referenced from this roadmap) so scope stays **objective** for PRs. |
+| **Evidence bar (Charter)** | **Symmetry + example-driven delivery:** no new or widened **`UiReact*`** inspector **proof** without meeting the **Charter** table—**Appendix** / **Inspector surface matrix** tracking **plus** official example usage as specified there. |
 
 ### Stock computed library (future)
 
@@ -34,7 +36,8 @@ Additional **stock** **`UiComputedStringState` / `UiComputedBoolState`** subclas
 | **Language** | **GDScript-only** addon. |
 | **Compatibility** | **Semantic Versioning**: minor = additive; major = breaking changes to `class_name`, `@export` shapes, or other **documented public API**. |
 | **Command pattern (v1.x)** | **Documented pattern + example** only; no mandatory `UiCommand` (or equivalent) resource in core until a **later phase** explicitly adds it. |
-| **New `UiReact*` controls** | Add a wrapper only after the **same binding pattern appears 3+ times** in dogfood game code **or** is required by **two** official example scenes. |
+| **New `UiReact*` controls** | Ship a **new** `UiReact*` wrapper only when **two** **official examples** need it (README **Quickstart** list)—**not** gated on repetition in a private game. |
+| **New or widened `UiReact*` inspector exports** | Additive **`@export`** on an existing control (e.g. **`action_targets`**, **`wire_rules`**) ships only when **(1)** the **Inspector surface matrix (CB-052)** or **Appendix** records the intent (**symmetry**, **†** closure, or parity), **and** **(2)** at least **one** **official example** **exercises** the new surface in a committed **`.tscn`**. **Exceptions:** validator-only or runtime bugfix **without** public export shape change; matrix cell stays **—** with **documented** no-change rationale (no new example required). |
 | **Rich list / row UI** | Prefer **documentation + one example scene** before committing to heavyweight framework features (virtualization, generic grid widget). |
 | **Maintenance budget** | **4–8 hours/month** for triage, documentation fixes, and Godot minor-version compatibility (adjust this line if your capacity differs). |
 | **Public v1.0 vs game-complete** | **v1.0** remains **P1 exit** as before. **P5 wiring** is the **committed path** to eliminate **addon-documented** root glue from **official examples**; games may still use game-layer scripts for domain logic per Non-goals. |
@@ -57,7 +60,7 @@ Additional **stock** **`UiComputedStringState` / `UiComputedBoolState`** subclas
 | **P1** | Transactional state | Minimal draft / commit / revert via **`UiTransactionalState`**; batch **Apply** / **Cancel** via **`UiTransactionalGroup`** + **`UiReactTransactionalActions`** (no command resource). **Validation:** **Options**-class example **`options_transactional_demo.tscn`**. **Delivery complete** (historical). |
 | **P2** | Computed state | Minimal computed resource or helper with **explicit dependencies** and documented limits (no general graph solver promise in v1). **Validation:** at least one **shop** or **inventory-filter** example. **Delivery complete** (historical). |
 | **P3** | List richness and templates | README recipe + example for row templates / icon lists; optional incremental changes to `UiReactItemList` **only if** scoped in an issue. **Delivery complete** (historical). |
-| **P4** | Selective new react controls | e.g. `UiReactTextureButton` / slot pattern, `UiReactTree`—**only** when the **3× rule** (Charter) fires; each new control updates **`UiReactComponentRegistry`** (stem + binding slots) and keeps **`UiReactBindingValidator`** / dock parity. **`UiReactScannerService`** remains the node walk + `kind_to_suggested_class` helper. **Delivery complete** (historical). |
+| **P4** | Selective new react controls | e.g. `UiReactTextureButton` / slot pattern, `UiReactTree`—historically when the **Charter** bar for **new** controls (two official examples) was met; each new control updates **`UiReactComponentRegistry`** (stem + binding slots) and keeps **`UiReactBindingValidator`** / dock parity. **`UiReactScannerService`** remains the node walk + `kind_to_suggested_class` helper. **Delivery complete** (historical). |
 | **P5** | Wiring layer | **`UiReactWireRuleHelper`**, **`UiReactWireRule`** family, **`wire_rules`** on P5.1 control set, diagnostics, example migration per [`WIRING_LAYER.md`](WIRING_LAYER.md). Sub-milestones: **P5.1** (core), **P5.2** (dock wire editor, **CB-035**). |
 | **P6.1** | Declarative Actions | **`action_targets`**, **`UiReactActionTarget`**, **`UiReactActionTargetHelper`** on **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** control set; validator/scanner; runnable example merged into **`inventory_screen_demo.tscn`**. **Normative** [`ACTION_LAYER.md`](ACTION_LAYER.md). Ships **after** P5.1 wiring core. |
 | **P6+** | Deferred parking | Virtualization, state debug overlay, major dock modularization, first-class command resource, deep undo stacks—**not sequenced** until promoted from the Appendix; see **CB-005**, **CB-007**, **CB-010**, **CB-018**, **CB-019**, and other rows with Target phase **P6+**. |
@@ -152,6 +155,38 @@ Not every row is a v1.0 promise; this maps **Megaman-style** UI goals to **phase
 - **Quarterly:** Reconcile **`CB-031`–`CB-047`**, [`WIRING_LAYER.md`](WIRING_LAYER.md), and [`ACTION_LAYER.md`](ACTION_LAYER.md) with implementation drift; re-run stock-take [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) when wiring diagnostics or rules change materially.
 - **Releases:** Version bumps follow **CHANGELOG.md**; this file does not duplicate SemVer rules beyond the Charter.
 
+### Inspector surface matrix (CB-052)
+
+Normative **parity** reference for **`animation_targets`**, **`action_targets`**, and **`wire_rules`** on each shipped **`UiReact*`** control. **Closing CB-052** means this table stays **true in code and docs**: every **†** is either shipped (**●**) with **Charter** **evidence bar** met (**Appendix** / matrix + **official example**), explicitly **—** with rationale, or moved to a **named Appendix row** with target phase.
+
+| Symbol | Meaning |
+|--------|--------|
+| **●** | **Shipped:** export exists; behavior covered by [`ACTION_LAYER.md`](ACTION_LAYER.md) / [`WIRING_LAYER.md`](WIRING_LAYER.md) / registry (**`ANIM_TRIGGERS_BY_COMPONENT`**) as applicable. |
+| **—** | **Out of scope** for this host today (not an error—often intentional). |
+| **†** | **Promotion needed:** new Appendix row + update **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** (wiring triggers) and/or **[`ACTION_LAYER.md`](ACTION_LAYER.md) §4** (action hosts) before treating the cell as **●**. |
+| **○** | **Optional parity** (subset of triggers / low-frequency pattern); decide under CB-052, then ship or mark **—**. |
+
+**`UiReactTransactionalActions`** is a **non-Control** host: it exposes **`action_targets`** + **`wire_rules`** only (no motion layer).
+
+| Control | `animation_targets` | `action_targets` | `wire_rules` | Notes |
+|---------|:-------------------:|:----------------:|:------------:|-------|
+| `UiReactButton` | ● | ● | — | Wiring concentrates on **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** pickers; use children or a new row to put **`wire_rules`** on **Button**. |
+| `UiReactTextureButton` | ● | ● | — | Same as **Button**. |
+| `UiReactCheckBox` | ● | ● | ● | §5 host. |
+| `UiReactLineEdit` | ● | ● | ● | §5 host. |
+| `UiReactItemList` | ● | ● | ● | §5 host. |
+| `UiReactTree` | ● | ● | ● | §5 host. |
+| `UiReactTransactionalActions` | — | ● | ● | State-driven **`action_targets`** only ([`ACTION_LAYER.md`](ACTION_LAYER.md) §3.1.1); **`wire_rules`** for orchestration. |
+| `UiReactSlider` | ● | — | — | Value-centric control; **Actions** / **Wiring** widen via **†** + Appendix only after **Charter** **evidence bar** (matrix **plus** official example). |
+| `UiReactSpinBox` | ● | — | — | Same as **Slider**. |
+| `UiReactProgressBar` | ● | — | — | Same; **`COMPLETED`** trigger for anims. |
+| `UiReactLabel` | ● | ○ | — | **Display sink** (**`text_state`**); not a **`UiReactWireRule`** trigger host. Optional **`action_targets`** (e.g. hover → chrome) is **○** only. |
+| `UiReactRichTextLabel` | ● | ○ | — | Same as **Label**. |
+| `UiReactOptionButton` | ● | † | † | **`SELECTION_CHANGED`** anim trigger; **§5** / **§4** promotion for parity with **ItemList**-style screens. |
+| `UiReactTabContainer` | ● | † | † | Tab index ↔ **`SELECTION_CHANGED`**; promotion for declarative tab-bar chrome / wires. |
+
+Trigger vocabulary per host: **`editor_plugin/ui_react_component_registry.gd`** (**`ANIM_TRIGGERS_BY_COMPONENT`**). **Wiring** allowed triggers per §5 host: **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** table.
+
 ---
 
 ## Part II — Appendix: capability backlog
@@ -211,9 +246,9 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-049 | **`UiReactComputedService.hook_bind`** for **`value_state`** on **`UiReactSlider`** and **`UiReactProgressBar`** | Sliders, bars driven by **`UiComputed*`** | P2 | Done | **2.17.0:** **`hook_bind` / `hook_unbind`** on **`value_state`** (parity with **`UiReactSpinBox`**). |
 | CB-050 | **`action_targets`** on **`UiReactTextureButton`** | Inventory, hotbar, icon buttons | P6+ | Done | **2.17.0:** export + **`apply_validated_actions_and_merge_triggers`**, **`sync_initial_state`**, **`run_actions`**; **[`ACTION_LAYER.md`](ACTION_LAYER.md)** / **[`WIRING_LAYER.md`](WIRING_LAYER.md)** / README updated. |
 | CB-051 | **Action layer:** expand **`UiReactActionKind`** + **`UiReactStateOpService`** (whitelisted math beyond **`SUBTRACT_PRODUCT_FROM_FLOAT`**) | Shop, crafting, any “add / transfer / int” UI | P6+ | Planned | Examples: accumulate without subtract-only, transfer between **`UiFloatState`**, **`UiIntState`** ops—**normative [`ACTION_LAYER.md`](ACTION_LAYER.md)**, validators, no unbounded scripting in Actions. |
-| CB-052 | **`UiReact*`** baseline surface parity | All inspector-driven screens | P6+ | Planned | Decide and ship or document: which controls expose **`animation_targets`**, **`action_targets`**, **`wire_rules`**, and control-specific **`UiState`** exports; reduce “same pattern, different exports” drift (**Charter** 3× rule for **new** controls). |
+| CB-052 | **`UiReact*`** baseline surface parity | All inspector-driven screens | P6+ | Planned | **Normative matrix:** Part I **Inspector surface matrix (CB-052)**. Resolve every **†** / **○** to **●** or **—** (with rationale), or split into **new Appendix rows** + **WIRING §5** / **ACTION §4** updates. Any **●** that widens exports must meet **Charter** **evidence bar** (example + tracking). **`UiReactComponentRegistry`** + per-control scripts stay aligned. |
 | CB-053 | **Plugin / designer UX (post-parity)** | Editor | P6+ | Deferred | **Non-blocking** until **CB-049**–**CB-052** direction is clear: e.g. richer dock (**CB-035**), graph-style views, bulk **`UiAnimTarget`** row generation from list/tree row counts, designer-friendly hooks into gameplay—promote rows when scoped. |
 
 ---
 
-*Last updated: 2026-04-06 — Wiring decentralization: **`UiReactWireRuleHelper`**, **`CB-041` Wont** (hub superseded). **CB-049** / **CB-050** **Done** (**2.17.0**); **CB-051**–**CB-053** remain. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Examples remain **four** scenes.*
+*Last updated: 2026-04-06 — **Charter:** **official examples** + **symmetry** replace dogfood **3×** as the evidence bar; glossary **Official example** / **Evidence bar**. Part I **Inspector surface matrix (CB-052)**. Wiring: **`UiReactWireRuleHelper`**, **`CB-041` Wont**. **CB-049** / **CB-050** **Done** (**2.17.0**); **CB-051**–**CB-053** remain. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Examples remain **four** scenes.*
