@@ -13,7 +13,7 @@ Quick index for **solo maintenance** and **AI agents**. Authoring narrative and 
 | [**README.md**](README.md) | This map — routing and rules of engagement | author, agent |
 | [**CHANGELOG.md**](CHANGELOG.md) | Release history and breaking changes | author, maintainer |
 | [**ROADMAP.md**](ROADMAP.md) | Charter, phases, Appendix backlog (**CB-***), glossary | author, maintainer |
-| [**WIRING_LAYER.md**](WIRING_LAYER.md) | Normative **P5** wiring contract (`UiReactWireRunner`, `wire_rules`, …) | maintainer, agent |
+| [**WIRING_LAYER.md**](WIRING_LAYER.md) | Normative **P5** wiring contract (`UiReactWireRuleHelper`, `wire_rules`, …) | maintainer, agent |
 | [**ACTION_LAYER.md**](ACTION_LAYER.md) | Normative **P6.1** action contract (`action_targets`, `UiReactActionKind`, …) | maintainer, agent |
 | [**P5_CURRENT_STATE_AUDIT.md**](P5_CURRENT_STATE_AUDIT.md) | Stock-take checklist for wiring readiness (**P5.1.b** / **CB-041**) | maintainer |
 | [**DECISIONS.md**](DECISIONS.md) | Lightweight ADR log (context → decision → consequences) | author, agent |
@@ -24,7 +24,7 @@ Quick index for **solo maintenance** and **AI agents**. Authoring narrative and 
 
 | Task | Read first |
 |------|------------|
-| Change or debug **wiring** rules / runner behavior | [WIRING_LAYER.md](WIRING_LAYER.md); `scripts/controls/ui_react_wire_runner.gd`, `scripts/api/models/ui_react_wire_*.gd` |
+| Change or debug **wiring** rules / helper behavior | [WIRING_LAYER.md](WIRING_LAYER.md); `scripts/internal/react/ui_react_wire_rule_helper.gd`, `scripts/api/models/ui_react_wire_*.gd` |
 | Change or debug **action** presets / transactional action constraints | [ACTION_LAYER.md](ACTION_LAYER.md); `scripts/api/models/ui_react_action_target.gd`, `editor_plugin/services/ui_react_action_validator.gd` |
 | Add a **new `UiReact*`** control or **export** | [ROADMAP.md](ROADMAP.md) Charter; `editor_plugin/ui_react_component_registry.gd` (**BINDINGS_BY_COMPONENT**, **ANIM_TRIGGERS_BY_COMPONENT**); `editor_plugin/services/ui_react_binding_validator.gd` |
 | **Dock diagnostics** (anim, actions, wiring, tree, computed) | `editor_plugin/services/ui_react_validator_service.gd` façade → `ui_react_*_validator.gd` |

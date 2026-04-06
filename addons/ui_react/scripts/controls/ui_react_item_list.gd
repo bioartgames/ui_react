@@ -39,12 +39,21 @@ var _items_state: UiArrayState
 ## **Optional** — Action layer rows (focus, visibility, [code]mouse_filter[/code], UI bool flags). See [code]docs/ACTION_LAYER.md[/code].
 @export var action_targets: Array[UiReactActionTarget] = []
 
-## **Optional** — Wiring rules ([code]docs/WIRING_LAYER.md[/code] §5). Applied by [UiReactWireRunner] in the scene.
+## **Optional** — Wiring rules ([code]docs/WIRING_LAYER.md[/code] §5). Applied by [UiReactWireRuleHelper].
 @export var wire_rules: Array[UiReactWireRule] = []
 
 var _row_play_in_progress: bool = false
 
 const _WARN_SINGLE_SELECT_EXPECT_INT := "UiReactItemList: expected int for single-select selected_state"
+
+
+func _enter_tree() -> void:
+	UiReactWireRuleHelper.schedule_attach(self)
+
+
+func _exit_tree() -> void:
+	UiReactWireRuleHelper.detach(self)
+
 
 func _ready() -> void:
 	item_selected.connect(_on_item_selected)

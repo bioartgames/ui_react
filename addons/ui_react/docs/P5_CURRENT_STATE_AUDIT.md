@@ -1,8 +1,8 @@
 # P5 current-state audit (stock-take)
 
-**Purpose:** Doc-driven pass/fail checklist for **P5.1** exit honesty and gates for **P5.1.b** / **P5.2**. Authority: [`WIRING_LAYER.md`](WIRING_LAYER.md) → [`ROADMAP.md`](ROADMAP.md) → [`CHANGELOG.md`](../CHANGELOG.md).
+**Purpose:** Doc-driven pass/fail checklist for **P5.1** exit honesty and gate for **P5.2**. Authority: [`WIRING_LAYER.md`](WIRING_LAYER.md) → [`ROADMAP.md`](ROADMAP.md) → [`CHANGELOG.md`](../CHANGELOG.md).
 
-**Last run:** 2026-04-03 (post–**2.16.0** per [`plugin.cfg`](../editor_plugin/plugin.cfg): README / ROADMAP / WIRING / ACTION **north-star** doc alignment; same date previously recorded **2.14.0** wiring: bool-pulse + debug-line + no inventory root script).
+**Last run:** 2026-04-06 (decentralized wiring: **`UiReactWireRuleHelper`**, removal of **`UiReactWireRunner`**; dock duplicate cross-node rule warning).
 
 Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 
@@ -12,13 +12,13 @@ Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 
 | # | Result | Notes |
 |---|--------|-------|
-| A1 Runner exists | **PASS** | `class_name UiReactWireRunner` in `scripts/controls/ui_react_wire_runner.gd`. |
+| A1 Helper exists | **PASS** | `class_name UiReactWireRuleHelper` in `scripts/internal/react/ui_react_wire_rule_helper.gd`. |
 | A2 Rule base + MVP types | **PASS** | `UiReactWireRule` + map / refresh / copy-detail / bool-pulse / debug-line + `UiReactWireCatalogData` under `scripts/api/models/ui_react_wire_*.gd`. |
 | A3 `wire_rules` on §5 set | **PASS** | Five controls export `Array[UiReactWireRule]`: ItemList, Tree, LineEdit, CheckBox, TransactionalActions. |
-| A4 One runner / warnings | **PASS** | Runtime warning if multiple runners under `current_scene`; dock warns on duplicate runners. |
-| A5 Collection scope | **PASS** | [`WIRING_LAYER.md`](WIRING_LAYER.md) §3 documents **parent-of-runner** subtree (aligned with `get_parent()` walk in code). |
-| A6 Deterministic ordering | **PARTIAL** | Stable sort uses node path + rule index + `rule_id`; spec text mentions `resource_path_or_uid` — equivalent intent, different tuple. **Related (not wiring ordering):** **`UiReactSpinBox`** **`hook_bind`** for computeds is a **control export** integration ([`CHANGELOG.md`](CHANGELOG.md) **[Changed]**), not a **`UiReactWireRunner`** rule concern. |
-| A7 Teardown | **PASS** | `_exit_tree` disconnects registered callables. |
+| A4 Per-host registration | **PASS** | Hosts call `schedule_attach` / `detach` from `_enter_tree` / `_exit_tree`; attach deferred to next `process_frame`. |
+| A5 Collection scope | **PASS** | [`WIRING_LAYER.md`](WIRING_LAYER.md) §3: only the host’s own `wire_rules` array. |
+| A6 Cross-host ordering | **N/A** | Intentionally **undefined**; local array order + state/dataflow per spec. |
+| A7 Teardown | **PASS** | `_exit_tree` → `detach` disconnects registered callables on that host. |
 | A8 Catalog lazy load | **PASS** | `ensure_rows_loaded()` on catalog; refresh rule calls it before filtering. |
 
 ---
@@ -27,8 +27,8 @@ Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 
 | # | Result | Notes |
 |---|--------|-------|
-| B1 Scene uses runner + rules | **PASS** | `inventory_screen_demo.tscn`: `WireRunner` + `wire_rules` on tree / filter / list. |
-| B2 No root glue script | **PASS** | `inventory_screen_demo.tscn` only: **`wire_rules`** on list (copy-detail, bool-pulse suffix, debug lines) + runner; tree from **`tree_items_state`**. |
+| B1 Scene uses rules on controls | **PASS** | `inventory_screen_demo.tscn`: `wire_rules` on tree / filter / list; no `WireRunner` node. |
+| B2 No root glue script | **PASS** | `inventory_screen_demo.tscn` only: **`wire_rules`** on list (copy-detail, bool-pulse suffix, debug lines); tree from **`tree_items_state`**. |
 | B3 ROADMAP checkbox drift | **RESOLVED** | See [`ROADMAP.md`](ROADMAP.md) P5.1 — migration line marked complete with same exception note. |
 
 ---
@@ -37,13 +37,12 @@ Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 
 | # | Result | Notes |
 |---|--------|-------|
-| C1 Missing runner | **PASS** | `_validate_wiring_scope`: WARN when `wire_rules` present and no runner. |
-| C2 Duplicate runner | **PASS** | Same: WARN when `runners > 1`. |
-| C3 Rule export validation | **PASS** | Dock validates concrete rule types (§6): required refs + expected `UiState` / `UiReactWireCatalogData` types (`UiReactWiringValidator.validate_wire_rules`, invoked from the **`UiReactValidatorService`** façade). |
-| C4 Scanner / unused-file parity | **PASS** | Stem map + **`BINDINGS_BY_COMPONENT`** live in **`UiReactComponentRegistry`**; **`UiReactScannerService`** resolves component names on nodes. **`UiReactTransactionalActions`** is listed in the registry like other **`UiReact*`** controls. **`UiReactStateReferenceCollector`** uses the same registry for binding paths and registers `UiState` refs from **`wire_rules`**. Future **NodePath**-on-rules (if any) remains follow-up. |
-| C5 Runtime vs editor | **PASS** | Both paths surface duplicate-runner concerns; missing runner is editor-first. |
+| C1 Cross-node duplicate rule | **PASS** | `validate_wiring_under_root`: WARN when the same `UiReactWireRule` instance appears on two different nodes. |
+| C2 Rule export validation | **PASS** | Dock validates concrete rule types (§6): required refs + expected `UiState` / `UiReactWireCatalogData` types (`UiReactWiringValidator.validate_wire_rules`, invoked from the **`UiReactValidatorService`** façade). |
+| C3 Scanner / unused-file parity | **PASS** | Stem map + **`BINDINGS_BY_COMPONENT`** live in **`UiReactComponentRegistry`**; **`UiReactScannerService`** resolves component names on nodes. **`UiReactTransactionalActions`** is listed in the registry like other **`UiReact*`** controls. **`UiReactStateReferenceCollector`** uses the same registry for binding paths and registers `UiState` refs from **`wire_rules`**. Future **NodePath**-on-rules (if any) remains follow-up. |
+| C4 Runtime vs editor | **PASS** | Editor-first validation for duplicate rule refs; per-rule export issues. |
 
-**Interpretation:** **CB-034** (P5.1 editor scope) is **Done**; **CB-041** hub placement is the remaining wiring diagnostic milestone before optional hub authoring.
+**Interpretation:** **CB-034** (P5.1 editor scope) **Done**. **CB-041** (hub) **Wont** — superseded by per-host helper.
 
 ---
 
@@ -51,16 +50,15 @@ Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 
 | # | Result | Notes |
 |---|--------|-------|
-| D1 CHANGELOG | **PASS** | **2.7.0** documents P5.1 wiring + **CB-034** completion. |
-| D2 Appendix CB-032 / CB-033 / CB-034 | **RESOLVED** | [`ROADMAP.md`](ROADMAP.md) Appendix: **CB-034** **Done** for P5.1 scope; **CB-041** open. |
+| D1 CHANGELOG | **PASS** | Unreleased + historical entries; **2.7.0** documents earlier P5.1 wiring ship. |
+| D2 Appendix CB-032 / CB-033 / CB-034 | **RESOLVED** | [`ROADMAP.md`](ROADMAP.md) Appendix: **CB-041** **Wont**. |
 
 ---
 
-## E–F. Gates: P5.1.b and P5.2
+## E–F. Gate: P5.2
 
 | Milestone | Ready? | Condition |
 |-----------|--------|-----------|
-| **P5.1.b** (`UiReactWireHub`, **CB-041**) | **Yes (engineering start)** | A/B/C **PASS** for current scope; hub + placement validator **not** built (**CB-041**). |
 | **P5.2** (dock rule editor, **CB-035**) | **Proceed** | MVP rule exports are dock-validated; future **NodePath**-on-rules may warrant more checks before graph UX. On-disk model remains **only** `UiReactWireRule` subresources (**PASS**). |
 
 ---
@@ -80,7 +78,6 @@ Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 | **P5.1 core runtime** | **PASS** |
 | **inventory_screen_demo fully wired** | **PASS** |
 | **Dock wiring diagnostics (CB-034 P5.1)** | **PASS** |
-| **Start P5.1.b** | **Unblocked** (**CB-041**) |
 | **Start P5.2** | **Unblocked**; optional follow-up if new rule shapes add paths |
 
 Re-run this file after major wiring changes; update “Last run” date and §A–§C tables if behavior shifts.

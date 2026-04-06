@@ -104,7 +104,11 @@ static func _wire_computed(computed: UiState, consumer: Node, _site_binding: Str
 	var entry := WiredEntry.new()
 	entry.computed = computed
 	entry.nested_to_release = []
-	var cb := Callable(UiReactComputedService, &"_on_dep_changed").bind(cid)
+	## Per-wiring closure: [method Resource.changed.is_connected] + [Callable.bind] on the same static
+	## method could skip attaching a second computed’s listener on a shared [UiFloatState]; use a unique
+	## lambda per wired computed and always [code]connect[/code] (shop: afford bool + order summary string).
+	var wiring_cid: int = cid
+	var cb: Callable = func(_a = null) -> void: _on_dep_changed(wiring_cid)
 	entry.dep_callable = cb
 	for i in mini(raw.size(), _MAX_SOURCES):
 		var dep: UiState = raw[i]
@@ -114,8 +118,7 @@ static func _wire_computed(computed: UiState, consumer: Node, _site_binding: Str
 			var nb := _chain_binding(computed, dep)
 			ensure_wired(dep, consumer, nb)
 			entry.nested_to_release.append([dep, consumer, nb])
-		if not dep.changed.is_connected(cb):
-			dep.changed.connect(cb)
+		dep.changed.connect(cb)
 		entry.deps.append(dep)
 	_wired[cid] = entry
 	_trigger_recompute_safe(computed)

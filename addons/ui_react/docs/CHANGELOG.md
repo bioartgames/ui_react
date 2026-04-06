@@ -9,12 +9,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Documentation
 
 - **North-star alignment:** README (inspector-first **four pillars**, designer/blessed path, **Examples at a glance**, **Conditional strings**, list-patterns lead with **`inventory_screen_demo`** + **`wire_rules`**); [`ROADMAP.md`](ROADMAP.md) (Charter **inspector-first** row, glossary **Action layer** = §5 + **`UiReactButton`** + float ops, **CB-002** / **CB-043** notes, **CB-048** stock-computed backlog, **CB-040** closed); [`WIRING_LAYER.md`](WIRING_LAYER.md) §2 **Actions** + bounded float cross-link; [`ACTION_LAYER.md`](ACTION_LAYER.md) §2 `UiComputed*` vs Actions for conditional copy; [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) **Last run** context. **No** `plugin.cfg` version bump (docs-only).
+- **Wiring decentralization:** [`WIRING_LAYER.md`](WIRING_LAYER.md) — **`UiReactWireRuleHelper`**, per-host **`wire_rules`**, removed **`UiReactWireRunner`** / hub; [`ROADMAP.md`](ROADMAP.md) (**CB-032**, **CB-034**, **CB-039**, **CB-041** Wont); [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md); [`README.md`](../README.md), [`AGENTS.md`](../AGENTS.md), [`docs/README.md`](README.md).
 
 ### Breaking
 
+- **Wiring:** removed **`UiReactWireRunner`** (`scripts/controls/ui_react_wire_runner.gd`). Each **`UiReact*`** host with **`wire_rules`** applies rules via **`UiReactWireRuleHelper`** (`scripts/internal/react/ui_react_wire_rule_helper.gd`) from **`_enter_tree`** / **`_exit_tree`**. **`inventory_screen_demo.tscn`** no longer includes a **`WireRunner`** node.
 - **Examples:** removed **`examples/shop_computed_afford.gd`**, **`shop_computed_buy_disabled.gd`**, **`shop_computed_status.gd`** (replaced by stock **`UiComputed*`** under **`scripts/api/models/`**). **`class_name`** **`ShopComputedAfford`**, **`ShopComputedBuyDisabled`**, **`ShopComputedStatus`** removed.
 - **Examples:** removed **`examples/shop_computed_demo.gd`** and **`examples/options_status_computed.gd`**. Shop **Buy** is **`UiReactButton.action_targets`** **`SUBTRACT_PRODUCT_FROM_FLOAT`**; options status uses **`UiComputedTransactionalStatusString`**.
-- **Wiring:** removed **`examples/inventory_screen_demo.gd`**. **`inventory_screen_demo.tscn`** is **inspector-only** (**`wire_rules`** + **`UiReactWireRunner`**). New rules: **`UiReactWireSetStringOnBoolPulse`**, **`UiReactWireSyncBoolStateDebugLine`**. **`UiReactWireCopySelectionDetail`** defaults **`clear_suffix_on_selection_change`** to **true** (runner clears **`suffix_note_state`** when **`selected_state`** changes before recomputing detail).
+- **Wiring:** removed **`examples/inventory_screen_demo.gd`**. **`inventory_screen_demo.tscn`** is **inspector-only** (**`wire_rules`** on controls + **`UiReactWireRuleHelper`**). New rules: **`UiReactWireSetStringOnBoolPulse`**, **`UiReactWireSyncBoolStateDebugLine`**. **`UiReactWireCopySelectionDetail`** defaults **`clear_suffix_on_selection_change`** to **true** (helper clears **`suffix_note_state`** when **`selected_state`** changes before recomputing detail).
 - **`UiReactTree`:** requires **`tree_items_state`** (**`UiArrayState`** whose value is an **`Array` of `UiReactTreeNode`**). Populate the tree via data, not ad hoc **`create_item`** code on the control.
 - **Computed wiring:** removed **`UiReactComputedSync`**. Assign **`UiComputedStringState`** / **`UiComputedBoolState`** subclasses to **`UiReact*`** exports (e.g. **`text_state`**, **`checked_state`**); **`UiReactComputedService`** wires **`sources`** at runtime. Nested computeds (sources of other computeds) are wired automatically.
 - **`UiAnimTarget`:** renamed **`preamble_reset_duration`** → **`reset_duration`**, **`await_preamble_before_main`** → **`wait_after_reset`**. Re-save scenes/subresources that referenced the old property names.
@@ -48,7 +50,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **`UiAnimTarget`:** Inspector **`@export`** order is **`target`** → **`selection_slot`** → **`trigger`** → **`reset_duration`** / **`wait_after_reset`** → **`animation`**, then timing and behavior.
 - **`UiReactAnimTargetHelper`:** **`collect_animation_targets_for_row_slot`**; **`UiReactItemList`** row play uses **`animation_targets`** + **`selection_slot`** only.
 - **`UiReactAnimTargetHelper.trigger_animations`:** resolves selection index from the host when slot gating is used (no external provider node).
-- **Reactivity:** `UiReactWireRunner` listens to **`Resource.changed` only** on `UiState` dependencies where applicable; **`UiReactComputedService`** uses **`Resource.changed`** on computed **`sources`**.
+- **Reactivity:** **`UiReactWireRuleHelper`** listens to **`Resource.changed` only** on `UiState` dependencies where applicable; **`UiReactComputedService`** uses **`Resource.changed`** on computed **`sources`**.
 - **Wiring:** `UiReactWireRule.trigger` uses **`UiReactWireRule.TriggerKind`** (`TEXT_CHANGED = 5`, `SELECTION_CHANGED = 6`, `TEXT_ENTERED = 13`) so wiring does not depend on `UiAnimTarget.Trigger`; existing saved ints stay valid.
 - **Catalog rule:** `UiReactWireRefreshItemsFromCatalog.first_row_icon_path` applies to the **first row after filters**, not catalog row 0 only.
 - **`UiTransactionalState`:** `set_value` / `set_silent` clone array/dictionary drafts like other states.
@@ -57,6 +59,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Editor:** `UiReactComponentRegistry` is the single binding/stem registry; **`UiReactValidatorService`** delegates to split validators; **`UiReactUnusedStateService`** caches loads by `mtime` (full cache clear on dock **Rescan**).
 - **Editor:** dock UI scripts live under **`editor_plugin/dock/`** (`ui_react_dock.tscn`, `ui_react_dock*.gd`); **`ui_react_editor_plugin.gd`** loads **`res://addons/ui_react/editor_plugin/dock/ui_react_dock.tscn`**.
 - **Hygiene:** Removed unreferenced plugin-generated sample `.tres` files; README notes not committing stray plugin output.
+
+## [2.17.1] - 2026-04-03
+
+### Fixed
+
+- **`UiReactComputedService`:** dependency **`Resource.changed`** listeners for multiple **`UiComputed*`** instances sharing the same **`UiFloatState`** (e.g. **`shop_computed_demo.tscn`** afford bool + order summary string) — use a per-wiring lambda instead of **`Callable.bind`** and **`is_connected`**, and always **`connect`**, so every computed’s flush/recompute runs when gold/price/qty change.
+
+## [2.17.0] - 2026-04-03
+
+### Added
+
+- **CB-049:** **`UiReactSlider`** and **`UiReactProgressBar`** — **`UiReactComputedService.hook_bind`** / **`hook_unbind`** on **`value_state`** (parity with **`UiReactSpinBox`**) so bound **`UiComputed*`** dependency wiring applies to range controls.
+- **CB-050:** **`UiReactTextureButton`** — **`action_targets`** export; merged trigger map with **`animation_targets`**, **`sync_initial_state`**, and **`run_actions`** (parity with **`UiReactButton`**).
+
+### Documentation
+
+- **[`ACTION_LAYER.md`](ACTION_LAYER.md) §4**, **[`WIRING_LAYER.md`](WIRING_LAYER.md)** Actions one-liner, **[`README.md`](../README.md)** binding table, **[`ROADMAP.md`](ROADMAP.md)** (glossary + **CB-049** / **CB-050**): **`UiReactTextureButton`** **`action_targets`**; range **`value_state`** computed hooks.
 
 ## [2.7.0] - 2026-04-04
 

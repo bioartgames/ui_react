@@ -1,4 +1,4 @@
-[gd_scene load_steps=61 format=3 uid="uid://ca8gfny15h7yc"]
+[gd_scene load_steps=60 format=3 uid="uid://ca8gfny15h7yc"]
 
 [ext_resource type="Script" uid="uid://dd4kr4kdd6cnc" path="res://addons/ui_react/scripts/controls/ui_react_tree.gd" id="2_tree"]
 [ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://addons/ui_react/scripts/controls/ui_react_line_edit.gd" id="3_le"]
@@ -15,7 +15,6 @@
 [ext_resource type="Script" uid="uid://diigywt0dm170" path="res://addons/ui_react/scripts/api/models/ui_anim_target.gd" id="13_anim"]
 [ext_resource type="Script" uid="uid://dqbg42kucypqk" path="res://addons/ui_react/scripts/api/models/ui_react_action_target.gd" id="14_action"]
 [ext_resource type="Script" uid="uid://b75p2so2hr0wd" path="res://addons/ui_react/scripts/controls/ui_react_option_button.gd" id="15_opt"]
-[ext_resource type="Script" uid="uid://dvk0dx7nwd4ot" path="res://addons/ui_react/scripts/controls/ui_react_wire_runner.gd" id="16_runner"]
 [ext_resource type="Script" uid="uid://1x0toeuqjwhi" path="res://addons/ui_react/scripts/api/models/ui_react_wire_map_int_to_string.gd" id="17_wmap"]
 [ext_resource type="Script" uid="uid://bsbpe0w03dr75" path="res://addons/ui_react/scripts/api/models/ui_react_wire_refresh_items_from_catalog.gd" id="18_wref"]
 [ext_resource type="Script" uid="uid://bqi8ila03i20u" path="res://addons/ui_react/scripts/api/models/ui_react_wire_copy_selection_detail.gd" id="19_wcopy"]
@@ -256,9 +255,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="WireRunner" type="Node" parent="."]
-script = ExtResource("16_runner")
-
 [node name="MainHBox" type="HBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
@@ -315,7 +311,7 @@ text = "Items"
 
 [node name="Help" type="Label" parent="MainHBox/CenterColumn"]
 layout_mode = 2
-text = "UiReactWireRunner + wire_rules (refresh + copy detail). Lock: action_targets SET_MOUSE_FILTER (P6.1). Uncheck Lock → GRAB_FOCUS on filter."
+text = "wire_rules on controls + UiReactWireRuleHelper (refresh + copy detail). Lock: action_targets SET_MOUSE_FILTER (P6.1). Uncheck Lock → GRAB_FOCUS on filter."
 autowrap_mode = 3
 
 [node name="FilterLabel" type="Label" parent="MainHBox/CenterColumn"]

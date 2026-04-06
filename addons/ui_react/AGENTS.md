@@ -36,7 +36,7 @@ This file is the **checklist** before large refactors. The **documentation map**
 | Shared validator helpers | `editor_plugin/services/ui_react_validator_common.gd` |
 | Scene scan / component name from script | `editor_plugin/services/ui_react_scanner_service.gd` |
 | Animation dispatch (triggers, `selection_slot`) | `scripts/internal/react/ui_react_anim_target_helper.gd` |
-| Wiring runtime | `scripts/controls/ui_react_wire_runner.gd`, `scripts/api/models/ui_react_wire_*.gd` |
+| Wiring runtime | `scripts/internal/react/ui_react_wire_rule_helper.gd`, `scripts/api/models/ui_react_wire_*.gd` |
 | Official examples | `examples/*.tscn` |
 | Normative docs | `docs/WIRING_LAYER.md`, `docs/ACTION_LAYER.md`, `docs/ROADMAP.md` |
 | Decision log | `docs/DECISIONS.md` |

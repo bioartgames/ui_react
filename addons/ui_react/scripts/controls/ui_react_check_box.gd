@@ -37,8 +37,17 @@ var _disabled_state: UiBoolState
 ## **Optional** — Action layer presets ([code]docs/ACTION_LAYER.md[/code]).
 @export var action_targets: Array[UiReactActionTarget] = []
 
-## **Optional** — Wiring rules ([code]docs/WIRING_LAYER.md[/code] §5).
+## **Optional** — Wiring rules ([code]docs/WIRING_LAYER.md[/code] §5). Applied by [UiReactWireRuleHelper].
 @export var wire_rules: Array[UiReactWireRule] = []
+
+
+func _enter_tree() -> void:
+	UiReactWireRuleHelper.schedule_attach(self)
+
+
+func _exit_tree() -> void:
+	UiReactWireRuleHelper.detach(self)
+
 
 func _ready() -> void:
 	toggled.connect(_on_toggled)

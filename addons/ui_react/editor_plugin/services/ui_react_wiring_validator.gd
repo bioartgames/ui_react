@@ -1,4 +1,4 @@
-## Validates [member wire_rules] and scene-level wiring scope (editor diagnostics).
+## Validates [member wire_rules] and scene-level duplicate rule references (editor diagnostics).
 class_name UiReactWiringValidator
 extends RefCounted
 
@@ -77,39 +77,44 @@ static func validate_wiring_under_root(root: Node) -> Array[UiReactDiagnosticMod
 	var out: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
 	if root == null:
 		return out
-	var state := {"runners": 0, "rules": 0}
-	_scan_wiring_under(root, state)
-	if state.rules > 0 and state.runners == 0:
-		out.append(
-			UiReactDiagnosticModel.DiagnosticIssue.make_structured(
-				UiReactDiagnosticModel.Severity.WARNING,
-				"UiReactWireRunner",
-				str(root.name),
-				"Scene has wire_rules but no UiReactWireRunner (see docs/WIRING_LAYER.md §3 / CB-034).",
-				"Add a UiReactWireRunner node under the screen root (sibling of wired controls).",
-				root.get_path(),
-				&"wire_rules",
-				&"",
-				UiReactDiagnosticModel.IssueKind.GENERIC,
-				"",
-			)
-		)
-	if state.runners > 1:
-		out.append(
-			UiReactDiagnosticModel.DiagnosticIssue.make_structured(
-				UiReactDiagnosticModel.Severity.WARNING,
-				"UiReactWireRunner",
-				str(root.name),
-				"Multiple UiReactWireRunner nodes in this scene; use exactly one (docs/WIRING_LAYER.md §3).",
-				"Keep a single runner per scene instance.",
-				root.get_path(),
-				&"wire_rules",
-				&"",
-				UiReactDiagnosticModel.IssueKind.GENERIC,
-				"",
-			)
-		)
+	var first_host_by_rule: Dictionary = {}
+	_collect_cross_node_duplicate_rules(root, first_host_by_rule, out)
 	return out
+
+
+static func _collect_cross_node_duplicate_rules(
+	n: Node, first_host_by_rule: Dictionary, out: Array[UiReactDiagnosticModel.DiagnosticIssue]
+) -> void:
+	var wr_variant: Variant = n.get("wire_rules")
+	if wr_variant is Array:
+		for item in wr_variant as Array:
+			if item is UiReactWireRule:
+				var rule := item as UiReactWireRule
+				var rid: int = rule.get_instance_id()
+				if first_host_by_rule.has(rid):
+					var prev_path: NodePath = first_host_by_rule[rid] as NodePath
+					if prev_path != n.get_path():
+						out.append(
+							UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+								UiReactDiagnosticModel.Severity.WARNING,
+								"UiReactWireRuleHelper",
+								str(n.name),
+								(
+									"wire_rules: same UiReactWireRule instance is also on %s; use one rule instance per host (docs/WIRING_LAYER.md)."
+									% prev_path
+								),
+								"Duplicate the subresource in the inspector or assign a separate rule per control.",
+								n.get_path(),
+								&"wire_rules",
+								&"",
+								UiReactDiagnosticModel.IssueKind.GENERIC,
+								"",
+							)
+						)
+				else:
+					first_host_by_rule[rid] = n.get_path()
+	for c in n.get_children():
+		_collect_cross_node_duplicate_rules(c, first_host_by_rule, out)
 
 
 static func _validate_wire_rule_map_int(
@@ -316,14 +321,3 @@ static func _wire_rules_issue(
 		"",
 	)
 
-
-static func _scan_wiring_under(n: Node, state: Dictionary) -> void:
-	if n is UiReactWireRunner:
-		state.runners = int(state.runners) + 1
-	var wr_variant: Variant = n.get("wire_rules")
-	if wr_variant is Array:
-		for item in wr_variant as Array:
-			if item is UiReactWireRule:
-				state.rules = int(state.rules) + 1
-	for c in n.get_children():
-		_scan_wiring_under(c, state)

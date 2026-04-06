@@ -12,12 +12,16 @@ This document is the **committal** plan for **dogfooding the addon in a real gam
 |------|---------|
 | **Computed state** | State whose value is **determined from** other state (e.g. filtered list, “can afford,” label from selection). This is the **only** public term for that idea—avoid “derived state” in API and docs to prevent synonym drift. |
 | **Transaction (transactional state)** | A **draft / working copy** of settings (or similar) separate from **committed** values, with an explicit **apply**, **cancel**, or **revert** path—not the same as computed state. |
-| **Wiring** | Inspector-authored **`UiReactWireRule`** resources + **`UiReactWireRunner`** (and optionally **`UiReactWireHub`** after **P5.1**), replacing ad-hoc root orchestration for supported patterns. Normative detail: [`WIRING_LAYER.md`](WIRING_LAYER.md). |
-| **Action layer** | Inspector-authored **`action_targets`** + **`UiReactActionTarget`** on the **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** control set **and** **`UiReactButton`** ([`ACTION_LAYER.md`](ACTION_LAYER.md) §4)—**non-motion** UI reactions (focus, visibility, `mouse_filter`, narrow UI **`UiBoolState`** flags) **plus** **bounded** **`UiFloatState`** mutations (**`SUBTRACT_PRODUCT_FROM_FLOAT`**, …). **No** `UiAnimTarget` / `UiAnimUtils` inside Actions. Widening **`action_targets`** to further controls requires a new **WIRING** Appendix row. Normative detail: [`ACTION_LAYER.md`](ACTION_LAYER.md). |
+| **Wiring** | Inspector-authored **`UiReactWireRule`** resources + **`UiReactWireRuleHelper`** on each **`UiReact*`** host (**`wire_rules`**), replacing ad-hoc root orchestration for supported patterns. Normative detail: [`WIRING_LAYER.md`](WIRING_LAYER.md). |
+| **Action layer** | Inspector-authored **`action_targets`** + **`UiReactActionTarget`** on the **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** control set **and** **`UiReactButton`** / **`UiReactTextureButton`** ([`ACTION_LAYER.md`](ACTION_LAYER.md) §4)—**non-motion** UI reactions (focus, visibility, `mouse_filter`, narrow UI **`UiBoolState`** flags) **plus** **bounded** **`UiFloatState`** mutations (**`SUBTRACT_PRODUCT_FROM_FLOAT`**, …). **No** `UiAnimTarget` / `UiAnimUtils` inside Actions. Widening **`action_targets`** to further controls requires a new **WIRING** Appendix row. Normative detail: [`ACTION_LAYER.md`](ACTION_LAYER.md). |
 
 ### Stock computed library (future)
 
 Additional **stock** **`UiComputedStringState` / `UiComputedBoolState`** subclasses for repeated **conditional copy** patterns (beyond today’s shop/options stock types) are **backlog**, not API promises—see **Appendix CB-048** and README **Conditional strings**. Ship only when a second screen needs the same shape (**YAGNI**).
+
+### Tracked follow-ups (product parity — 2026)
+
+**Done:** **CB-049**, **CB-050** (**2.17.0**). **Remaining** Appendix rows: **CB-051** (action math / op expansion), **CB-052** (**`UiReact*`** baseline surface parity), **CB-053** (plugin UX after core parity).
 
 ### Charter (lock-in)
 
@@ -34,7 +38,7 @@ Additional **stock** **`UiComputedStringState` / `UiComputedBoolState`** subclas
 | **Rich list / row UI** | Prefer **documentation + one example scene** before committing to heavyweight framework features (virtualization, generic grid widget). |
 | **Maintenance budget** | **4–8 hours/month** for triage, documentation fixes, and Godot minor-version compatibility (adjust this line if your capacity differs). |
 | **Public v1.0 vs game-complete** | **v1.0** remains **P1 exit** as before. **P5 wiring** is the **committed path** to eliminate **addon-documented** root glue from **official examples**; games may still use game-layer scripts for domain logic per Non-goals. |
-| **Wiring layer** | **P5** delivers runner + rule resources + per-control `wire_rules`; **P5.1.b** optionally adds **`UiReactWireHub`** (central `rules` array); **P5.2** delivers dock UI only (**CB-035**). |
+| **Wiring layer** | **P5** delivers **`UiReactWireRuleHelper`** + rule resources + per-control `wire_rules`; **P5.2** delivers dock UI only (**CB-035**). |
 
 ### Non-goals (explicit)
 
@@ -54,7 +58,7 @@ Additional **stock** **`UiComputedStringState` / `UiComputedBoolState`** subclas
 | **P2** | Computed state | Minimal computed resource or helper with **explicit dependencies** and documented limits (no general graph solver promise in v1). **Validation:** at least one **shop** or **inventory-filter** example. **Delivery complete** (historical). |
 | **P3** | List richness and templates | README recipe + example for row templates / icon lists; optional incremental changes to `UiReactItemList` **only if** scoped in an issue. **Delivery complete** (historical). |
 | **P4** | Selective new react controls | e.g. `UiReactTextureButton` / slot pattern, `UiReactTree`—**only** when the **3× rule** (Charter) fires; each new control updates **`UiReactComponentRegistry`** (stem + binding slots) and keeps **`UiReactBindingValidator`** / dock parity. **`UiReactScannerService`** remains the node walk + `kind_to_suggested_class` helper. **Delivery complete** (historical). |
-| **P5** | Wiring layer | **`UiReactWireRunner`**, **`UiReactWireRule`** family, **`wire_rules`** on P5.1 control set, diagnostics, example migration per [`WIRING_LAYER.md`](WIRING_LAYER.md). Sub-milestones: **P5.1** (core), **P5.1.b** (optional **`UiReactWireHub`**), **P5.2** (dock wire editor, **CB-035**). |
+| **P5** | Wiring layer | **`UiReactWireRuleHelper`**, **`UiReactWireRule`** family, **`wire_rules`** on P5.1 control set, diagnostics, example migration per [`WIRING_LAYER.md`](WIRING_LAYER.md). Sub-milestones: **P5.1** (core), **P5.2** (dock wire editor, **CB-035**). |
 | **P6.1** | Declarative Actions | **`action_targets`**, **`UiReactActionTarget`**, **`UiReactActionTargetHelper`** on **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** control set; validator/scanner; runnable example merged into **`inventory_screen_demo.tscn`**. **Normative** [`ACTION_LAYER.md`](ACTION_LAYER.md). Ships **after** P5.1 wiring core. |
 | **P6+** | Deferred parking | Virtualization, state debug overlay, major dock modularization, first-class command resource, deep undo stacks—**not sequenced** until promoted from the Appendix; see **CB-005**, **CB-007**, **CB-010**, **CB-018**, **CB-019**, and other rows with Target phase **P6+**. |
 
@@ -120,18 +124,13 @@ Not every row is a v1.0 promise; this maps **Megaman-style** UI goals to **phase
 
 **P5.1 — Wiring core**
 
-- [x] **`UiReactWireRunner`** implemented; **one runner per scene** rule enforced; duplicate-runner **warning** in dock when multiple runners detected (**CB-034**).
+- [x] **`UiReactWireRuleHelper`** implemented; per-host **`wire_rules`** via **`_enter_tree`** / **`_exit_tree`**; dock **warning** when the same rule subresource instance is on two nodes (**CB-034** extension).
 - [x] **`UiReactWireRule`** abstract base + concrete rules named in [`WIRING_LAYER.md`](WIRING_LAYER.md) (§6) shipped.
 - [x] **`wire_rules`** export on **P5.1 control set** defined in [`WIRING_LAYER.md`](WIRING_LAYER.md) (§5).
-- [x] **`inventory_screen_demo`** is **fully declarative:** no root script; **tree** from **`tree_items_state`**; filter / list / detail / suffix / debug readouts via **`wire_rules`** + **`UiReactWireRunner`** (stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) §B).
+- [x] **`inventory_screen_demo`** is **fully declarative:** no root script; **tree** from **`tree_items_state`**; filter / list / detail / suffix / debug readouts via **`wire_rules`** on controls (stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) §B).
 - [x] README **List patterns** / inventory pointers reference **wiring** for filter+selection patterns.
 - [x] **`CHANGELOG.md`** documents P5.1 + **CB-034** completion in **`[2.7.0]`** (see SemVer policy).
-- [x] **Dock validator** for wired scenes: missing **`UiReactWireRunner`** + duplicate runners; per-rule **wire_rules** export validation (MVP types); **`UiReactTransactionalActions`** in **`UiReactScannerService`**; **wire_rules** **`UiState`** refs in unused-file collector (**CB-034** complete for P5.1 scope; hub checks remain **CB-041**). See [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) §C.
-
-**P5.1.b — Optional wire hub** (after P5.1 exit)
-
-- [ ] **`UiReactWireHub`** node with `rules: Array[UiReactWireRule]`; runner collects rules from **both** per-control **`wire_rules`** and hub(s); **deduplication** when the same rule subresource is referenced twice (**CB-041**).
-- [ ] Validator (**CB-041**) flags invalid hub/runner placement (hub outside runner subtree, hub with no runner, etc.).
+- [x] **Dock validator** for wired scenes: per-rule **`wire_rules`** export validation (MVP types); cross-node duplicate rule instance (**`UiReactWireRuleHelper`** policy); **`UiReactTransactionalActions`** in **`UiReactScannerService`**; **wire_rules** **`UiState`** refs in unused-file collector (**CB-034**). See [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) §C.
 
 **P5.2 — Dock wire editor**
 
@@ -192,24 +191,29 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-029 | Enterprise support SLA | — | Wont | Wont | Indie/small-team focus. |
 | CB-030 | Game-specific domain rules in core (prices, recipes) | — | Wont | Wont | Belongs in game layer. |
 | CB-031 | Normative [`WIRING_LAYER.md`](WIRING_LAYER.md) + roadmap P5 | All | P5 | Done | Normative spec maintained; stock-take [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). |
-| CB-032 | **`UiReactWireRunner`** (scene node, non-autoload) | Any wired scene | P5 | Done | `scripts/controls/ui_react_wire_runner.gd`; see audit §A. |
+| CB-032 | **`UiReactWireRuleHelper`** (per-host wiring, non-autoload) | Any wired scene | P5 | Done | `scripts/internal/react/ui_react_wire_rule_helper.gd`; see audit §A. |
 | CB-033 | **`UiReactWireRule`** abstract base + concrete MVP rules (three named in [`WIRING_LAYER.md`](WIRING_LAYER.md)) | Inventory, filters | P5 | Done | `scripts/api/models/ui_react_wire_*.gd`; see audit §A. |
-| CB-034 | **`wire_rules`** export on P5.1 control set + dock/validator + editor parity | Same | P5 | Done | **Shipped:** missing/duplicate runner; MVP **rule export** validation; unused-**`UiState`** scan includes **`wire_rules`** refs; **`UiReactTransactionalActions`** scanner registration (**2.7.0**). **Hub / placement:** **CB-041**. See [`WIRING_LAYER.md`](WIRING_LAYER.md) §9. |
+| CB-034 | **`wire_rules`** export on P5.1 control set + dock/validator + editor parity | Same | P5 | Done | **Shipped:** MVP **rule export** validation; cross-node duplicate rule instance warning; unused-**`UiState`** scan includes **`wire_rules`** refs; **`UiReactTransactionalActions`** scanner registration (**2.7.0** + later). See [`WIRING_LAYER.md`](WIRING_LAYER.md) §8. |
 | CB-035 | Dock **graph or form** editor for wire rules (edits same resources) | N/A | P5.2 | Planned | **After** P5.1; **no** alternate format. |
 | CB-036 | Migrate **`inventory_list_demo`** off orchestration glue | Inventory | Wont | Wont | Scene removed; **`inventory_screen_demo.tscn`** is the canonical inventory example (**CB-037**). |
-| CB-037 | Migrate **`inventory_screen_demo`** off orchestration glue | Inventory | P5 | Done | Filter/list/detail/suffix/debug via **`wire_rules`** + **`UiReactWireRunner`**; **no** root script. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) §B. |
+| CB-037 | Migrate **`inventory_screen_demo`** off orchestration glue | Inventory | P5 | Done | Filter/list/detail/suffix/debug via **`wire_rules`** on controls; **no** root script. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) §B. |
 | CB-038 | Migrate remaining examples with root glue only where wiring/actions **replace** glue without losing teaching value | Demos | P5 | Done | **`shop_computed_demo`** scriptless: **`action_targets`** buy + stock **`UiComputedFloatGeProductBool`** / **`UiComputedBoolInvert`** / **`UiComputedOrderSummaryThreeFloatString`** (no **`examples/shop_computed_*.gd`**). |
-| CB-039 | **Semantic versioning** policy: wiring API (`UiReactWireRunner`, `UiReactWireRule` subclasses, `wire_rules` shape) is **public**; breaking changes **major** | Releases | P5 | Planned | CHANGELOG + Charter cross-link. |
+| CB-039 | **Semantic versioning** policy: wiring API (`UiReactWireRuleHelper`, `UiReactWireRule` subclasses, `wire_rules` shape) is **public**; breaking changes **major** | Releases | P5 | Planned | CHANGELOG + Charter cross-link. |
 | CB-040 | Remove or archive legacy **P5**-plus phase wording repo-wide; **P6+** is only deferred bucket | Docs | P5 | Done | **2026-04-03** grep under `addons/ui_react/`: no **`P5+`** / **`P5 +`** legacy token; **P6+** remains the Appendix deferred bucket. |
-| CB-041 | **`UiReactWireHub`** optional node; central **`rules`** array; runner aggregates hub + per-control **`wire_rules`** with **dedup**; validator expectations for bad hub/runner setups | Dense inventory/shop screens | P5.1.b | Planned | Normative in [`WIRING_LAYER.md`](WIRING_LAYER.md) §7; **after** P5.1 exit; extends **CB-034**. |
+| CB-041 | **`UiReactWireHub`** (central **`rules`** array) | — | — | Wont | Superseded by per-host **`UiReactWireRuleHelper`** + **`wire_rules`**; hub not pursued. |
 | CB-042 | Normative **[`ACTION_LAYER.md`](ACTION_LAYER.md)** (Action layer contract) | All inspector-driven UI | P6.1 | Done | Shipped **2.6.4**; cross-links ROADMAP / WIRING / README. |
 | CB-043 | **`UiReactActionTarget`** resource + **`UiReactActionKind`** (five presets: four presentation + one float op) | Focus, visibility, mouse filter, UI flags, bounded float | P6.1 | Done | `scripts/api/models/ui_react_action_target.gd`; **2.6.4** MVP four + later **`SUBTRACT_PRODUCT_FROM_FLOAT`**. |
 | CB-044 | **`UiReactActionTargetHelper`** (`run_actions`, `sync_initial_state`, `state_watch` wiring) | Same | P6.1 | Done | `scripts/internal/react/ui_react_action_target_helper.gd`; **2.6.4**. |
 | CB-045 | **`action_targets`** export on **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** control set | P5.1 controls + transactional actions host | P6.1 | Done | **2.6.4**: ItemList, Tree, LineEdit, CheckBox, `UiReactTransactionalActions` (state-driven rows only on transactional host). |
 | CB-046 | Dock validator for **`action_targets`** (paths, loops, transactional constraint) | Editor | P6.1 | Done | **`UiReactValidatorService`**; extends **CB-020**; **2.6.4**. |
 | CB-047 | Action layer runnable example | Demos | P6.1 | Done | **`inventory_screen_demo.tscn`**: **`SET_MOUSE_FILTER`** list lock + **`GRAB_FOCUS`** on unlock; **2.6.4** (standalone **`action_layer_demo`** removed in consolidation). |
-| CB-048 | Stock **`UiComputed*`** library expansion (conditional strings / labels) | HUD, shop, options | P2 | Planned | Backlog for additional **stock** computeds when the same conditional-copy pattern appears twice (**YAGNI**); extends **CB-003**. See README **Conditional strings**. |
+| CB-048 | Stock **`UiComputed*`** library expansion (conditional strings / labels) | HUD, shop, options | P2 | Planned | Backlog for additional **stock** computeds when the same conditional-copy pattern appears twice (**YAGNI**); extends **CB-003**. See README **Conditional strings**. **`UiReactSpinBox`**, **`UiReactSlider`**, **`UiReactProgressBar`** **`value_state`** use **`hook_bind`** when the bound state is a supported **`UiComputed*`** (**CB-049**, **2.17.0**). |
+| CB-049 | **`UiReactComputedService.hook_bind`** for **`value_state`** on **`UiReactSlider`** and **`UiReactProgressBar`** | Sliders, bars driven by **`UiComputed*`** | P2 | Done | **2.17.0:** **`hook_bind` / `hook_unbind`** on **`value_state`** (parity with **`UiReactSpinBox`**). |
+| CB-050 | **`action_targets`** on **`UiReactTextureButton`** | Inventory, hotbar, icon buttons | P6+ | Done | **2.17.0:** export + **`apply_validated_actions_and_merge_triggers`**, **`sync_initial_state`**, **`run_actions`**; **[`ACTION_LAYER.md`](ACTION_LAYER.md)** / **[`WIRING_LAYER.md`](WIRING_LAYER.md)** / README updated. |
+| CB-051 | **Action layer:** expand **`UiReactActionKind`** + **`UiReactStateOpService`** (whitelisted math beyond **`SUBTRACT_PRODUCT_FROM_FLOAT`**) | Shop, crafting, any “add / transfer / int” UI | P6+ | Planned | Examples: accumulate without subtract-only, transfer between **`UiFloatState`**, **`UiIntState`** ops—**normative [`ACTION_LAYER.md`](ACTION_LAYER.md)**, validators, no unbounded scripting in Actions. |
+| CB-052 | **`UiReact*`** baseline surface parity | All inspector-driven screens | P6+ | Planned | Decide and ship or document: which controls expose **`animation_targets`**, **`action_targets`**, **`wire_rules`**, and control-specific **`UiState`** exports; reduce “same pattern, different exports” drift (**Charter** 3× rule for **new** controls). |
+| CB-053 | **Plugin / designer UX (post-parity)** | Editor | P6+ | Deferred | **Non-blocking** until **CB-049**–**CB-052** direction is clear: e.g. richer dock (**CB-035**), graph-style views, bulk **`UiAnimTarget`** row generation from list/tree row counts, designer-friendly hooks into gameplay—promote rows when scoped. |
 
 ---
 
-*Last updated: 2026-04-03 — Docs alignment (north star, glossary Action layer, **CB-048**). **CB-034** (P5.1 dock scope) **Done** (**2.7.0**); **CB-041** hub validator still **Planned**. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Examples remain **four** scenes.*
+*Last updated: 2026-04-06 — Wiring decentralization: **`UiReactWireRuleHelper`**, **`CB-041` Wont** (hub superseded). **CB-049** / **CB-050** **Done** (**2.17.0**); **CB-051**–**CB-053** remain. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Examples remain **four** scenes.*

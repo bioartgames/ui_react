@@ -35,6 +35,9 @@ var _disabled_state: UiBoolState
 ## Each [UiAnimTarget] sets Trigger, Target NodePath, and animation type; no extra resource files required.
 @export var animation_targets: Array[UiAnimTarget] = []
 
+## **Optional** — Action layer ([code]docs/ACTION_LAYER.md[/code]): focus, visibility, [code]mouse_filter[/code], bounded float ops, etc.
+@export var action_targets: Array[UiReactActionTarget] = []
+
 ## Optional one-way write to a [UiFloatState] on [signal BaseButton.pressed].
 @export var press_writes_float_state: UiFloatState
 @export var press_writes_float_value: float = 100.0
@@ -76,6 +79,7 @@ func _connect_all_states() -> void:
 ## Called automatically in [method _ready].
 func _validate_animation_targets() -> void:
 	var trigger_map: Dictionary = UiReactAnimTargetHelper.apply_validated_targets(self, "UiReactTextureButton")
+	UiReactActionTargetHelper.apply_validated_actions_and_merge_triggers(self, "UiReactTextureButton", trigger_map)
 
 	if trigger_map.has(UiAnimTarget.Trigger.PRESSED):
 		UiReactAnimTargetHelper.connect_if_absent(pressed, _on_trigger_pressed)
@@ -85,6 +89,8 @@ func _validate_animation_targets() -> void:
 		UiReactAnimTargetHelper.connect_if_absent(mouse_exited, _on_trigger_hover_exit)
 	if (trigger_map.has(UiAnimTarget.Trigger.TOGGLED_ON) or trigger_map.has(UiAnimTarget.Trigger.TOGGLED_OFF)) and has_signal(&"toggled"):
 		UiReactAnimTargetHelper.connect_if_absent(toggled, _on_trigger_toggled)
+
+	UiReactActionTargetHelper.sync_initial_state(self, "UiReactTextureButton", action_targets)
 
 
 func _on_trigger_pressed() -> void:
@@ -114,6 +120,9 @@ func _on_trigger_toggled(active: bool) -> void:
 
 func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 	UiReactAnimTargetHelper.trigger_animations(self, animation_targets, trigger_type, true, disabled)
+	UiReactActionTargetHelper.run_actions(
+		self, "UiReactTextureButton", action_targets, trigger_type, true, disabled
+	)
 
 
 func _on_press_writes_float() -> void:
