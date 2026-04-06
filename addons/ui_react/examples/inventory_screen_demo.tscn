@@ -1,4 +1,4 @@
-[gd_scene load_steps=56 format=3]
+[gd_scene load_steps=61 format=3 uid="uid://ca8gfny15h7yc"]
 
 [ext_resource type="Script" uid="uid://dd4kr4kdd6cnc" path="res://addons/ui_react/scripts/controls/ui_react_tree.gd" id="2_tree"]
 [ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://addons/ui_react/scripts/controls/ui_react_line_edit.gd" id="3_le"]
@@ -7,21 +7,99 @@
 [ext_resource type="Script" uid="uid://3m8buhv674ja" path="res://addons/ui_react/scripts/controls/ui_react_check_box.gd" id="6_cb"]
 [ext_resource type="Script" uid="uid://3a3144h5usfc" path="res://addons/ui_react/scripts/api/models/ui_string_state.gd" id="7_str"]
 [ext_resource type="Script" uid="uid://dwwa3tekslkjw" path="res://addons/ui_react/scripts/api/models/ui_array_state.gd" id="8_arr"]
+[ext_resource type="Script" uid="uid://b4oijtx34uadm" path="res://addons/ui_react/scripts/api/models/ui_react_wire_rule.gd" id="8_xha3j"]
 [ext_resource type="Script" uid="uid://dxvrutpo1gjxg" path="res://addons/ui_react/scripts/api/models/ui_int_state.gd" id="9_int"]
 [ext_resource type="Script" uid="uid://cxg5hj6ihqtue" path="res://addons/ui_react/scripts/api/models/ui_bool_state.gd" id="10_bool"]
 [ext_resource type="Script" uid="uid://b21fgnaf6xp7" path="res://addons/ui_react/scripts/controls/ui_react_texture_button.gd" id="11_tex"]
 [ext_resource type="Texture2D" uid="uid://dqdnr3bne60mc" path="res://icon.svg" id="12_icon"]
 [ext_resource type="Script" uid="uid://diigywt0dm170" path="res://addons/ui_react/scripts/api/models/ui_anim_target.gd" id="13_anim"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_action_target.gd" id="14_action"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_option_button.gd" id="15_opt"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_wire_runner.gd" id="16_runner"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_wire_map_int_to_string.gd" id="17_wmap"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_wire_refresh_items_from_catalog.gd" id="18_wref"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_wire_copy_selection_detail.gd" id="19_wcopy"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_wire_catalog_data.gd" id="20_wacd"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_tree_node.gd" id="21_tnode"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_wire_set_string_on_bool_pulse.gd" id="22_wpulse"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_wire_sync_bool_state_debug_line.gd" id="23_wdbg"]
+[ext_resource type="Script" uid="uid://dqbg42kucypqk" path="res://addons/ui_react/scripts/api/models/ui_react_action_target.gd" id="14_action"]
+[ext_resource type="Script" uid="uid://b75p2so2hr0wd" path="res://addons/ui_react/scripts/controls/ui_react_option_button.gd" id="15_opt"]
+[ext_resource type="Script" uid="uid://dvk0dx7nwd4ot" path="res://addons/ui_react/scripts/controls/ui_react_wire_runner.gd" id="16_runner"]
+[ext_resource type="Script" uid="uid://1x0toeuqjwhi" path="res://addons/ui_react/scripts/api/models/ui_react_wire_map_int_to_string.gd" id="17_wmap"]
+[ext_resource type="Script" uid="uid://bsbpe0w03dr75" path="res://addons/ui_react/scripts/api/models/ui_react_wire_refresh_items_from_catalog.gd" id="18_wref"]
+[ext_resource type="Script" uid="uid://bqi8ila03i20u" path="res://addons/ui_react/scripts/api/models/ui_react_wire_copy_selection_detail.gd" id="19_wcopy"]
+[ext_resource type="Script" uid="uid://buamlsltsffu" path="res://addons/ui_react/scripts/api/models/ui_react_wire_catalog_data.gd" id="20_wacd"]
+[ext_resource type="Script" uid="uid://d0qonr8j0o6lo" path="res://addons/ui_react/scripts/api/models/ui_react_tree_node.gd" id="21_tnode"]
+[ext_resource type="Script" uid="uid://bb8t2qrgil0ob" path="res://addons/ui_react/scripts/api/models/ui_react_wire_set_string_on_bool_pulse.gd" id="22_wpulse"]
+[ext_resource type="Script" uid="uid://ckxya8dq4gqug" path="res://addons/ui_react/scripts/api/models/ui_react_wire_sync_bool_state_debug_line.gd" id="23_wdbg"]
+
+[sub_resource type="Resource" id="tn_all"]
+script = ExtResource("21_tnode")
+text = "All items"
+icon = ExtResource("12_icon")
+
+[sub_resource type="Resource" id="tn_weapons"]
+script = ExtResource("21_tnode")
+text = "Weapons"
+icon = ExtResource("12_icon")
+
+[sub_resource type="Resource" id="tn_consumables"]
+script = ExtResource("21_tnode")
+text = "Consumables"
+icon = ExtResource("12_icon")
+
+[sub_resource type="Resource" id="tn_materials"]
+script = ExtResource("21_tnode")
+text = "Materials"
+icon = ExtResource("12_icon")
+
+[sub_resource type="Resource" id="tree_items_st"]
+script = ExtResource("8_arr")
+value = [SubResource("tn_all"), SubResource("tn_weapons"), SubResource("tn_consumables"), SubResource("tn_materials")]
+
+[sub_resource type="Resource" id="tree_sel"]
+script = ExtResource("9_int")
+
+[sub_resource type="Resource" id="anim_tree_hint_fade"]
+script = ExtResource("13_anim")
+target = NodePath("../CategoryHint")
+trigger = 6
+animation = 3
+duration = 0.2
+
+[sub_resource type="Resource" id="category_hint_str"]
+script = ExtResource("7_str")
+value = "Category: —"
+
+[sub_resource type="Resource" id="category_kind_str"]
+script = ExtResource("7_str")
+
+[sub_resource type="Resource" id="wire_map_cat"]
+script = ExtResource("17_wmap")
+source_int_state = SubResource("tree_sel")
+target_string_state = SubResource("category_kind_str")
+hint_state = SubResource("category_hint_str")
+rule_id = "map_tree_to_kind"
+
+[sub_resource type="Resource" id="inv_catalog"]
+script = ExtResource("20_wacd")
+rows = Array[Dictionary]([{
+"id": "iron_sword",
+"kind": "weapon",
+"name": "Iron Sword",
+"qty": 1
+}, {
+"id": "heal_pot",
+"kind": "consumable",
+"name": "Health Potion",
+"qty": 3
+}, {
+"id": "oak_wood",
+"kind": "material",
+"name": "Oak Wood",
+"qty": 12
+}, {
+"id": "leather",
+"kind": "material",
+"name": "Leather Scraps",
+"qty": 5
+}, {
+"id": "steel_dagger",
+"kind": "weapon",
+"name": "Steel Dagger",
+"qty": 1
+}])
 
 [sub_resource type="Resource" id="filter_str"]
 script = ExtResource("7_str")
@@ -33,182 +111,37 @@ script = ExtResource("8_arr")
 script = ExtResource("9_int")
 value = -1
 
-[sub_resource type="Resource" id="tree_sel"]
-script = ExtResource("9_int")
-value = 0
+[sub_resource type="Resource" id="wire_refresh_tree"]
+script = ExtResource("18_wref")
+filter_text_state = SubResource("filter_str")
+category_kind_state = SubResource("category_kind_str")
+catalog = SubResource("inv_catalog")
+items_state = SubResource("items_arr")
+selected_state = SubResource("sel_int")
+first_row_icon_path = "res://icon.svg"
+rule_id = "refresh_on_tree"
 
-[sub_resource type="Resource" id="detail_str"]
-script = ExtResource("7_str")
-value = "No selection."
+[sub_resource type="Resource" id="wire_refresh_filter"]
+script = ExtResource("18_wref")
+filter_text_state = SubResource("filter_str")
+category_kind_state = SubResource("category_kind_str")
+catalog = SubResource("inv_catalog")
+items_state = SubResource("items_arr")
+selected_state = SubResource("sel_int")
+first_row_icon_path = "res://icon.svg"
+rule_id = "refresh_on_filter"
+trigger = 5
 
 [sub_resource type="Resource" id="locked_bool"]
 script = ExtResource("10_bool")
 
-[sub_resource type="Resource" id="actions_disabled"]
-script = ExtResource("10_bool")
-
-[sub_resource type="Resource" id="use_pressed"]
-script = ExtResource("10_bool")
-
-[sub_resource type="Resource" id="sort_pressed"]
-script = ExtResource("10_bool")
-
-[sub_resource type="Resource" id="sort_preset_str"]
-script = ExtResource("7_str")
-value = "By name"
-
-[sub_resource type="Resource" id="category_kind_str"]
-script = ExtResource("7_str")
-value = ""
-
-[sub_resource type="Resource" id="category_hint_str"]
-script = ExtResource("7_str")
-value = "Category: —"
-
-[sub_resource type="Resource" id="detail_suffix_str"]
-script = ExtResource("7_str")
-value = ""
-
-[sub_resource type="Resource" id="inv_catalog"]
-script = ExtResource("20_wacd")
-rows = Array[Dictionary]([{ "id": "iron_sword", "name": "Iron Sword", "kind": "weapon", "qty": 1 }, { "id": "heal_pot", "name": "Health Potion", "kind": "consumable", "qty": 3 }, { "id": "oak_wood", "name": "Oak Wood", "kind": "material", "qty": 12 }, { "id": "leather", "name": "Leather Scraps", "kind": "material", "qty": 5 }, { "id": "steel_dagger", "name": "Steel Dagger", "kind": "weapon", "qty": 1 }])
-
-[sub_resource type="Resource" id="tn_all"]
-script = ExtResource("21_tnode")
-text = "All items"
-icon = ExtResource("12_icon")
-children = []
-
-[sub_resource type="Resource" id="tn_weapons"]
-script = ExtResource("21_tnode")
-text = "Weapons"
-icon = ExtResource("12_icon")
-children = []
-
-[sub_resource type="Resource" id="tn_consumables"]
-script = ExtResource("21_tnode")
-text = "Consumables"
-icon = ExtResource("12_icon")
-children = []
-
-[sub_resource type="Resource" id="tn_materials"]
-script = ExtResource("21_tnode")
-text = "Materials"
-icon = ExtResource("12_icon")
-children = []
-
-[sub_resource type="Resource" id="tree_items_st"]
-script = ExtResource("8_arr")
-value = [SubResource("tn_all"), SubResource("tn_weapons"), SubResource("tn_consumables"), SubResource("tn_materials")]
-
-[sub_resource type="Resource" id="wire_map_cat"]
-script = ExtResource("17_wmap")
-rule_id = "map_tree_to_kind"
-trigger = 6
-source_int_state = SubResource("tree_sel")
-target_string_state = SubResource("category_kind_str")
-hint_state = SubResource("category_hint_str")
-
-[sub_resource type="Resource" id="wire_refresh_tree"]
-script = ExtResource("18_wref")
-rule_id = "refresh_on_tree"
-trigger = 6
-filter_text_state = SubResource("filter_str")
-category_kind_state = SubResource("category_kind_str")
-catalog = SubResource("inv_catalog")
-items_state = SubResource("items_arr")
-selected_state = SubResource("sel_int")
-first_row_icon_path = "res://icon.svg"
-
-[sub_resource type="Resource" id="wire_refresh_filter"]
-script = ExtResource("18_wref")
-rule_id = "refresh_on_filter"
-trigger = 5
-filter_text_state = SubResource("filter_str")
-category_kind_state = SubResource("category_kind_str")
-catalog = SubResource("inv_catalog")
-items_state = SubResource("items_arr")
-selected_state = SubResource("sel_int")
-first_row_icon_path = "res://icon.svg"
-
-[sub_resource type="Resource" id="wire_copy"]
-script = ExtResource("19_wcopy")
-rule_id = "copy_detail"
-trigger = 6
-selected_state = SubResource("sel_int")
-items_state = SubResource("items_arr")
-detail_state = SubResource("detail_str")
-suffix_note_state = SubResource("detail_suffix_str")
-clear_suffix_on_selection_change = true
-
-[sub_resource type="Resource" id="dbg_use_str"]
-script = ExtResource("7_str")
-value = "use pressed_state: false"
-
-[sub_resource type="Resource" id="dbg_sort_str"]
-script = ExtResource("7_str")
-value = "sort pressed_state: false"
-
-[sub_resource type="Resource" id="dbg_dis_str"]
-script = ExtResource("7_str")
-value = "actions disabled_state: false"
-
-[sub_resource type="Resource" id="wire_use_suffix"]
-script = ExtResource("22_wpulse")
-rule_id = "suffix_on_use"
-pulse_bool = SubResource("use_pressed")
-target_string_state = SubResource("detail_suffix_str")
-selected_state = SubResource("sel_int")
-items_state = SubResource("items_arr")
-template_no_selection = "[Demo] Use — select an item first."
-template_rising = "[Demo] Use — queued for \"{name}\"."
-
-[sub_resource type="Resource" id="wire_sort_suffix"]
-script = ExtResource("22_wpulse")
-rule_id = "suffix_on_sort"
-pulse_bool = SubResource("sort_pressed")
-target_string_state = SubResource("detail_suffix_str")
-template_rising = "[Demo] Sort — no-op (texture button pressed_state)."
-
-[sub_resource type="Resource" id="wire_dbg_use"]
-script = ExtResource("23_wdbg")
-rule_id = "debug_use_pressed"
-bool_state = SubResource("use_pressed")
-target_string_state = SubResource("dbg_use_str")
-line_prefix = "use pressed_state: "
-
-[sub_resource type="Resource" id="wire_dbg_sort"]
-script = ExtResource("23_wdbg")
-rule_id = "debug_sort_pressed"
-bool_state = SubResource("sort_pressed")
-target_string_state = SubResource("dbg_sort_str")
-line_prefix = "sort pressed_state: "
-
-[sub_resource type="Resource" id="wire_dbg_dis"]
-script = ExtResource("23_wdbg")
-rule_id = "debug_actions_disabled"
-bool_state = SubResource("actions_disabled")
-target_string_state = SubResource("dbg_dis_str")
-line_prefix = "actions disabled_state: "
-
-[sub_resource type="Resource" id="action_lock_mousefilter"]
-script = ExtResource("14_action")
-action = 3
-state_watch = SubResource("locked_bool")
-target = NodePath("../InputBlocker")
-mouse_filter_when_true = 0
-mouse_filter_when_false = 2
-
 [sub_resource type="Resource" id="action_grab_filter"]
+Resource = null
+resource_path = "res://addons/ui_react/examples/inventory_screen_demo.tscn::action_grab_filter"
+resource_scene_unique_id = "action_grab_filter"
 script = ExtResource("14_action")
-action = 0
 trigger = 4
 target = NodePath("../../FilterEdit")
-
-[sub_resource type="Resource" id="anim_pop_use"]
-script = ExtResource("13_anim")
-target = NodePath(".")
-animation = 17
 
 [sub_resource type="Resource" id="anim_list_detail_fade"]
 script = ExtResource("13_anim")
@@ -216,15 +149,98 @@ target = NodePath("../../Detail")
 trigger = 6
 animation = 3
 duration = 0.22
-easing = 1
 
-[sub_resource type="Resource" id="anim_tree_hint_fade"]
+[sub_resource type="Resource" id="action_lock_mousefilter"]
+Resource = null
+resource_path = "res://addons/ui_react/examples/inventory_screen_demo.tscn::action_lock_mousefilter"
+resource_scene_unique_id = "action_lock_mousefilter"
+script = ExtResource("14_action")
+state_watch = SubResource("locked_bool")
+action = 3
+target = NodePath("../InputBlocker")
+
+[sub_resource type="Resource" id="detail_str"]
+script = ExtResource("7_str")
+value = "No selection."
+
+[sub_resource type="Resource" id="detail_suffix_str"]
+script = ExtResource("7_str")
+
+[sub_resource type="Resource" id="wire_copy"]
+script = ExtResource("19_wcopy")
+selected_state = SubResource("sel_int")
+items_state = SubResource("items_arr")
+detail_state = SubResource("detail_str")
+suffix_note_state = SubResource("detail_suffix_str")
+rule_id = "copy_detail"
+
+[sub_resource type="Resource" id="use_pressed"]
+script = ExtResource("10_bool")
+
+[sub_resource type="Resource" id="wire_use_suffix"]
+script = ExtResource("22_wpulse")
+pulse_bool = SubResource("use_pressed")
+target_string_state = SubResource("detail_suffix_str")
+selected_state = SubResource("sel_int")
+items_state = SubResource("items_arr")
+template_no_selection = "[Demo] Use — select an item first."
+template_rising = "[Demo] Use — queued for \"{name}\"."
+rule_id = "suffix_on_use"
+
+[sub_resource type="Resource" id="sort_pressed"]
+script = ExtResource("10_bool")
+
+[sub_resource type="Resource" id="wire_sort_suffix"]
+script = ExtResource("22_wpulse")
+pulse_bool = SubResource("sort_pressed")
+target_string_state = SubResource("detail_suffix_str")
+template_rising = "[Demo] Sort — no-op (texture button pressed_state)."
+rule_id = "suffix_on_sort"
+
+[sub_resource type="Resource" id="dbg_use_str"]
+script = ExtResource("7_str")
+value = "use pressed_state: false"
+
+[sub_resource type="Resource" id="wire_dbg_use"]
+script = ExtResource("23_wdbg")
+bool_state = SubResource("use_pressed")
+target_string_state = SubResource("dbg_use_str")
+line_prefix = "use pressed_state: "
+rule_id = "debug_use_pressed"
+
+[sub_resource type="Resource" id="dbg_sort_str"]
+script = ExtResource("7_str")
+value = "sort pressed_state: false"
+
+[sub_resource type="Resource" id="wire_dbg_sort"]
+script = ExtResource("23_wdbg")
+bool_state = SubResource("sort_pressed")
+target_string_state = SubResource("dbg_sort_str")
+line_prefix = "sort pressed_state: "
+rule_id = "debug_sort_pressed"
+
+[sub_resource type="Resource" id="actions_disabled"]
+script = ExtResource("10_bool")
+
+[sub_resource type="Resource" id="dbg_dis_str"]
+script = ExtResource("7_str")
+value = "actions disabled_state: false"
+
+[sub_resource type="Resource" id="wire_dbg_dis"]
+script = ExtResource("23_wdbg")
+bool_state = SubResource("actions_disabled")
+target_string_state = SubResource("dbg_dis_str")
+line_prefix = "actions disabled_state: "
+rule_id = "debug_actions_disabled"
+
+[sub_resource type="Resource" id="sort_preset_str"]
+script = ExtResource("7_str")
+value = "By name"
+
+[sub_resource type="Resource" id="anim_pop_use"]
 script = ExtResource("13_anim")
-target = NodePath("../CategoryHint")
-trigger = 6
-animation = 3
-duration = 0.2
-easing = 1
+target = NodePath(".")
+animation = 17
 
 [sub_resource type="Resource" id="anim_pop_sort"]
 script = ExtResource("13_anim")
@@ -280,7 +296,7 @@ script = ExtResource("2_tree")
 tree_items_state = SubResource("tree_items_st")
 selected_state = SubResource("tree_sel")
 animation_targets = Array[ExtResource("13_anim")]([SubResource("anim_tree_hint_fade")])
-wire_rules = [SubResource("wire_map_cat"), SubResource("wire_refresh_tree")]
+wire_rules = Array[ExtResource("8_xha3j")]([SubResource("wire_map_cat"), SubResource("wire_refresh_tree")])
 
 [node name="CategoryHint" type="Label" parent="MainHBox/LeftColumn"]
 layout_mode = 2
@@ -311,7 +327,7 @@ layout_mode = 2
 placeholder_text = "e.g. wood, potion…"
 script = ExtResource("3_le")
 text_state = SubResource("filter_str")
-wire_rules = [SubResource("wire_refresh_filter")]
+wire_rules = Array[ExtResource("8_xha3j")]([SubResource("wire_refresh_filter")])
 
 [node name="LockRow" type="HBoxContainer" parent="MainHBox/CenterColumn"]
 layout_mode = 2
@@ -344,7 +360,7 @@ selected_state = SubResource("sel_int")
 items_state = SubResource("items_arr")
 animation_targets = Array[ExtResource("13_anim")]([SubResource("anim_list_detail_fade")])
 action_targets = Array[ExtResource("14_action")]([SubResource("action_lock_mousefilter")])
-wire_rules = [SubResource("wire_copy"), SubResource("wire_use_suffix"), SubResource("wire_sort_suffix"), SubResource("wire_dbg_use"), SubResource("wire_dbg_sort"), SubResource("wire_dbg_dis")]
+wire_rules = Array[ExtResource("8_xha3j")]([SubResource("wire_copy"), SubResource("wire_use_suffix"), SubResource("wire_sort_suffix"), SubResource("wire_dbg_use"), SubResource("wire_dbg_sort"), SubResource("wire_dbg_dis")])
 
 [node name="InputBlocker" type="Control" parent="MainHBox/CenterColumn/ListSlot"]
 layout_mode = 1

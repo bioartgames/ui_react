@@ -1,0 +1,57 @@
+# Ui React — notes for agents and solo maintainer
+
+**Scope:** Work under `addons/ui_react/` unless the user explicitly points elsewhere.
+
+This file is the **checklist** before large refactors. The **documentation map** is [`docs/README.md`](docs/README.md).
+
+---
+
+## Read order (refactors and new features)
+
+1. [`docs/README.md`](docs/README.md) — which normative doc owns what.
+2. Relevant spec: [`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md) (wiring) and/or [`docs/ACTION_LAYER.md`](docs/ACTION_LAYER.md) (actions).
+3. If touching exports, scanner, or dock issues: [`editor_plugin/ui_react_component_registry.gd`](editor_plugin/ui_react_component_registry.gd) (**BINDINGS_BY_COMPONENT**, **ANIM_TRIGGERS_BY_COMPONENT**).
+4. Validators: [`editor_plugin/services/ui_react_validator_service.gd`](editor_plugin/services/ui_react_validator_service.gd) (façade) and the specific `ui_react_*_validator.gd` modules.
+
+---
+
+## Hard boundaries (do not “simplify” away)
+
+| Topic | Rule | Spec |
+|------|------|------|
+| **String / data ownership** | Wiring owns filter/catalog/detail **string** transforms; Actions **must not** duplicate those jobs. | [WIRING_LAYER.md](docs/WIRING_LAYER.md) §2; [ACTION_LAYER.md](docs/ACTION_LAYER.md) §2 |
+| **Conditional copy** | Derived user-visible strings → **`UiComputed*`** or wiring — not ad hoc Actions writing wiring-owned `UiStringState`. | [ACTION_LAYER.md](docs/ACTION_LAYER.md) §2; README “Conditional strings” |
+| **Motion vs actions** | No tweens inside Action rows; motion stays on **`animation_targets`** / **`UiAnimUtils`**. | [ACTION_LAYER.md](docs/ACTION_LAYER.md) |
+| **Trigger vocabulary** | **`UiAnimTarget.Trigger`** is shared by animations and control-driven **`action_targets`**; host support is **not** identical for every trigger — see registry. | [`editor_plugin/ui_react_component_registry.gd`](editor_plugin/ui_react_component_registry.gd) **ANIM_TRIGGERS_BY_COMPONENT** |
+
+---
+
+## Where things live
+
+| Area | Path |
+|------|------|
+| Editor dock façade | `editor_plugin/services/ui_react_validator_service.gd` |
+| Binding / anim / action / wiring / tree / computed validators | `editor_plugin/services/ui_react_*_validator.gd` |
+| Component metadata (stems, bindings, **animation trigger allowlist**) | `editor_plugin/ui_react_component_registry.gd` |
+| Shared validator helpers | `editor_plugin/services/ui_react_validator_common.gd` |
+| Scene scan / component name from script | `editor_plugin/services/ui_react_scanner_service.gd` |
+| Animation dispatch (triggers, `selection_slot`) | `scripts/internal/react/ui_react_anim_target_helper.gd` |
+| Wiring runtime | `scripts/controls/ui_react_wire_runner.gd`, `scripts/api/models/ui_react_wire_*.gd` |
+| Official examples | `examples/*.tscn` |
+| Normative docs | `docs/WIRING_LAYER.md`, `docs/ACTION_LAYER.md`, `docs/ROADMAP.md` |
+| Decision log | `docs/DECISIONS.md` |
+
+---
+
+## Change policy
+
+- **`class_name`**, **`@export`** shapes, or **documented public** wiring/action API: follow [ROADMAP.md](docs/ROADMAP.md) Charter (SemVer) and record in [CHANGELOG.md](docs/CHANGELOG.md).
+- **Normative** spec edits: mention in CHANGELOG under **Documentation** or **Changed** as appropriate.
+
+---
+
+## Non-goals for automated edits
+
+- No drive-by refactors of unrelated files or game projects consuming the addon.
+- No new capability without a **ROADMAP** Appendix row or explicit user approval (solo scope guard).
+- Do not delete or replace normative **WIRING** / **ACTION** docs without a superseding revision and CHANGELOG entry.
