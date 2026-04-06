@@ -72,6 +72,27 @@ static func validate_action_targets(
 				)
 			)
 
+		if not transactional and row.state_watch == null:
+			if not UiReactValidatorCommon.is_anim_trigger_allowed(component, row.trigger):
+				out.append(
+					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+						UiReactDiagnosticModel.Severity.WARNING,
+						component,
+						str(owner.name),
+						(
+							"action_targets[%d] uses Trigger %s on %s, which this control never dispatches."
+							% [i, UiReactValidatorCommon.format_anim_trigger_name(row.trigger), component]
+						),
+						"Supported triggers for %s: %s."
+						% [component, UiReactValidatorCommon.format_allowed_anim_triggers_hint(component)],
+						node_path,
+						&"action_targets",
+						&"",
+						UiReactDiagnosticModel.IssueKind.GENERIC,
+						"",
+					)
+				)
+
 		if row.action == UiReactActionTarget.UiReactActionKind.SUBTRACT_PRODUCT_FROM_FLOAT:
 			if row.state_watch != null:
 				out.append(

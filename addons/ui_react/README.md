@@ -150,6 +150,23 @@ All plugin usage details are documented in this README.
 
 **`animation_targets`** is always **optional**: leave empty if you don’t want automatic tweens. **`action_targets`** (where exposed) is optional; see **`docs/ACTION_LAYER.md`** and the **Action layer (P6.1)** section above.
 
+### UiAnimTarget: supported triggers per host
+
+The Inspector lists **all** [`UiAnimTarget.Trigger`](scripts/api/models/ui_anim_target.gd) values on every row, but each **`UiReact*`** only **connects** the signals for triggers that appear in its **`animation_targets`** (see **`_validate_animation_targets`** on that control). The **editor dock** warns if a row’s **Trigger** is not supported on that host (registry: **`ANIM_TRIGGERS_BY_COMPONENT`** in [`editor_plugin/ui_react_component_registry.gd`](editor_plugin/ui_react_component_registry.gd)). The same set applies to **control-driven** **`action_targets`** rows (**`state_watch`** null). **`UiReactTabContainer`**: **`SELECTION_CHANGED`** rows may use an **empty** **Target** path for tab transition presets (runtime **`allow_empty_for`**).
+
+| Host | Supported triggers |
+|------|-------------------|
+| **`UiReactButton`**, **`UiReactTextureButton`** | `PRESSED`, `HOVER_ENTER`, `HOVER_EXIT`, `TOGGLED_ON`, `TOGGLED_OFF` |
+| **`UiReactCheckBox`** | `TOGGLED_ON`, `TOGGLED_OFF`, `HOVER_ENTER`, `HOVER_EXIT` |
+| **`UiReactSlider`** | `VALUE_CHANGED`, `VALUE_INCREASED`, `VALUE_DECREASED`, `DRAG_STARTED`, `DRAG_ENDED`, `HOVER_ENTER`, `HOVER_EXIT` |
+| **`UiReactSpinBox`** | `VALUE_CHANGED`, `VALUE_INCREASED`, `VALUE_DECREASED`, `FOCUS_ENTERED`, `FOCUS_EXITED`, `HOVER_ENTER`, `HOVER_EXIT` |
+| **`UiReactProgressBar`** | `VALUE_CHANGED`, `VALUE_INCREASED`, `VALUE_DECREASED`, `COMPLETED`, `HOVER_ENTER`, `HOVER_EXIT` |
+| **`UiReactLineEdit`** | `TEXT_CHANGED`, `TEXT_ENTERED`, `FOCUS_ENTERED`, `FOCUS_EXITED`, `HOVER_ENTER`, `HOVER_EXIT` |
+| **`UiReactLabel`**, **`UiReactRichTextLabel`** | `TEXT_CHANGED`, `HOVER_ENTER`, `HOVER_EXIT` |
+| **`UiReactOptionButton`** | `SELECTION_CHANGED`, `HOVER_ENTER`, `HOVER_EXIT` |
+| **`UiReactItemList`**, **`UiReactTree`** | `SELECTION_CHANGED`, `HOVER_ENTER`, `HOVER_EXIT` |
+| **`UiReactTabContainer`** | `SELECTION_CHANGED`, `HOVER_ENTER`, `HOVER_EXIT` |
+
 ### UiAnimTarget: unified baseline and RESET
 
 - **`use_unified_baseline`** defaults to **on**. Supported motions (slides, center slides, **`EXPAND`/`EXPAND_X`/`EXPAND_Y`**, shake, float, color flash, etc.) **capture** a unified baseline for the tween and **release** it when the animation completes, so the control returns to the snapshot baseline (and **RESET** can restore it later).
@@ -365,7 +382,7 @@ These may change between template versions; **do not rely on them from game code
 
 | Symptom | Likely cause | Fix |
 |--------|----------------|-----|
-| Animation never plays | Empty `animation_targets`, wrong **Trigger**, or invalid **Target** NodePath | In Inspector: set Trigger, drag a **Control** onto Target, pick animation type. Check Output for warnings. |
+| Animation never plays | Empty `animation_targets`, **Trigger** not supported on this **`UiReact*`** (dock warns), or invalid **Target** NodePath | Use a **Trigger** from the **supported triggers** table above; drag a **Control** onto Target (except **`UiReactTabContainer`** **`SELECTION_CHANGED`** tab presets). Check the **Ui React** dock and Output. |
 | State doesn’t sync | State not assigned, or wrong concrete type | Assign the exported `*_state` field; use the **Ui React** dock to catch type mismatches. Use **int** for tab list indices; **float** only for range controls (slider / spin / progress); bool / String / Array as documented per control. |
 | “Target not found” warning | NodePath not under this node | Use a path relative to the control, or drag the node into the Target field. |
 | Tab arrays don’t apply | `tabs_state` / `disabled_tabs_state` / `visible_tabs_state` not an **Array** | Those `UiState` values must be `Array` (see Output warning). |

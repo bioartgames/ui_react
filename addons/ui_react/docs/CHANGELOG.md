@@ -24,6 +24,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Editor:** dock validates **`UiAnimTarget.trigger`** on **`animation_targets`** and **control-driven** **`action_targets`** rows against **`ANIM_TRIGGERS_BY_COMPONENT`** ([`editor_plugin/ui_react_component_registry.gd`](../editor_plugin/ui_react_component_registry.gd)); **`UiReactTabContainer`** **`SELECTION_CHANGED`** may use an **empty** animation **Target** without a dock error (aligned with runtime **`allow_empty_for`**).
+
 - **`UiReactStateOpService.afford_floats`**; stock computeds **`UiComputedFloatGeProductBool`**, **`UiComputedBoolInvert`**, **`UiComputedOrderSummaryThreeFloatString`** (shop demo afford / buy-disabled / order-summary BBCode; no **`examples/*.gd`**).
 - **`UiReactStateOpService`** (`scripts/internal/react/ui_react_state_op_service.gd`); **`UiReactActionKind.SUBTRACT_PRODUCT_FROM_FLOAT`** on **`UiReactActionTarget`**; **`UiReactButton.action_targets`** + **`run_actions`** on **`PRESSED`** (merged trigger map with **`animation_targets`**).
 - **`UiComputedTransactionalStatusString`** for draft/committed transactional status lines.

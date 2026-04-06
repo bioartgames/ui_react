@@ -56,7 +56,7 @@ Fields:
 
 - **`enabled`**: `bool`, default `true`.
 - **`state_watch`**: `@export` **nullable** **`UiBoolState`**. If **non-null**, this row is **state-driven** (§5.1). If **null**, the row is **control-signal-driven** via **`trigger`**.
-- **`trigger`**: **`UiAnimTarget.Trigger`** — used **only when `state_watch` is null**. **Reuse the existing enum** (**DRY**). The enum type **lives in** `ui_anim_target.gd`; Actions **never** call animation code. **Normative intent:** shared **trigger vocabulary** only.
+- **`trigger`**: **`UiAnimTarget.Trigger`** — used **only when `state_watch` is null**. **Reuse the existing enum** (**DRY**). The enum type **lives in** `ui_anim_target.gd`; Actions **never** call animation code. **Normative intent:** shared **trigger vocabulary** only. For **control-driven** rows, **`trigger`** must be a value the **host** **`UiReact*`** actually dispatches (same per-host set as **`animation_targets`**; see **`ANIM_TRIGGERS_BY_COMPONENT`** in `editor_plugin/ui_react_component_registry.gd` — the dock warns on mismatch).
 - **`action`**: **`UiReactActionKind`** — closed enum (v1 list below).
 - **Path / payload fields** (shown in the Inspector only when relevant to **`action`**; see implementation `_validate_property`):
   - **`target`**: `NodePath` (`@export_node_path("Control")`) for **`GRAB_FOCUS`**, **`SET_VISIBLE`**, **`SET_MOUSE_FILTER`**.

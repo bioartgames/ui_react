@@ -72,3 +72,92 @@ const BINDINGS_BY_COMPONENT: Dictionary = {
 	],
 	"UiReactTransactionalActions": [],
 }
+
+## [UiAnimTarget.Trigger] values each [UiReact*] host actually wires and dispatches (see [code]_validate_animation_targets[/code] on each control).
+## When adding or changing signal wiring for animation triggers, update this map and [code]README.md[/code] (animation triggers table).
+const ANIM_TRIGGERS_BY_COMPONENT: Dictionary = {
+	"UiReactButton": [
+		UiAnimTarget.Trigger.PRESSED,
+		UiAnimTarget.Trigger.HOVER_ENTER,
+		UiAnimTarget.Trigger.HOVER_EXIT,
+		UiAnimTarget.Trigger.TOGGLED_ON,
+		UiAnimTarget.Trigger.TOGGLED_OFF,
+	],
+	"UiReactTextureButton": [
+		UiAnimTarget.Trigger.PRESSED,
+		UiAnimTarget.Trigger.HOVER_ENTER,
+		UiAnimTarget.Trigger.HOVER_EXIT,
+		UiAnimTarget.Trigger.TOGGLED_ON,
+		UiAnimTarget.Trigger.TOGGLED_OFF,
+	],
+	"UiReactCheckBox": [
+		UiAnimTarget.Trigger.TOGGLED_ON,
+		UiAnimTarget.Trigger.TOGGLED_OFF,
+		UiAnimTarget.Trigger.HOVER_ENTER,
+		UiAnimTarget.Trigger.HOVER_EXIT,
+	],
+	"UiReactSlider": [
+		UiAnimTarget.Trigger.VALUE_CHANGED,
+		UiAnimTarget.Trigger.VALUE_INCREASED,
+		UiAnimTarget.Trigger.VALUE_DECREASED,
+		UiAnimTarget.Trigger.DRAG_STARTED,
+		UiAnimTarget.Trigger.DRAG_ENDED,
+		UiAnimTarget.Trigger.HOVER_ENTER,
+		UiAnimTarget.Trigger.HOVER_EXIT,
+	],
+	"UiReactSpinBox": [
+		UiAnimTarget.Trigger.VALUE_CHANGED,
+		UiAnimTarget.Trigger.VALUE_INCREASED,
+		UiAnimTarget.Trigger.VALUE_DECREASED,
+		UiAnimTarget.Trigger.FOCUS_ENTERED,
+		UiAnimTarget.Trigger.FOCUS_EXITED,
+		UiAnimTarget.Trigger.HOVER_ENTER,
+		UiAnimTarget.Trigger.HOVER_EXIT,
+	],
+	"UiReactProgressBar": [
+		UiAnimTarget.Trigger.VALUE_CHANGED,
+		UiAnimTarget.Trigger.VALUE_INCREASED,
+		UiAnimTarget.Trigger.VALUE_DECREASED,
+		UiAnimTarget.Trigger.COMPLETED,
+		UiAnimTarget.Trigger.HOVER_ENTER,
+		UiAnimTarget.Trigger.HOVER_EXIT,
+	],
+	"UiReactLineEdit": [
+		UiAnimTarget.Trigger.TEXT_CHANGED,
+		UiAnimTarget.Trigger.TEXT_ENTERED,
+		UiAnimTarget.Trigger.FOCUS_ENTERED,
+		UiAnimTarget.Trigger.FOCUS_EXITED,
+		UiAnimTarget.Trigger.HOVER_ENTER,
+		UiAnimTarget.Trigger.HOVER_EXIT,
+	],
+	"UiReactLabel": [
+		UiAnimTarget.Trigger.TEXT_CHANGED,
+		UiAnimTarget.Trigger.HOVER_ENTER,
+		UiAnimTarget.Trigger.HOVER_EXIT,
+	],
+	"UiReactRichTextLabel": [
+		UiAnimTarget.Trigger.TEXT_CHANGED,
+		UiAnimTarget.Trigger.HOVER_ENTER,
+		UiAnimTarget.Trigger.HOVER_EXIT,
+	],
+	"UiReactOptionButton": [
+		UiAnimTarget.Trigger.SELECTION_CHANGED,
+		UiAnimTarget.Trigger.HOVER_ENTER,
+		UiAnimTarget.Trigger.HOVER_EXIT,
+	],
+	"UiReactItemList": [
+		UiAnimTarget.Trigger.SELECTION_CHANGED,
+		UiAnimTarget.Trigger.HOVER_ENTER,
+		UiAnimTarget.Trigger.HOVER_EXIT,
+	],
+	"UiReactTree": [
+		UiAnimTarget.Trigger.SELECTION_CHANGED,
+		UiAnimTarget.Trigger.HOVER_ENTER,
+		UiAnimTarget.Trigger.HOVER_EXIT,
+	],
+	"UiReactTabContainer": [
+		UiAnimTarget.Trigger.SELECTION_CHANGED,
+		UiAnimTarget.Trigger.HOVER_ENTER,
+		UiAnimTarget.Trigger.HOVER_EXIT,
+	],
+}

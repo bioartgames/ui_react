@@ -36,7 +36,12 @@ static func validate_anim_targets(
 		if not (anim_target is UiAnimTarget):
 			continue
 		var at := anim_target as UiAnimTarget
-		if at.target.is_empty():
+		var tab_selection_empty_ok: bool = (
+			component == "UiReactTabContainer"
+			and at.trigger == UiAnimTarget.Trigger.SELECTION_CHANGED
+			and at.target.is_empty()
+		)
+		if at.target.is_empty() and not tab_selection_empty_ok:
 			out.append(
 				UiReactDiagnosticModel.DiagnosticIssue.make_structured(
 					UiReactDiagnosticModel.Severity.WARNING,
@@ -52,15 +57,53 @@ static func validate_anim_targets(
 				)
 			)
 			continue
-		var tn := owner.get_node_or_null(at.target)
-		if tn == null:
+		if not at.target.is_empty():
+			var tn := owner.get_node_or_null(at.target)
+			if tn == null:
+				out.append(
+					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+						UiReactDiagnosticModel.Severity.ERROR,
+						component,
+						str(owner.name),
+						"UiAnimTarget #%d Target '%s' could not be resolved." % [i, at.target],
+						"Fix the NodePath relative to this control.",
+						node_path,
+						&"animation_targets",
+						&"",
+						UiReactDiagnosticModel.IssueKind.GENERIC,
+						"",
+					)
+				)
+				continue
+			if not (tn is Control):
+				out.append(
+					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+						UiReactDiagnosticModel.Severity.ERROR,
+						component,
+						str(owner.name),
+						"UiAnimTarget #%d Target is not a Control." % i,
+						"Point Target at a Control node.",
+						node_path,
+						&"animation_targets",
+						&"",
+						UiReactDiagnosticModel.IssueKind.GENERIC,
+						"",
+					)
+				)
+				continue
+
+		if not UiReactValidatorCommon.is_anim_trigger_allowed(component, at.trigger):
 			out.append(
 				UiReactDiagnosticModel.DiagnosticIssue.make_structured(
-					UiReactDiagnosticModel.Severity.ERROR,
+					UiReactDiagnosticModel.Severity.WARNING,
 					component,
 					str(owner.name),
-					"UiAnimTarget #%d Target '%s' could not be resolved." % [i, at.target],
-					"Fix the NodePath relative to this control.",
+					(
+						"UiAnimTarget #%d uses Trigger %s on %s, which this control never dispatches."
+						% [i, UiReactValidatorCommon.format_anim_trigger_name(at.trigger), component]
+					),
+					"Supported triggers for %s: %s."
+					% [component, UiReactValidatorCommon.format_allowed_anim_triggers_hint(component)],
 					node_path,
 					&"animation_targets",
 					&"",
@@ -68,22 +111,7 @@ static func validate_anim_targets(
 					"",
 				)
 			)
-			continue
-		if not (tn is Control):
-			out.append(
-				UiReactDiagnosticModel.DiagnosticIssue.make_structured(
-					UiReactDiagnosticModel.Severity.ERROR,
-					component,
-					str(owner.name),
-					"UiAnimTarget #%d Target is not a Control." % i,
-					"Point Target at a Control node.",
-					node_path,
-					&"animation_targets",
-					&"",
-					UiReactDiagnosticModel.IssueKind.GENERIC,
-					"",
-				)
-			)
+
 		if component == "UiReactItemList" and owner is ItemList:
 			var il := owner as ItemList
 			if il.item_count > 0 and at.selection_slot >= 0 and at.selection_slot >= il.item_count:
