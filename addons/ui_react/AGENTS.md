@@ -31,7 +31,7 @@ This file is the **checklist** before large refactors. The **documentation map**
 | Area | Path |
 |------|------|
 | Editor dock façade | `editor_plugin/services/ui_react_validator_service.gd` |
-| Binding / anim / action / wiring / tree / computed validators | `editor_plugin/services/ui_react_*_validator.gd` |
+| Binding / anim / action / wiring / transactional / tree / computed validators | `editor_plugin/services/ui_react_*_validator.gd` |
 | Component metadata (stems, bindings, **animation trigger allowlist**) | `editor_plugin/ui_react_component_registry.gd` |
 | Shared validator helpers | `editor_plugin/services/ui_react_validator_common.gd` |
 | Scene scan / component name from script | `editor_plugin/services/ui_react_scanner_service.gd` |

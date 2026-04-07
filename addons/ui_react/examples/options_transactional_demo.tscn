@@ -1,11 +1,10 @@
-[gd_scene load_steps=35 format=3 uid="uid://lp6x0p7wqckg"]
+[gd_scene load_steps=37 format=3 uid="uid://lp6x0p7wqckg"]
 
 [ext_resource type="Script" uid="uid://c1jlkpahxxnpi" path="res://addons/ui_react/scripts/api/models/ui_transactional_state.gd" id="1_txn"]
 [ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://addons/ui_react/scripts/controls/ui_react_slider.gd" id="2_sl"]
 [ext_resource type="Script" uid="uid://3m8buhv674ja" path="res://addons/ui_react/scripts/controls/ui_react_check_box.gd" id="3_cb"]
 [ext_resource type="Script" uid="uid://st55qiias3cb" path="res://addons/ui_react/scripts/api/models/ui_state.gd" id="3_cux1w"]
 [ext_resource type="Script" uid="uid://ddkpdoxca60md" path="res://addons/ui_react/scripts/api/models/ui_transactional_group.gd" id="4_grp"]
-[ext_resource type="Script" uid="uid://da03oq3dwj1le" path="res://addons/ui_react/scripts/controls/ui_react_transactional_actions.gd" id="5_act"]
 [ext_resource type="Script" uid="uid://bpargu3etc8wf" path="res://addons/ui_react/scripts/api/models/ui_computed_transactional_status_string.gd" id="6_status"]
 [ext_resource type="Script" uid="uid://bw7gojuop1hic" path="res://addons/ui_react/scripts/controls/ui_react_label.gd" id="8_lbl"]
 [ext_resource type="Resource" uid="uid://b4gdunujg6evw" path="res://addons/ui_react/ui_resources/plugin_generated/MuteToggle_disabled_state_3.tres" id="9_6xi6r"]
@@ -19,18 +18,8 @@
 [ext_resource type="Script" uid="uid://dqbg42kucypqk" path="res://addons/ui_react/scripts/api/models/ui_react_action_target.gd" id="17_action"]
 [ext_resource type="Script" uid="uid://b75p2so2hr0wd" path="res://addons/ui_react/scripts/controls/ui_react_option_button.gd" id="18_opt"]
 [ext_resource type="Script" uid="uid://cxg5hj6ihqtue" path="res://addons/ui_react/scripts/api/models/ui_bool_state.gd" id="19_bool"]
-
-[sub_resource type="Resource" id="txn_vol"]
-script = ExtResource("1_txn")
-committed_value = 0.65
-
-[sub_resource type="Resource" id="txn_mute"]
-script = ExtResource("1_txn")
-committed_value = false
-
-[sub_resource type="Resource" id="txn_group"]
-script = ExtResource("4_grp")
-states = Array[ExtResource("1_txn")]([SubResource("txn_vol"), SubResource("txn_mute")])
+[ext_resource type="Script" uid="uid://lv5ixpw5hlvp" path="res://addons/ui_react/scripts/controls/ui_react_button.gd" id="20_btn"]
+[ext_resource type="Script" uid="uid://bm888uf1am2em" path="res://addons/ui_react/scripts/api/models/ui_transactional_screen_config.gd" id="21_txnscr"]
 
 [sub_resource type="Resource" id="tab_detail_str"]
 script = ExtResource("12_str")
@@ -53,6 +42,14 @@ items_state = SubResource("tab_items_arr")
 detail_state = SubResource("tab_detail_str")
 text_no_selection = "Pick a tab."
 rule_id = "options_tab_copy_detail"
+
+[sub_resource type="Resource" id="txn_vol"]
+script = ExtResource("1_txn")
+committed_value = 0.65
+
+[sub_resource type="Resource" id="txn_mute"]
+script = ExtResource("1_txn")
+committed_value = false
 
 [sub_resource type="Resource" id="quality_sel"]
 script = ExtResource("12_str")
@@ -93,6 +90,13 @@ state_watch = SubResource("cb056_bool")
 action = 1
 target = NodePath("../CB056Hint")
 
+[sub_resource type="Resource" id="txn_group"]
+script = ExtResource("4_grp")
+states = Array[ExtResource("1_txn")]([SubResource("txn_vol"), SubResource("txn_mute")])
+
+[sub_resource type="Resource" id="txn_screen"]
+script = ExtResource("21_txnscr")
+
 [sub_resource type="Resource" id="status_computed"]
 script = ExtResource("6_status")
 sources = Array[ExtResource("3_cux1w")]([SubResource("txn_vol"), SubResource("txn_mute")])
@@ -105,15 +109,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-
-[node name="TxnActions" type="Control" parent="."]
-anchors_preset = 0
-mouse_filter = 2
-script = ExtResource("5_act")
-group = SubResource("txn_group")
-apply_button_path = NodePath("../VBox/OptionsTabs/AudioPanel/AudioVBox/ButtonRow/ApplyButton")
-cancel_button_path = NodePath("../VBox/OptionsTabs/AudioPanel/AudioVBox/ButtonRow/CancelButton")
-metadata/_ui_react_action_sw_bindings = []
 
 [node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -131,7 +126,7 @@ text = "Options (transactional demo — audio)"
 [node name="Help" type="Label" parent="VBox"]
 custom_minimum_size = Vector2(1, 1)
 layout_mode = 2
-text = "Audio settings are on the first tab. Second tab is a static UiReactTabContainer showcase. Apply / Cancel commit or revert draft volume + mute. CB-052: TabContainer + OptionButton use wire_rules (copy-detail + map) and action_targets (SET_VISIBLE). CB-056: CheckBox state_watch SET_VISIBLE (visible_when_true / visible_when_false)."
+text = "Audio settings are on the first tab. Second tab is a static UiReactTabContainer showcase. Apply / Cancel use UiReactButton transactional_role + UiTransactionalScreenConfig (UiReactTransactionalSession). CB-052: TabContainer + OptionButton use wire_rules (copy-detail + map) and action_targets (SET_VISIBLE). CB-056: CheckBox state_watch SET_VISIBLE (visible_when_true / visible_when_false)."
 autowrap_mode = 3
 
 [node name="TabSelectionDetail" type="Label" parent="VBox"]
@@ -235,10 +230,18 @@ theme_override_constants/separation = 8
 [node name="ApplyButton" type="Button" parent="VBox/OptionsTabs/AudioPanel/AudioVBox/ButtonRow"]
 layout_mode = 2
 text = "Apply"
+script = ExtResource("20_btn")
+transactional_group = SubResource("txn_group")
+transactional_screen = SubResource("txn_screen")
+transactional_role = 1
 
 [node name="CancelButton" type="Button" parent="VBox/OptionsTabs/AudioPanel/AudioVBox/ButtonRow"]
 layout_mode = 2
 text = "Cancel"
+script = ExtResource("20_btn")
+transactional_group = SubResource("txn_group")
+transactional_screen = SubResource("txn_screen")
+transactional_role = 2
 
 [node name="GameplayPanel" type="Panel" parent="VBox/OptionsTabs"]
 visible = false

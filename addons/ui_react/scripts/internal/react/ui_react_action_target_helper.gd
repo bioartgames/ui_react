@@ -76,6 +76,7 @@ static func validate_action_targets(
 	allow_empty_target: Array[int] = [],
 ) -> Array[UiReactActionTarget]:
 	var out: Array[UiReactActionTarget] = []
+	# UiReactButton hosts use normal control-triggered + state_watch rules; coordinator has no trigger dispatch.
 	var transactional_only_state: bool = owner is UiReactTransactionalActions
 
 	for i in range(action_targets.size()):

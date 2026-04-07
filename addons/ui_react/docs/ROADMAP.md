@@ -57,7 +57,7 @@ Additional **stock** **`UiComputedStringState` / `UiComputedBoolState`** subclas
 | Phase | Name | Summary |
 |-------|------|---------|
 | **P0** | Now / baseline | Current addon: `Ui*` states, `UiReact*` controls, `UiAnimUtils` + `UiAnimTarget`, editor dock with validator/scanner. Documentation anchor only—no additional delivery commitment. |
-| **P1** | Transactional state | Minimal draft / commit / revert via **`UiTransactionalState`**; batch **Apply** / **Cancel** via **`UiTransactionalGroup`** + **`UiReactTransactionalActions`** (no command resource). **Validation:** **Options**-class example **`options_transactional_demo.tscn`**. **Delivery complete** (historical). |
+| **P1** | Transactional state | Minimal draft / commit / revert via **`UiTransactionalState`**; batch **Apply** / **Cancel** via **`UiTransactionalGroup`** + **`UiReactButton`**/**`UiReactTextureButton`** **`transactional_*`** + **`UiReactTransactionalSession`** (**`UiTransactionalScreenConfig`**); **`UiReactTransactionalActions`** deprecated. **Validation:** **`options_transactional_demo.tscn`**. **Delivery complete** (historical). |
 | **P2** | Computed state | Minimal computed resource or helper with **explicit dependencies** and documented limits (no general graph solver promise in v1). **Validation:** at least one **shop** or **inventory-filter** example. **Delivery complete** (historical). |
 | **P3** | List richness and templates | README recipe + example for row templates / icon lists; optional incremental changes to `UiReactItemList` **only if** scoped in an issue. **Delivery complete** (historical). |
 | **P4** | Selective new react controls | e.g. `UiReactTextureButton` / slot pattern, `UiReactTree`—historically when the **Charter** bar for **new** controls (two official examples) was met; each new control updates **`UiReactComponentRegistry`** (stem + binding slots) and keeps **`UiReactBindingValidator`** / dock parity. **`UiReactScannerService`** remains the node walk + `kind_to_suggested_class` helper. **Delivery complete** (historical). |
@@ -101,9 +101,9 @@ Not every row is a v1.0 promise; this maps **Megaman-style** UI goals to **phase
 
 **P1 — Transactional state**
 
-**Orchestration note (non-command, non-computed):** Screens with multiple transactional states use **`UiTransactionalGroup`** (`begin_edit_all` / `apply_all` / `cancel_all`) and optional inspector wiring **`UiReactTransactionalActions`** on **`BaseButton`** paths—no autoload scanner, no per-control connection arrays, and no mandatory `UiCommand`-style resource (Charter).
+**Orchestration note (non-command, non-computed):** Screens with multiple transactional states use **`UiTransactionalGroup`** (`begin_edit_all` / `apply_all` / `cancel_all`) and **`UiReactButton`** / **`UiReactTextureButton`** **`transactional_*`** (**`UiReactTransactionalSession`**) or deprecated path-based **`UiReactTransactionalActions`**—no autoload scanner, no mandatory `UiCommand`-style resource (Charter).
 
-- [x] Implementation merged: **`UiTransactionalState`**, **`UiTransactionalGroup`**, **`UiReactTransactionalActions`** (see addon `scripts/api/models/` and `scripts/controls/`).
+- [x] Implementation merged: **`UiTransactionalState`**, **`UiTransactionalGroup`**, **`UiTransactionalScreenConfig`**, **`UiReactTransactionalSession`**, **`UiReactButton`**/**`UiReactTextureButton`** transactional exports, **`UiReactTransactionalActions`** (deprecated coordinator).
 - [x] README section describes draft / apply / cancel and links to example.
 - [x] Example scene or shipped game screen path documented (path in the Appendix **Notes** when known).
 - [x] `CHANGELOG.md` entry (minor or patch per SemVer).
@@ -166,17 +166,17 @@ Normative **parity** reference for **`animation_targets`**, **`action_targets`**
 | **†** | **Promotion needed:** new Appendix row + update **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** and/or **[`ACTION_LAYER.md`](ACTION_LAYER.md) §4** before treating the cell as **●**. |
 | **○** | **Optional parity** — decide under roadmap; **Label** / **RichText** **`action_targets`** closed as **—** (**CB-052**). |
 
-**`UiReactTransactionalActions`** is a **non-Control** host: it exposes **`action_targets`** + **`wire_rules`** only (no motion layer).
+**`UiReactTransactionalActions`** is a thin **`Control`** coordinator (**deprecated**): it exposes **`action_targets`** + **`wire_rules`** only (no motion layer).
 
 | Control | `animation_targets` | `action_targets` | `wire_rules` | Notes |
 |---------|:-------------------:|:----------------:|:------------:|-------|
-| `UiReactButton` | ● | ● | — | Wiring concentrates on **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** pickers; use children or a new row to put **`wire_rules`** on **Button**. |
+| `UiReactButton` | ● | ● | — | Wiring concentrates on **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** pickers; **also** **`transactional_group`** / **`transactional_screen`** / **`transactional_role`** for Apply/Cancel (**`UiReactTransactionalSession`**). |
 | `UiReactTextureButton` | ● | ● | — | Same as **Button**. |
 | `UiReactCheckBox` | ● | ● | ● | §5 host. |
 | `UiReactLineEdit` | ● | ● | ● | §5 host. |
 | `UiReactItemList` | ● | ● | ● | §5 host. |
 | `UiReactTree` | ● | ● | ● | §5 host. |
-| `UiReactTransactionalActions` | — | ● | ● | State-driven **`action_targets`** only ([`ACTION_LAYER.md`](ACTION_LAYER.md) §3.1.1); **`wire_rules`** for orchestration. |
+| `UiReactTransactionalActions` | — | ● | ● | **Deprecated** — prefer **`UiReactButton`** **`transactional_*`**. State-driven **`action_targets`** only ([`ACTION_LAYER.md`](ACTION_LAYER.md) §3.1.1); **`wire_rules`** for orchestration. |
 | `UiReactSlider` | ● | — | — | Value-centric control; **Actions** / **Wiring** widen via **†** + Appendix only after **Charter** **evidence bar** (matrix **plus** official example). |
 | `UiReactSpinBox` | ● | — | — | Same as **Slider**. |
 | `UiReactProgressBar` | ● | — | — | Same; **`COMPLETED`** trigger for anims. |
@@ -196,7 +196,7 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | ID | Capability / topic | Screen examples | Target phase | Status | Notes |
 |----|-------------------|-----------------|--------------|--------|-------|
 | CB-001 | Core: `UiState`, `UiReact*`, `UiAnimUtils`, `UiAnimTarget`, editor dock | All | P0 | Done | Baseline shipped; maintain compat per SemVer. Includes typed diagnostics (`IssueKind`/`resource_path`), scene-file-scoped unused `UiState` `.tres` diagnostics (no cross-scene clutter), Reveal + persisted ignore flows, and filesystem-triggered dock refresh. |
-| CB-002 | Transactional / draft state (apply, cancel, revert) | Options, key remap drafts | P1 | Done | **`UiTransactionalState`** + **`UiTransactionalGroup`** + **`UiReactTransactionalActions`**; README + **`options_transactional_demo.tscn`**. Status line uses stock **`UiComputedTransactionalStatusString`** on **`text_state`** (supersedes early **2.2.0** “generic **`UiComputedStringState`** subclass” note). |
+| CB-002 | Transactional / draft state (apply, cancel, revert) | Options, key remap drafts | P1 | Done | **`UiTransactionalState`** + **`UiTransactionalGroup`** + **`UiReactTransactionalSession`** / **`UiTransactionalScreenConfig`** on **`UiReactButton`**; deprecated **`UiReactTransactionalActions`**; README + **`options_transactional_demo.tscn`**. Status line uses stock **`UiComputedTransactionalStatusString`** on **`text_state`**. |
 | CB-003 | Computed state (explicit dependencies, documented limits) | Shop totals, afford flags, filtered inventory | P2 | Done | **`UiComputedStringState`**, **`UiComputedBoolState`**, **`UiReactComputedService`**; README; **`shop_computed_demo.tscn`**; **`options_transactional_demo.tscn`**. **2.2.0**. Inventory filtering lives on **`inventory_screen_demo.tscn`** (successor to removed **`inventory_list_demo`**). |
 | CB-004 | Explicit dependency / recalc rules (documented) | Same as CB-003 | P2 | Done | Same release as CB-003; cap **32** **`sources`**, no solver (README **Computed state**). |
 | CB-005 | Undo stack / nested transactions | Advanced options | P6+ | Deferred | Not v1.0 scope; promote if needed. |
@@ -251,6 +251,7 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-054 | **`wire_rules`** + **`action_targets`** on **`UiReactOptionButton`** | Options, settings | P6+ | Done | **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5**, **[`ACTION_LAYER.md`](ACTION_LAYER.md) §4**, **`ui_react_wire_rule_helper.gd`**; **`options_transactional_demo.tscn`**. Subsumes matrix **†** for this host. |
 | CB-055 | **`wire_rules`** + **`action_targets`** on **`UiReactTabContainer`** | Tabbed settings | P6+ | Done | Same as **CB-054** for **`UiReactTabContainer`**; **`options_transactional_demo.tscn`**. |
 | CB-056 | **`SET_VISIBLE`** branches on **`state_watch`** (`visible_when_true` / `visible_when_false`) | Presentation | P6.1 | Done | **[`ACTION_LAYER.md`](ACTION_LAYER.md)** §3; **`ui_react_action_target.gd`** / **`ui_react_action_target_helper.gd`**; **`options_transactional_demo.tscn`** (**CB056DemoToggle**). **2.19.0**; **`state_watch`** dispatch fix **`_install_state_watch_bindings`** (**2.19.1**). |
+| CB-057 | Transactional Apply/Cancel on **`UiReactButton`** + **`UiReactTransactionalSession`** | Options | P1 | Done | **`UiTransactionalScreenConfig`**, cohort refcount, dock **`validate_transactional_under_root`**; **`UiReactTransactionalActions`** deprecated; **`options_transactional_demo.tscn`** migrated off coordinator node. |
 
 ---
 

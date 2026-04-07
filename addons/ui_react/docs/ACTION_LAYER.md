@@ -75,7 +75,7 @@ Fields:
 - **Warning:** **`state_watch`** non-null **and** **`trigger`** is not **`PRESSED`** (authors should leave the default when state-driven; the editor **may** hide **`trigger`** when **`state_watch`** is set).
 - **`SET_MOUSE_FILTER`:** For the two-branch path, the bool **must** come **only** from **`state_watch.get_value()`**, not from other preset fields.
 - **`SET_VISIBLE`:** For the two-branch path, the bool **must** come **only** from **`state_watch.get_value()`**, not from **`visible_value`**.
-- **`UiReactTransactionalActions`:** **Control-triggered** action rows (`state_watch` null) **are not supported**; only **state-driven** rows are valid on this host (validator **error**).
+- **`UiReactTransactionalActions`** (deprecated coordinator): **Control-triggered** action rows (`state_watch` null) **are not supported**; only **state-driven** rows are valid on this host (validator **error**). **`UiReactButton`** / **`UiReactTextureButton`** with **`transactional_*`** use the normal per-host trigger set for **`action_targets`** (including control-triggered rows).
 
 ### 3.2 MVP enum: `UiReactActionKind`
 

@@ -27,5 +27,9 @@ static func validate_wiring_under_root(root: Node) -> Array[UiReactDiagnosticMod
 	return UiReactWiringValidator.validate_wiring_under_root(root)
 
 
+static func validate_transactional_under_root(root: Node) -> Array[UiReactDiagnosticModel.DiagnosticIssue]:
+	return UiReactTransactionalValidator.validate_transactional_under_root(root)
+
+
 static func validate_computed_under_root(root: Node) -> Array[UiReactDiagnosticModel.DiagnosticIssue]:
 	return UiReactComputedValidator.validate_under_root(root)

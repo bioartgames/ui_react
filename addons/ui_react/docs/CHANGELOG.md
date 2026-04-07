@@ -6,9 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **`UiTransactionalScreenConfig`**, **`UiReactTransactionalSession`**: tree-scoped Apply/Cancel cohort (**`begin_edit_all`** deferred one frame on first registration); **`UiReactButton`** / **`UiReactTextureButton`** exports **`transactional_group`**, **`transactional_screen`**, **`transactional_role`**.
+- **`UiReactTransactionalValidator.validate_transactional_under_root`**: dock **ERROR** when **`UiReactTransactionalActions`** and button **`transactional_*`** target the same **`UiTransactionalGroup`**; duplicate Apply/Cancel role checks; **`pressed_state` + `transactional_role`** warning (**CB-057**).
+
+### Changed
+
+- **`UiReactTransactionalActions`**: delegates to **`UiReactTransactionalSession`**; **`options_transactional_demo.tscn`** uses **`UiReactButton`** Apply/Cancel (no coordinator node).
+
+### Deprecated
+
+- **`UiReactTransactionalActions`**: prefer **`UiReactButton`** / **`UiReactTextureButton`** **`transactional_*`** for Apply/Cancel.
+
 ### Documentation
 
 - **Charter evidence bar:** [`ROADMAP.md`](ROADMAP.md) intro + **Charter**—**official examples** (README-indexed) replace private-game **dogfood** / **3×** as proof; new glossary **Official example**, **Evidence bar**; **Inspector surface matrix (CB-052)** and **CB-052** Note tie **†** → **●** to the bar; [`DECISIONS.md`](DECISIONS.md) **2026-04-06**; [`docs/README.md`](README.md) task routing; [`AGENTS.md`](../AGENTS.md) change policy + non-goals; [`README.md`](../README.md) roadmap paragraph. **No** `plugin.cfg` bump (docs-only).
+- **Transactional mini-host (CB-057):** [`README.md`](../README.md), [`ROADMAP.md`](ROADMAP.md), [`ACTION_LAYER.md`](ACTION_LAYER.md), [`WIRING_LAYER.md`](WIRING_LAYER.md), model docstrings.
 
 ## [2.19.1] - 2026-04-07
 

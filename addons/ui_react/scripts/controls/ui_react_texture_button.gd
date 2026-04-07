@@ -1,6 +1,8 @@
 extends TextureButton
 class_name UiReactTextureButton
 
+const _TxnSession := preload("res://addons/ui_react/scripts/internal/react/ui_react_transactional_session.gd")
+
 var _bind := UiReactTwoWayBindingDriver.new()
 var _pressed_state: UiBoolState
 var _disabled_state: UiBoolState
@@ -41,6 +43,23 @@ var _disabled_state: UiBoolState
 ## Optional one-way write to a [UiFloatState] on [signal BaseButton.pressed].
 @export var press_writes_float_state: UiFloatState
 @export var press_writes_float_value: float = 100.0
+
+## Batch [UiTransactionalState] draft/commit for this screen. Use with [member transactional_role] and [member transactional_screen].
+@export var transactional_group: UiTransactionalGroup
+## Shared with the paired Apply/Cancel button; assign [UiTransactionalScreenConfig].
+@export var transactional_screen: Resource
+enum TransactionalHostRole { NONE = 0, APPLY_ALL = 1, CANCEL_ALL = 2 }
+## **Apply** / **Cancel** — wires [signal BaseButton.pressed] to [method UiTransactionalGroup.apply_all] / [method UiTransactionalGroup.cancel_all] via [UiReactTransactionalSession].
+@export var transactional_role: TransactionalHostRole = TransactionalHostRole.NONE
+
+func _enter_tree() -> void:
+	if int(transactional_role) != int(TransactionalHostRole.NONE) and transactional_group != null:
+		_TxnSession.register_host(self, transactional_group, int(transactional_role), transactional_screen)
+
+
+func _exit_tree() -> void:
+	_TxnSession.unregister_host(self)
+
 
 func _ready() -> void:
 	pressed.connect(_on_pressed)

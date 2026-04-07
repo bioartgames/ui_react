@@ -13,6 +13,7 @@ static func validate_action_targets(
 	if not (arr is Array):
 		return out
 	var rows: Array = arr as Array
+	# Deprecated UiReactTransactionalActions only — not UiReactButton transactional exports.
 	var transactional: bool = owner is UiReactTransactionalActions
 
 	for i in range(rows.size()):

@@ -1,7 +1,7 @@
 @tool
 ## Batch orchestration for multiple [UiTransactionalState] resources on one screen (e.g. options **Apply** / **Cancel**).
 ## Assign [member states] in order; call [method begin_edit_all], [method apply_all], or [method cancel_all] instead of looping in scene code.
-## For inspector-driven wiring, use [UiReactTransactionalActions] with the same group resource.
+## For inspector-driven wiring, prefer [UiReactButton] / [UiReactTextureButton] with [member UiReactButton.transactional_group], [UiTransactionalScreenConfig], and [UiReactTransactionalSession]; [UiReactTransactionalActions] remains for path-based Apply/Cancel (deprecated).
 class_name UiTransactionalGroup
 extends Resource
 

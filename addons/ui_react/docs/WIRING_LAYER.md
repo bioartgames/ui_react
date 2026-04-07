@@ -116,7 +116,7 @@ Official **`inventory_screen_demo`** uses only **`wire_rules`** on **`UiReact*`*
 
 **Unused `UiState` `.tres` diagnostics:** `UiState` resources referenced **only** inside `wire_rules` subresources are counted as used (`UiReactStateReferenceCollector`).
 
-**`UiReactTransactionalActions`** is registered in `UiReactScannerService` so §5 hosts participate in the same dock passes as other `UiReact*` controls.
+**`UiReactTransactionalActions`** is registered in `UiReactScannerService` so §5 hosts participate in the same dock passes as other `UiReact*` controls. **Apply/Cancel** wiring for **`UiTransactionalGroup`** is preferred on **`UiReactButton`** / **`UiReactTextureButton`** (**`transactional_*`** exports + **`UiReactTransactionalSession`**); footer-only **`wire_rules`** without a §5 host stay on **`UiReactTabContainer`**, **`UiReactOptionButton`**, or other §5 controls—the **`Button`** matrix row does not ship **`wire_rules`**. The dock runs **`validate_transactional_under_root`** (conflict if coordinator + button **`transactional_*`** share a group).
 
 **Follow-up** (optional backlog): invalid `NodePath` targets when future rules use paths. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md).
 
