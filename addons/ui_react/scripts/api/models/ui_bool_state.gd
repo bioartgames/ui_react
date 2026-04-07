@@ -3,6 +3,10 @@
 class_name UiBoolState
 extends UiState
 
+const _action_state_watch_debug := preload(
+	"res://addons/ui_react/scripts/internal/react/ui_react_action_state_watch_debug.gd"
+)
+
 @export var value: bool = false
 
 
@@ -21,6 +25,7 @@ func set_value(new_value: Variant) -> void:
 		return
 	var old: bool = value
 	value = v
+	_action_state_watch_debug.line("UiBoolState.set_value id=%d new=%s old=%s" % [get_instance_id(), v, old])
 	if not Engine.is_editor_hint():
 		value_changed.emit(v, old)
 	emit_changed()

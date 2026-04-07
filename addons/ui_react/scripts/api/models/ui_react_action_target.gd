@@ -31,7 +31,13 @@ enum UiReactActionKind {
 ## NodePath for [code]GRAB_FOCUS[/code], [code]SET_VISIBLE[/code], and [code]SET_MOUSE_FILTER[/code].
 @export_node_path("Control") var target: NodePath = NodePath()
 
+## Used only when [member action] is [code]SET_VISIBLE[/code] and [member state_watch] is [code]null[/code] (control-triggered rows).
 @export var visible_value: bool = true
+
+## Used only when [member action] is [code]SET_VISIBLE[/code] and [member state_watch] is set (state-driven rows). Runtime reads [method UiBoolState.get_value] coerced to [code]bool[/code] ([code]UiReactActionTargetHelper[/code]).
+@export var visible_when_true: bool = true
+## See [member visible_when_true].
+@export var visible_when_false: bool = false
 
 @export var bool_flag_state: UiBoolState
 @export var bool_flag_value: bool = true
@@ -62,8 +68,14 @@ func _validate_property(property: Dictionary) -> void:
 			if pname == &"target":
 				return
 		UiReactActionKind.SET_VISIBLE:
-			if pname in [&"target", &"visible_value"]:
+			if pname == &"target":
 				return
+			if sw_set:
+				if pname in [&"visible_when_true", &"visible_when_false"]:
+					return
+			else:
+				if pname == &"visible_value":
+					return
 		UiReactActionKind.SET_UI_BOOL_FLAG:
 			if pname in [&"bool_flag_state", &"bool_flag_value"]:
 				return

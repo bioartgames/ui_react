@@ -93,6 +93,8 @@ func _validate_animation_targets() -> void:
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
 		UiReactAnimTargetHelper.connect_if_absent(mouse_exited, _on_trigger_hover_exit)
 
+	UiReactActionTargetHelper.sync_initial_state(self, "UiReactCheckBox", action_targets)
+
 
 ## Finishes initialization, allowing animations to trigger on toggle changes.
 func _finish_initialization() -> void:

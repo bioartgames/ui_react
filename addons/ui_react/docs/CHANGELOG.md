@@ -10,6 +10,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **Charter evidence bar:** [`ROADMAP.md`](ROADMAP.md) intro + **Charter**—**official examples** (README-indexed) replace private-game **dogfood** / **3×** as proof; new glossary **Official example**, **Evidence bar**; **Inspector surface matrix (CB-052)** and **CB-052** Note tie **†** → **●** to the bar; [`DECISIONS.md`](DECISIONS.md) **2026-04-06**; [`docs/README.md`](README.md) task routing; [`AGENTS.md`](../AGENTS.md) change policy + non-goals; [`README.md`](../README.md) roadmap paragraph. **No** `plugin.cfg` bump (docs-only).
 
+## [2.19.1] - 2026-04-07
+
+### Fixed
+
+- **`UiReactActionTargetHelper._install_state_watch_bindings`**: In GDScript, **`PackedInt32Array`** is value-typed; **`append`** on a value read from a **`Dictionary`** did not update the stored array, so per-**`state_watch`** row **`indices`** stayed **empty** and **`value_changed`** never dispatched **`action_targets`** rows (e.g. **`SET_VISIBLE`**, **`SET_MOUSE_FILTER`**). The array is now read, appended, and **written back** to the dictionary (**2.19.1**).
+
+## [2.19.0] - 2026-04-03
+
+### Added
+
+- **`UiReactActionTarget`**: **`visible_when_true`** and **`visible_when_false`** for **state-driven** **`SET_VISIBLE`** rows (bool from **`state_watch.get_value()`**, coerced); Inspector shows branch fields when **`state_watch`** is set, **`visible_value`** when control-triggered (**CB-056**).
+- **`options_transactional_demo.tscn`**: **`UiReactCheckBox`** row (**`CB056DemoToggle`**) with **`state_watch`** **`SET_VISIBLE`** on **`CB056Hint`** (Charter **official example**).
+
+### Changed
+
+- **`SET_VISIBLE`** with **`state_watch`**: visibility now follows **`visible_when_true`** / **`visible_when_false`** instead of always applying **`visible_value`** on each **`value_changed`**. Rows that need **unchanged** visibility whenever the watched bool updates should set **both** branch fields to the same **`bool`** (e.g. always visible: **`true`** / **`true`**).
+- **`UiReactCheckBox`**: **`UiReactActionTargetHelper.sync_initial_state`** after validating **`action_targets`** (parity with **`UiReactButton`** and other hosts; state-driven rows apply on first frame).
+
+### Documentation
+
+- [`ACTION_LAYER.md`](ACTION_LAYER.md) §3 (`SET_VISIBLE` bullets, validator note); [`DECISIONS.md`](DECISIONS.md) **`SET_VISIBLE`** branches entry; [`ROADMAP.md`](ROADMAP.md) **CB-056**; README **Conditional strings** (presentation).
+
 ## [2.18.0]
 
 ### Added

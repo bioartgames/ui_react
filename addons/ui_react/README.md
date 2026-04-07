@@ -58,7 +58,7 @@ Copy `addons/ui_react/` into your Godot project at **`addons/ui_react/`**. Open 
 The addon ships **four** runnable examples under **`res://addons/ui_react/examples/`** (game-screen style + one animation catalog). Open any of these and press **Play** (default **Main Scene** is **`inventory_screen_demo.tscn`**):
 
 - **`res://addons/ui_react/examples/inventory_screen_demo.tscn`** — **`wire_rules`** on controls (map / refresh / copy-detail / bool-pulse suffix / debug lines per **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)**); **no** root script; **`UiReactTree`** + filtered **`UiReactItemList`** + actions; list lock via overlay + **`action_targets`** (**CB-015** / **P6.1**); sample **`UiAnimTarget`** fades/POP.
-- **`res://addons/ui_react/examples/options_transactional_demo.tscn`** — transactional **Apply / Cancel** + **`UiReactTabContainer`** / **`UiReactOptionButton`** with **`wire_rules`** + **`action_targets`** (**CB-052** / **CB-054** / **CB-055**).
+- **`res://addons/ui_react/examples/options_transactional_demo.tscn`** — transactional **Apply / Cancel** + **`UiReactTabContainer`** / **`UiReactOptionButton`** with **`wire_rules`** + **`action_targets`** (**CB-052** / **CB-054** / **CB-055**); **`UiReactCheckBox`** **`state_watch`** **`SET_VISIBLE`** (**CB-056**).
 - **`res://addons/ui_react/examples/shop_computed_demo.tscn`** — **`UiComputedFloatGeProductBool`** / **`UiComputedBoolInvert`** / **`UiComputedOrderSummaryThreeFloatString`** + **`UiReactRichTextLabel`**; **`UiReactProgressBar`** / **`UiReactSpinBox`**; **Buy** via **`action_targets`** **`SUBTRACT_PRODUCT_FROM_FLOAT`**; no root script, no **`examples/*.gd`** for shop computeds.
 - **`res://addons/ui_react/examples/anim_targets_catalog_demo.tscn`** — catalog of **`UiAnimTarget.AnimationAction`** ( **`animation_targets`** with **`selection_slot`** per row + **`play_selected_row_animation`**) + trigger playground; no root script.
 
@@ -276,7 +276,7 @@ Use a **`UiComputedStringState`** or **`UiComputedBoolState`** **subclass** when
 
 - **Derived UI copy:** Subclass **`UiComputedStringState`**, list dependencies in **`sources`**, implement **`compute_string()`**, assign to **`text_state`** on **`UiReactLabel`** / **`UiReactRichTextLabel`**. Stock examples: **`UiComputedOrderSummaryThreeFloatString`**, **`UiComputedTransactionalStatusString`**. Use this for “show this BBCode / line when state looks like X.”
 - **Data-shaped strings the wiring layer owns:** Filter keys, catalog-driven rows, selection detail text — implement with **`wire_rules`**, not **`action_targets`** ([**`docs/WIRING_LAYER.md`**](docs/WIRING_LAYER.md) §2; [**`docs/ACTION_LAYER.md`**](docs/ACTION_LAYER.md) §2 — Actions must not duplicate those jobs).
-- **Conditional presentation without new string payloads:** **`SET_VISIBLE`**, **`SET_UI_BOOL_FLAG`**, **`SET_MOUSE_FILTER`** on **`action_targets`** ([**`docs/ACTION_LAYER.md`**](docs/ACTION_LAYER.md)).
+- **Conditional presentation without new string payloads:** **`SET_VISIBLE`** (control-triggered **`visible_value`** or **`state_watch`** + **`visible_when_true`** / **`visible_when_false`**), **`SET_UI_BOOL_FLAG`**, **`SET_MOUSE_FILTER`** on **`action_targets`** ([**`docs/ACTION_LAYER.md`**](docs/ACTION_LAYER.md)).
 - **More stock computeds** for common conditionals are tracked in **[`docs/ROADMAP.md`](docs/ROADMAP.md)** Appendix (see backlog rows for **stock computed** / **CB-003** extensions)—shipped helpers will be called out in **CHANGELOG** when added.
 
 ---

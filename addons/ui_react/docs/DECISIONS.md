@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-04-06 — `SET_VISIBLE` branches on `state_watch` (mirror `SET_MOUSE_FILTER`)
+
+**Context:** State-driven **`SET_VISIBLE`** rows ignored **`state_watch`** and always applied **`visible_value`**, unlike **`SET_MOUSE_FILTER`**, which already branched on **`state_watch.get_value()`**.
+
+**Decision:** Add **`visible_when_true`** / **`visible_when_false`** on **`UiReactActionTarget`**, shown in the Inspector only when **`action == SET_VISIBLE`** and **`state_watch`** is set. Predicates (“dirty”, etc.) remain **`UiBoolState`** / **`UiComputedBoolState`** (or game-owned computeds); Actions only map bool → visibility on **`target`**, parallel to mouse-filter branching.
+
+**Consequences:** **`ACTION_LAYER.md`** and validators describe the split; rare old scenes with **`state_watch` + `SET_VISIBLE`** may need migration (see **CHANGELOG**).
+
+**Links:** [ACTION_LAYER.md](ACTION_LAYER.md) §3, `scripts/api/models/ui_react_action_target.gd`, **CB-056**
+
+---
+
 ## 2026-04-06 — Charter evidence bar: official examples + symmetry (not dogfood)
 
 **Context:** The maintainer will **not** rely on private-game dogfood; the old **3×** “same pattern in shipped game code” gate is unavailable.

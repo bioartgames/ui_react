@@ -60,7 +60,8 @@ Fields:
 - **`action`**: **`UiReactActionKind`** — closed enum (v1 list below).
 - **Path / payload fields** (shown in the Inspector only when relevant to **`action`**; see implementation `_validate_property`):
   - **`target`**: `NodePath` (`@export_node_path("Control")`) for **`GRAB_FOCUS`**, **`SET_VISIBLE`**, **`SET_MOUSE_FILTER`**.
-  - **`visible_value`**: `bool` for **`SET_VISIBLE`**.
+  - **`visible_value`**: `bool` for **control-triggered** **`SET_VISIBLE`** only (`state_watch` null).
+  - **`visible_when_true`**, **`visible_when_false`**: `bool` for **state-driven** **`SET_VISIBLE`** (`state_watch` non-null).
   - **`bool_flag_state`**, **`bool_flag_value`**: for **`SET_UI_BOOL_FLAG`**.
   - **`mouse_filter`**: `Control.MouseFilter` for **control-triggered** **`SET_MOUSE_FILTER`** (`state_watch` null).
   - **`mouse_filter_when_true`**, **`mouse_filter_when_false`**: for **state-driven** **`SET_MOUSE_FILTER`**.
@@ -73,6 +74,7 @@ Fields:
 - **Error:** **`SET_UI_BOOL_FLAG`** field **`bool_flag_state`** is the **same resource instance** as the row’s **`state_watch`** (infinite `value_changed` loop risk).
 - **Warning:** **`state_watch`** non-null **and** **`trigger`** is not **`PRESSED`** (authors should leave the default when state-driven; the editor **may** hide **`trigger`** when **`state_watch`** is set).
 - **`SET_MOUSE_FILTER`:** For the two-branch path, the bool **must** come **only** from **`state_watch.get_value()`**, not from other preset fields.
+- **`SET_VISIBLE`:** For the two-branch path, the bool **must** come **only** from **`state_watch.get_value()`**, not from **`visible_value`**.
 - **`UiReactTransactionalActions`:** **Control-triggered** action rows (`state_watch` null) **are not supported**; only **state-driven** rows are valid on this host (validator **error**).
 
 ### 3.2 MVP enum: `UiReactActionKind`
@@ -80,7 +82,9 @@ Fields:
 **Adding** a value requires **CHANGELOG** entry and **SemVer minor** (additive), per Charter.
 
 1. **`GRAB_FOCUS`** — resolve **`target`** as `Control`, `grab_focus()` if `is_inside_tree()`.
-2. **`SET_VISIBLE`** — resolve **`target`** as **`CanvasItem` or `Control`**; set **`visible_value`**. Validator enforces node type.
+2. **`SET_VISIBLE`** — resolve **`target`** as **`CanvasItem` or `Control`**. Validator enforces node type.
+   - **State-driven** (`state_watch` non-null): **`visible_when_true`** / **`visible_when_false`**; read bool from **`state_watch.get_value()`** (coerced); **initial sync** §5.1.
+   - **Control-triggered** (`state_watch` null): single **`visible_value`** on each matching **`trigger`**.
 3. **`SET_UI_BOOL_FLAG`** — write **`bool_flag_value`** to **`bool_flag_state`**. **Independent** from row **`state_watch`** (§3.1.1). **UI-only** flags; forbidden uses §2.
 4. **`SET_MOUSE_FILTER`** — resolve **`target`** as **`Control`**.
    - **State-driven** (`state_watch` non-null; list-lock / **CB-015**): **`mouse_filter_when_true`** / **`mouse_filter_when_false`**, `Control.MouseFilter`; read bool from **`state_watch.get_value()`**; **initial sync** §5.1.

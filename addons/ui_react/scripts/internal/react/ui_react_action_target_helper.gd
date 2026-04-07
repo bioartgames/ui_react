@@ -1,6 +1,10 @@
 class_name UiReactActionTargetHelper
 extends RefCounted
 
+const _action_state_watch_debug := preload(
+	"res://addons/ui_react/scripts/internal/react/ui_react_action_state_watch_debug.gd"
+)
+
 const _META_LOCKS := &"_ui_react_action_locks"
 const _META_SW_BINDINGS := &"_ui_react_action_sw_bindings"
 
@@ -26,8 +30,16 @@ class _StateWatchBinding extends RefCounted:
 
 	func on_value_changed(_new_value: Variant, _old_value: Variant) -> void:
 		var o: Control = _owner.get_ref() as Control
+		_action_state_watch_debug.line(
+			"binding on_value_changed state_id=%d new=%s old=%s owner=%s"
+			% [_state.get_instance_id(), _new_value, _old_value, o.name if o else "<dead>"]
+		)
 		if o == null:
 			return
+		_action_state_watch_debug.line(
+			"binding CALL dispatch rows=%d indices=%s component=%s"
+			% [_rows.size(), str(_indices), _component]
+		)
 		UiReactActionTargetHelper._dispatch_state_indices(o, _component, _rows, _indices)
 
 
@@ -44,6 +56,9 @@ static func _locks_for(owner: Node) -> Dictionary:
 static func _with_reentry_guard(owner: Node, key: String, fn: Callable) -> void:
 	var locks := _locks_for(owner)
 	if locks.get(key, false):
+		_action_state_watch_debug.line(
+			"reentry BLOCKED key=%s owner=%s" % [key, owner.name]
+		)
 		push_warning(
 			"UiReactActionTargetHelper: reentrant action dispatch ignored (%s on %s)"
 			% [key, owner.name]
@@ -168,7 +183,10 @@ static func _install_state_watch_bindings(owner: Control, component_name: String
 		var st: UiBoolState = row.state_watch
 		if not by_state.has(st):
 			by_state[st] = PackedInt32Array()
-		(by_state[st] as PackedInt32Array).append(i)
+		# PackedInt32Array is value-typed: dictionary get returns a copy; append must be written back.
+		var packed: PackedInt32Array = by_state[st]
+		packed.append(i)
+		by_state[st] = packed
 
 	var bindings: Array = []
 	for st in by_state.keys():
@@ -198,22 +216,40 @@ static func _dispatch_state_indices(
 	rows: Array[UiReactActionTarget],
 	indices: PackedInt32Array,
 ) -> void:
+	_action_state_watch_debug.line(
+		"dispatch ENTER owner=%s component=%s rows=%d indices=%s"
+		% [owner.name, component_name, rows.size(), str(indices)]
+	)
 	if indices.is_empty():
+		_action_state_watch_debug.line("dispatch EARLY indices.is_empty()")
 		return
 	var k0: int = int(indices[0])
 	if k0 < 0 or k0 >= rows.size():
+		_action_state_watch_debug.line(
+			"dispatch EARLY k0 out of range k0=%d rows.size=%d" % [k0, rows.size()]
+		)
 		return
 	var row0: UiReactActionTarget = rows[k0]
 	if row0 == null or row0.state_watch == null:
+		_action_state_watch_debug.line(
+			"dispatch EARLY row0 or state_watch null row0=%s sw=%s"
+			% [str(row0), str(row0.state_watch if row0 else "n/a")]
+		)
 		return
 	var key := "sw:%d" % row0.state_watch.get_instance_id()
+	_action_state_watch_debug.line(
+		"dispatch owner=%s component=%s indices=%s key=%s"
+		% [owner.name, component_name, str(indices), key]
+	)
 	_with_reentry_guard(owner, key, func() -> void:
+		_action_state_watch_debug.line("dispatch INSIDE guard key=%s — applying row indices" % key)
 		var sorted: Array = []
 		for j in range(indices.size()):
 			sorted.append(int(indices[j]))
 		sorted.sort()
 		for idx in sorted:
 			if idx < 0 or idx >= rows.size():
+				_action_state_watch_debug.line("dispatch SKIP idx out of range idx=%d rows=%d" % [idx, rows.size()])
 				continue
 			var row: UiReactActionTarget = rows[idx]
 			_apply_row(owner, row, idx, component_name)
@@ -279,7 +315,19 @@ static func _apply_row(owner: Control, row: UiReactActionTarget, row_index: int,
 				)
 				return
 			if n2 is CanvasItem:
-				(n2 as CanvasItem).visible = row.visible_value
+				var ci: CanvasItem = n2 as CanvasItem
+				if row.state_watch != null:
+					var b: bool = UiReactStateBindingHelper.coerce_bool(row.state_watch.get_value())
+					var vis: bool = row.visible_when_true if b else row.visible_when_false
+					ci.visible = vis
+					_action_state_watch_debug.line(
+						(
+							"SET_VISIBLE row=%d sw_id=%d coerce_bool=%s -> visible=%s target=%s path=%s"
+							% [row_index, row.state_watch.get_instance_id(), b, vis, n2.name, row.target]
+						)
+					)
+				else:
+					ci.visible = row.visible_value
 			else:
 				push_warning(
 					"%s action_targets[%d] SET_VISIBLE: target is not CanvasItem/Control." % [component_name, row_index]
