@@ -131,6 +131,10 @@ static func _bind_map_int_to_string(
 		var tree := host as Tree
 		_safe_connect(conns, tree.item_selected, cb)
 		_safe_connect(conns, tree.nothing_selected, cb)
+	elif host is OptionButton:
+		_safe_connect(conns, (host as OptionButton).item_selected, cb)
+	elif host is TabContainer:
+		_safe_connect(conns, (host as TabContainer).tab_selected, cb)
 	if rule.source_int_state != null:
 		_safe_connect(conns, rule.source_int_state.changed, cb)
 
@@ -153,6 +157,10 @@ static func _bind_refresh_items(
 				_safe_connect(conns, tree.nothing_selected, cb)
 			elif host is ItemList:
 				_safe_connect(conns, (host as ItemList).item_selected, cb)
+			elif host is OptionButton:
+				_safe_connect(conns, (host as OptionButton).item_selected, cb)
+			elif host is TabContainer:
+				_safe_connect(conns, (host as TabContainer).tab_selected, cb)
 		_:
 			push_warning(
 				"UiReactWireRuleHelper: RefreshItemsFromCatalog rule '%s' trigger %s not bound on node %s."
@@ -176,8 +184,13 @@ static func _bind_copy_detail(
 		if not is_instance_valid(host):
 			return
 		_apply_rule(host, rule)
-	if rule.trigger == UiReactWireRule.TriggerKind.SELECTION_CHANGED and host is ItemList:
-		_safe_connect(conns, (host as ItemList).item_selected, sel_cb)
+	if rule.trigger == UiReactWireRule.TriggerKind.SELECTION_CHANGED:
+		if host is ItemList:
+			_safe_connect(conns, (host as ItemList).item_selected, sel_cb)
+		elif host is OptionButton:
+			_safe_connect(conns, (host as OptionButton).item_selected, sel_cb)
+		elif host is TabContainer:
+			_safe_connect(conns, (host as TabContainer).tab_selected, sel_cb)
 	if rule.items_state != null:
 		_safe_connect(conns, rule.items_state.changed, apply_cb)
 	if rule.suffix_note_state != null:

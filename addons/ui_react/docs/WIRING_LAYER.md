@@ -32,7 +32,7 @@ flowchart TB
   Wiring -.->|"observe trigger sources"| Controls
 ```
 
-**Actions (P6.1):** Inspector **`action_targets`** on the **§5** P5.1 control set (and **`UiReactButton`** / **`UiReactTextureButton`** per [`ACTION_LAYER.md`](ACTION_LAYER.md) §4) drives **non-motion** UI behavior: **presentation** (focus, visibility, **`Control.mouse_filter`**, narrow UI **`UiBoolState`** flags) **and bounded** **`UiFloatState`** mutations (e.g. **`SUBTRACT_PRODUCT_FROM_FLOAT`** — see [`ACTION_LAYER.md`](ACTION_LAYER.md)). Normative contract: [`ACTION_LAYER.md`](ACTION_LAYER.md). **Wiring** still owns **`UiStringState`** catalog/filter/detail data transforms (**§2**); **Actions** must not duplicate those jobs.
+**Actions (P6.1):** Inspector **`action_targets`** on the **§5** control set—including **`UiReactOptionButton`** and **`UiReactTabContainer`**—(and **`UiReactButton`** / **`UiReactTextureButton`** per [`ACTION_LAYER.md`](ACTION_LAYER.md) §4) drives **non-motion** UI behavior: **presentation** (focus, visibility, **`Control.mouse_filter`**, narrow UI **`UiBoolState`** flags) **and bounded** **`UiFloatState`** mutations (e.g. **`SUBTRACT_PRODUCT_FROM_FLOAT`** — see [`ACTION_LAYER.md`](ACTION_LAYER.md)). Normative contract: [`ACTION_LAYER.md`](ACTION_LAYER.md). **Wiring** still owns **`UiStringState`** catalog/filter/detail data transforms (**§2**); **Actions** must not duplicate those jobs.
 
 ---
 
@@ -65,7 +65,7 @@ Each `UiReact*` that can **source** wires exposes **at most one** additional exp
 
 (Exact typed array when Godot permits; until then: documented as array of `UiReactWireRule`.)
 
-**P5.1 minimum control set** (first implementation wave only; other controls **lack** `wire_rules` until promoted via a new Appendix row):
+**P5.1 control set** (controls **without** `wire_rules` stay **Appendix-promoted**; see matrix in [`ROADMAP.md`](ROADMAP.md) Part I **Inspector surface matrix (CB-052)**):
 
 | Control | Allowed wire rule triggers ([`UiReactWireRule.TriggerKind`](../scripts/api/models/ui_react_wire_rule.gd); values match legacy `UiAnimTarget` ordinals for serialization) |
 |---------|-------------------------------------------------------------------------------|
@@ -73,6 +73,8 @@ Each `UiReact*` that can **source** wires exposes **at most one** additional exp
 | `UiReactTree` | `SELECTION_CHANGED` (`6`) for tree-sourced rules. |
 | `UiReactLineEdit` | `TEXT_CHANGED` (`5`), `TEXT_ENTERED` (`13`) for line-edit–sourced rules (`FOCUS_*` / `HOVER_*` remain animation-only unless promoted later). |
 | `UiReactCheckBox` | Checkbox/toggle as implemented for wiring (see control script). |
+| `UiReactOptionButton` | `SELECTION_CHANGED` (`6`) via `item_selected` (`HOVER_*` remain animation-only unless promoted later). **`UiReactWireCopySelectionDetail`** / **`SetStringOnBoolPulse`** use **`UiIntState`** `selected_state` on the rule when row lookup is by index; host’s **`selected_state`** export is **`UiStringState`**—use a **separate** **`UiIntState`** for those rules if needed. |
+| `UiReactTabContainer` | `SELECTION_CHANGED` (`6`) via `tab_selected`. Authors may assign the **same** **`UiIntState`** instance as the tab **`selected_state`** export to **`CopySelectionDetail.selected_state`**. Rules run on user **`tab_selected`**; programmatic `current_tab` changes do **not** re-fire `tab_selected`—rely on **`selected_state.changed`** on rules that subscribe to it, or a follow-up if a screen needs parity (**YAGNI**). |
 | `UiReactTransactionalActions` | As implemented on that control. |
 
 ---

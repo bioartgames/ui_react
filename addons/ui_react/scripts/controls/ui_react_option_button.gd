@@ -34,6 +34,21 @@ var _disabled_state: UiBoolState
 ## **Optional** — Inspector-driven tweens (selection, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
+## **Optional** — Action layer ([code]docs/ACTION_LAYER.md[/code]): focus, visibility, [code]mouse_filter[/code], UI bool flags, bounded float ops.
+@export var action_targets: Array[UiReactActionTarget] = []
+
+## **Optional** — Wiring rules ([code]docs/WIRING_LAYER.md[/code] §5). Applied by [UiReactWireRuleHelper].
+@export var wire_rules: Array[UiReactWireRule] = []
+
+
+func _enter_tree() -> void:
+	UiReactWireRuleHelper.schedule_attach(self)
+
+
+func _exit_tree() -> void:
+	UiReactWireRuleHelper.detach(self)
+
+
 func _ready() -> void:
 	item_selected.connect(_on_item_selected)
 	_disconnect_all_states()
@@ -68,6 +83,7 @@ func _connect_all_states() -> void:
 ## Called automatically in [method _ready].
 func _validate_animation_targets() -> void:
 	var trigger_map: Dictionary = UiReactAnimTargetHelper.apply_validated_targets(self, "UiReactOptionButton")
+	UiReactActionTargetHelper.apply_validated_actions_and_merge_triggers(self, "UiReactOptionButton", trigger_map)
 
 	# Connect signals based on which triggers are used
 	if trigger_map.has(UiAnimTarget.Trigger.SELECTION_CHANGED):
@@ -76,6 +92,8 @@ func _validate_animation_targets() -> void:
 		UiReactAnimTargetHelper.connect_if_absent(mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
 		UiReactAnimTargetHelper.connect_if_absent(mouse_exited, _on_trigger_hover_exit)
+
+	UiReactActionTargetHelper.sync_initial_state(self, "UiReactOptionButton", action_targets)
 
 
 ## Finishes initialization, allowing animations to trigger on selection changes.
@@ -106,6 +124,9 @@ func _on_trigger_hover_exit() -> void:
 ## [param trigger_type]: The trigger type to match.
 func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 	UiReactAnimTargetHelper.trigger_animations(self, animation_targets, trigger_type, true, disabled)
+	UiReactActionTargetHelper.run_actions(
+		self, "UiReactOptionButton", action_targets, trigger_type, true, disabled
+	)
 
 
 func _on_item_selected(index: int) -> void:

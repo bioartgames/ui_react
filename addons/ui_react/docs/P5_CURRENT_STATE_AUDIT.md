@@ -14,7 +14,7 @@ Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 |---|--------|-------|
 | A1 Helper exists | **PASS** | `class_name UiReactWireRuleHelper` in `scripts/internal/react/ui_react_wire_rule_helper.gd`. |
 | A2 Rule base + MVP types | **PASS** | `UiReactWireRule` + map / refresh / copy-detail / bool-pulse / debug-line + `UiReactWireCatalogData` under `scripts/api/models/ui_react_wire_*.gd`. |
-| A3 `wire_rules` on §5 set | **PASS** | Five controls export `Array[UiReactWireRule]`: ItemList, Tree, LineEdit, CheckBox, TransactionalActions. |
+| A3 `wire_rules` on §5 set | **PASS** | Seven controls export `Array[UiReactWireRule]`: ItemList, Tree, LineEdit, CheckBox, OptionButton, TabContainer, TransactionalActions ([`ROADMAP.md`](ROADMAP.md) matrix / **CB-052**). |
 | A4 Per-host registration | **PASS** | Hosts call `schedule_attach` / `detach` from `_enter_tree` / `_exit_tree`; attach deferred to next `process_frame`. |
 | A5 Collection scope | **PASS** | [`WIRING_LAYER.md`](WIRING_LAYER.md) §3: only the host’s own `wire_rules` array. |
 | A6 Cross-host ordering | **N/A** | Intentionally **undefined**; local array order + state/dataflow per spec. |

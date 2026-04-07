@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://lp6x0p7wqckg"]
+[gd_scene load_steps=32 format=3 uid="uid://lp6x0p7wqckg"]
 
 [ext_resource type="Script" uid="uid://c1jlkpahxxnpi" path="res://addons/ui_react/scripts/api/models/ui_transactional_state.gd" id="1_txn"]
 [ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://addons/ui_react/scripts/controls/ui_react_slider.gd" id="2_sl"]
@@ -6,11 +6,18 @@
 [ext_resource type="Script" uid="uid://st55qiias3cb" path="res://addons/ui_react/scripts/api/models/ui_state.gd" id="3_cux1w"]
 [ext_resource type="Script" uid="uid://ddkpdoxca60md" path="res://addons/ui_react/scripts/api/models/ui_transactional_group.gd" id="4_grp"]
 [ext_resource type="Script" uid="uid://da03oq3dwj1le" path="res://addons/ui_react/scripts/controls/ui_react_transactional_actions.gd" id="5_act"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_computed_transactional_status_string.gd" id="6_status"]
+[ext_resource type="Script" uid="uid://bpargu3etc8wf" path="res://addons/ui_react/scripts/api/models/ui_computed_transactional_status_string.gd" id="6_status"]
 [ext_resource type="Script" uid="uid://bw7gojuop1hic" path="res://addons/ui_react/scripts/controls/ui_react_label.gd" id="8_lbl"]
 [ext_resource type="Resource" uid="uid://b4gdunujg6evw" path="res://addons/ui_react/ui_resources/plugin_generated/MuteToggle_disabled_state_3.tres" id="9_6xi6r"]
 [ext_resource type="Script" uid="uid://dohh71knb8vid" path="res://addons/ui_react/scripts/controls/ui_react_tab_container.gd" id="10_tabs"]
 [ext_resource type="Script" uid="uid://dxvrutpo1gjxg" path="res://addons/ui_react/scripts/api/models/ui_int_state.gd" id="11_int"]
+[ext_resource type="Script" uid="uid://3a3144h5usfc" path="res://addons/ui_react/scripts/api/models/ui_string_state.gd" id="12_str"]
+[ext_resource type="Script" uid="uid://dwwa3tekslkjw" path="res://addons/ui_react/scripts/api/models/ui_array_state.gd" id="13_arr"]
+[ext_resource type="Script" uid="uid://b4oijtx34uadm" path="res://addons/ui_react/scripts/api/models/ui_react_wire_rule.gd" id="14_wrule"]
+[ext_resource type="Script" uid="uid://bqi8ila03i20u" path="res://addons/ui_react/scripts/api/models/ui_react_wire_copy_selection_detail.gd" id="15_wcopy"]
+[ext_resource type="Script" uid="uid://1x0toeuqjwhi" path="res://addons/ui_react/scripts/api/models/ui_react_wire_map_int_to_string.gd" id="16_wmap"]
+[ext_resource type="Script" uid="uid://dqbg42kucypqk" path="res://addons/ui_react/scripts/api/models/ui_react_action_target.gd" id="17_action"]
+[ext_resource type="Script" uid="uid://b75p2so2hr0wd" path="res://addons/ui_react/scripts/controls/ui_react_option_button.gd" id="18_opt"]
 
 [sub_resource type="Resource" id="txn_vol"]
 script = ExtResource("1_txn")
@@ -20,17 +27,62 @@ committed_value = 0.65
 script = ExtResource("1_txn")
 committed_value = false
 
-[sub_resource type="Resource" id="status_computed"]
-script = ExtResource("6_status")
-sources = Array[ExtResource("3_cux1w")]([SubResource("txn_vol"), SubResource("txn_mute")])
-value = "Draft: volume=0.65 mute=false | Committed: volume=0.65 mute=false"
-
 [sub_resource type="Resource" id="txn_group"]
 script = ExtResource("4_grp")
 states = Array[ExtResource("1_txn")]([SubResource("txn_vol"), SubResource("txn_mute")])
 
+[sub_resource type="Resource" id="tab_detail_str"]
+script = ExtResource("12_str")
+
 [sub_resource type="Resource" id="tab_index"]
 script = ExtResource("11_int")
+
+[sub_resource type="Resource" id="tab_items_arr"]
+script = ExtResource("13_arr")
+value = [{
+"label": "Audio: volume + mute + apply"
+}, {
+"label": "Gameplay: placeholder tab"
+}]
+
+[sub_resource type="Resource" id="wire_copy_tabs"]
+script = ExtResource("15_wcopy")
+selected_state = SubResource("tab_index")
+items_state = SubResource("tab_items_arr")
+detail_state = SubResource("tab_detail_str")
+text_no_selection = "Pick a tab."
+rule_id = "options_tab_copy_detail"
+
+[sub_resource type="Resource" id="quality_sel"]
+script = ExtResource("12_str")
+value = "Low"
+
+[sub_resource type="Resource" id="act_quality_vis"]
+Resource = null
+resource_path = "res://addons/ui_react/examples/options_transactional_demo.tscn::act_quality_vis"
+resource_scene_unique_id = "act_quality_vis"
+script = ExtResource("17_action")
+trigger = 6
+action = 1
+target = NodePath("../../../../TabSelectionDetail")
+
+[sub_resource type="Resource" id="opt_hint_str"]
+script = ExtResource("12_str")
+
+[sub_resource type="Resource" id="opt_kind_str"]
+script = ExtResource("12_str")
+
+[sub_resource type="Resource" id="wire_opt_map"]
+script = ExtResource("16_wmap")
+source_int_state = SubResource("tab_index")
+target_string_state = SubResource("opt_kind_str")
+hint_state = SubResource("opt_hint_str")
+rule_id = "options_map_tab_index"
+
+[sub_resource type="Resource" id="status_computed"]
+script = ExtResource("6_status")
+sources = Array[ExtResource("3_cux1w")]([SubResource("txn_vol"), SubResource("txn_mute")])
+value = "Draft: volume=0.65 mute=false | Committed: volume=0.65 mute=false"
 
 [node name="OptionsTransactionalDemo" type="Control"]
 layout_mode = 3
@@ -47,16 +99,13 @@ script = ExtResource("5_act")
 group = SubResource("txn_group")
 apply_button_path = NodePath("../VBox/OptionsTabs/AudioPanel/AudioVBox/ButtonRow/ApplyButton")
 cancel_button_path = NodePath("../VBox/OptionsTabs/AudioPanel/AudioVBox/ButtonRow/CancelButton")
+metadata/_ui_react_action_sw_bindings = []
 
 [node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 24.0
-offset_top = 24.0
-offset_right = -24.0
-offset_bottom = -24.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 12
@@ -66,8 +115,17 @@ layout_mode = 2
 text = "Options (transactional demo — audio)"
 
 [node name="Help" type="Label" parent="VBox"]
+custom_minimum_size = Vector2(1, 1)
 layout_mode = 2
-text = "Audio settings are on the first tab. Second tab is a static UiReactTabContainer showcase. Apply / Cancel commit or revert draft volume + mute."
+text = "Audio settings are on the first tab. Second tab is a static UiReactTabContainer showcase. Apply / Cancel commit or revert draft volume + mute. CB-052: TabContainer + OptionButton use wire_rules (copy-detail + map) and action_targets (SET_VISIBLE)."
+autowrap_mode = 3
+
+[node name="TabSelectionDetail" type="Label" parent="VBox"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.85, 1, 1)
+script = ExtResource("8_lbl")
+text_state = SubResource("tab_detail_str")
 
 [node name="OptionsTabs" type="TabContainer" parent="VBox"]
 layout_mode = 2
@@ -75,6 +133,7 @@ size_flags_vertical = 3
 current_tab = 0
 script = ExtResource("10_tabs")
 selected_state = SubResource("tab_index")
+wire_rules = Array[ExtResource("14_wrule")]([SubResource("wire_copy_tabs")])
 
 [node name="AudioPanel" type="Panel" parent="VBox/OptionsTabs"]
 layout_mode = 2
@@ -112,6 +171,36 @@ text = "Mute audio"
 script = ExtResource("3_cb")
 checked_state = SubResource("txn_mute")
 disabled_state = ExtResource("9_6xi6r")
+
+[node name="QualityLabel" type="Label" parent="VBox/OptionsTabs/AudioPanel/AudioVBox"]
+layout_mode = 2
+text = "Quality preset (UiReactOptionButton — action_targets + wire_rules)"
+
+[node name="QualityOption" type="OptionButton" parent="VBox/OptionsTabs/AudioPanel/AudioVBox"]
+layout_mode = 2
+item_count = 3
+popup/item_0/text = "Low"
+popup/item_0/id = 0
+popup/item_1/text = "Medium"
+popup/item_1/id = 1
+popup/item_2/text = "High"
+popup/item_2/id = 2
+script = ExtResource("18_opt")
+selected_state = SubResource("quality_sel")
+action_targets = Array[ExtResource("17_action")]([SubResource("act_quality_vis")])
+wire_rules = Array[ExtResource("14_wrule")]([SubResource("wire_opt_map")])
+
+[node name="OptMapHint" type="Label" parent="VBox/OptionsTabs/AudioPanel/AudioVBox"]
+layout_mode = 2
+autowrap_mode = 3
+script = ExtResource("8_lbl")
+text_state = SubResource("opt_hint_str")
+
+[node name="OptKindHint" type="Label" parent="VBox/OptionsTabs/AudioPanel/AudioVBox"]
+layout_mode = 2
+autowrap_mode = 3
+script = ExtResource("8_lbl")
+text_state = SubResource("opt_kind_str")
 
 [node name="ButtonRow" type="HBoxContainer" parent="VBox/OptionsTabs/AudioPanel/AudioVBox"]
 layout_mode = 2

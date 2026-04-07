@@ -13,7 +13,7 @@ This document is the **committal** plan for **public releases** and **maintained
 | **Computed state** | State whose value is **determined from** other state (e.g. filtered list, “can afford,” label from selection). This is the **only** public term for that idea—avoid “derived state” in API and docs to prevent synonym drift. |
 | **Transaction (transactional state)** | A **draft / working copy** of settings (or similar) separate from **committed** values, with an explicit **apply**, **cancel**, or **revert** path—not the same as computed state. |
 | **Wiring** | Inspector-authored **`UiReactWireRule`** resources + **`UiReactWireRuleHelper`** on each **`UiReact*`** host (**`wire_rules`**), replacing ad-hoc root orchestration for supported patterns. Normative detail: [`WIRING_LAYER.md`](WIRING_LAYER.md). |
-| **Action layer** | Inspector-authored **`action_targets`** + **`UiReactActionTarget`** on the **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** control set **and** **`UiReactButton`** / **`UiReactTextureButton`** ([`ACTION_LAYER.md`](ACTION_LAYER.md) §4)—**non-motion** UI reactions (focus, visibility, `mouse_filter`, narrow UI **`UiBoolState`** flags) **plus** **bounded** **`UiFloatState`** mutations (**`SUBTRACT_PRODUCT_FROM_FLOAT`**, …). **No** `UiAnimTarget` / `UiAnimUtils` inside Actions. Widening **`action_targets`** to further controls requires a new **WIRING** Appendix row. Normative detail: [`ACTION_LAYER.md`](ACTION_LAYER.md). |
+| **Action layer** | Inspector-authored **`action_targets`** + **`UiReactActionTarget`** on the **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** control set (includes **`UiReactOptionButton`**, **`UiReactTabContainer`**) **and** **`UiReactButton`** / **`UiReactTextureButton`** ([`ACTION_LAYER.md`](ACTION_LAYER.md) §4)—**non-motion** UI reactions (focus, visibility, `mouse_filter`, narrow UI **`UiBoolState`** flags) **plus** **bounded** **`UiFloatState`** mutations (**`SUBTRACT_PRODUCT_FROM_FLOAT`**, …). **No** `UiAnimTarget` / `UiAnimUtils` inside Actions. Widening **`action_targets`** to controls **not** listed in §5 / §4 requires a new **Appendix** row. Normative detail: [`ACTION_LAYER.md`](ACTION_LAYER.md). |
 | **Official example** | A **committed** scene under **`res://addons/ui_react/examples/`**, **Play**-runnable, listed in addon [**README**](../README.md) **Quickstart** (or otherwise referenced from this roadmap) so scope stays **objective** for PRs. |
 | **Evidence bar (Charter)** | **Symmetry + example-driven delivery:** no new or widened **`UiReact*`** inspector **proof** without meeting the **Charter** table—**Appendix** / **Inspector surface matrix** tracking **plus** official example usage as specified there. |
 
@@ -23,7 +23,7 @@ Additional **stock** **`UiComputedStringState` / `UiComputedBoolState`** subclas
 
 ### Tracked follow-ups (product parity — 2026)
 
-**Done:** **CB-049**, **CB-050** (**2.17.0**). **Remaining** Appendix rows: **CB-051** (action math / op expansion), **CB-052** (**`UiReact*`** baseline surface parity), **CB-053** (plugin UX after core parity).
+**Done:** **CB-049**, **CB-050** (**2.17.0**); **CB-052**, **CB-054**, **CB-055** (surface parity + OptionButton / TabContainer). **Remaining:** **CB-051** (action math / op expansion), **CB-053** (plugin UX after core parity).
 
 ### Charter (lock-in)
 
@@ -157,14 +157,14 @@ Not every row is a v1.0 promise; this maps **Megaman-style** UI goals to **phase
 
 ### Inspector surface matrix (CB-052)
 
-Normative **parity** reference for **`animation_targets`**, **`action_targets`**, and **`wire_rules`** on each shipped **`UiReact*`** control. **Closing CB-052** means this table stays **true in code and docs**: every **†** is either shipped (**●**) with **Charter** **evidence bar** met (**Appendix** / matrix + **official example**), explicitly **—** with rationale, or moved to a **named Appendix row** with target phase.
+Normative **parity** reference for **`animation_targets`**, **`action_targets`**, and **`wire_rules`** on each shipped **`UiReact*`** control. **Closing CB-052** means this table stays **true in code and docs**: promoted hosts (**OptionButton**, **TabContainer**) ship **●** with **Charter** **evidence bar**; remaining **—** cells have rationale; future **†** rows follow **Appendix** + spec updates.
 
 | Symbol | Meaning |
 |--------|--------|
 | **●** | **Shipped:** export exists; behavior covered by [`ACTION_LAYER.md`](ACTION_LAYER.md) / [`WIRING_LAYER.md`](WIRING_LAYER.md) / registry (**`ANIM_TRIGGERS_BY_COMPONENT`**) as applicable. |
 | **—** | **Out of scope** for this host today (not an error—often intentional). |
-| **†** | **Promotion needed:** new Appendix row + update **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** (wiring triggers) and/or **[`ACTION_LAYER.md`](ACTION_LAYER.md) §4** (action hosts) before treating the cell as **●**. |
-| **○** | **Optional parity** (subset of triggers / low-frequency pattern); decide under CB-052, then ship or mark **—**. |
+| **†** | **Promotion needed:** new Appendix row + update **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** and/or **[`ACTION_LAYER.md`](ACTION_LAYER.md) §4** before treating the cell as **●**. |
+| **○** | **Optional parity** — decide under roadmap; **Label** / **RichText** **`action_targets`** closed as **—** (**CB-052**). |
 
 **`UiReactTransactionalActions`** is a **non-Control** host: it exposes **`action_targets`** + **`wire_rules`** only (no motion layer).
 
@@ -180,10 +180,10 @@ Normative **parity** reference for **`animation_targets`**, **`action_targets`**
 | `UiReactSlider` | ● | — | — | Value-centric control; **Actions** / **Wiring** widen via **†** + Appendix only after **Charter** **evidence bar** (matrix **plus** official example). |
 | `UiReactSpinBox` | ● | — | — | Same as **Slider**. |
 | `UiReactProgressBar` | ● | — | — | Same; **`COMPLETED`** trigger for anims. |
-| `UiReactLabel` | ● | ○ | — | **Display sink** (**`text_state`**); not a **`UiReactWireRule`** trigger host. Optional **`action_targets`** (e.g. hover → chrome) is **○** only. |
-| `UiReactRichTextLabel` | ● | ○ | — | Same as **Label**. |
-| `UiReactOptionButton` | ● | † | † | **`SELECTION_CHANGED`** anim trigger; **§5** / **§4** promotion for parity with **ItemList**-style screens. |
-| `UiReactTabContainer` | ● | † | † | Tab index ↔ **`SELECTION_CHANGED`**; promotion for declarative tab-bar chrome / wires. |
+| `UiReactLabel` | ● | — | — | **Display sink** (**`text_state`**); not a **`UiReactWireRule`** trigger host. **`action_targets`** out of scope (use parent **`Control`** / §5 hosts). |
+| `UiReactRichTextLabel` | ● | — | — | Same as **Label**. |
+| `UiReactOptionButton` | ● | ● | ● | §5 + **ACTION** §4; **`options_transactional_demo.tscn`** (**CB-054**). |
+| `UiReactTabContainer` | ● | ● | ● | §5 + **ACTION** §4; **`options_transactional_demo.tscn`** (**CB-055**). |
 
 Trigger vocabulary per host: **`editor_plugin/ui_react_component_registry.gd`** (**`ANIM_TRIGGERS_BY_COMPONENT`**). **Wiring** allowed triggers per §5 host: **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** table.
 
@@ -246,9 +246,11 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-049 | **`UiReactComputedService.hook_bind`** for **`value_state`** on **`UiReactSlider`** and **`UiReactProgressBar`** | Sliders, bars driven by **`UiComputed*`** | P2 | Done | **2.17.0:** **`hook_bind` / `hook_unbind`** on **`value_state`** (parity with **`UiReactSpinBox`**). |
 | CB-050 | **`action_targets`** on **`UiReactTextureButton`** | Inventory, hotbar, icon buttons | P6+ | Done | **2.17.0:** export + **`apply_validated_actions_and_merge_triggers`**, **`sync_initial_state`**, **`run_actions`**; **[`ACTION_LAYER.md`](ACTION_LAYER.md)** / **[`WIRING_LAYER.md`](WIRING_LAYER.md)** / README updated. |
 | CB-051 | **Action layer:** expand **`UiReactActionKind`** + **`UiReactStateOpService`** (whitelisted math beyond **`SUBTRACT_PRODUCT_FROM_FLOAT`**) | Shop, crafting, any “add / transfer / int” UI | P6+ | Planned | Examples: accumulate without subtract-only, transfer between **`UiFloatState`**, **`UiIntState`** ops—**normative [`ACTION_LAYER.md`](ACTION_LAYER.md)**, validators, no unbounded scripting in Actions. |
-| CB-052 | **`UiReact*`** baseline surface parity | All inspector-driven screens | P6+ | Planned | **Normative matrix:** Part I **Inspector surface matrix (CB-052)**. Resolve every **†** / **○** to **●** or **—** (with rationale), or split into **new Appendix rows** + **WIRING §5** / **ACTION §4** updates. Any **●** that widens exports must meet **Charter** **evidence bar** (example + tracking). **`UiReactComponentRegistry`** + per-control scripts stay aligned. |
-| CB-053 | **Plugin / designer UX (post-parity)** | Editor | P6+ | Deferred | **Non-blocking** until **CB-049**–**CB-052** direction is clear: e.g. richer dock (**CB-035**), graph-style views, bulk **`UiAnimTarget`** row generation from list/tree row counts, designer-friendly hooks into gameplay—promote rows when scoped. |
+| CB-052 | **`UiReact*`** baseline surface parity | All inspector-driven screens | P6+ | Done | **Inspector surface matrix (CB-052)** closed: **Label**/**RichText** **`action_targets`** → **—**; **OptionButton** / **TabContainer** via **CB-054** / **CB-055** + **`options_transactional_demo.tscn`**. |
+| CB-053 | **Plugin / designer UX (post-parity)** | Editor | P6+ | Deferred | **Non-blocking** until core parity settled: e.g. richer dock (**CB-035**), graph-style views, bulk **`UiAnimTarget`** row generation from list/tree row counts, designer-friendly hooks into gameplay—promote rows when scoped. |
+| CB-054 | **`wire_rules`** + **`action_targets`** on **`UiReactOptionButton`** | Options, settings | P6+ | Done | **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5**, **[`ACTION_LAYER.md`](ACTION_LAYER.md) §4**, **`ui_react_wire_rule_helper.gd`**; **`options_transactional_demo.tscn`**. Subsumes matrix **†** for this host. |
+| CB-055 | **`wire_rules`** + **`action_targets`** on **`UiReactTabContainer`** | Tabbed settings | P6+ | Done | Same as **CB-054** for **`UiReactTabContainer`**; **`options_transactional_demo.tscn`**. |
 
 ---
 
-*Last updated: 2026-04-06 — **Charter:** **official examples** + **symmetry** replace dogfood **3×** as the evidence bar; glossary **Official example** / **Evidence bar**. Part I **Inspector surface matrix (CB-052)**. Wiring: **`UiReactWireRuleHelper`**, **`CB-041` Wont**. **CB-049** / **CB-050** **Done** (**2.17.0**); **CB-051**–**CB-053** remain. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Examples remain **four** scenes.*
+*Last updated: 2026-04-06 — **CB-052** / **CB-054** / **CB-055** closed (**2.18.0**): **`UiReactOptionButton`** / **`UiReactTabContainer`** **`action_targets`** + **`wire_rules`**; **`options_transactional_demo.tscn`** updated. **Charter** evidence bar; Part I **Inspector surface matrix**. **CB-051**–**CB-053** remain. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Examples remain **four** scenes.*

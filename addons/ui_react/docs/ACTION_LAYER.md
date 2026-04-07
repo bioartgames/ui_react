@@ -99,7 +99,7 @@ Fields:
 
 ## 4. Authoring surface (per control)
 
-- **`action_targets`** on each **`UiReact*`** in the **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** **P5.1 minimum control set**, plus **`UiReactButton`** and **`UiReactTextureButton`** (same **`action_targets`** / **`animation_targets`** merge pattern; **shop Buy** / **`SUBTRACT_PRODUCT_FROM_FLOAT`** on **`UiReactButton`**); **widening** to further controls requires a **new Appendix row**.
+- **`action_targets`** on each **`UiReact*`** in the **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** table, plus **`UiReactButton`** and **`UiReactTextureButton`** (same **`action_targets`** / **`animation_targets`** merge pattern; **shop Buy** / **`SUBTRACT_PRODUCT_FROM_FLOAT`** on **`UiReactButton`**). **§5** includes **`UiReactOptionButton`** and **`UiReactTabContainer`** (**`SELECTION_CHANGED`**, **`HOVER_*`** per registry); **`UiReactTabContainer`** dispatches alongside tab content binding / transition behavior (see control script). **Widening** to hosts **not** listed in §5 requires a **new Appendix row**.
 - **No** `UiReactActionRunner`. **No** autoload.
 - **`_ready` (implementation):** validate rows; connect **control** triggers (merged map with **`animation_targets`** where applicable); connect **`state_watch.value_changed`**; **`sync_initial_state`** once **`owner.is_inside_tree()`** (§5.1).
 

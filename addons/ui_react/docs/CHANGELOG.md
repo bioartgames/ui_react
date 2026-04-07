@@ -9,6 +9,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Documentation
 
 - **Charter evidence bar:** [`ROADMAP.md`](ROADMAP.md) intro + **Charter**—**official examples** (README-indexed) replace private-game **dogfood** / **3×** as proof; new glossary **Official example**, **Evidence bar**; **Inspector surface matrix (CB-052)** and **CB-052** Note tie **†** → **●** to the bar; [`DECISIONS.md`](DECISIONS.md) **2026-04-06**; [`docs/README.md`](README.md) task routing; [`AGENTS.md`](../AGENTS.md) change policy + non-goals; [`README.md`](../README.md) roadmap paragraph. **No** `plugin.cfg` bump (docs-only).
+
+## [2.18.0]
+
+### Added
+
+- **`UiReactOptionButton`**: **`action_targets`**, **`wire_rules`**, **`UiReactWireRuleHelper`** attach/detach, merged triggers + **`sync_initial_state`** + **`run_actions`** (**CB-054**).
+- **`UiReactTabContainer`**: **`action_targets`**, **`wire_rules`**, same action/wiring integration; **`tab_selected`** always dispatches **`SELECTION_CHANGED`** for animations/actions when either array is non-empty (**CB-055**).
+- **`UiReactWireRuleHelper`**: **`SELECTION_CHANGED`** bindings for **`OptionButton.item_selected`** and **`TabContainer.tab_selected`** on **`MapIntToString`**, **`RefreshItemsFromCatalog`**, **`CopySelectionDetail`**.
+- **`options_transactional_demo.tscn`**: demonstrates **`CopySelectionDetail`** + **`MapIntToString`** on tabs/quality row + **`SET_VISIBLE`** action on **`UiReactOptionButton`**.
+
+### Documentation
+
+- [`WIRING_LAYER.md`](WIRING_LAYER.md) §5 (**OptionButton**, **TabContainer**); [`ACTION_LAYER.md`](ACTION_LAYER.md) §4; [`ROADMAP.md`](ROADMAP.md) Inspector matrix + **CB-052** **Done** + **CB-054** / **CB-055**; [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) A3; README binding rows + Quickstart.
 - **North-star alignment:** README (inspector-first **four pillars**, designer/blessed path, **Examples at a glance**, **Conditional strings**, list-patterns lead with **`inventory_screen_demo`** + **`wire_rules`**); [`ROADMAP.md`](ROADMAP.md) (Charter **inspector-first** row, glossary **Action layer** = §5 + **`UiReactButton`** + float ops, **CB-002** / **CB-043** notes, **CB-048** stock-computed backlog, **CB-040** closed); [`WIRING_LAYER.md`](WIRING_LAYER.md) §2 **Actions** + bounded float cross-link; [`ACTION_LAYER.md`](ACTION_LAYER.md) §2 `UiComputed*` vs Actions for conditional copy; [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) **Last run** context. **No** `plugin.cfg` version bump (docs-only).
 - **Wiring decentralization:** [`WIRING_LAYER.md`](WIRING_LAYER.md) — **`UiReactWireRuleHelper`**, per-host **`wire_rules`**, removed **`UiReactWireRunner`** / hub; [`ROADMAP.md`](ROADMAP.md) (**CB-032**, **CB-034**, **CB-039**, **CB-041** Wont); [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md); [`README.md`](../README.md), [`AGENTS.md`](../AGENTS.md), [`docs/README.md`](README.md).
 

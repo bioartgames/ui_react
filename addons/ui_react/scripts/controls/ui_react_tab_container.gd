@@ -34,7 +34,22 @@ var _tab_config: UiTabContainerCfg
 ## **Optional** — Inspector-driven tweens (selection changed, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
+## **Optional** — Action layer ([code]docs/ACTION_LAYER.md[/code]): focus, visibility, [code]mouse_filter[/code], UI bool flags, bounded float ops.
+@export var action_targets: Array[UiReactActionTarget] = []
+
+## **Optional** — Wiring rules ([code]docs/WIRING_LAYER.md[/code] §5). Applied by [UiReactWireRuleHelper].
+@export var wire_rules: Array[UiReactWireRule] = []
+
 var _previous_tab_index: int = -1
+
+
+func _enter_tree() -> void:
+	UiReactWireRuleHelper.schedule_attach(self)
+
+
+func _exit_tree() -> void:
+	UiReactWireRuleHelper.detach(self)
+
 
 func _ready() -> void:
 	tab_selected.connect(_on_tab_selected)
@@ -89,6 +104,7 @@ func _validate_animation_targets() -> void:
 		"UiReactTabContainer",
 		[UiAnimTarget.Trigger.SELECTION_CHANGED],
 	)
+	UiReactActionTargetHelper.apply_validated_actions_and_merge_triggers(self, "UiReactTabContainer", trigger_map)
 
 	if trigger_map.has(UiAnimTarget.Trigger.SELECTION_CHANGED):
 		UiReactAnimTargetHelper.connect_if_absent(tab_selected, _on_trigger_selection_changed)
@@ -96,6 +112,8 @@ func _validate_animation_targets() -> void:
 		UiReactAnimTargetHelper.connect_if_absent(mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
 		UiReactAnimTargetHelper.connect_if_absent(mouse_exited, _on_trigger_hover_exit)
+
+	UiReactActionTargetHelper.sync_initial_state(self, "UiReactTabContainer", action_targets)
 
 
 func _finish_initialization() -> void:
@@ -118,6 +136,7 @@ func _on_trigger_hover_exit() -> void:
 
 func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 	UiReactAnimTargetHelper.trigger_animations(self, animation_targets, trigger_type)
+	UiReactActionTargetHelper.run_actions(self, "UiReactTabContainer", action_targets, trigger_type)
 
 
 func _on_tab_selected(tab_index: int) -> void:
@@ -128,8 +147,7 @@ func _on_tab_selected(tab_index: int) -> void:
 
 	UiTabContentStateBinder.bind_tab_content(self, _tab_config, tab_index, Callable(self, "_on_tab_content_state_changed"))
 
-	if animation_targets.size() > 0:
-		_on_trigger_selection_changed(tab_index)
+	_on_trigger_selection_changed(tab_index)
 
 	if not _selected_state or _bind.updating:
 		return
