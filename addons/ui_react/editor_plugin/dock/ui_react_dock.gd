@@ -2,6 +2,8 @@
 extends Control
 class_name UiReactDock
 
+const _WireRulesPanelScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_wire_rules_panel.gd")
+
 const _EMPTY_ISSUES_NO_DIAGNOSTICS := "No issues reported for the current scan."
 const _EMPTY_ISSUES_FILTERED := "No issues match the current filters or search."
 
@@ -50,6 +52,10 @@ var _btn_fix_all: Button
 var _btn_ignore_all: Button
 var _replace_confirm_dialog: ConfirmationDialog
 
+var _tabs: TabContainer
+## [UiReactDockWireRulesPanel] — untyped so [method refresh] / [method setup] resolve without global class cache in the analyzer.
+var _wire_rules_panel: Variant = null
+
 ## group_key -> expanded (for grouped view)
 var _group_expanded: Dictionary = {}
 
@@ -88,6 +94,8 @@ func _run_startup_refresh() -> void:
 
 ## Called from [EditorPlugin] when the edited scene tab changes (open/switch/empty).
 func notify_edited_scene_changed() -> void:
+	if _wire_rules_panel != null and _wire_rules_panel.has_method(&"refresh"):
+		_wire_rules_panel.call(&"refresh")
 	request_refresh(&"scene_changed")
 
 
@@ -105,12 +113,28 @@ func _build_ui() -> void:
 	margin.add_theme_constant_override("margin_bottom", 8)
 	add_child(margin)
 
+	_tabs = TabContainer.new()
+	_tabs.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_tabs.clip_contents = true
+	margin.add_child(_tabs)
+
 	var vbox := VBoxContainer.new()
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.clip_contents = true
-	margin.add_child(vbox)
+	_tabs.add_child(vbox)
+	_tabs.set_tab_title(0, "Diagnostics")
+
+	var wr_panel = _WireRulesPanelScript.new()
+	wr_panel.setup(_plugin, _actions)
+	_wire_rules_panel = wr_panel
+	_tabs.add_child(wr_panel)
+	_tabs.set_tab_title(1, "Wire rules")
+	if not _tabs.tab_selected.is_connected(_on_tabs_tab_selected):
+		_tabs.tab_selected.connect(_on_tabs_tab_selected)
 
 	var mode_row := HBoxContainer.new()
 	vbox.add_child(mode_row)
@@ -341,8 +365,15 @@ func _exit_tree() -> void:
 
 
 func _on_selection_changed() -> void:
+	if _wire_rules_panel != null and _wire_rules_panel.has_method(&"refresh"):
+		_wire_rules_panel.call(&"refresh")
 	if _auto_refresh and _auto_refresh.button_pressed and _mode_option.get_item_id(_mode_option.selected) == UiReactDockConfig.SCAN_MODE_SELECTION:
 		request_refresh(&"selection_changed")
+
+
+func _on_tabs_tab_selected(tab_idx: int) -> void:
+	if _wire_rules_panel != null and tab_idx == 1 and _wire_rules_panel.has_method(&"refresh"):
+		_wire_rules_panel.call(&"refresh")
 
 
 func _on_editor_filesystem_changed() -> void:

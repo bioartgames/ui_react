@@ -10,10 +10,16 @@ func _init(p_undo_redo: EditorUndoRedoManager) -> void:
 
 
 func assign_resource_property(node: Node, property_name: StringName, new_value: Resource) -> void:
+	assign_property_variant(node, property_name, new_value, "Assign %s" % property_name)
+
+
+func assign_property_variant(
+	node: Node, property_name: StringName, new_value: Variant, action_label: String
+) -> void:
 	if node == null or property_name == &"":
 		return
 	var old_val: Variant = node.get(property_name)
-	_undo_redo.create_action("Assign %s" % property_name)
+	_undo_redo.create_action(action_label)
 	_undo_redo.add_do_property(node, property_name, new_value)
 	_undo_redo.add_undo_property(node, property_name, old_val)
 	_undo_redo.commit_action()

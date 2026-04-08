@@ -110,7 +110,7 @@ Official **`inventory_screen_demo`** uses only **`wire_rules`** on **`UiReact*`*
 
 ---
 
-## 8. Diagnostics (P5.1)
+## 8. Diagnostics (P5.1) and dock authoring (P5.2)
 
 **`wire_rules` row validation** (MVP rule types §6): missing / wrong-type **`@export`** state or **`catalog`** refs → **warning** (`UiReactValidatorService`).
 
@@ -122,6 +122,8 @@ Official **`inventory_screen_demo`** uses only **`wire_rules`** on **`UiReact*`*
 
 **Follow-up** (optional backlog): invalid `NodePath` targets when future rules use paths. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md).
 
+**P5.2 — Wire rules tab (editor):** The **Ui React** bottom dock (**Diagnostics** / **Wire rules**) includes a **Wire rules** tab that lists **`wire_rules`** for the **single** selected §5 host, adds concrete rules from the §6 set, removes/duplicates/reorders entries with **Undo**, and **Inspect rule** opens the Inspector on the same embedded **`UiReactWireRule`** subresources—**no** second on-disk format (**CB-035**).
+
 ---
 
 ## 9. Phasing
@@ -129,7 +131,7 @@ Official **`inventory_screen_demo`** uses only **`wire_rules`** on **`UiReact*`*
 | Milestone | Contents |
 |-----------|----------|
 | **P5.1** | `UiReactWireRuleHelper`; `UiReactWireRule` + concrete rules (§6); `wire_rules` on §5 control set; dock diagnostics per §8; **`inventory_screen_demo`** is **inspector-only** (no root glue script). |
-| **P5.2** | Dock **form or graph** UI that edits **only** existing `UiReactWireRule` subresources—**no second on-disk format** (**CB-035**). |
+| **P5.2** | Dock **form** UI (rule list + **Inspect**) that edits **only** existing `UiReactWireRule` subresources—**no second on-disk format** (**CB-035**). A **graph** view remains optional backlog if ever needed. |
 
 ---
 

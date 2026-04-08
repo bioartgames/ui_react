@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.22.0] - 2026-04-07
+
+### Added
+
+- **Editor dock — Wire rules tab (P5.2 / CB-035):** second tab on the **Ui React** bottom panel — lists **`wire_rules`** for one selected §5 host, **Add rule…** (§6 concrete types), **Remove**, **Duplicate**, **Move up/down**, **Inspect rule**, **Refresh list**; **UndoRedo** via **`EditorUndoRedoManager`** and **`UiReactActionController.assign_property_variant`** (same embedded **`UiReactWireRule`** subresources as the Inspector; no parallel format).
+- **`UiReactActionController.assign_property_variant`:** undo-safe assignment for any **`Variant`** property (used for **`wire_rules`** **`Array[UiReactWireRule]`**).
+
+### Documentation
+
+- **[`WIRING_LAYER.md`](WIRING_LAYER.md)** §8 / §9; **[`README.md`](../README.md)** designer path; **[`ROADMAP.md`](ROADMAP.md)** P5.2 exit + Appendix **CB-035** **Done**.
+
 ## [2.21.0] - 2026-04-07
 
 ### Added

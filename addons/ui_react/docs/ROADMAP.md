@@ -23,7 +23,7 @@ Additional **stock** **`UiComputedStringState` / `UiComputedBoolState`** subclas
 
 ### Tracked follow-ups (product parity — 2026)
 
-**Done:** **CB-049**, **CB-050** (**2.17.0**); **CB-052**, **CB-054**, **CB-055** (**2.18.0** surface); **CB-056** (**2.19.0** / **2.19.1**); **CB-057** (**2.20.0**); **CB-051** (**2.21.0**). **Remaining:** **CB-053** (plugin UX after core parity).
+**Done:** **CB-049**, **CB-050** (**2.17.0**); **CB-052**, **CB-054**, **CB-055** (**2.18.0** surface); **CB-056** (**2.19.0** / **2.19.1**); **CB-057** (**2.20.0**); **CB-051** (**2.21.0**); **CB-035** (**2.22.0** — dock **Wire rules** tab). **Remaining:** **CB-053** (broader plugin UX after parity — e.g. graph-style wire view, bulk anim helpers; non-blocking).
 
 ### Charter (lock-in)
 
@@ -137,8 +137,8 @@ Not every row is a v1.0 promise; this maps **Megaman-style** UI goals to **phase
 
 **P5.2 — Dock wire editor**
 
-- [ ] Dock UI creates/edits **only** existing `UiReactWireRule` subresources; **no** parallel format (**CB-035**).
-- [ ] **CHANGELOG** + README pointer.
+- [x] Dock UI creates/edits **only** existing `UiReactWireRule` subresources; **no** parallel format (**CB-035**).
+- [x] **CHANGELOG** + README pointer.
 
 #### P6.1 — Declarative Action layer
 
@@ -157,7 +157,7 @@ Not every row is a v1.0 promise; this maps **Megaman-style** UI goals to **phase
 
 #### Last quarterly review
 
-- **2026-04-07:** Charter + Non-goals unchanged. **Inspector surface matrix** vs. control scripts: aligned (seven **`wire_rules`** hosts; **Button** / **TextureButton** **`action_targets`** without **`wire_rules`**, per [`ACTION_LAYER.md`](ACTION_LAYER.md) §4). **[`WIRING_LAYER.md`](WIRING_LAYER.md) §6** concrete rule types match `addons/ui_react/scripts/api/models/ui_react_wire_*.gd`. **[`ACTION_LAYER.md`](ACTION_LAYER.md) §3.2** preset list matches **`UiReactActionKind`**. Appendix **CB-031**–**CB-057** row statuses vs. repo: no drift requiring edits. **[`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md):** stock-take **`Last run`** updated for this pass (no new wiring diagnostic surfaces since **2.20.0**). **[`CHANGELOG.md`](CHANGELOG.md):** **`[Unreleased]`** empty — normal until the next shippable change (**CB-021** ongoing).
+- **2026-04-07:** Charter + Non-goals unchanged. **P5.2** / **CB-035** shipped **2.22.0** (dock **Wire rules** tab). **Inspector surface matrix** vs. control scripts: aligned (seven **`wire_rules`** hosts; **Button** / **TextureButton** **`action_targets`** without **`wire_rules`**, per [`ACTION_LAYER.md`](ACTION_LAYER.md) §4). **[`WIRING_LAYER.md`](WIRING_LAYER.md) §6** concrete rule types match `addons/ui_react/scripts/api/models/ui_react_wire_*.gd`. **[`ACTION_LAYER.md`](ACTION_LAYER.md) §3.2** preset list matches **`UiReactActionKind`**. Appendix **CB-031**–**CB-057**: **CB-035** **Done**. **[`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md):** refresh **`Last run`** on next stock-take pass. **[`CHANGELOG.md`](CHANGELOG.md):** follow **CB-021** on release.
 
 ### Inspector surface matrix (CB-052)
 
@@ -233,7 +233,7 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-032 | **`UiReactWireRuleHelper`** (per-host wiring, non-autoload) | Any wired scene | P5 | Done | `scripts/internal/react/ui_react_wire_rule_helper.gd`; see audit §A. |
 | CB-033 | **`UiReactWireRule`** abstract base + concrete MVP rules (three named in [`WIRING_LAYER.md`](WIRING_LAYER.md)) | Inventory, filters | P5 | Done | `scripts/api/models/ui_react_wire_*.gd`; see audit §A. |
 | CB-034 | **`wire_rules`** export on P5.1 control set + dock/validator + editor parity | Same | P5 | Done | **Shipped:** MVP **rule export** validation; cross-node duplicate rule instance warning; unused-**`UiState`** scan includes **`wire_rules`** refs; **`UiReactTransactionalActions`** scanner registration (**2.7.0** + later). See [`WIRING_LAYER.md`](WIRING_LAYER.md) §8. |
-| CB-035 | Dock **graph or form** editor for wire rules (edits same resources) | N/A | P5.2 | Planned | **After** P5.1; **no** alternate format. |
+| CB-035 | Dock **form** editor for wire rules (edits same resources) | N/A | P5.2 | Done | **2.22.0**: **Ui React** dock **Wire rules** tab (`UiReactDockWireRulesPanel`); **no** alternate format. Graph UI remains backlog under **CB-053**. |
 | CB-036 | Migrate **`inventory_list_demo`** off orchestration glue | Inventory | Wont | Wont | Scene removed; **`inventory_screen_demo.tscn`** is the canonical inventory example (**CB-037**). |
 | CB-037 | Migrate **`inventory_screen_demo`** off orchestration glue | Inventory | P5 | Done | Filter/list/detail/suffix/debug via **`wire_rules`** on controls; **no** root script. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) §B. |
 | CB-038 | Migrate remaining examples with root glue only where wiring/actions **replace** glue without losing teaching value | Demos | P5 | Done | **`shop_computed_demo`** scriptless: **`action_targets`** buy + stock **`UiComputedFloatGeProductBool`** / **`UiComputedBoolInvert`** / **`UiComputedOrderSummaryThreeFloatString`** (no **`examples/shop_computed_*.gd`**). |
@@ -259,4 +259,4 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 
 ---
 
-*Last updated: 2026-04-07 — **2.21.0**: **CB-051** (four numeric **`UiReactActionKind`** presets + **`UiReactStateOpService`**). Prior **2.20.0**: **CB-057**, **`UiReactWireSortArrayByKey`**, doc charter + mini-host. **CB-056** / **2.19.x**. **CB-052** / **CB-054** / **CB-055** (**2.18.0**). **CB-053** remains. Quarterly review: **Review process** → **Last quarterly review**. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Examples remain **four** scenes.*
+*Last updated: 2026-04-07 — **2.22.0**: **CB-035** / **P5.2** dock **Wire rules** tab. **2.21.0**: **CB-051**. **2.20.0**: **CB-057**, **`UiReactWireSortArrayByKey`**, doc charter + mini-host. **CB-053** remains (broader plugin UX). Quarterly review: **Review process** → **Last quarterly review**. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Examples remain **four** scenes.*
