@@ -34,6 +34,23 @@ static func apply_panelcontainer(panel: PanelContainer, plugin: EditorPlugin) ->
 		panel.add_theme_stylebox_override(&"panel", t.get_stylebox(&"panel", &"PanelContainer"))
 
 
+## MenuButton vs [Button] parity: copy editor [code]Button[/code] panel styleboxes so the dock "Add rule…" control matches adjacent buttons.
+static func apply_basebutton_editor_panel_style(bb: BaseButton, plugin: EditorPlugin) -> void:
+	var t := editor_theme(plugin)
+	if t == null or bb == null:
+		return
+	for key: StringName in [
+		&"normal",
+		&"hover",
+		&"pressed",
+		&"disabled",
+		&"focus",
+		&"hover_pressed",
+	]:
+		if t.has_stylebox(key, &"Button"):
+			bb.add_theme_stylebox_override(key, t.get_stylebox(key, &"Button").duplicate())
+
+
 static func apply_split_bar(split: SplitContainer, plugin: EditorPlugin) -> void:
 	var t := editor_theme(plugin)
 	if t == null:

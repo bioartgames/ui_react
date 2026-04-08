@@ -1,4 +1,4 @@
-[gd_scene load_steps=38 format=3 uid="uid://lp6x0p7wqckg"]
+[gd_scene load_steps=40 format=3 uid="uid://lp6x0p7wqckg"]
 
 [ext_resource type="Script" uid="uid://c1jlkpahxxnpi" path="res://addons/ui_react/scripts/api/models/ui_transactional_state.gd" id="1_txn"]
 [ext_resource type="Script" uid="uid://toxmw3una1r3" path="res://addons/ui_react/scripts/controls/ui_react_slider.gd" id="2_sl"]
@@ -20,7 +20,7 @@
 [ext_resource type="Script" uid="uid://cxg5hj6ihqtue" path="res://addons/ui_react/scripts/api/models/ui_bool_state.gd" id="19_bool"]
 [ext_resource type="Script" uid="uid://lv5ixpw5hlvp" path="res://addons/ui_react/scripts/controls/ui_react_button.gd" id="20_btn"]
 [ext_resource type="Script" uid="uid://bm888uf1am2em" path="res://addons/ui_react/scripts/api/models/ui_transactional_screen_config.gd" id="21_txnscr"]
-[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_transactional_host_binding.gd" id="22_txnhost"]
+[ext_resource type="Script" uid="uid://bqmttg6nx2853" path="res://addons/ui_react/scripts/api/models/ui_react_transactional_host_binding.gd" id="22_txnhost"]
 
 [sub_resource type="Resource" id="tab_detail_str"]
 script = ExtResource("12_str")

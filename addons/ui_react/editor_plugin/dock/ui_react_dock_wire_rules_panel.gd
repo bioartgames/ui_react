@@ -37,6 +37,7 @@ func setup(plugin: EditorPlugin, actions: UiReactActionController) -> void:
 func refresh() -> void:
 	_target = null
 	_list.clear()
+	_list.tooltip_text = ""
 	if _plugin == null or _actions == null:
 		_set_hint("Plugin not ready.")
 		_set_buttons(false)
@@ -66,10 +67,8 @@ func refresh() -> void:
 		_set_buttons(false)
 		return
 	_target = n
-	_set_hint(
-		"Target: [b]%s[/b] — order matches [code]wire_rules[/code] ([code]WIRING_LAYER.md[/code] §3)."
-		% str(n.get_path())
-	)
+	_set_hint(_format_target_hint(n, root))
+	_list.tooltip_text = "Rule order matches Inspector and runtime (see WIRING_LAYER §3)."
 	var wr: Variant = n.get(&"wire_rules")
 	var arr: Array = wr as Array if wr is Array else []
 	for i in range(arr.size()):
@@ -120,6 +119,10 @@ func _build_ui() -> void:
 		pop.set_item_id(i, i)
 	if not pop.id_pressed.is_connected(_on_add_menu_id):
 		pop.id_pressed.connect(_on_add_menu_id)
+	_btn_add.flat = false
+	_btn_add.theme_type_variation = &"Button"
+	if _plugin:
+		UiReactDockTheme.apply_basebutton_editor_panel_style(_btn_add, _plugin)
 	row1.add_child(_btn_add)
 
 	_btn_remove = Button.new()
@@ -161,6 +164,14 @@ func _build_ui() -> void:
 	row2.add_child(_btn_refresh)
 
 	_set_buttons(false)
+
+
+func _format_target_hint(n: Node, root: Node) -> String:
+	var rel := root.get_path_to(n)
+	var rel_str := String(rel)
+	if rel_str == "." or rel.is_empty():
+		return "Wire rules: [b]%s[/b] · (scene root)" % n.name
+	return "Wire rules: [b]%s[/b] · [code]%s[/code]" % [n.name, rel_str]
 
 
 func _set_hint(bbcode: String) -> void:
