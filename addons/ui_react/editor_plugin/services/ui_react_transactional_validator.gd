@@ -23,10 +23,10 @@ static func validate_transactional_under_root(root: Node) -> Array[UiReactDiagno
 					UiReactDiagnosticModel.Severity.ERROR,
 					"UiReactTransactionalActions",
 					str(nn.name) if nn else "",
-					"UiTransactionalGroup cohort: remove UiReactTransactionalActions or clear transactional_role on UiReactButton/UiReactTextureButton (same group).",
-					"Use either path-based coordinator or button-hosted transactional exports—not both for one group.",
+					"UiTransactionalGroup cohort: remove UiReactTransactionalActions or clear transactional_host.role on UiReactButton/UiReactTextureButton (same group).",
+					"Use either path-based coordinator or button-hosted transactional_host—not both for one group.",
 					p,
-					&"transactional_group",
+					&"transactional_host",
 					&"",
 					UiReactDiagnosticModel.IssueKind.GENERIC,
 					"",
@@ -42,9 +42,9 @@ static func validate_transactional_under_root(root: Node) -> Array[UiReactDiagno
 						"UiReactButton",
 						str(n2.name) if n2 else "",
 						"Duplicate APPLY_ALL for the same UiTransactionalGroup.",
-						"Keep a single Apply button with transactional_role APPLY_ALL per group.",
+						"Keep a single Apply button with transactional_host.role APPLY_ALL per group.",
 						extra,
-						&"transactional_role",
+						&"transactional_host",
 						&"",
 						UiReactDiagnosticModel.IssueKind.GENERIC,
 						"",
@@ -60,9 +60,9 @@ static func validate_transactional_under_root(root: Node) -> Array[UiReactDiagno
 						"UiReactTextureButton",
 						str(n3.name) if n3 else "",
 						"Duplicate CANCEL_ALL for the same UiTransactionalGroup.",
-						"Keep a single Cancel button with transactional_role CANCEL_ALL per group.",
+						"Keep a single Cancel button with transactional_host.role CANCEL_ALL per group.",
 						extra2,
-						&"transactional_role",
+						&"transactional_host",
 						&"",
 						UiReactDiagnosticModel.IssueKind.GENERIC,
 						"",
@@ -77,9 +77,9 @@ static func validate_transactional_under_root(root: Node) -> Array[UiReactDiagno
 					"UiReactTransactionalSession",
 					str(na.name) if na else "",
 					"UiTransactionalGroup has APPLY_ALL but no CANCEL_ALL in this scene.",
-					"Add a Cancel button with transactional_role CANCEL_ALL or use a coordinator with both paths.",
+					"Add a Cancel button with transactional_host.role CANCEL_ALL or use a coordinator with both paths.",
 					ap,
-					&"transactional_role",
+					&"transactional_host",
 					&"",
 					UiReactDiagnosticModel.IssueKind.GENERIC,
 					"",
@@ -94,9 +94,9 @@ static func validate_transactional_under_root(root: Node) -> Array[UiReactDiagno
 					"UiReactTransactionalSession",
 					str(nc.name) if nc else "",
 					"UiTransactionalGroup has CANCEL_ALL but no APPLY_ALL in this scene.",
-					"Add an Apply button with transactional_role APPLY_ALL or use a coordinator with both paths.",
+					"Add an Apply button with transactional_host.role APPLY_ALL or use a coordinator with both paths.",
 					cp,
-					&"transactional_role",
+					&"transactional_host",
 					&"",
 					UiReactDiagnosticModel.IssueKind.GENERIC,
 					"",
@@ -108,35 +108,40 @@ static func validate_transactional_under_root(root: Node) -> Array[UiReactDiagno
 static func _append_pressed_state_warnings(n: Node, root: Node, out: Array[UiReactDiagnosticModel.DiagnosticIssue]) -> void:
 	if n is UiReactButton or n is UiReactTextureButton:
 		var ps: Variant = n.get(&"pressed_state")
-		if ps != null and n.get(&"transactional_group") is UiTransactionalGroup:
-			if int(n.get(&"transactional_role")) != 0:
-				var rel: NodePath = root.get_path_to(n)
-				var comp := "UiReactButton" if n is UiReactButton else "UiReactTextureButton"
-				out.append(
-					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
-						UiReactDiagnosticModel.Severity.WARNING,
-						comp,
-						str(n.name),
-						"pressed_state and transactional_role are both set; both react to presses.",
-						"Clear pressed_state for pure Apply/Cancel or use a plain Button.",
-						rel,
-						&"pressed_state",
-						&"",
-						UiReactDiagnosticModel.IssueKind.GENERIC,
-						"",
-					)
+		var th: Variant = n.get(&"transactional_host")
+		var host_ok: bool = false
+		if th is UiReactTransactionalHostBinding:
+			var hb: UiReactTransactionalHostBinding = th as UiReactTransactionalHostBinding
+			host_ok = hb.group is UiTransactionalGroup and int(hb.role) != 0
+		if ps != null and host_ok:
+			var rel: NodePath = root.get_path_to(n)
+			var comp := "UiReactButton" if n is UiReactButton else "UiReactTextureButton"
+			out.append(
+				UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+					UiReactDiagnosticModel.Severity.WARNING,
+					comp,
+					str(n.name),
+					"pressed_state and transactional_host (Apply/Cancel) are both set; both react to presses.",
+					"Clear pressed_state for pure Apply/Cancel or use a plain Button.",
+					rel,
+					&"pressed_state",
+					&"",
+					UiReactDiagnosticModel.IssueKind.GENERIC,
+					"",
 				)
+			)
 	for c in n.get_children():
 		_append_pressed_state_warnings(c, root, out)
 
 
 static func _walk_collect(n: Node, root: Node, cohorts: Dictionary) -> void:
 	if n is UiReactButton or n is UiReactTextureButton:
-		var g: Variant = n.get(&"transactional_group")
-		var role: Variant = n.get(&"transactional_role")
-		if g is UiTransactionalGroup:
-			var r := int(role)
-			if r != 0:
+		var th: Variant = n.get(&"transactional_host")
+		if th is UiReactTransactionalHostBinding:
+			var hb: UiReactTransactionalHostBinding = th as UiReactTransactionalHostBinding
+			var g: Variant = hb.group
+			var r := int(hb.role)
+			if g is UiTransactionalGroup and r != 0:
 				var gid: int = (g as UiTransactionalGroup).get_instance_id()
 				_ensure_bucket(cohorts, gid)
 				var rel: NodePath = root.get_path_to(n)

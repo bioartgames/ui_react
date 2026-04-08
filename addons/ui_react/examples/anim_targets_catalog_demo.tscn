@@ -1,4 +1,4 @@
-[gd_scene load_steps=66 format=3 uid="uid://bmhxq7v0p4nw1"]
+[gd_scene load_steps=67 format=3 uid="uid://bmhxq7v0p4nw1"]
 
 [ext_resource type="Script" uid="uid://cy1vsor6ek3xr" path="res://addons/ui_react/scripts/api/models/ui_float_state.gd" id="2_float"]
 [ext_resource type="Script" uid="uid://3a3144h5usfc" path="res://addons/ui_react/scripts/api/models/ui_string_state.gd" id="3_str"]
@@ -12,9 +12,206 @@
 [ext_resource type="Script" uid="uid://s6xiov8r6bil" path="res://addons/ui_react/scripts/controls/ui_react_progress_bar.gd" id="11_pb"]
 [ext_resource type="Script" uid="uid://duphbaan8pk5f" path="res://addons/ui_react/scripts/controls/ui_react_item_list.gd" id="12_il"]
 [ext_resource type="Script" uid="uid://diigywt0dm170" path="res://addons/ui_react/scripts/api/models/ui_anim_target.gd" id="13_at"]
+[ext_resource type="Script" uid="uid://dqbg42kucypqk" path="res://addons/ui_react/scripts/api/models/ui_react_action_target.gd" id="14_act"]
 
-[sub_resource type="Resource" id="fprog"]
-script = ExtResource("2_float")
+[sub_resource type="Resource" id="catalog_sel"]
+script = ExtResource("6_int")
+
+[sub_resource type="Resource" id="catalog_items_state"]
+script = ExtResource("5_arr")
+value = [&"EXPAND", &"EXPAND_X", &"EXPAND_Y", &"FADE_IN", &"SLIDE_FROM_LEFT", &"SLIDE_FROM_RIGHT", &"SLIDE_FROM_TOP", &"SLIDE_FROM_BOTTOM", &"FROM_LEFT_TO_CENTER", &"FROM_RIGHT_TO_CENTER", &"FROM_TOP_TO_CENTER", &"FROM_BOTTOM_TO_CENTER", &"BOUNCE_IN", &"ELASTIC_IN", &"ROTATE_IN", &"POP", &"PULSE", &"SHAKE", &"BREATHING", &"WOBBLE", &"FLOAT", &"GLOW_PULSE", &"COLOR_FLASH", &"RESET"]
+
+[sub_resource type="Resource" id="cat_row_0"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 0
+reset_duration = 0.0
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_1"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 1
+reset_duration = 0.0
+animation = 1
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_2"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 2
+reset_duration = 0.0
+animation = 2
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_3"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 3
+reset_duration = 0.0
+animation = 3
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_4"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 4
+reset_duration = 0.0
+animation = 4
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_5"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 5
+reset_duration = 0.0
+animation = 5
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_6"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 6
+reset_duration = 0.0
+animation = 6
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_7"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 7
+reset_duration = 0.0
+animation = 7
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_8"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 8
+reset_duration = 0.0
+animation = 8
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_9"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 9
+reset_duration = 0.0
+animation = 9
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_10"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 10
+reset_duration = 0.0
+animation = 10
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_11"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 11
+reset_duration = 0.0
+animation = 11
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_12"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 12
+reset_duration = 0.0
+animation = 12
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_13"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 13
+reset_duration = 0.0
+animation = 13
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_14"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 14
+reset_duration = 0.0
+animation = 14
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_15"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 15
+reset_duration = 0.0
+animation = 15
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_16"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 16
+reset_duration = 0.0
+animation = 16
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_17"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 17
+reset_duration = 0.0
+animation = 17
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_18"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 18
+reset_duration = 0.0
+animation = 18
+duration = 0.35
+repeat_count = -1
+
+[sub_resource type="Resource" id="cat_row_19"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 19
+reset_duration = 0.0
+animation = 19
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_20"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 20
+reset_duration = 0.0
+animation = 20
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_21"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 21
+reset_duration = 0.0
+animation = 21
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_22"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 22
+reset_duration = 0.0
+animation = 22
+duration = 0.35
+
+[sub_resource type="Resource" id="cat_row_23"]
+script = ExtResource("13_at")
+target = NodePath("../../RightColumn/PreviewPanel")
+selection_slot = 23
+reset_duration = 0.0
+animation = 23
+duration = 0.0
 
 [sub_resource type="Resource" id="at_btn_press"]
 script = ExtResource("13_at")
@@ -123,6 +320,9 @@ trigger = 11
 animation = 15
 duration = 0.25
 
+[sub_resource type="Resource" id="fprog"]
+script = ExtResource("2_float")
+
 [sub_resource type="Resource" id="at_pb_comp"]
 script = ExtResource("13_at")
 target = NodePath("../../../../../PreviewPanel")
@@ -143,6 +343,15 @@ target = NodePath("../../../../../PreviewPanel")
 trigger = 2
 animation = 15
 duration = 0.25
+
+[sub_resource type="Resource" id="fire_completed_action"]
+Resource = null
+resource_path = "res://addons/ui_react/examples/anim_targets_catalog_demo.tscn::fire_completed_action"
+resource_scene_unique_id = "fire_completed_action"
+script = ExtResource("14_act")
+action = 9
+float_literal_target = SubResource("fprog")
+float_literal_value = 100.0
 
 [sub_resource type="Resource" id="sellist"]
 script = ExtResource("6_int")
@@ -171,310 +380,6 @@ target = NodePath("../../../../PreviewPanel")
 trigger = 2
 animation = 15
 duration = 0.25
-
-[sub_resource type="Resource" id="catalog_items_state"]
-script = ExtResource("5_arr")
-value = [ &"EXPAND", &"EXPAND_X", &"EXPAND_Y", &"FADE_IN", &"SLIDE_FROM_LEFT", &"SLIDE_FROM_RIGHT", &"SLIDE_FROM_TOP", &"SLIDE_FROM_BOTTOM", &"FROM_LEFT_TO_CENTER", &"FROM_RIGHT_TO_CENTER", &"FROM_TOP_TO_CENTER", &"FROM_BOTTOM_TO_CENTER", &"BOUNCE_IN", &"ELASTIC_IN", &"ROTATE_IN", &"POP", &"PULSE", &"SHAKE", &"BREATHING", &"WOBBLE", &"FLOAT", &"GLOW_PULSE", &"COLOR_FLASH", &"RESET" ]
-
-[sub_resource type="Resource" id="catalog_sel"]
-script = ExtResource("6_int")
-value = 0
-
-[sub_resource type="Resource" id="cat_row_0"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 0
-trigger = 0
-animation = 0
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-
-[sub_resource type="Resource" id="cat_row_1"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 1
-trigger = 0
-animation = 1
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-
-[sub_resource type="Resource" id="cat_row_2"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 2
-trigger = 0
-animation = 2
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-
-[sub_resource type="Resource" id="cat_row_3"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 3
-trigger = 0
-animation = 3
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-
-[sub_resource type="Resource" id="cat_row_4"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 4
-trigger = 0
-animation = 4
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-
-[sub_resource type="Resource" id="cat_row_5"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 5
-trigger = 0
-animation = 5
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-
-[sub_resource type="Resource" id="cat_row_6"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 6
-trigger = 0
-animation = 6
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-
-[sub_resource type="Resource" id="cat_row_7"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 7
-trigger = 0
-animation = 7
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-
-[sub_resource type="Resource" id="cat_row_8"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 8
-trigger = 0
-animation = 8
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-
-[sub_resource type="Resource" id="cat_row_9"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 9
-trigger = 0
-animation = 9
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-
-[sub_resource type="Resource" id="cat_row_10"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 10
-trigger = 0
-animation = 10
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-
-[sub_resource type="Resource" id="cat_row_11"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 11
-trigger = 0
-animation = 11
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-
-[sub_resource type="Resource" id="cat_row_12"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 12
-trigger = 0
-animation = 12
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-
-[sub_resource type="Resource" id="cat_row_13"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 13
-trigger = 0
-animation = 13
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-
-[sub_resource type="Resource" id="cat_row_14"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 14
-trigger = 0
-animation = 14
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-rotate_start_angle = -360.0
-
-[sub_resource type="Resource" id="cat_row_15"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 15
-trigger = 0
-animation = 15
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-pop_overshoot = 1.2
-
-[sub_resource type="Resource" id="cat_row_16"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 16
-trigger = 0
-animation = 16
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-pulse_amount = 1.1
-pulse_count = 2
-
-[sub_resource type="Resource" id="cat_row_17"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 17
-trigger = 0
-animation = 17
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-shake_intensity = 10.0
-shake_count = 5
-
-[sub_resource type="Resource" id="cat_row_18"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 18
-trigger = 0
-animation = 18
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-
-[sub_resource type="Resource" id="cat_row_19"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 19
-trigger = 0
-animation = 19
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-
-[sub_resource type="Resource" id="cat_row_20"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 20
-trigger = 0
-animation = 20
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-
-[sub_resource type="Resource" id="cat_row_21"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 21
-trigger = 0
-animation = 21
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-
-[sub_resource type="Resource" id="cat_row_22"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 22
-trigger = 0
-animation = 22
-duration = 0.35
-easing = 1
-repeat_count = 0
-reverse = false
-flash_color = Color(1, 1, 0, 1)
-flash_intensity = 1.5
-
-[sub_resource type="Resource" id="cat_row_23"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-reset_duration = 0.0
-selection_slot = 23
-trigger = 0
-animation = 23
-duration = 0.0
-easing = 1
-repeat_count = 0
-reverse = false
 
 [node name="AnimTargetsCatalogDemo" type="Control"]
 layout_mode = 3
@@ -511,8 +416,8 @@ custom_minimum_size = Vector2(0, 200)
 layout_mode = 2
 size_flags_vertical = 3
 script = ExtResource("12_il")
-items_state = SubResource("catalog_items_state")
 selected_state = SubResource("catalog_sel")
+items_state = SubResource("catalog_items_state")
 animation_targets = Array[ExtResource("13_at")]([SubResource("cat_row_0"), SubResource("cat_row_1"), SubResource("cat_row_2"), SubResource("cat_row_3"), SubResource("cat_row_4"), SubResource("cat_row_5"), SubResource("cat_row_6"), SubResource("cat_row_7"), SubResource("cat_row_8"), SubResource("cat_row_9"), SubResource("cat_row_10"), SubResource("cat_row_11"), SubResource("cat_row_12"), SubResource("cat_row_13"), SubResource("cat_row_14"), SubResource("cat_row_15"), SubResource("cat_row_16"), SubResource("cat_row_17"), SubResource("cat_row_18"), SubResource("cat_row_19"), SubResource("cat_row_20"), SubResource("cat_row_21"), SubResource("cat_row_22"), SubResource("cat_row_23")])
 
 [node name="PlayButton" type="Button" parent="HSplit/LeftColumn"]
@@ -641,8 +546,7 @@ animation_targets = Array[ExtResource("13_at")]([SubResource("at_pb_comp"), SubR
 layout_mode = 2
 text = "Fire COMPLETED (set bar value state to max)"
 script = ExtResource("7_btn")
-press_writes_float_state = SubResource("fprog")
-press_writes_float_value = 100.0
+action_targets = Array[ExtResource("14_act")]([SubResource("fire_completed_action")])
 
 [node name="RowItemList" type="VBoxContainer" parent="HSplit/RightColumn/ScrollContainer/PlaygroundVBox"]
 layout_mode = 2

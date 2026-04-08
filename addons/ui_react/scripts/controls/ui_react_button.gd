@@ -40,21 +40,13 @@ var _disabled_state: UiBoolState
 ## **Optional** — Action layer ([code]docs/ACTION_LAYER.md[/code]): focus, visibility, [code]mouse_filter[/code], bounded float ops, etc.
 @export var action_targets: Array[UiReactActionTarget] = []
 
-## Optional one-way write to a [UiFloatState] on [signal BaseButton.pressed] (e.g. drive progress demo to 100%).
-@export var press_writes_float_state: UiFloatState
-@export var press_writes_float_value: float = 100.0
-
-## Batch [UiTransactionalState] draft/commit for this screen. Use with [member transactional_role] and [member transactional_screen].
-@export var transactional_group: UiTransactionalGroup
-## Shared with the paired Apply/Cancel button; assign [UiTransactionalScreenConfig] (controls [method UiTransactionalGroup.begin_edit_all] timing for the cohort).
-@export var transactional_screen: Resource
-enum TransactionalHostRole { NONE = 0, APPLY_ALL = 1, CANCEL_ALL = 2 }
-## **Apply** / **Cancel** — wires [signal BaseButton.pressed] to [method UiTransactionalGroup.apply_all] / [method UiTransactionalGroup.cancel_all] via [UiReactTransactionalSession].
-@export var transactional_role: TransactionalHostRole = TransactionalHostRole.NONE
+## **Optional** — [UiTransactionalGroup] cohort (Apply/Cancel) via [UiReactTransactionalSession]. Same subresource [member UiReactTransactionalHostBinding.screen] on both buttons when sharing config.
+@export var transactional_host: UiReactTransactionalHostBinding
 
 func _enter_tree() -> void:
-	if int(transactional_role) != int(TransactionalHostRole.NONE) and transactional_group != null:
-		_TxnSession.register_host(self, transactional_group, int(transactional_role), transactional_screen)
+	var th: UiReactTransactionalHostBinding = transactional_host
+	if th != null and th.group != null and int(th.role) != int(UiReactTransactionalHostBinding.HostRole.NONE):
+		_TxnSession.register_host(self, th.group, int(th.role), th.screen)
 
 
 func _exit_tree() -> void:
@@ -63,7 +55,6 @@ func _exit_tree() -> void:
 
 func _ready() -> void:
 	pressed.connect(_on_pressed)
-	pressed.connect(_on_press_writes_float)
 	toggled.connect(_on_toggled)
 	_disconnect_all_states()
 	_connect_all_states()
@@ -151,12 +142,6 @@ func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 	UiReactActionTargetHelper.run_actions(
 		self, "UiReactButton", action_targets, trigger_type, true, disabled
 	)
-
-
-func _on_press_writes_float() -> void:
-	if press_writes_float_state == null:
-		return
-	press_writes_float_state.set_value(press_writes_float_value)
 
 
 func _on_pressed() -> void:

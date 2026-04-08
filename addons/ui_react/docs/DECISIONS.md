@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-04-07 — Button exports: `UiReactTransactionalHostBinding` + `SET_FLOAT_LITERAL` (replace flat transactional / press-write exports)
+
+**Context:** Apply/Cancel and one-off float writes on **`UiReactButton`** / **`UiReactTextureButton`** used five separate Inspector exports (`transactional_*` triple + **`press_writes_float_*`**), overlapping the Action layer’s job for imperative steps.
+
+**Decision:** Collapse transactional wiring into one optional **`transactional_host: UiReactTransactionalHostBinding`**. Fold press-time literal float writes into the Action layer as **`SET_FLOAT_LITERAL`** + **`UiReactStateOpService.set_float_literal`**. Ship as **SemVer major** (**3.0.0**); no deprecation shims.
+
+**Consequences:** **[`CHANGELOG.md`](CHANGELOG.md) [3.0.0]**; **[`ACTION_LAYER.md`](ACTION_LAYER.md)** §3.2 item 10; **[`README.md`](../README.md)** matrix and transactional how-to.
+
+**Links:** `ui_react_transactional_host_binding.gd`, `ui_react_action_target.gd`, `ui_react_state_op_service.gd`
+
+---
+
 ## 2026-04-07 — CB-051: closed `UiReactActionKind` presets for whitelisted math (`UiReactStateOpService`)
 
 **Context:** **`SUBTRACT_PRODUCT_FROM_FLOAT`** alone could not express refund-style add, pool-to-pool transfer, or **`UiIntState`** stacks without inventing ad hoc scripts or duplicating math in Computed-only paths.

@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-04-07
+
+### Breaking
+
+- **`UiReactButton`** / **`UiReactTextureButton`:** removed **`transactional_group`**, **`transactional_screen`**, **`transactional_role`**, **`press_writes_float_state`**, and **`press_writes_float_value`**. Use **`transactional_host`** ([**`UiReactTransactionalHostBinding`**](../scripts/api/models/ui_react_transactional_host_binding.gd)) and literal float writes via **`action_targets`** row **`UiReactActionKind.SET_FLOAT_LITERAL`**.
+- Official examples **`options_transactional_demo.tscn`** and **`anim_targets_catalog_demo.tscn`** updated accordingly.
+
+### Added
+
+- **`UiReactTransactionalHostBinding`**: cohort **`group`**, optional **`screen`** ([**`UiTransactionalScreenConfig`**](../scripts/api/models/ui_transactional_screen_config.gd)), **`role`** (Apply/Cancel).
+- **`UiReactActionKind.SET_FLOAT_LITERAL`**, **`UiReactStateOpService.set_float_literal`**.
+
 ## [2.22.0] - 2026-04-07
 
 ### Added

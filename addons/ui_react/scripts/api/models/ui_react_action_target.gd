@@ -19,6 +19,8 @@ enum UiReactActionKind {
 	ADD_PRODUCT_TO_INT,
 	## Clamped int transfer ([code]UiReactStateOpService.transfer_int_product_clamped[/code]).
 	TRANSFER_INT_PRODUCT_CLAMPED,
+	## Literal [code]set_value[/code] on [member float_literal_target] (control-triggered; [member state_watch] must be null).
+	SET_FLOAT_LITERAL,
 }
 
 @export var enabled: bool = true
@@ -70,6 +72,11 @@ enum UiReactActionKind {
 @export var int_factor_a: UiIntState
 @export var int_factor_b: UiIntState
 
+## [member action] [code]SET_FLOAT_LITERAL[/code] only.
+@export var float_literal_target: UiFloatState
+## [member action] [code]SET_FLOAT_LITERAL[/code] only.
+@export var float_literal_value: float = 0.0
+
 
 func _validate_property(property: Dictionary) -> void:
 	var pname: StringName = property.name
@@ -119,5 +126,8 @@ func _validate_property(property: Dictionary) -> void:
 				return
 		UiReactActionKind.TRANSFER_INT_PRODUCT_CLAMPED:
 			if pname in [&"int_from", &"int_to", &"int_factor_a", &"int_factor_b"]:
+				return
+		UiReactActionKind.SET_FLOAT_LITERAL:
+			if pname in [&"float_literal_target", &"float_literal_value"]:
 				return
 	property.usage = PROPERTY_USAGE_STORAGE

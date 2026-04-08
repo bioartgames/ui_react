@@ -9,6 +9,13 @@ static func float_from_state(s: UiFloatState) -> float:
 	return float(s.get_value())
 
 
+## One-way literal write ([code]UiReactActionKind.SET_FLOAT_LITERAL[/code]).
+static func set_float_literal(s: UiFloatState, value: float) -> void:
+	if s == null:
+		return
+	s.set_value(value)
+
+
 ## [code]accum >= price * qty[/code] with null-safe reads (afford / order-summary computeds).
 static func afford_floats(accum: UiFloatState, price: UiFloatState, qty: UiFloatState) -> bool:
 	var g := float_from_state(accum)

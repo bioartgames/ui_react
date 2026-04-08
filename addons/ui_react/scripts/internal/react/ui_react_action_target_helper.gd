@@ -331,3 +331,5 @@ static func _apply_row(owner: Control, row: UiReactActionTarget, row_index: int,
 			UiReactStateOpService.transfer_int_product_clamped(
 				row.int_from, row.int_to, row.int_factor_a, row.int_factor_b
 			)
+		UiReactActionTarget.UiReactActionKind.SET_FLOAT_LITERAL:
+			UiReactStateOpService.set_float_literal(row.float_literal_target, row.float_literal_value)

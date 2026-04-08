@@ -200,6 +200,17 @@ static func validate_action_targets(
 					"action_targets[%d] int_factor_b must be UiIntState." % i,
 				)
 				continue
+			UiReactActionTarget.UiReactActionKind.SET_FLOAT_LITERAL:
+				_append_error_state_watch_on_numeric_row(
+					out, component, owner, node_path, i, row, "SET_FLOAT_LITERAL"
+				)
+				_append_uifloat_ref(
+					out, component, owner, node_path, i, row.float_literal_target,
+					"action_targets[%d] SET_FLOAT_LITERAL needs float_literal_target." % i,
+					"Assign UiFloatState.",
+					"action_targets[%d] float_literal_target must be UiFloatState." % i,
+				)
+				continue
 			_:
 				pass
 

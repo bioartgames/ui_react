@@ -4,7 +4,7 @@
 class_name UiReactTransactionalSession
 extends RefCounted
 
-## Match [member UiReactButton.transactional_role] integer export (1 = apply, 2 = cancel).
+## Match [member UiReactTransactionalHostBinding.role] (1 = apply, 2 = cancel) on [UiReactButton] / [UiReactTextureButton].
 enum Role { NONE = 0, APPLY_ALL = 1, CANCEL_ALL = 2 }
 
 const _META_CB := &"_ui_react_txn_pressed_cb"

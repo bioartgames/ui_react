@@ -1,5 +1,5 @@
 @tool
-## [deprecated] Use [UiReactButton] / [UiReactTextureButton] with [member UiReactButton.transactional_group], [member UiReactButton.transactional_role], and [UiTransactionalScreenConfig], or keep this node for path-based Apply/Cancel only.
+## [deprecated] Use [UiReactButton] / [UiReactTextureButton] with [member UiReactButton.transactional_host] ([UiReactTransactionalHostBinding]) and [UiTransactionalScreenConfig], or keep this node for path-based Apply/Cancel only.
 ## Connects [BaseButton] **Apply** / **Cancel** to a [UiTransactionalGroup]: calls [method UiTransactionalGroup.apply_all] / [method UiTransactionalGroup.cancel_all] via [UiReactTransactionalSession].
 ## Optional [member begin_on_ready]: mapped into a [UiTransactionalScreenConfig] for [method UiTransactionalGroup.begin_edit_all] once when the cohort first registers (deferred one frame).
 ## Paths are relative to this control node.
