@@ -92,7 +92,11 @@ static func validate_anim_targets(
 				)
 				continue
 
-		if not UiReactValidatorCommon.is_anim_trigger_allowed(component, at.trigger):
+		# Row-play presets (selection_slot >= 0) are driven by play_* APIs, not host signal dispatch; default trigger is ignored.
+		if (
+			not _skip_trigger_allowlist_for_row_play_preset(component, at)
+			and not UiReactValidatorCommon.is_anim_trigger_allowed(component, at.trigger)
+		):
 			out.append(
 				UiReactDiagnosticModel.DiagnosticIssue.make_structured(
 					UiReactDiagnosticModel.Severity.WARNING,
@@ -147,6 +151,13 @@ static func validate_anim_targets(
 					)
 				)
 	return out
+
+
+## Row-scoped [member UiAnimTarget.selection_slot] [code]>= 0[/code]: on [UiReactItemList], [method UiReactItemList.play_selected_row_animation] / [method UiReactItemList.play_preamble_reset_only] ignore [member UiAnimTarget.trigger] (default [code]PRESSED[/code] is a common false positive). On [UiReactTree], the same default on slot-gated rows is often unused; allowlist warnings are skipped for both.
+static func _skip_trigger_allowlist_for_row_play_preset(component: String, anim_target: UiAnimTarget) -> bool:
+	if anim_target.selection_slot < 0:
+		return false
+	return component == "UiReactItemList" or component == "UiReactTree"
 
 
 ## Matches [method UiReactTree.get_visible_row_count] when the tree is built from [member UiReactTree.tree_items_state] (one visible row per [UiReactTreeNode]). Editor-safe (no calls on placeholder [Tree] instances).

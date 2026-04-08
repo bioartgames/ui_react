@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **`UiReactAnimValidator`**: no longer warns about unsupported **`UiAnimTarget.trigger`** on **`UiReactItemList`** / **`UiReactTree`** when **`selection_slot` ≥ 0** (row-play presets; trigger is not used for host dispatch).
 - **Lead-in preamble reset** (when **`reset_duration` ≥ 0**): internal copy always uses **`RESET_AND_STOP`**.
 - **`anim_targets_catalog_demo.tscn`**: removed standalone **`RESET`** catalog row; reset affordance is **`Reset Preview`** only; help text updated.
 
