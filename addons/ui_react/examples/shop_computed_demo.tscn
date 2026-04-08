@@ -90,11 +90,21 @@ layout_mode = 2
 text = "Adjust gold, price, and quantity. Gold meter + quantity spin box are showcase bindings (shared gold/qty state). Status line is UiReactRichTextLabel + BBCode from UiComputedOrderSummaryThreeFloatString; afford/disabled use UiComputedFloatGeProductBool + UiComputedBoolInvert. Buy subtracts gold via action_targets SUBTRACT_PRODUCT_FROM_FLOAT (UiReactStateOpService)."
 autowrap_mode = 3
 
-[node name="GoldLabel" type="Label" parent="VBox"]
+[node name="ScrollShop" type="ScrollContainer" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="ShopInner" type="VBoxContainer" parent="VBox/ScrollShop"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="GoldLabel" type="Label" parent="VBox/ScrollShop/ShopInner"]
 layout_mode = 2
 text = "Player gold"
 
-[node name="GoldSlider" type="HSlider" parent="VBox"]
+[node name="GoldSlider" type="HSlider" parent="VBox/ScrollShop/ShopInner"]
 layout_mode = 2
 size_flags_horizontal = 3
 max_value = 200.0
@@ -102,11 +112,11 @@ value = 100.0
 script = ExtResource("3_sl")
 value_state = SubResource("gold")
 
-[node name="GoldMeterLabel" type="Label" parent="VBox"]
+[node name="GoldMeterLabel" type="Label" parent="VBox/ScrollShop/ShopInner"]
 layout_mode = 2
 text = "Gold meter (UiReactProgressBar — same UiFloatState as slider)"
 
-[node name="GoldMeter" type="ProgressBar" parent="VBox"]
+[node name="GoldMeter" type="ProgressBar" parent="VBox/ScrollShop/ShopInner"]
 layout_mode = 2
 max_value = 200.0
 value = 100.0
@@ -114,11 +124,11 @@ show_percentage = false
 script = ExtResource("11_pb")
 value_state = SubResource("gold")
 
-[node name="PriceLabel" type="Label" parent="VBox"]
+[node name="PriceLabel" type="Label" parent="VBox/ScrollShop/ShopInner"]
 layout_mode = 2
 text = "Item price (each)"
 
-[node name="PriceSlider" type="HSlider" parent="VBox"]
+[node name="PriceSlider" type="HSlider" parent="VBox/ScrollShop/ShopInner"]
 layout_mode = 2
 size_flags_horizontal = 3
 step = 0.5
@@ -126,11 +136,11 @@ value = 25.0
 script = ExtResource("3_sl")
 value_state = SubResource("price")
 
-[node name="QtyLabel" type="Label" parent="VBox"]
+[node name="QtyLabel" type="Label" parent="VBox/ScrollShop/ShopInner"]
 layout_mode = 2
 text = "Quantity"
 
-[node name="QtySlider" type="HSlider" parent="VBox"]
+[node name="QtySlider" type="HSlider" parent="VBox/ScrollShop/ShopInner"]
 layout_mode = 2
 size_flags_horizontal = 3
 max_value = 10.0
@@ -138,11 +148,11 @@ value = 1.0
 script = ExtResource("3_sl")
 value_state = SubResource("qty")
 
-[node name="QtySpinLabel" type="Label" parent="VBox"]
+[node name="QtySpinLabel" type="Label" parent="VBox/ScrollShop/ShopInner"]
 layout_mode = 2
 text = "Quantity (UiReactSpinBox — same state as slider; disabled when Buy disabled)"
 
-[node name="QtySpin" type="SpinBox" parent="VBox"]
+[node name="QtySpin" type="SpinBox" parent="VBox/ScrollShop/ShopInner"]
 layout_mode = 2
 min_value = 0.0
 max_value = 10.0
@@ -152,7 +162,7 @@ script = ExtResource("12_sp")
 value_state = SubResource("qty")
 disabled_state = SubResource("buy_dis")
 
-[node name="StatusLine" type="RichTextLabel" parent="VBox"]
+[node name="StatusLine" type="RichTextLabel" parent="VBox/ScrollShop/ShopInner"]
 custom_minimum_size = Vector2(1, 1)
 layout_mode = 2
 bbcode_enabled = true

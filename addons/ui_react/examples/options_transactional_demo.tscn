@@ -62,7 +62,7 @@ resource_scene_unique_id = "act_quality_vis"
 script = ExtResource("17_action")
 trigger = 6
 action = 1
-target = NodePath("../../../../TabSelectionDetail")
+target = NodePath("../../../../../TabSelectionDetail")
 
 [sub_resource type="Resource" id="opt_hint_str"]
 script = ExtResource("12_str")
@@ -148,7 +148,7 @@ wire_rules = Array[ExtResource("14_wrule")]([SubResource("wire_copy_tabs")])
 layout_mode = 2
 metadata/_tab_index = 0
 
-[node name="AudioVBox" type="VBoxContainer" parent="VBox/OptionsTabs/AudioPanel"]
+[node name="ScrollAudio" type="ScrollContainer" parent="VBox/OptionsTabs/AudioPanel"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -159,13 +159,17 @@ offset_right = -12.0
 offset_bottom = -12.0
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="AudioVBox" type="VBoxContainer" parent="VBox/OptionsTabs/AudioPanel/ScrollAudio"]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/separation = 12
 
-[node name="VolumeLabel" type="Label" parent="VBox/OptionsTabs/AudioPanel/AudioVBox"]
+[node name="VolumeLabel" type="Label" parent="VBox/OptionsTabs/AudioPanel/ScrollAudio/AudioVBox"]
 layout_mode = 2
 text = "Master volume (linear 0–1)"
 
-[node name="MasterVolume" type="HSlider" parent="VBox/OptionsTabs/AudioPanel/AudioVBox"]
+[node name="MasterVolume" type="HSlider" parent="VBox/OptionsTabs/AudioPanel/ScrollAudio/AudioVBox"]
 layout_mode = 2
 size_flags_horizontal = 3
 max_value = 1.0
@@ -174,18 +178,18 @@ value = 0.65
 script = ExtResource("2_sl")
 value_state = SubResource("txn_vol")
 
-[node name="MuteToggle" type="CheckBox" parent="VBox/OptionsTabs/AudioPanel/AudioVBox"]
+[node name="MuteToggle" type="CheckBox" parent="VBox/OptionsTabs/AudioPanel/ScrollAudio/AudioVBox"]
 layout_mode = 2
 text = "Mute audio"
 script = ExtResource("3_cb")
 checked_state = SubResource("txn_mute")
 disabled_state = ExtResource("9_6xi6r")
 
-[node name="QualityLabel" type="Label" parent="VBox/OptionsTabs/AudioPanel/AudioVBox"]
+[node name="QualityLabel" type="Label" parent="VBox/OptionsTabs/AudioPanel/ScrollAudio/AudioVBox"]
 layout_mode = 2
 text = "Quality preset (UiReactOptionButton — action_targets + wire_rules)"
 
-[node name="QualityOption" type="OptionButton" parent="VBox/OptionsTabs/AudioPanel/AudioVBox"]
+[node name="QualityOption" type="OptionButton" parent="VBox/OptionsTabs/AudioPanel/ScrollAudio/AudioVBox"]
 layout_mode = 2
 item_count = 3
 popup/item_0/text = "Low"
@@ -199,35 +203,35 @@ selected_state = SubResource("quality_sel")
 action_targets = Array[ExtResource("17_action")]([SubResource("act_quality_vis")])
 wire_rules = Array[ExtResource("14_wrule")]([SubResource("wire_opt_map")])
 
-[node name="CB056DemoToggle" type="CheckBox" parent="VBox/OptionsTabs/AudioPanel/AudioVBox"]
+[node name="CB056DemoToggle" type="CheckBox" parent="VBox/OptionsTabs/AudioPanel/ScrollAudio/AudioVBox"]
 layout_mode = 2
 text = "Show CB-056 hint (state_watch SET_VISIBLE)"
 script = ExtResource("3_cb")
 checked_state = SubResource("cb056_bool")
 action_targets = Array[ExtResource("17_action")]([SubResource("act_cb056_vis")])
 
-[node name="CB056Hint" type="Label" parent="VBox/OptionsTabs/AudioPanel/AudioVBox"]
+[node name="CB056Hint" type="Label" parent="VBox/OptionsTabs/AudioPanel/ScrollAudio/AudioVBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.85, 0.75, 0.4, 1)
 text = "CB-056: Label visibility follows UiBoolState via SET_VISIBLE (visible_when_true / visible_when_false)."
 
-[node name="OptMapHint" type="Label" parent="VBox/OptionsTabs/AudioPanel/AudioVBox"]
+[node name="OptMapHint" type="Label" parent="VBox/OptionsTabs/AudioPanel/ScrollAudio/AudioVBox"]
 layout_mode = 2
 autowrap_mode = 3
 script = ExtResource("8_lbl")
 text_state = SubResource("opt_hint_str")
 
-[node name="OptKindHint" type="Label" parent="VBox/OptionsTabs/AudioPanel/AudioVBox"]
+[node name="OptKindHint" type="Label" parent="VBox/OptionsTabs/AudioPanel/ScrollAudio/AudioVBox"]
 layout_mode = 2
 autowrap_mode = 3
 script = ExtResource("8_lbl")
 text_state = SubResource("opt_kind_str")
 
-[node name="ButtonRow" type="HBoxContainer" parent="VBox/OptionsTabs/AudioPanel/AudioVBox"]
+[node name="ButtonRow" type="HBoxContainer" parent="VBox/OptionsTabs/AudioPanel/ScrollAudio/AudioVBox"]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="ApplyButton" type="Button" parent="VBox/OptionsTabs/AudioPanel/AudioVBox/ButtonRow"]
+[node name="ApplyButton" type="Button" parent="VBox/OptionsTabs/AudioPanel/ScrollAudio/AudioVBox/ButtonRow"]
 layout_mode = 2
 text = "Apply"
 script = ExtResource("20_btn")
@@ -235,7 +239,7 @@ transactional_group = SubResource("txn_group")
 transactional_screen = SubResource("txn_screen")
 transactional_role = 1
 
-[node name="CancelButton" type="Button" parent="VBox/OptionsTabs/AudioPanel/AudioVBox/ButtonRow"]
+[node name="CancelButton" type="Button" parent="VBox/OptionsTabs/AudioPanel/ScrollAudio/AudioVBox/ButtonRow"]
 layout_mode = 2
 text = "Cancel"
 script = ExtResource("20_btn")
@@ -248,7 +252,7 @@ visible = false
 layout_mode = 2
 metadata/_tab_index = 1
 
-[node name="GameplayHint" type="Label" parent="VBox/OptionsTabs/GameplayPanel"]
+[node name="ScrollGameplay" type="ScrollContainer" parent="VBox/OptionsTabs/GameplayPanel"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -259,6 +263,10 @@ offset_right = -12.0
 offset_bottom = -12.0
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="GameplayHint" type="Label" parent="VBox/OptionsTabs/GameplayPanel/ScrollGameplay"]
+layout_mode = 2
+size_flags_horizontal = 3
 text = "Second tab: static content for UiReactTabContainer + UiIntState.selected_state binding (showcase only)."
 autowrap_mode = 3
 
