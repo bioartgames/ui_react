@@ -2,7 +2,7 @@
 
 **Purpose:** Doc-driven pass/fail checklist for **P5.1** exit honesty and gate for **P5.2**. Authority: [`WIRING_LAYER.md`](WIRING_LAYER.md) → [`ROADMAP.md`](ROADMAP.md) → [`CHANGELOG.md`](../CHANGELOG.md).
 
-**Last run:** 2026-04-06 (decentralized wiring: **`UiReactWireRuleHelper`**, removal of **`UiReactWireRunner`**; dock duplicate cross-node rule warning).
+**Last run:** 2026-04-07 — **Quarterly doc/code reconcile** (Charter-path stock-take): matrix **CB-052** vs. `scripts/controls` exports; **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5–§6** vs. shipped rules; **[`ACTION_LAYER.md`](ACTION_LAYER.md)** vs. **`UiReactActionKind`**; Appendix **CB-031**–**CB-057** — **no drift**. **Prior technical baseline:** **`UiReactWireSortArrayByKey`**, transactional dock **`validate_transactional_under_root`**, **CB-057** mini-host vs deprecated **`UiReactTransactionalActions`** (**2.20.0**).
 
 Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 
@@ -50,7 +50,7 @@ Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 
 | # | Result | Notes |
 |---|--------|-------|
-| D1 CHANGELOG | **PASS** | Unreleased + historical entries; **2.7.0** documents earlier P5.1 wiring ship. |
+| D1 CHANGELOG | **PASS** | Historical entries per release; **`[Unreleased]`** may be empty between ships (**CB-021**). **2.7.0** documents earlier P5.1 wiring ship. |
 | D2 Appendix CB-032 / CB-033 / CB-034 | **RESOLVED** | [`ROADMAP.md`](ROADMAP.md) Appendix: **CB-041** **Wont**. |
 
 ---

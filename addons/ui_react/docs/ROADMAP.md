@@ -23,7 +23,7 @@ Additional **stock** **`UiComputedStringState` / `UiComputedBoolState`** subclas
 
 ### Tracked follow-ups (product parity — 2026)
 
-**Done:** **CB-049**, **CB-050** (**2.17.0**); **CB-052**, **CB-054**, **CB-055** (surface parity + OptionButton / TabContainer). **Remaining:** **CB-051** (action math / op expansion), **CB-053** (plugin UX after core parity).
+**Done:** **CB-049**, **CB-050** (**2.17.0**); **CB-052**, **CB-054**, **CB-055** (**2.18.0** surface); **CB-056** (**2.19.0** / **2.19.1**); **CB-057** (**2.20.0**). **Remaining:** **CB-051** (action math / op expansion), **CB-053** (plugin UX after core parity).
 
 ### Charter (lock-in)
 
@@ -62,7 +62,7 @@ Additional **stock** **`UiComputedStringState` / `UiComputedBoolState`** subclas
 | **P3** | List richness and templates | README recipe + example for row templates / icon lists; optional incremental changes to `UiReactItemList` **only if** scoped in an issue. **Delivery complete** (historical). |
 | **P4** | Selective new react controls | e.g. `UiReactTextureButton` / slot pattern, `UiReactTree`—historically when the **Charter** bar for **new** controls (two official examples) was met; each new control updates **`UiReactComponentRegistry`** (stem + binding slots) and keeps **`UiReactBindingValidator`** / dock parity. **`UiReactScannerService`** remains the node walk + `kind_to_suggested_class` helper. **Delivery complete** (historical). |
 | **P5** | Wiring layer | **`UiReactWireRuleHelper`**, **`UiReactWireRule`** family, **`wire_rules`** on P5.1 control set, diagnostics, example migration per [`WIRING_LAYER.md`](WIRING_LAYER.md). Sub-milestones: **P5.1** (core), **P5.2** (dock wire editor, **CB-035**). |
-| **P6.1** | Declarative Actions | **`action_targets`**, **`UiReactActionTarget`**, **`UiReactActionTargetHelper`** on **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** control set; validator/scanner; runnable example merged into **`inventory_screen_demo.tscn`**. **Normative** [`ACTION_LAYER.md`](ACTION_LAYER.md). Ships **after** P5.1 wiring core. |
+| **P6.1** | Declarative Actions | **`action_targets`**, **`UiReactActionTarget`**, **`UiReactActionTargetHelper`** on **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** hosts **and** **`UiReactButton`** / **`UiReactTextureButton`** ([`ACTION_LAYER.md`](ACTION_LAYER.md) §4); validator/scanner; runnable example merged into **`inventory_screen_demo.tscn`**. **Normative** [`ACTION_LAYER.md`](ACTION_LAYER.md). Ships **after** P5.1 wiring core. |
 | **P6+** | Deferred parking | Virtualization, state debug overlay, major dock modularization, first-class command resource, deep undo stacks—**not sequenced** until promoted from the Appendix; see **CB-005**, **CB-007**, **CB-010**, **CB-018**, **CB-019**, and other rows with Target phase **P6+**. |
 
 ```mermaid
@@ -152,8 +152,12 @@ Not every row is a v1.0 promise; this maps **Megaman-style** UI goals to **phase
 ### Review process
 
 - **Quarterly:** Re-read Charter and Non-goals; still accurate? Promote or demote Appendix rows; close or open phases.
-- **Quarterly:** Reconcile **`CB-031`–`CB-047`**, [`WIRING_LAYER.md`](WIRING_LAYER.md), and [`ACTION_LAYER.md`](ACTION_LAYER.md) with implementation drift; re-run stock-take [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) when wiring diagnostics or rules change materially.
+- **Quarterly:** Reconcile **`CB-031`–`CB-057`**, [`WIRING_LAYER.md`](WIRING_LAYER.md), and [`ACTION_LAYER.md`](ACTION_LAYER.md) with implementation drift; re-run stock-take [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md) when wiring diagnostics or rules change materially.
 - **Releases:** Version bumps follow **CHANGELOG.md**; this file does not duplicate SemVer rules beyond the Charter.
+
+#### Last quarterly review
+
+- **2026-04-07:** Charter + Non-goals unchanged. **Inspector surface matrix** vs. control scripts: aligned (seven **`wire_rules`** hosts; **Button** / **TextureButton** **`action_targets`** without **`wire_rules`**, per [`ACTION_LAYER.md`](ACTION_LAYER.md) §4). **[`WIRING_LAYER.md`](WIRING_LAYER.md) §6** concrete rule types match `addons/ui_react/scripts/api/models/ui_react_wire_*.gd`. **[`ACTION_LAYER.md`](ACTION_LAYER.md) §3.2** preset list matches **`UiReactActionKind`**. Appendix **CB-031**–**CB-057** row statuses vs. repo: no drift requiring edits. **[`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md):** stock-take **`Last run`** updated for this pass (no new wiring diagnostic surfaces since **2.20.0**). **[`CHANGELOG.md`](CHANGELOG.md):** **`[Unreleased]`** empty — normal until the next shippable change (**CB-021** ongoing).
 
 ### Inspector surface matrix (CB-052)
 
@@ -205,7 +209,7 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-008 | Richer `ItemList` / icons | Inventory, shop list | P3 | Done | **`UiReactItemList`** dictionary rows **`label`/`text`** + optional **`icon`**; **`inventory_screen_demo.tscn`** uses **`res://icon.svg`** on a sample row. **2.3.0**. |
 | CB-009 | Row template / static body pattern (docs + example) | Inventory, shop, loot | P3 | Done | README **List patterns (P3)** + **`inventory_screen_demo.tscn`**. **2.2.1**. |
 | CB-010 | Virtualization / paging | Huge inventories | P6+ | Deferred | Measure need first. |
-| CB-011 | Filtering and sorting recipes (documentation) | Inventory | P2 | Done | Filter recipe in README **List patterns (P3)**; stock sort via **`UiReactWireSortArrayByKey`** (**[`WIRING_LAYER.md`](WIRING_LAYER.md)** §6) + **`inventory_screen_demo.tscn`**. **2.2.1** + later. |
+| CB-011 | Filtering and sorting recipes (documentation) | Inventory | P2 | Done | Filter recipe in README **List patterns (P3)**; stock sort via **`UiReactWireSortArrayByKey`** (**[`WIRING_LAYER.md`](WIRING_LAYER.md)** §6) + **`inventory_screen_demo.tscn`**. **2.2.1** doc; **`UiReactWireSortArrayByKey`** **2.20.0**. |
 | CB-012 | `UiReactTextureButton` or slot helper | Equipment grid, hotbar | P4 | Done | **`UiReactTextureButton`** (`scripts/controls/ui_react_texture_button.gd`); README; **`inventory_screen_demo.tscn`**. **`texture_button_demo`** removed in example consolidation. **2.4.0**. |
 | CB-013 | `UiReactTree` | Categorized shop, hierarchical lists | P4 | Done | **`UiReactTree`** (`scripts/controls/ui_react_tree.gd`); README **UiReactTree binding semantics**; **`inventory_screen_demo.tscn`**. **`tree_demo`** removed in consolidation. **2.4.0**. |
 | CB-014 | **`UiReactRichTextLabel`** (BBCode display binding); **`UiReactTextEdit`** deferred | Journal, long text | P4 | Done | **`UiReactRichTextLabel`** + **`shop_computed_demo.tscn`** + scanner/validator (**CB-020**) in **2.5.0**. **`rich_text_label_demo`** removed in consolidation. Multi-line **editable** **`UiReactTextEdit`** not in this release. |
@@ -251,8 +255,8 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-054 | **`wire_rules`** + **`action_targets`** on **`UiReactOptionButton`** | Options, settings | P6+ | Done | **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5**, **[`ACTION_LAYER.md`](ACTION_LAYER.md) §4**, **`ui_react_wire_rule_helper.gd`**; **`options_transactional_demo.tscn`**. Subsumes matrix **†** for this host. |
 | CB-055 | **`wire_rules`** + **`action_targets`** on **`UiReactTabContainer`** | Tabbed settings | P6+ | Done | Same as **CB-054** for **`UiReactTabContainer`**; **`options_transactional_demo.tscn`**. |
 | CB-056 | **`SET_VISIBLE`** branches on **`state_watch`** (`visible_when_true` / `visible_when_false`) | Presentation | P6.1 | Done | **[`ACTION_LAYER.md`](ACTION_LAYER.md)** §3; **`ui_react_action_target.gd`** / **`ui_react_action_target_helper.gd`**; **`options_transactional_demo.tscn`** (**CB056DemoToggle**). **2.19.0**; **`state_watch`** dispatch fix **`_install_state_watch_bindings`** (**2.19.1**). |
-| CB-057 | Transactional Apply/Cancel on **`UiReactButton`** + **`UiReactTransactionalSession`** | Options | P1 | Done | **`UiTransactionalScreenConfig`**, cohort refcount, dock **`validate_transactional_under_root`**; **`UiReactTransactionalActions`** deprecated; **`options_transactional_demo.tscn`** migrated off coordinator node. |
+| CB-057 | Transactional Apply/Cancel on **`UiReactButton`** + **`UiReactTransactionalSession`** | Options | P1 | Done | **`UiTransactionalScreenConfig`**, cohort refcount, dock **`validate_transactional_under_root`**; **`UiReactTransactionalActions`** deprecated; **`options_transactional_demo.tscn`** migrated off coordinator node. **2.20.0**. |
 
 ---
 
-*Last updated: 2026-04-07 — **2.19.1**: **`PackedInt32Array`** / **`state_watch`** action dispatch fix in **`ui_react_action_target_helper.gd`**. **CB-056** (**2.19.0** + patch). **CB-052** / **CB-054** / **CB-055** (**2.18.0**). **Charter** evidence bar; Part I **Inspector surface matrix**. **CB-051**–**CB-053** remain. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Examples remain **four** scenes.*
+*Last updated: 2026-04-07 — **2.20.0** combined: **CB-057** (**`UiReactTransactionalSession`**, button **`transactional_*`**, dock validator), **`UiReactWireSortArrayByKey`**, doc charter + mini-host. Prior **2.19.1**: **`state_watch`** dispatch fix. **CB-056** (*SET_VISIBLE* branches). **CB-052** / **CB-054** / **CB-055** (**2.18.0**). **CB-051**–**CB-053** remain. Quarterly review logged under **Review process** → **Last quarterly review**. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Examples remain **four** scenes.*

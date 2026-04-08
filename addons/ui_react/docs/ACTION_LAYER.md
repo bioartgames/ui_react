@@ -162,7 +162,7 @@ Invalid path, wrong type, freed node: **`push_warning`**; **skip that row**; **c
 
 ## 7. Sequencing vs Wiring (roadmap)
 
-**P5.1 wiring** ships before **P6.1 Action** code. **Appendix** rows **CB-042–CB-047** are the **single source of truth** for capability text ([`ROADMAP.md`](ROADMAP.md) Part II).
+**P5.1 wiring** ships before **P6.1 Action** code. **Appendix** rows **CB-042** through **CB-047** (baseline P6.1 delivery) and follow-on closures (**CB-056**, **CB-057**, etc.) are the **single source of truth** for capability text ([`ROADMAP.md`](ROADMAP.md) Part II).
 
 **Note:** An addon release may ship **P6.1 Action** implementation (resources, helper, `action_targets` on the §5 control set) **before** P5.1 wiring exit criteria are fully met. The **§2** boundary table still applies: Actions do not take over Wiring-owned **`UiStringState`** data paths. Prefer finishing **P5.1** before building **official examples** that lean heavily on Actions alongside wiring.
 

@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.20.0] - 2026-04-07
+
 ### Added
 
 - **`UiReactWireSortArrayByKey`**: wiring rule to sort **`UiArrayState`** rows by a flat dictionary key (**`UiStringState`**) with optional **`UiBoolState`** descending; **`inventory_screen_demo.tscn`** exercises it (**CB-011**).
@@ -22,7 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Documentation
 
-- **Charter evidence bar:** [`ROADMAP.md`](ROADMAP.md) intro + **Charter**—**official examples** (README-indexed) replace private-game **dogfood** / **3×** as proof; new glossary **Official example**, **Evidence bar**; **Inspector surface matrix (CB-052)** and **CB-052** Note tie **†** → **●** to the bar; [`DECISIONS.md`](DECISIONS.md) **2026-04-06**; [`docs/README.md`](README.md) task routing; [`AGENTS.md`](../AGENTS.md) change policy + non-goals; [`README.md`](../README.md) roadmap paragraph. **No** `plugin.cfg` bump (docs-only).
+- **Charter evidence bar:** [`ROADMAP.md`](ROADMAP.md) intro + **Charter**—**official examples** (README-indexed) replace private-game **dogfood** / **3×** as proof; new glossary **Official example**, **Evidence bar**; **Inspector surface matrix (CB-052)** and **CB-052** Note tie **†** → **●** to the bar; [`DECISIONS.md`](DECISIONS.md) **2026-04-06**; [`docs/README.md`](README.md) task routing; [`AGENTS.md`](../AGENTS.md) change policy + non-goals; [`README.md`](../README.md) roadmap paragraph.
 - **Transactional mini-host (CB-057):** [`README.md`](../README.md), [`ROADMAP.md`](ROADMAP.md), [`ACTION_LAYER.md`](ACTION_LAYER.md), [`WIRING_LAYER.md`](WIRING_LAYER.md), model docstrings.
 
 ## [2.19.1] - 2026-04-07
