@@ -105,6 +105,14 @@ enum Easing {
 	EASE_OUT_IN,
 }
 
+## How [enum AnimationAction.RESET] restores baseline (main animation or lead-in preamble).
+enum ResetBehavior {
+	## Restore unified snapshot only (default).
+	RESET_VISUAL_ONLY,
+	## Stop loop/sequence helpers on [member target] via [method UiAnimUtils.stop_all_animations], then restore snapshot.
+	RESET_AND_STOP,
+}
+
 ## Dispatch defaults aligned with [UiAnimUtils] slide/float/reset behavior.
 const DEFAULT_SLIDE_OFFSET_PX := 8.0
 const ROTATE_OUT_END_DEGREES := 360.0
@@ -148,6 +156,7 @@ func _is_pivot_visible_for(action: AnimationAction) -> bool:
 
 ## Before the main [member animation], optionally run [enum AnimationAction.RESET] on the same [member target].
 ## This is the **lead-in** reset duration—not the main tween [member duration]. [code]-1[/code] = disabled. [code]0[/code] = instant reset; [code]> 0[/code] = soft reset over that many seconds.
+## Lead-in reset always uses [enum ResetBehavior.RESET_AND_STOP] on the internal copy (stop loops, then restore).
 @export_range(-1.0, 3600.0, 0.001, "or_greater", "or_less") var reset_duration: float = -1.0:
 	set(value):
 		if reset_duration == value:
@@ -175,6 +184,14 @@ func _is_pivot_visible_for(action: AnimationAction) -> bool:
 ## Animation duration in seconds.
 ## For [enum AnimationAction.RESET], `0` is an instant (hard) restore; larger values tween to the stored snapshot (soft reset).
 @export_range(0.0, 60.0, 0.001, "or_greater") var duration: float = 0.3
+
+## For [enum AnimationAction.RESET] only (ignored for other [member animation] values). See [enum ResetBehavior].
+@export var reset_behavior: ResetBehavior = ResetBehavior.RESET_VISUAL_ONLY:
+	set(value):
+		if reset_behavior == value:
+			return
+		reset_behavior = value
+		notify_property_list_changed()
 
 ## Easing type for the animation (dropdown selection in Inspector).
 @export var easing: Easing = Easing.EASE_OUT
@@ -259,6 +276,8 @@ func _validate_property(property: Dictionary) -> void:
 		return
 	var show_in_editor: bool = false
 	match pname:
+		&"reset_behavior":
+			show_in_editor = animation == AnimationAction.RESET
 		&"pivot_offset":
 			show_in_editor = _is_pivot_visible_for(animation)
 		&"rotate_start_angle":
@@ -300,6 +319,7 @@ func _create_preamble_reset_resource() -> UiAnimTarget:
 	t.duration = reset_duration
 	t.easing = easing
 	t.use_unified_baseline = use_unified_baseline
+	t.reset_behavior = ResetBehavior.RESET_AND_STOP
 	return t
 
 
@@ -496,4 +516,7 @@ func _apply_effect_family(owner: Node, control_target: Control, tween_easing: in
 
 
 func _apply_reset(owner: Node, control_target: Control, tween_easing: int) -> Signal:
+	# Mirrors [method UiAnimUtils.animate_reset_all] with [code]stop_before_reset[/code] — keep behavior aligned with the façade API.
+	if reset_behavior == ResetBehavior.RESET_AND_STOP:
+		UiAnimUtils.stop_all_animations(owner, control_target)
 	return UiAnimUtils.animate_reset_all(owner, control_target, duration, tween_easing, true)

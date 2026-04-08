@@ -25,6 +25,7 @@ var _details_scroll: ScrollContainer
 var _details_label: RichTextLabel
 
 var _btn_add: MenuButton
+var _btn_copy: Button
 var _btn_refresh: Button
 
 var _target: Node = null
@@ -218,6 +219,12 @@ func _build_ui() -> void:
 		UiReactDockTheme.apply_basebutton_editor_panel_style(_btn_add, _plugin)
 	btn_row.add_child(_btn_add)
 
+	_btn_copy = Button.new()
+	_btn_copy.text = "Copy report"
+	_btn_copy.tooltip_text = "Copy the wire rule report for the selected row to the clipboard."
+	_btn_copy.pressed.connect(_on_copy_report_pressed)
+	btn_row.add_child(_btn_copy)
+
 	_btn_refresh = Button.new()
 	_btn_refresh.text = "Refresh list"
 	_btn_refresh.tooltip_text = "Resync from the scene after external edits or Undo."
@@ -321,6 +328,7 @@ func _set_details_idle() -> void:
 	_details_label.text = _WireDetailsScript.idle_placeholder_text()
 	if _plugin:
 		UiReactDockTheme.apply_richtext_content(_details_label, _plugin)
+	_sync_copy_button_state()
 
 
 func _update_details_panel() -> void:
@@ -338,6 +346,32 @@ func _update_details_panel() -> void:
 	)
 	if _plugin:
 		UiReactDockTheme.apply_richtext_content(_details_label, _plugin)
+	_sync_copy_button_state()
+
+
+func _sync_copy_button_state() -> void:
+	if _btn_copy == null:
+		return
+	var ok := false
+	if _target != null and _edited_scene_root != null and _selected_rule_index >= 0:
+		var wr2: Variant = _target.get(&"wire_rules")
+		var arr2: Array = wr2 as Array if wr2 is Array else []
+		ok = _selected_rule_index < arr2.size()
+	_btn_copy.disabled = not ok
+
+
+func _on_copy_report_pressed() -> void:
+	if _target == null or _edited_scene_root == null:
+		return
+	var wr: Variant = _target.get(&"wire_rules")
+	var arr: Array = wr as Array if wr is Array else []
+	if _selected_rule_index < 0 or _selected_rule_index >= arr.size():
+		return
+	var item: Variant = arr[_selected_rule_index]
+	var t: String = _WireDetailsScript.build_details_plain_text(
+		item, _selected_rule_index, _target, _edited_scene_root
+	)
+	DisplayServer.clipboard_set(t)
 
 
 func _format_target_hint(n: Node, root: Node) -> String:
@@ -357,6 +391,11 @@ func _set_hint(bbcode: String) -> void:
 func _set_global_actions_enabled(enabled: bool) -> void:
 	_btn_add.disabled = not enabled
 	_btn_refresh.disabled = not enabled
+	if not enabled:
+		if _btn_copy:
+			_btn_copy.disabled = true
+	else:
+		_sync_copy_button_state()
 
 
 func _format_rule_line(index: int, item: Variant) -> String:

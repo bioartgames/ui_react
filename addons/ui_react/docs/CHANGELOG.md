@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **`UiAnimTarget.ResetBehavior`**: **`RESET_VISUAL_ONLY`** (restore unified snapshot only) vs **`RESET_AND_STOP`** (call **`UiAnimUtils.stop_all_animations`** on the target, then restore).
+- **`UiAnimUtils.animate_reset_all`**: optional **`stop_before_reset`** — when **true**, runs **`stop_all_animations`** first, then **`UiAnimStateUtils.animate_reset_all`**.
+
+### Changed
+
+- **Lead-in preamble reset** (when **`reset_duration` ≥ 0**): internal copy always uses **`RESET_AND_STOP`**.
+- **`anim_targets_catalog_demo.tscn`**: removed standalone **`RESET`** catalog row; reset affordance is **`Reset Preview`** only; help text updated.
+
 ## [3.0.0] - 2026-04-07
 
 ### Breaking

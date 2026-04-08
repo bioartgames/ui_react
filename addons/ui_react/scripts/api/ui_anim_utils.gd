@@ -5,7 +5,7 @@
 ## - Scale/pop/bounce/elastic (pop is scale-only): [UiAnimScaleAnimations]
 ## - Fade/glow/color: [UiAnimOpacityColorAnimations]
 ## - Rotate/pulse/shake/breathing/wobble/float (rotate is transform-only): [UiAnimTransformEffects]
-## - Reset/focus/snapshot clear: [UiAnimStateUtils]
+## - Reset/focus/snapshot clear: [UiAnimStateUtils] ([method animate_reset_all] optionally stops loops first via [method stop_all_animations])
 ## - Stop/interrupt: [UiAnimRuntimeControl]
 ## - Loop orchestration: [UiAnimLoopRunner]
 ## - Enum presets: [UiAnimPresetRunner]
@@ -151,7 +151,10 @@ static func animate_pulse(source_node: Node, target: Control, speed: float = 0.5
 static func animate_shake(source_node: Node, target: Control, speed: float = 0.5, intensity: float = 10.0, shake_count: int = 5, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	return UiAnimTransformEffects.animate_shake(source_node, target, speed, intensity, shake_count, auto_visible, repeat_count, easing)
 
-static func animate_reset_all(source_node: Node, target: Control, duration: float = 0.3, easing: int = Tween.EASE_OUT, clear_unified_after: bool = true) -> Signal:
+## [param stop_before_reset]: When [code]true[/code], calls [method stop_all_animations] on [param target] before delegating to [UiAnimStateUtils.animate_reset_all] (stops infinite/finite loop helpers under the control).
+static func animate_reset_all(source_node: Node, target: Control, duration: float = 0.3, easing: int = Tween.EASE_OUT, clear_unified_after: bool = true, stop_before_reset: bool = false) -> Signal:
+	if stop_before_reset:
+		UiAnimRuntimeControl.stop_all_animations(source_node, target)
 	return UiAnimStateUtils.animate_reset_all(source_node, target, duration, easing, clear_unified_after)
 
 static func clear_unified_snapshot_for_target(target: Control) -> void:

@@ -1,4 +1,4 @@
-## Wire rules report BBCode for the dock details pane (static). Mirrors [UiReactDockDetails] role for diagnostics.
+## Wire rules report for the dock details pane (static). Presentation matches [UiReactDockDetails] (bold label + value per line).
 class_name UiReactDockWireDetails
 extends Object
 
@@ -13,216 +13,229 @@ static func idle_placeholder_text() -> String:
 	return "Select a rule above to view its wiring story: intent, states, runtime bindings, and validation."
 
 
-## [param scene_root] Edited scene root (for a stable relative path); if null, Host path line is [code]—[/code].
 static func build_details_bbcode(
 	rule: Variant, rule_index: int, host: Node, scene_root: Node
 ) -> String:
 	var body := ""
-	body += _sec_rule(rule, rule_index)
-	body += _sec_enabled_trigger(rule)
-	body += _sec_host(host, scene_root)
-	body += _sec_intent(rule, host)
-	body += _sec_inputs(rule)
-	body += _sec_outputs(rule)
-	body += _sec_runtime(rule, host)
-	body += _sec_validation(rule)
+	for row in _report_rows(rule, rule_index, host, scene_root):
+		var lbl: String = row[&"label"]
+		var val: String = row[&"value"]
+		body += "[b]%s[/b]: %s\n" % [lbl, escape_bbcode_literal(val)]
 	return body
 
 
-static func _sec_rule(rule: Variant, rule_index: int) -> String:
-	var line := "—"
+static func build_details_plain_text(
+	rule: Variant, rule_index: int, host: Node, scene_root: Node
+) -> String:
+	var lines: PackedStringArray = []
+	for row in _report_rows(rule, rule_index, host, scene_root):
+		lines.append("%s: %s" % [row[&"label"], row[&"value"]])
+	return "\n".join(lines)
+
+
+static func _report_rows(
+	rule: Variant, rule_index: int, host: Node, scene_root: Node
+) -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	rows.append({&"label": &"Rule", &"value": _val_rule(rule, rule_index)})
+	rows.append({&"label": &"Enabled", &"value": _val_enabled(rule)})
+	rows.append({&"label": &"Trigger", &"value": _val_trigger(rule)})
+	if host == null:
+		rows.append({&"label": &"Node", &"value": "—"})
+		rows.append({&"label": &"Path", &"value": "—"})
+	else:
+		rows.append({&"label": &"Node", &"value": str(host.name)})
+		rows.append({&"label": &"Path", &"value": _val_host_path(host, scene_root)})
+	rows.append({&"label": &"Intent", &"value": _val_intent(rule, host)})
+	rows.append({&"label": &"Inputs", &"value": _val_inputs(rule)})
+	rows.append({&"label": &"Outputs", &"value": _val_outputs(rule)})
+	rows.append({&"label": &"Runtime notes", &"value": _val_runtime(rule, host)})
+	rows.append({&"label": &"Validation warnings", &"value": _val_validation(rule)})
+	return rows
+
+
+static func _val_rule(rule: Variant, rule_index: int) -> String:
 	if rule == null:
-		line = "[i](null slot)[/i] at index %d" % rule_index
-	elif rule is UiReactWireRule:
+		return "(null slot) at index %d" % rule_index
+	if rule is UiReactWireRule:
 		var r := rule as UiReactWireRule
 		var cls := _rule_class_name(r)
 		var rid := r.rule_id.strip_edges()
 		if rid.is_empty():
 			rid = "—"
-		line = "%s · index %d · [code]%s[/code]" % [cls, rule_index, escape_bbcode_literal(rid)]
-	return "[b]Rule[/b]\n%s\n\n" % line
+		return "%s · index %d · %s" % [cls, rule_index, rid]
+	return "—"
 
 
-static func _sec_enabled_trigger(rule: Variant) -> String:
-	var line := "—"
+static func _val_enabled(rule: Variant) -> String:
 	if rule is UiReactWireRule:
-		var r := rule as UiReactWireRule
-		line = "%s · %s" % [str(r.enabled), _trigger_label(r.trigger)]
-	return "[b]Enabled / Trigger[/b]\n%s\n\n" % line
+		return str((rule as UiReactWireRule).enabled)
+	return "—"
 
 
-static func _sec_host(host: Node, scene_root: Node) -> String:
-	if host == null:
-		return "[b]Host[/b]\n—\n\n"
-	var name_part := host.name
-	var path_part := "—"
-	if scene_root != null:
-		var rel := scene_root.get_path_to(host)
-		var rs := String(rel)
-		if rs == "." or rel.is_empty():
-			path_part = "(scene root)"
-		else:
-			path_part = escape_bbcode_literal(rs)
-	var line := "[b]%s[/b] · %s" % [escape_bbcode_literal(name_part), path_part]
-	return "[b]Host[/b]\n%s\n\n" % line
+static func _val_trigger(rule: Variant) -> String:
+	if rule is UiReactWireRule:
+		return _trigger_label((rule as UiReactWireRule).trigger)
+	return "—"
 
 
-static func _sec_intent(rule: Variant, host: Node) -> String:
-	var line := "—"
+static func _val_host_path(host: Node, scene_root: Node) -> String:
+	if scene_root == null:
+		return "—"
+	var rel := scene_root.get_path_to(host)
+	var rs := String(rel)
+	if rs == "." or rel.is_empty():
+		return "(scene root)"
+	return rs
+
+
+static func _val_intent(rule: Variant, host: Node) -> String:
 	if rule == null:
-		line = "—"
-	elif rule is UiReactWireMapIntToString:
+		return "—"
+	if rule is UiReactWireMapIntToString:
 		var hcls := host.get_class() if host else "—"
-		line = (
+		return (
 			"Map an integer source (tree/tab/option index) to a kind string and optional hint line. "
-			+ "Host control: [code]%s[/code]."
-			% escape_bbcode_literal(hcls)
+			+ "Host control: %s." % hcls
 		)
-	elif rule is UiReactWireRefreshItemsFromCatalog:
-		line = "Rebuild item rows from catalog using filter text and optional category; normalize selection index."
-	elif rule is UiReactWireCopySelectionDetail:
-		line = "Format detail text from list/tab selection and row payloads; optional suffix line."
-	elif rule is UiReactWireSetStringOnBoolPulse:
-		line = "On bool pulse, write templated text using selected row placeholders."
-	elif rule is UiReactWireSyncBoolStateDebugLine:
-		line = "Mirror a bool into a debug string line (prefix + value)."
-	elif _is_sort_array_by_key(rule):
-		line = "Sort array rows by a dictionary key (or str compare for non-dict rows); optional descending."
-	else:
-		line = "—"
-	return "[b]Intent[/b]\n%s\n\n" % line
+	if rule is UiReactWireRefreshItemsFromCatalog:
+		return "Rebuild item rows from catalog using filter text and optional category; normalize selection index."
+	if rule is UiReactWireCopySelectionDetail:
+		return "Format detail text from list/tab selection and row payloads; optional suffix line."
+	if rule is UiReactWireSetStringOnBoolPulse:
+		return "On bool pulse, write templated text using selected row placeholders."
+	if rule is UiReactWireSyncBoolStateDebugLine:
+		return "Mirror a bool into a debug string line (prefix + value)."
+	if _is_sort_array_by_key(rule):
+		return "Sort array rows by a dictionary key (or str compare for non-dict rows); optional descending."
+	return "—"
 
 
-static func _sec_inputs(rule: Variant) -> String:
+static func _val_inputs(rule: Variant) -> String:
 	var lines: PackedStringArray = []
 	if rule == null:
-		lines.append("—")
-	elif rule is UiReactWireMapIntToString:
+		return "—"
+	if rule is UiReactWireMapIntToString:
 		var r := rule as UiReactWireMapIntToString
-		lines.append("- source_int_state: %s" % _state_ref(r.source_int_state))
-		lines.append(
-			"- index_to_string: %s" % _dict_summary(r.index_to_string, 8)
-		)
-		lines.append(
-			"- hint_labels_by_index: %s" % _dict_summary(r.hint_labels_by_index, 8)
-		)
+		lines.append("- source_int_state: %s" % _state_ref_plain(r.source_int_state))
+		lines.append("- index_to_string: %s" % _dict_summary_plain(r.index_to_string, 8))
+		lines.append("- hint_labels_by_index: %s" % _dict_summary_plain(r.hint_labels_by_index, 8))
 	elif rule is UiReactWireRefreshItemsFromCatalog:
 		var r := rule as UiReactWireRefreshItemsFromCatalog
-		lines.append("- filter_text_state: %s" % _state_ref(r.filter_text_state))
-		lines.append("- category_kind_state: %s" % _state_ref(r.category_kind_state))
-		lines.append("- catalog: %s" % _resource_ref(r.catalog))
-		lines.append("- first_row_icon_path: %s" % _str_or_dash(r.first_row_icon_path))
+		lines.append("- filter_text_state: %s" % _state_ref_plain(r.filter_text_state))
+		lines.append("- category_kind_state: %s" % _state_ref_plain(r.category_kind_state))
+		lines.append("- catalog: %s" % _resource_ref_plain(r.catalog))
+		lines.append("- first_row_icon_path: %s" % _str_or_dash_plain(r.first_row_icon_path))
 	elif rule is UiReactWireCopySelectionDetail:
 		var r := rule as UiReactWireCopySelectionDetail
-		lines.append("- selected_state: %s" % _state_ref(r.selected_state))
-		lines.append("- items_state: %s" % _state_ref(r.items_state))
-		lines.append("- suffix_note_state: %s" % _state_ref(r.suffix_note_state))
-		lines.append("- text_no_selection: %s" % _str_or_dash(r.text_no_selection))
-		lines.append(
-			"- clear_suffix_on_selection_change: %s" % str(r.clear_suffix_on_selection_change)
-		)
+		lines.append("- selected_state: %s" % _state_ref_plain(r.selected_state))
+		lines.append("- items_state: %s" % _state_ref_plain(r.items_state))
+		lines.append("- suffix_note_state: %s" % _state_ref_plain(r.suffix_note_state))
+		lines.append("- text_no_selection: %s" % _str_or_dash_plain(r.text_no_selection))
+		lines.append("- clear_suffix_on_selection_change: %s" % str(r.clear_suffix_on_selection_change))
 	elif rule is UiReactWireSetStringOnBoolPulse:
 		var r := rule as UiReactWireSetStringOnBoolPulse
-		lines.append("- pulse_bool: %s" % _state_ref(r.pulse_bool))
-		lines.append("- selected_state: %s" % _state_ref(r.selected_state))
-		lines.append("- items_state: %s" % _state_ref(r.items_state))
-		lines.append("- template_rising: %s" % _str_or_dash(r.template_rising))
-		lines.append("- template_no_selection: %s" % _str_or_dash(r.template_no_selection))
+		lines.append("- pulse_bool: %s" % _state_ref_plain(r.pulse_bool))
+		lines.append("- selected_state: %s" % _state_ref_plain(r.selected_state))
+		lines.append("- items_state: %s" % _state_ref_plain(r.items_state))
+		lines.append("- template_rising: %s" % _str_or_dash_plain(r.template_rising))
+		lines.append("- template_no_selection: %s" % _str_or_dash_plain(r.template_no_selection))
 		lines.append("- require_rising_edge: %s" % str(r.require_rising_edge))
 	elif rule is UiReactWireSyncBoolStateDebugLine:
 		var r := rule as UiReactWireSyncBoolStateDebugLine
-		lines.append("- bool_state: %s" % _state_ref(r.bool_state))
-		lines.append("- line_prefix: %s" % _str_or_dash(r.line_prefix))
+		lines.append("- bool_state: %s" % _state_ref_plain(r.bool_state))
+		lines.append("- line_prefix: %s" % _str_or_dash_plain(r.line_prefix))
 	elif _is_sort_array_by_key(rule):
 		var r_sort: UiReactWireSortArrayByKey = rule as UiReactWireSortArrayByKey
-		lines.append("- items_state: %s" % _state_ref(r_sort.items_state))
-		lines.append("- sort_key_state: %s" % _state_ref(r_sort.sort_key_state))
-		lines.append("- descending_state: %s" % _state_ref(r_sort.descending_state))
+		lines.append("- items_state: %s" % _state_ref_plain(r_sort.items_state))
+		lines.append("- sort_key_state: %s" % _state_ref_plain(r_sort.sort_key_state))
+		lines.append("- descending_state: %s" % _state_ref_plain(r_sort.descending_state))
 	else:
-		lines.append("—")
-	return "[b]Inputs / States[/b]\n%s\n\n" % "\n".join(lines)
+		return "—"
+	return "\n".join(lines)
 
 
-static func _sec_outputs(rule: Variant) -> String:
+static func _val_outputs(rule: Variant) -> String:
 	var lines: PackedStringArray = []
 	if rule == null:
-		lines.append("—")
-	elif rule is UiReactWireMapIntToString:
+		return "—"
+	if rule is UiReactWireMapIntToString:
 		var r := rule as UiReactWireMapIntToString
-		lines.append("- target_string_state: %s" % _state_ref(r.target_string_state))
-		lines.append("- hint_state: %s" % _state_ref(r.hint_state))
+		lines.append("- target_string_state: %s" % _state_ref_plain(r.target_string_state))
+		lines.append("- hint_state: %s" % _state_ref_plain(r.hint_state))
 	elif rule is UiReactWireRefreshItemsFromCatalog:
 		var r := rule as UiReactWireRefreshItemsFromCatalog
-		lines.append("- items_state: %s" % _state_ref(r.items_state))
-		lines.append("- selected_state: %s" % _state_ref(r.selected_state))
+		lines.append("- items_state: %s" % _state_ref_plain(r.items_state))
+		lines.append("- selected_state: %s" % _state_ref_plain(r.selected_state))
 	elif rule is UiReactWireCopySelectionDetail:
 		var r := rule as UiReactWireCopySelectionDetail
-		lines.append("- detail_state: %s" % _state_ref(r.detail_state))
+		lines.append("- detail_state: %s" % _state_ref_plain(r.detail_state))
 	elif rule is UiReactWireSetStringOnBoolPulse:
 		var r := rule as UiReactWireSetStringOnBoolPulse
-		lines.append("- target_string_state: %s" % _state_ref(r.target_string_state))
+		lines.append("- target_string_state: %s" % _state_ref_plain(r.target_string_state))
 	elif rule is UiReactWireSyncBoolStateDebugLine:
 		var r := rule as UiReactWireSyncBoolStateDebugLine
-		lines.append("- target_string_state: %s" % _state_ref(r.target_string_state))
+		lines.append("- target_string_state: %s" % _state_ref_plain(r.target_string_state))
 	elif _is_sort_array_by_key(rule):
-		lines.append("- items_state (reordered in place): %s" % _state_ref((rule as UiReactWireSortArrayByKey).items_state))
+		lines.append(
+			"- items_state (reordered in place): %s"
+			% _state_ref_plain((rule as UiReactWireSortArrayByKey).items_state)
+		)
 	else:
-		lines.append("—")
-	return "[b]Outputs / Targets[/b]\n%s\n\n" % "\n".join(lines)
+		return "—"
+	return "\n".join(lines)
 
 
-static func _sec_runtime(rule: Variant, host: Node) -> String:
+static func _val_runtime(rule: Variant, host: Node) -> String:
 	var lines: PackedStringArray = []
 	if rule == null:
-		lines.append("—")
-	elif rule is UiReactWireMapIntToString:
+		return "—"
+	if rule is UiReactWireMapIntToString:
 		var r := rule as UiReactWireMapIntToString
 		var hcls := host.get_class() if host else "—"
 		lines.append(
-			"- Host class [code]%s[/code]: helper binds selection signals when the control supports them (Tree / OptionButton / TabContainer) and source_int_state.changed."
-			% escape_bbcode_literal(hcls)
+			(
+				"- Host class %s: helper binds selection signals when the control supports them "
+				+ "(Tree / OptionButton / TabContainer) and source_int_state.changed."
+			)
+			% hcls
 		)
 		if r.trigger != UiReactWireRule.TriggerKind.SELECTION_CHANGED:
-			lines.append(
-				"- [i]Note:[/i] Helper warns when trigger is not SELECTION_CHANGED for MapIntToString."
-			)
+			lines.append("- Note: helper warns when trigger is not SELECTION_CHANGED for MapIntToString.")
 	elif rule is UiReactWireRefreshItemsFromCatalog:
-		lines.append("- Helper binds trigger-appropriate host signals plus filter_text_state and category_kind_state changes.")
+		lines.append(
+			"- Helper binds trigger-appropriate host signals plus filter_text_state and category_kind_state changes."
+		)
 	elif _is_sort_array_by_key(rule):
 		lines.append(
-			"- State-driven only: items_state, sort_key_state, descending_state [code]changed[/code] (trigger ignored for binding)."
+			"- State-driven only: items_state, sort_key_state, descending_state changed (trigger ignored for binding)."
 		)
 	elif rule is UiReactWireCopySelectionDetail:
-		var r := rule as UiReactWireCopySelectionDetail
 		lines.append(
 			"- On selection path, suffix may clear before recompute when clear_suffix_on_selection_change is true."
 		)
 		lines.append("- Also listens to items_state and suffix_note_state changes.")
 	elif rule is UiReactWireSetStringOnBoolPulse:
 		lines.append(
-			"- Bound to pulse_bool [code]value_changed[/code]; apply() is a no-op, work happens in apply_from_pulse()."
+			"- Bound to pulse_bool value_changed; apply() is a no-op, work happens in apply_from_pulse()."
 		)
 	elif rule is UiReactWireSyncBoolStateDebugLine:
-		lines.append(
-			"- Runs once at attach and on bool_state value_changed when bool_state is set."
-		)
+		lines.append("- Runs once at attach and on bool_state value_changed when bool_state is set.")
 	else:
-		lines.append("—")
-	if rule is UiReactWireRule and rule != null:
+		return "—"
+	if rule is UiReactWireRule:
 		lines.append(
-			"- Rule order in [code]wire_rules[/code] matters (e.g. sort before copy-detail on the same host; see WIRING_LAYER.md §6)."
+			"- Rule order in wire_rules matters (e.g. sort before copy-detail on the same host; see WIRING_LAYER.md §6)."
 		)
-	return "[b]Runtime notes[/b]\n%s\n\n" % "\n".join(lines)
+	return "\n".join(lines)
 
 
-static func _sec_validation(rule: Variant) -> String:
+static func _val_validation(rule: Variant) -> String:
 	var warns: PackedStringArray = []
 	if rule == null:
-		warns.append("Null slot: runner skips this index; remove or assign a UiReactWireRule resource.")
-		return "[b]Validation warnings[/b]\n%s\n" % "\n".join(warns)
+		return "Null slot: runner skips this index; remove or assign a UiReactWireRule resource."
 	if not (rule is UiReactWireRule):
-		warns.append("Value is not a UiReactWireRule.")
-		return "[b]Validation warnings[/b]\n%s\n" % "\n".join(warns)
+		return "Value is not a UiReactWireRule."
 	var r := rule as UiReactWireRule
 	if not r.enabled:
 		warns.append("Rule is disabled; helper skips binding and apply.")
@@ -263,8 +276,8 @@ static func _sec_validation(rule: Variant) -> String:
 			if key.is_empty():
 				warns.append("sort_key_state is empty after trim; apply() no-ops (no reorder).")
 	if warns.is_empty():
-		warns.append("—")
-	return "[b]Validation warnings[/b]\n%s\n" % "\n".join(warns)
+		return "—"
+	return "\n".join(warns)
 
 
 static func _rule_class_name(r: UiReactWireRule) -> String:
@@ -289,22 +302,22 @@ static func _trigger_label(t: int) -> String:
 			return str(t)
 
 
-static func _state_ref(st: Variant) -> String:
+static func _state_ref_plain(st: Variant) -> String:
 	if st == null:
-		return "[i](missing)[/i]"
+		return "(missing)"
 	if st is Resource:
-		return "%s [i](set)[/i]" % _resource_type_name(st as Resource)
+		return "%s (set)" % _resource_type_name(st as Resource)
 	return str(st)
 
 
-static func _resource_ref(res: Resource) -> String:
+static func _resource_ref_plain(res: Resource) -> String:
 	if res == null:
-		return "[i](missing)[/i]"
+		return "(missing)"
 	var tn := _resource_type_name(res)
 	var path := res.resource_path
 	if not path.is_empty():
-		return "%s · %s" % [tn, escape_bbcode_literal(path.get_file())]
-	return "%s [i](set)[/i]" % tn
+		return "%s · %s" % [tn, path.get_file()]
+	return "%s (set)" % tn
 
 
 static func _resource_type_name(res: Resource) -> String:
@@ -316,14 +329,14 @@ static func _resource_type_name(res: Resource) -> String:
 	return res.get_class()
 
 
-static func _str_or_dash(s: String) -> String:
+static func _str_or_dash_plain(s: String) -> String:
 	var t := s.strip_edges()
 	if t.is_empty():
 		return "—"
-	return escape_bbcode_literal(t)
+	return t
 
 
-static func _dict_summary(d: Dictionary, max_keys: int) -> String:
+static func _dict_summary_plain(d: Dictionary, max_keys: int) -> String:
 	if d.is_empty():
 		return "— (empty)"
 	var keys := d.keys()
@@ -334,7 +347,7 @@ static func _dict_summary(d: Dictionary, max_keys: int) -> String:
 	var out := ", ".join(parts)
 	if keys.size() > max_keys:
 		out += " …"
-	return escape_bbcode_literal(out)
+	return out
 
 
 static func _is_sort_array_by_key(rule: Variant) -> bool:

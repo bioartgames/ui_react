@@ -1,4 +1,4 @@
-[gd_scene load_steps=67 format=3 uid="uid://bmhxq7v0p4nw1"]
+[gd_scene load_steps=66 format=3 uid="uid://bmhxq7v0p4nw1"]
 
 [ext_resource type="Script" uid="uid://cy1vsor6ek3xr" path="res://addons/ui_react/scripts/api/models/ui_float_state.gd" id="2_float"]
 [ext_resource type="Script" uid="uid://3a3144h5usfc" path="res://addons/ui_react/scripts/api/models/ui_string_state.gd" id="3_str"]
@@ -19,7 +19,7 @@ script = ExtResource("6_int")
 
 [sub_resource type="Resource" id="catalog_items_state"]
 script = ExtResource("5_arr")
-value = [&"EXPAND", &"EXPAND_X", &"EXPAND_Y", &"FADE_IN", &"SLIDE_FROM_LEFT", &"SLIDE_FROM_RIGHT", &"SLIDE_FROM_TOP", &"SLIDE_FROM_BOTTOM", &"FROM_LEFT_TO_CENTER", &"FROM_RIGHT_TO_CENTER", &"FROM_TOP_TO_CENTER", &"FROM_BOTTOM_TO_CENTER", &"BOUNCE_IN", &"ELASTIC_IN", &"ROTATE_IN", &"POP", &"PULSE", &"SHAKE", &"BREATHING", &"WOBBLE", &"FLOAT", &"GLOW_PULSE", &"COLOR_FLASH", &"RESET"]
+value = [&"EXPAND", &"EXPAND_X", &"EXPAND_Y", &"FADE_IN", &"SLIDE_FROM_LEFT", &"SLIDE_FROM_RIGHT", &"SLIDE_FROM_TOP", &"SLIDE_FROM_BOTTOM", &"FROM_LEFT_TO_CENTER", &"FROM_RIGHT_TO_CENTER", &"FROM_TOP_TO_CENTER", &"FROM_BOTTOM_TO_CENTER", &"BOUNCE_IN", &"ELASTIC_IN", &"ROTATE_IN", &"POP", &"PULSE", &"SHAKE", &"BREATHING", &"WOBBLE", &"FLOAT", &"GLOW_PULSE", &"COLOR_FLASH"]
 
 [sub_resource type="Resource" id="cat_row_0"]
 script = ExtResource("13_at")
@@ -204,14 +204,6 @@ selection_slot = 22
 reset_duration = 0.0
 animation = 22
 duration = 0.35
-
-[sub_resource type="Resource" id="cat_row_23"]
-script = ExtResource("13_at")
-target = NodePath("../../RightColumn/PreviewPanel")
-selection_slot = 23
-reset_duration = 0.0
-animation = 23
-duration = 0.0
 
 [sub_resource type="Resource" id="at_btn_press"]
 script = ExtResource("13_at")
@@ -418,7 +410,7 @@ size_flags_vertical = 3
 script = ExtResource("12_il")
 selected_state = SubResource("catalog_sel")
 items_state = SubResource("catalog_items_state")
-animation_targets = Array[ExtResource("13_at")]([SubResource("cat_row_0"), SubResource("cat_row_1"), SubResource("cat_row_2"), SubResource("cat_row_3"), SubResource("cat_row_4"), SubResource("cat_row_5"), SubResource("cat_row_6"), SubResource("cat_row_7"), SubResource("cat_row_8"), SubResource("cat_row_9"), SubResource("cat_row_10"), SubResource("cat_row_11"), SubResource("cat_row_12"), SubResource("cat_row_13"), SubResource("cat_row_14"), SubResource("cat_row_15"), SubResource("cat_row_16"), SubResource("cat_row_17"), SubResource("cat_row_18"), SubResource("cat_row_19"), SubResource("cat_row_20"), SubResource("cat_row_21"), SubResource("cat_row_22"), SubResource("cat_row_23")])
+animation_targets = Array[ExtResource("13_at")]([SubResource("cat_row_0"), SubResource("cat_row_1"), SubResource("cat_row_2"), SubResource("cat_row_3"), SubResource("cat_row_4"), SubResource("cat_row_5"), SubResource("cat_row_6"), SubResource("cat_row_7"), SubResource("cat_row_8"), SubResource("cat_row_9"), SubResource("cat_row_10"), SubResource("cat_row_11"), SubResource("cat_row_12"), SubResource("cat_row_13"), SubResource("cat_row_14"), SubResource("cat_row_15"), SubResource("cat_row_16"), SubResource("cat_row_17"), SubResource("cat_row_18"), SubResource("cat_row_19"), SubResource("cat_row_20"), SubResource("cat_row_21"), SubResource("cat_row_22")])
 
 [node name="PlayButton" type="Button" parent="HSplit/LeftColumn"]
 layout_mode = 2
@@ -426,11 +418,11 @@ text = "Play selected"
 
 [node name="ResetButton" type="Button" parent="HSplit/LeftColumn"]
 layout_mode = 2
-text = "Manual reset preview"
+text = "Reset Preview"
 
 [node name="CatalogHelp" type="Label" parent="HSplit/LeftColumn"]
 layout_mode = 2
-text = "RESET runs before each play (instant restore). Pick an action, then Play. RESET list entry + Manual reset only restore the preview."
+text = "Lead-in reset runs before each Play (stops loops, then instant restore). Pick an action, then Play. Reset Preview runs the same lead-in without playing the main animation."
 autowrap_mode = 3
 
 [node name="RightColumn" type="VBoxContainer" parent="HSplit"]
