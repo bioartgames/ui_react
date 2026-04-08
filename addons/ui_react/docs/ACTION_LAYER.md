@@ -2,7 +2,7 @@
 
 **Status:** Normative specification for **Phase P6.1** (declarative **Action** layer). Runtime implementation **must** conform to this document until a superseding revision is recorded in [`CHANGELOG.md`](CHANGELOG.md) and Charter in [`ROADMAP.md`](ROADMAP.md).
 
-**Charter (one line):** Ui React adds inspector-authored **`action_targets`** on supported **`UiReact*`** controls—one **`UiReactActionTarget`** resource per row—so **non-motion** UI reactions (focus, visibility, `mouse_filter`, narrow **`UiBoolState`** UI flags, and **bounded** **`UiFloatState`** mutations via **`UiReactStateOpService`**) are serializable and validator-friendly **without** `UiAnimTarget` / `UiAnimUtils` inside Actions. Motion stays on **`animation_targets`**.
+**Charter (one line):** Ui React adds inspector-authored **`action_targets`** on supported **`UiReact*`** controls—one **`UiReactActionTarget`** resource per row—so **non-motion** UI reactions (focus, visibility, `mouse_filter`, narrow **`UiBoolState`** UI flags, and **bounded** **`UiFloatState`** / **`UiIntState`** mutations via **`UiReactStateOpService`**) are serializable and validator-friendly **without** `UiAnimTarget` / `UiAnimUtils` inside Actions. Motion stays on **`animation_targets`**.
 
 ---
 
@@ -23,7 +23,7 @@ Normative split (mirror style of [`WIRING_LAYER.md`](WIRING_LAYER.md) §2):
 | **Controls** | `*_state`, `animation_targets`, **`action_targets`** | user input | via bindings to state | — |
 | **State** | payload | — | committed / draft / computed | — |
 | **Wiring (P5)** | `wire_rules` / runner | controls + state | **`UiState`** per narrow wire rules | grab_focus, visibility orchestration, `UiAnimUtils` |
-| **Actions (P6.1)** | **`action_targets`** | host control subtree | **presentation**: focus, visibility, **`Control.mouse_filter`**, **narrow** `UiBoolState` UI flags; **bounded** `UiFloatState` writes **only** via **`SUBTRACT_PRODUCT_FROM_FLOAT`** ([`UiReactStateOpService`](../../scripts/internal/react/ui_react_state_op_service.gd)) | **Any** animation or tween (`UiAnimTarget`, `UiAnimUtils`), **unbounded** / arbitrary scripts, network, replacing **transactional** Apply/Cancel, **or** duplicating **Wiring** MVP string rules |
+| **Actions (P6.1)** | **`action_targets`** | host control subtree | **presentation**: focus, visibility, **`Control.mouse_filter`**, **narrow** `UiBoolState` UI flags; **bounded** numeric writes **only** via named **`UiReactActionKind`** presets that delegate to [`UiReactStateOpService`](../../scripts/internal/react/ui_react_state_op_service.gd) (float add/subtract/transfer, int add/transfer—see §3.2) | **Any** animation or tween (`UiAnimTarget`, `UiAnimUtils`), **unbounded** / arbitrary scripts, network, replacing **transactional** Apply/Cancel, **or** duplicating **Wiring** MVP string rules |
 
 **Wiring** answers: “**what data should this screen reflect?**”  
 **Actions** answer: “**what should the UI chrome do right now (non-motion)?**”  
@@ -38,7 +38,7 @@ If both Wiring and Actions could touch the same `UiStringState`, **Wiring wins**
 **State writes from Actions (bounded):**
 
 - **`SET_UI_BOOL_FLAG`** — **`UiBoolState`** **UI chrome flags** only (e.g. “detail panel open”); not transactional truth, inventory counts, or domain invariants.
-- **`SUBTRACT_PRODUCT_FROM_FLOAT`** — **`UiFloatState`** **only**; **control-triggered** (`state_watch` **null**); implementation **`UiReactStateOpService.subtract_product_from_accumulator`** (accumulator −= factor_a × factor_b when affordable). **No** arbitrary expressions; **no** `UiStringState` writes.
+- **Numeric presets (float / int)** — **`UiFloatState`** and **`UiIntState`** **only**; **control-triggered** (`state_watch` **null**; validator **error** otherwise). Implementations are **`UiReactStateOpService`** statics (§3.2). **No** arbitrary expressions; **no** `UiStringState` writes for domain copy (Wiring/Computed own those paths).
 
 **Cross-layer:** **Computed** (`**UiComputed*`**) **derives** display state; **Actions** **mutate** allowed state on triggers; both may call the **same** op helpers internally (**DRY**). **Wiring** does **not** own shop gold math. Example **`shop_computed_demo.tscn`** uses stock **`UiComputedFloatGeProductBool`** / **`UiComputedBoolInvert`** / **`UiComputedOrderSummaryThreeFloatString`** (no demo-only computed scripts).
 
@@ -65,7 +65,10 @@ Fields:
   - **`bool_flag_state`**, **`bool_flag_value`**: for **`SET_UI_BOOL_FLAG`**.
   - **`mouse_filter`**: `Control.MouseFilter` for **control-triggered** **`SET_MOUSE_FILTER`** (`state_watch` null).
   - **`mouse_filter_when_true`**, **`mouse_filter_when_false`**: for **state-driven** **`SET_MOUSE_FILTER`**.
-  - **`float_accumulator`**, **`float_factor_a`**, **`float_factor_b`**: **`UiFloatState`** refs for **`SUBTRACT_PRODUCT_FROM_FLOAT`** only.
+  - **`float_accumulator`**, **`float_factor_a`**, **`float_factor_b`**: **`UiFloatState`** refs for **`SUBTRACT_PRODUCT_FROM_FLOAT`** and **`ADD_PRODUCT_TO_FLOAT`**.
+  - **`float_from`**, **`float_to`**, plus **`float_factor_a`**, **`float_factor_b`**: **`TRANSFER_FLOAT_PRODUCT_CLAMPED`** (clamped move of **`min(from, factor_a×factor_b)`** from **`float_from`** to **`float_to`** when product &gt; 0).
+  - **`int_accumulator`**, **`int_factor_a`**, **`int_factor_b`**: **`ADD_PRODUCT_TO_INT`** (signed overflow-safe add of product; **no-op** if product &lt; 0 or math unsafe).
+  - **`int_from`**, **`int_to`**, **`int_factor_a`**, **`int_factor_b`**: **`TRANSFER_INT_PRODUCT_CLAMPED`** (same clamped transfer semantics as float; **no-op** if product ≤ 0 or unsafe).
 
 **Mutual exclusion (runtime):** If **`state_watch`** is **non-null**, **`trigger`** **does not** dispatch the row. If **`state_watch`** is **null**, dispatch uses **`trigger`** + host control signals only.
 
@@ -76,6 +79,7 @@ Fields:
 - **`SET_MOUSE_FILTER`:** For the two-branch path, the bool **must** come **only** from **`state_watch.get_value()`**, not from other preset fields.
 - **`SET_VISIBLE`:** For the two-branch path, the bool **must** come **only** from **`state_watch.get_value()`**, not from **`visible_value`**.
 - **`UiReactTransactionalActions`** (deprecated coordinator): **Control-triggered** action rows (`state_watch` null) **are not supported**; only **state-driven** rows are valid on this host (validator **error**). **`UiReactButton`** / **`UiReactTextureButton`** with **`transactional_*`** use the normal per-host trigger set for **`action_targets`** (including control-triggered rows).
+- **Numeric presets** (`**SUBTRACT_PRODUCT_FROM_FLOAT**` through **`TRANSFER_INT_PRODUCT_CLAMPED**`): **`state_watch` must be null** (validator **error** otherwise)—numeric mutators are **control-triggered only** in v1.
 
 ### 3.2 MVP enum: `UiReactActionKind`
 
@@ -89,9 +93,13 @@ Fields:
 4. **`SET_MOUSE_FILTER`** — resolve **`target`** as **`Control`**.
    - **State-driven** (`state_watch` non-null; list-lock / **CB-015**): **`mouse_filter_when_true`** / **`mouse_filter_when_false`**, `Control.MouseFilter`; read bool from **`state_watch.get_value()`**; **initial sync** §5.1.
    - **Control-triggered** (`state_watch` null): single **`mouse_filter`** on each matching **`trigger`**.
-5. **`SUBTRACT_PRODUCT_FROM_FLOAT`** — **`state_watch` must be null** (validator **error** otherwise). On **`trigger`**, call **`UiReactStateOpService.subtract_product_from_accumulator(float_accumulator, float_factor_a, float_factor_b)`**. No-op when **unaffordable** (accumulator &lt; price × qty).
+5. **`SUBTRACT_PRODUCT_FROM_FLOAT`** — **`state_watch` must be null** (validator **error** otherwise). On **`trigger`**, call **`UiReactStateOpService.subtract_product_from_accumulator(float_accumulator, float_factor_a, float_factor_b)`**. No-op when **unaffordable** (accumulator &lt; factor_a × factor_b).
+6. **`ADD_PRODUCT_TO_FLOAT`** — **`state_watch` must be null**. On **`trigger`**, **`UiReactStateOpService.add_product_to_accumulator(float_accumulator, float_factor_a, float_factor_b)`** — **`accumulator += factor_a × factor_b`** (unbounded add; any null ref → no-op).
+7. **`TRANSFER_FLOAT_PRODUCT_CLAMPED`** — **`state_watch` must be null**. On **`trigger`**, **`UiReactStateOpService.transfer_float_product_clamped(float_from, float_to, float_factor_a, float_factor_b)`** — with **`p = factor_a × factor_b`**, if **`p ≤ 0`** no-op; else move **`min(from_value, p)`** from **`float_from`** to **`float_to`**.
+8. **`ADD_PRODUCT_TO_INT`** — **`state_watch` must be null**. On **`trigger`**, **`UiReactStateOpService.add_product_to_int_clamped(int_accumulator, int_factor_a, int_factor_b)`** — **`accumulator += factor_a × factor_b`** when product ≥ **0** and **signed 64-bit** multiply/add do not overflow (**no-op** otherwise).
+9. **`TRANSFER_INT_PRODUCT_CLAMPED`** — **`state_watch` must be null**. On **`trigger`**, **`UiReactStateOpService.transfer_int_product_clamped(int_from, int_to, int_factor_a, int_factor_b)`** — same clamped transfer semantics as (7) for **`UiIntState`** pools, with overflow-safe math.
 
-**Out of scope (non-goals):** presets invoking `UiAnimTarget.apply`, `UiAnimUtils`, parallel row groups, `emit_signal` / `call` by name/string, `UiReactActionRunner`, action hub, dock graph editor, watching **non-bool** state as dispatch sources—defer **P6.2+**. (**`state_watch: UiBoolState`** **is** in v1 for the four **presentation** presets.)
+**Out of scope (non-goals):** presets invoking `UiAnimTarget.apply`, `UiAnimUtils`, parallel row groups, `emit_signal` / `call` by name/string, `UiReactActionRunner`, action hub, dock graph editor, watching **non-bool** state as dispatch sources for **numeric** mutators—defer **P6.2+**. (**`state_watch: UiBoolState`** **is** in v1 for the four **presentation** presets.)
 
 ### 3.3 No separate “chain” or step subclass types (v1)
 

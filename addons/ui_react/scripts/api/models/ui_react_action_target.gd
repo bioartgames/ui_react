@@ -11,6 +11,14 @@ enum UiReactActionKind {
 	SET_MOUSE_FILTER,
 	## [code]accumulator -= factor_a * factor_b[/code] when affordable ([code]UiReactStateOpService[/code]).
 	SUBTRACT_PRODUCT_FROM_FLOAT,
+	## [code]accumulator += factor_a * factor_b[/code] ([code]UiReactStateOpService.add_product_to_accumulator[/code]).
+	ADD_PRODUCT_TO_FLOAT,
+	## Clamped move [code]min(from, factor_a * factor_b)[/code] from [member float_from] to [member float_to].
+	TRANSFER_FLOAT_PRODUCT_CLAMPED,
+	## [code]accumulator += factor_a * factor_b[/code] with int overflow guards ([code]UiReactStateOpService[/code]).
+	ADD_PRODUCT_TO_INT,
+	## Clamped int transfer ([code]UiReactStateOpService.transfer_int_product_clamped[/code]).
+	TRANSFER_INT_PRODUCT_CLAMPED,
 }
 
 @export var enabled: bool = true
@@ -50,6 +58,18 @@ enum UiReactActionKind {
 @export var float_factor_a: UiFloatState
 @export var float_factor_b: UiFloatState
 
+## [member action] [code]TRANSFER_FLOAT_PRODUCT_CLAMPED[/code] only — source pool.
+@export var float_from: UiFloatState
+## [member action] [code]TRANSFER_FLOAT_PRODUCT_CLAMPED[/code] only — destination pool.
+@export var float_to: UiFloatState
+
+## [member action] [code]ADD_PRODUCT_TO_INT[/code] / [code]TRANSFER_INT_PRODUCT_CLAMPED[/code] (accumulator / from / to / factors per kind).
+@export var int_accumulator: UiIntState
+@export var int_from: UiIntState
+@export var int_to: UiIntState
+@export var int_factor_a: UiIntState
+@export var int_factor_b: UiIntState
+
 
 func _validate_property(property: Dictionary) -> void:
 	var pname: StringName = property.name
@@ -88,7 +108,16 @@ func _validate_property(property: Dictionary) -> void:
 			else:
 				if pname == &"mouse_filter":
 					return
-		UiReactActionKind.SUBTRACT_PRODUCT_FROM_FLOAT:
+		UiReactActionKind.SUBTRACT_PRODUCT_FROM_FLOAT, UiReactActionKind.ADD_PRODUCT_TO_FLOAT:
 			if pname in [&"float_accumulator", &"float_factor_a", &"float_factor_b"]:
+				return
+		UiReactActionKind.TRANSFER_FLOAT_PRODUCT_CLAMPED:
+			if pname in [&"float_from", &"float_to", &"float_factor_a", &"float_factor_b"]:
+				return
+		UiReactActionKind.ADD_PRODUCT_TO_INT:
+			if pname in [&"int_accumulator", &"int_factor_a", &"int_factor_b"]:
+				return
+		UiReactActionKind.TRANSFER_INT_PRODUCT_CLAMPED:
+			if pname in [&"int_from", &"int_to", &"int_factor_a", &"int_factor_b"]:
 				return
 	property.usage = PROPERTY_USAGE_STORAGE

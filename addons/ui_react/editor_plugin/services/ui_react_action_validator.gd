@@ -94,113 +94,114 @@ static func validate_action_targets(
 					)
 				)
 
-		if row.action == UiReactActionTarget.UiReactActionKind.SUBTRACT_PRODUCT_FROM_FLOAT:
-			if row.state_watch != null:
-				out.append(
-					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
-						UiReactDiagnosticModel.Severity.ERROR,
-						component,
-						str(owner.name),
-						"action_targets[%d]: SUBTRACT_PRODUCT_FROM_FLOAT is control-triggered only (clear state_watch)." % i,
-						"Remove state_watch or use a different action kind.",
-						node_path,
-						&"action_targets",
-						&"",
-						UiReactDiagnosticModel.IssueKind.GENERIC,
-						"",
-					)
+		match row.action:
+			UiReactActionTarget.UiReactActionKind.SUBTRACT_PRODUCT_FROM_FLOAT, UiReactActionTarget.UiReactActionKind.ADD_PRODUCT_TO_FLOAT:
+				_append_error_state_watch_on_numeric_row(
+					out, component, owner, node_path, i, row, _numeric_kind_label(row.action)
 				)
-			if row.float_accumulator == null:
-				out.append(
-					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
-						UiReactDiagnosticModel.Severity.WARNING,
-						component,
-						str(owner.name),
-						"action_targets[%d] SUBTRACT_PRODUCT_FROM_FLOAT needs float_accumulator." % i,
-						"Assign UiFloatState (e.g. gold).",
-						node_path,
-						&"action_targets",
-						&"",
-						UiReactDiagnosticModel.IssueKind.GENERIC,
-						"",
-					)
+				var _kl := _numeric_kind_label(row.action)
+				_append_uifloat_ref(
+					out, component, owner, node_path, i, row.float_accumulator,
+					"action_targets[%d] %s needs float_accumulator." % [i, _kl],
+					"Assign UiFloatState (e.g. gold).",
+					"action_targets[%d] float_accumulator must be UiFloatState." % i,
 				)
-			elif not (row.float_accumulator is UiFloatState):
-				out.append(
-					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
-						UiReactDiagnosticModel.Severity.WARNING,
-						component,
-						str(owner.name),
-						"action_targets[%d] float_accumulator must be UiFloatState." % i,
-						"Assign UiFloatState.",
-						node_path,
-						&"action_targets",
-						&"",
-						UiReactDiagnosticModel.IssueKind.GENERIC,
-						"",
-					)
+				_append_uifloat_ref(
+					out, component, owner, node_path, i, row.float_factor_a,
+					"action_targets[%d] %s needs float_factor_a." % [i, _kl],
+					"Assign UiFloatState (e.g. price).",
+					"action_targets[%d] float_factor_a must be UiFloatState." % i,
 				)
-			if row.float_factor_a == null:
-				out.append(
-					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
-						UiReactDiagnosticModel.Severity.WARNING,
-						component,
-						str(owner.name),
-						"action_targets[%d] SUBTRACT_PRODUCT_FROM_FLOAT needs float_factor_a." % i,
-						"Assign UiFloatState (e.g. price).",
-						node_path,
-						&"action_targets",
-						&"",
-						UiReactDiagnosticModel.IssueKind.GENERIC,
-						"",
-					)
+				_append_uifloat_ref(
+					out, component, owner, node_path, i, row.float_factor_b,
+					"action_targets[%d] %s needs float_factor_b." % [i, _kl],
+					"Assign UiFloatState (e.g. quantity).",
+					"action_targets[%d] float_factor_b must be UiFloatState." % i,
 				)
-			elif not (row.float_factor_a is UiFloatState):
-				out.append(
-					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
-						UiReactDiagnosticModel.Severity.WARNING,
-						component,
-						str(owner.name),
-						"action_targets[%d] float_factor_a must be UiFloatState." % i,
-						"Assign UiFloatState.",
-						node_path,
-						&"action_targets",
-						&"",
-						UiReactDiagnosticModel.IssueKind.GENERIC,
-						"",
-					)
+				continue
+			UiReactActionTarget.UiReactActionKind.TRANSFER_FLOAT_PRODUCT_CLAMPED:
+				_append_error_state_watch_on_numeric_row(
+					out, component, owner, node_path, i, row, "TRANSFER_FLOAT_PRODUCT_CLAMPED"
 				)
-			if row.float_factor_b == null:
-				out.append(
-					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
-						UiReactDiagnosticModel.Severity.WARNING,
-						component,
-						str(owner.name),
-						"action_targets[%d] SUBTRACT_PRODUCT_FROM_FLOAT needs float_factor_b." % i,
-						"Assign UiFloatState (e.g. quantity).",
-						node_path,
-						&"action_targets",
-						&"",
-						UiReactDiagnosticModel.IssueKind.GENERIC,
-						"",
-					)
+				_append_uifloat_ref(
+					out, component, owner, node_path, i, row.float_from,
+					"action_targets[%d] TRANSFER_FLOAT_PRODUCT_CLAMPED needs float_from." % i,
+					"Assign UiFloatState (source pool).",
+					"action_targets[%d] float_from must be UiFloatState." % i,
 				)
-			elif not (row.float_factor_b is UiFloatState):
-				out.append(
-					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
-						UiReactDiagnosticModel.Severity.WARNING,
-						component,
-						str(owner.name),
-						"action_targets[%d] float_factor_b must be UiFloatState." % i,
-						"Assign UiFloatState.",
-						node_path,
-						&"action_targets",
-						&"",
-						UiReactDiagnosticModel.IssueKind.GENERIC,
-						"",
-					)
+				_append_uifloat_ref(
+					out, component, owner, node_path, i, row.float_to,
+					"action_targets[%d] TRANSFER_FLOAT_PRODUCT_CLAMPED needs float_to." % i,
+					"Assign UiFloatState (destination pool).",
+					"action_targets[%d] float_to must be UiFloatState." % i,
 				)
-			continue
+				_append_uifloat_ref(
+					out, component, owner, node_path, i, row.float_factor_a,
+					"action_targets[%d] TRANSFER_FLOAT_PRODUCT_CLAMPED needs float_factor_a." % i,
+					"Assign UiFloatState (e.g. price).",
+					"action_targets[%d] float_factor_a must be UiFloatState." % i,
+				)
+				_append_uifloat_ref(
+					out, component, owner, node_path, i, row.float_factor_b,
+					"action_targets[%d] TRANSFER_FLOAT_PRODUCT_CLAMPED needs float_factor_b." % i,
+					"Assign UiFloatState (e.g. quantity).",
+					"action_targets[%d] float_factor_b must be UiFloatState." % i,
+				)
+				continue
+			UiReactActionTarget.UiReactActionKind.ADD_PRODUCT_TO_INT:
+				_append_error_state_watch_on_numeric_row(
+					out, component, owner, node_path, i, row, "ADD_PRODUCT_TO_INT"
+				)
+				_append_uiint_ref(
+					out, component, owner, node_path, i, row.int_accumulator,
+					"action_targets[%d] ADD_PRODUCT_TO_INT needs int_accumulator." % i,
+					"Assign UiIntState.",
+					"action_targets[%d] int_accumulator must be UiIntState." % i,
+				)
+				_append_uiint_ref(
+					out, component, owner, node_path, i, row.int_factor_a,
+					"action_targets[%d] ADD_PRODUCT_TO_INT needs int_factor_a." % i,
+					"Assign UiIntState.",
+					"action_targets[%d] int_factor_a must be UiIntState." % i,
+				)
+				_append_uiint_ref(
+					out, component, owner, node_path, i, row.int_factor_b,
+					"action_targets[%d] ADD_PRODUCT_TO_INT needs int_factor_b." % i,
+					"Assign UiIntState.",
+					"action_targets[%d] int_factor_b must be UiIntState." % i,
+				)
+				continue
+			UiReactActionTarget.UiReactActionKind.TRANSFER_INT_PRODUCT_CLAMPED:
+				_append_error_state_watch_on_numeric_row(
+					out, component, owner, node_path, i, row, "TRANSFER_INT_PRODUCT_CLAMPED"
+				)
+				_append_uiint_ref(
+					out, component, owner, node_path, i, row.int_from,
+					"action_targets[%d] TRANSFER_INT_PRODUCT_CLAMPED needs int_from." % i,
+					"Assign UiIntState (source).",
+					"action_targets[%d] int_from must be UiIntState." % i,
+				)
+				_append_uiint_ref(
+					out, component, owner, node_path, i, row.int_to,
+					"action_targets[%d] TRANSFER_INT_PRODUCT_CLAMPED needs int_to." % i,
+					"Assign UiIntState (destination).",
+					"action_targets[%d] int_to must be UiIntState." % i,
+				)
+				_append_uiint_ref(
+					out, component, owner, node_path, i, row.int_factor_a,
+					"action_targets[%d] TRANSFER_INT_PRODUCT_CLAMPED needs int_factor_a." % i,
+					"Assign UiIntState.",
+					"action_targets[%d] int_factor_a must be UiIntState." % i,
+				)
+				_append_uiint_ref(
+					out, component, owner, node_path, i, row.int_factor_b,
+					"action_targets[%d] TRANSFER_INT_PRODUCT_CLAMPED needs int_factor_b." % i,
+					"Assign UiIntState.",
+					"action_targets[%d] int_factor_b must be UiIntState." % i,
+				)
+				continue
+			_:
+				pass
 
 		if row.state_watch != null and row.bool_flag_state != null:
 			if (
@@ -310,3 +311,126 @@ static func validate_action_targets(
 			)
 
 	return out
+
+
+static func _numeric_kind_label(action: UiReactActionTarget.UiReactActionKind) -> String:
+	match action:
+		UiReactActionTarget.UiReactActionKind.SUBTRACT_PRODUCT_FROM_FLOAT:
+			return "SUBTRACT_PRODUCT_FROM_FLOAT"
+		UiReactActionTarget.UiReactActionKind.ADD_PRODUCT_TO_FLOAT:
+			return "ADD_PRODUCT_TO_FLOAT"
+		_:
+			return ""
+
+
+static func _append_error_state_watch_on_numeric_row(
+	out: Array,
+	component: String,
+	owner: Control,
+	node_path: NodePath,
+	i: int,
+	row: UiReactActionTarget,
+	kind_name: String,
+) -> void:
+	if row.state_watch == null:
+		return
+	out.append(
+		UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+			UiReactDiagnosticModel.Severity.ERROR,
+			component,
+			str(owner.name),
+			"action_targets[%d]: %s is control-triggered only (clear state_watch)." % [i, kind_name],
+			"Remove state_watch or use a different action kind.",
+			node_path,
+			&"action_targets",
+			&"",
+			UiReactDiagnosticModel.IssueKind.GENERIC,
+			"",
+		)
+	)
+
+
+static func _append_uifloat_ref(
+	out: Array,
+	component: String,
+	owner: Control,
+	node_path: NodePath,
+	i: int,
+	ref: Variant,
+	missing_line: String,
+	assign_hint: String,
+	wrong_type_line: String,
+) -> void:
+	if ref == null:
+		out.append(
+			UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+				UiReactDiagnosticModel.Severity.WARNING,
+				component,
+				str(owner.name),
+				missing_line,
+				assign_hint,
+				node_path,
+				&"action_targets",
+				&"",
+				UiReactDiagnosticModel.IssueKind.GENERIC,
+				"",
+			)
+		)
+	elif not (ref is UiFloatState):
+		out.append(
+			UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+				UiReactDiagnosticModel.Severity.WARNING,
+				component,
+				str(owner.name),
+				wrong_type_line,
+				"Assign UiFloatState.",
+				node_path,
+				&"action_targets",
+				&"",
+				UiReactDiagnosticModel.IssueKind.GENERIC,
+				"",
+			)
+		)
+
+
+static func _append_uiint_ref(
+	out: Array,
+	component: String,
+	owner: Control,
+	node_path: NodePath,
+	i: int,
+	ref: Variant,
+	missing_line: String,
+	assign_hint: String,
+	wrong_type_line: String,
+) -> void:
+	if ref == null:
+		out.append(
+			UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+				UiReactDiagnosticModel.Severity.WARNING,
+				component,
+				str(owner.name),
+				missing_line,
+				assign_hint,
+				node_path,
+				&"action_targets",
+				&"",
+				UiReactDiagnosticModel.IssueKind.GENERIC,
+				"",
+			)
+		)
+	elif not (ref is UiIntState):
+		out.append(
+			UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+				UiReactDiagnosticModel.Severity.WARNING,
+				component,
+				str(owner.name),
+				wrong_type_line,
+				"Assign UiIntState.",
+				node_path,
+				&"action_targets",
+				&"",
+				UiReactDiagnosticModel.IssueKind.GENERIC,
+				"",
+			)
+		)

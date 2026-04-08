@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3 uid="uid://bhrsm6wi0v4s"]
+[gd_scene load_steps=22 format=3 uid="uid://bhrsm6wi0v4s"]
 
 [ext_resource type="Script" uid="uid://cy1vsor6ek3xr" path="res://addons/ui_react/scripts/api/models/ui_float_state.gd" id="1_fl"]
 [ext_resource type="Script" uid="uid://st55qiias3cb" path="res://addons/ui_react/scripts/api/models/ui_state.gd" id="2_st"]
@@ -12,6 +12,7 @@
 [ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_progress_bar.gd" id="11_pb"]
 [ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_spin_box.gd" id="12_sp"]
 [ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_action_target.gd" id="13_at"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_int_state.gd" id="14_int"]
 
 [sub_resource type="Resource" id="gold"]
 script = ExtResource("1_fl")
@@ -59,6 +60,64 @@ float_accumulator = SubResource("gold")
 float_factor_a = SubResource("price")
 float_factor_b = SubResource("qty")
 
+[sub_resource type="Resource" id="bank"]
+script = ExtResource("1_fl")
+value = 0.0
+
+[sub_resource type="Resource" id="tickets"]
+script = ExtResource("14_int")
+value = 10
+
+[sub_resource type="Resource" id="gift"]
+script = ExtResource("14_int")
+value = 0
+
+[sub_resource type="Resource" id="int_fa"]
+script = ExtResource("14_int")
+value = 2
+
+[sub_resource type="Resource" id="int_fb"]
+script = ExtResource("14_int")
+value = 3
+
+[sub_resource type="Resource" id="sell_action"]
+script = ExtResource("13_at")
+rule_id = "sell_add_gold"
+action = 5
+trigger = 0
+float_accumulator = SubResource("gold")
+float_factor_a = SubResource("price")
+float_factor_b = SubResource("qty")
+
+[sub_resource type="Resource" id="deposit_action"]
+script = ExtResource("13_at")
+rule_id = "deposit_bank"
+action = 6
+trigger = 0
+float_from = SubResource("gold")
+float_to = SubResource("bank")
+float_factor_a = SubResource("price")
+float_factor_b = SubResource("qty")
+
+[sub_resource type="Resource" id="add_tickets_action"]
+script = ExtResource("13_at")
+rule_id = "add_tickets"
+action = 7
+trigger = 0
+int_accumulator = SubResource("tickets")
+int_factor_a = SubResource("int_fa")
+int_factor_b = SubResource("int_fb")
+
+[sub_resource type="Resource" id="tip_action"]
+script = ExtResource("13_at")
+rule_id = "tip_gift"
+action = 8
+trigger = 0
+int_from = SubResource("tickets")
+int_to = SubResource("gift")
+int_factor_a = SubResource("int_fa")
+int_factor_b = SubResource("int_fb")
+
 [node name="ShopComputedDemo" type="Control"]
 layout_mode = 3
 anchors_preset = 15
@@ -87,7 +146,7 @@ text = "Shop (computed state demo)"
 [node name="Help" type="Label" parent="VBox"]
 custom_minimum_size = Vector2(1, 1)
 layout_mode = 2
-text = "Adjust gold, price, and quantity. Gold meter + quantity spin box are showcase bindings (shared gold/qty state). Status line is UiReactRichTextLabel + BBCode from UiComputedOrderSummaryThreeFloatString; afford/disabled use UiComputedFloatGeProductBool + UiComputedBoolInvert. Buy subtracts gold via action_targets SUBTRACT_PRODUCT_FROM_FLOAT (UiReactStateOpService)."
+text = "Adjust gold, price, and quantity. Gold meter + quantity spin box are showcase bindings (shared gold/qty state). Status line is UiReactRichTextLabel + BBCode from UiComputedOrderSummaryThreeFloatString; afford/disabled use UiComputedFloatGeProductBool + UiComputedBoolInvert. Action layer (UiReactStateOpService): Buy = SUBTRACT_PRODUCT_FROM_FLOAT; Sell = ADD_PRODUCT_TO_FLOAT (refund price×qty); Deposit = TRANSFER_FLOAT_PRODUCT_CLAMPED (gold→bank, clamped by price×qty); Add tickets = ADD_PRODUCT_TO_INT (tickets += 2×3); Tip = TRANSFER_INT_PRODUCT_CLAMPED (tickets→gift, clamped by 2×3)."
 autowrap_mode = 3
 
 [node name="ScrollShop" type="ScrollContainer" parent="VBox"]
@@ -123,6 +182,42 @@ value = 100.0
 show_percentage = false
 script = ExtResource("11_pb")
 value_state = SubResource("gold")
+
+[node name="BankLabel" type="Label" parent="VBox/ScrollShop/ShopInner"]
+layout_mode = 2
+text = "Bank pool (UiFloatState — TRANSFER_FLOAT_PRODUCT_CLAMPED destination)"
+
+[node name="BankMeter" type="ProgressBar" parent="VBox/ScrollShop/ShopInner"]
+layout_mode = 2
+max_value = 200.0
+value = 0.0
+show_percentage = false
+script = ExtResource("11_pb")
+value_state = SubResource("bank")
+
+[node name="TicketsLabel" type="Label" parent="VBox/ScrollShop/ShopInner"]
+layout_mode = 2
+text = "Tickets (UiIntState — ADD_PRODUCT_TO_INT / TRANSFER_INT_PRODUCT_CLAMPED)"
+
+[node name="TicketsMeter" type="ProgressBar" parent="VBox/ScrollShop/ShopInner"]
+layout_mode = 2
+max_value = 100.0
+value = 10.0
+show_percentage = false
+script = ExtResource("11_pb")
+value_state = SubResource("tickets")
+
+[node name="GiftLabel" type="Label" parent="VBox/ScrollShop/ShopInner"]
+layout_mode = 2
+text = "Gift jar (UiIntState — tip destination)"
+
+[node name="GiftMeter" type="ProgressBar" parent="VBox/ScrollShop/ShopInner"]
+layout_mode = 2
+max_value = 100.0
+value = 0.0
+show_percentage = false
+script = ExtResource("11_pb")
+value_state = SubResource("gift")
 
 [node name="PriceLabel" type="Label" parent="VBox/ScrollShop/ShopInner"]
 layout_mode = 2
@@ -182,3 +277,35 @@ text = "Buy"
 script = ExtResource("5_btn")
 disabled_state = SubResource("buy_dis")
 action_targets = [SubResource("buy_action")]
+
+[node name="ShopMathRow" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SellButton" type="Button" parent="VBox/ShopMathRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Sell (ADD_PRODUCT_TO_FLOAT)"
+script = ExtResource("5_btn")
+action_targets = [SubResource("sell_action")]
+
+[node name="DepositButton" type="Button" parent="VBox/ShopMathRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Deposit (TRANSFER_FLOAT)"
+script = ExtResource("5_btn")
+action_targets = [SubResource("deposit_action")]
+
+[node name="AddTicketsButton" type="Button" parent="VBox/ShopMathRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Add tickets (ADD_INT)"
+script = ExtResource("5_btn")
+action_targets = [SubResource("add_tickets_action")]
+
+[node name="TipButton" type="Button" parent="VBox/ShopMathRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Tip (TRANSFER_INT)"
+script = ExtResource("5_btn")
+action_targets = [SubResource("tip_action")]

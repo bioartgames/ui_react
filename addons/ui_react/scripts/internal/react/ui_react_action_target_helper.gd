@@ -315,3 +315,19 @@ static func _apply_row(owner: Control, row: UiReactActionTarget, row_index: int,
 			UiReactStateOpService.subtract_product_from_accumulator(
 				row.float_accumulator, row.float_factor_a, row.float_factor_b
 			)
+		UiReactActionTarget.UiReactActionKind.ADD_PRODUCT_TO_FLOAT:
+			UiReactStateOpService.add_product_to_accumulator(
+				row.float_accumulator, row.float_factor_a, row.float_factor_b
+			)
+		UiReactActionTarget.UiReactActionKind.TRANSFER_FLOAT_PRODUCT_CLAMPED:
+			UiReactStateOpService.transfer_float_product_clamped(
+				row.float_from, row.float_to, row.float_factor_a, row.float_factor_b
+			)
+		UiReactActionTarget.UiReactActionKind.ADD_PRODUCT_TO_INT:
+			UiReactStateOpService.add_product_to_int_clamped(
+				row.int_accumulator, row.int_factor_a, row.int_factor_b
+			)
+		UiReactActionTarget.UiReactActionKind.TRANSFER_INT_PRODUCT_CLAMPED:
+			UiReactStateOpService.transfer_int_product_clamped(
+				row.int_from, row.int_to, row.int_factor_a, row.int_factor_b
+			)

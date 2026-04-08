@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.21.0] - 2026-04-07
+
+### Added
+
+- **`UiReactActionKind`**: **`ADD_PRODUCT_TO_FLOAT`**, **`TRANSFER_FLOAT_PRODUCT_CLAMPED`**, **`ADD_PRODUCT_TO_INT`**, **`TRANSFER_INT_PRODUCT_CLAMPED`** on **`UiReactActionTarget`**; **`UiReactStateOpService`**: **`add_product_to_accumulator`**, **`transfer_float_product_clamped`**, **`add_product_to_int_clamped`**, **`transfer_int_product_clamped`** (**CB-051**).
+- **`shop_computed_demo.tscn`**: exercises all four new presets (Sell, Deposit, Add tickets, Tip) alongside existing Buy (**`SUBTRACT_PRODUCT_FROM_FLOAT`**).
+
+### Documentation
+
+- **[`ACTION_LAYER.md`](ACTION_LAYER.md)** §2 / §3.2 (numeric presets, int overflow **no-op** policy); **[`DECISIONS.md`](DECISIONS.md)** CB-051 entry; **[`ROADMAP.md`](ROADMAP.md)** Appendix **CB-051** **Done**.
+
 ## [2.20.0] - 2026-04-07
 
 ### Added

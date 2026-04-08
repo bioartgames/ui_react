@@ -59,7 +59,7 @@ The addon ships **four** runnable examples under **`res://addons/ui_react/exampl
 
 - **`res://addons/ui_react/examples/inventory_screen_demo.tscn`** — **`wire_rules`** on controls (map / refresh / copy-detail / bool-pulse suffix / debug lines per **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)**); **no** root script; **`UiReactTree`** + filtered **`UiReactItemList`** + actions; list lock via overlay + **`action_targets`** (**CB-015** / **P6.1**); sample **`UiAnimTarget`** fades/POP.
 - **`res://addons/ui_react/examples/options_transactional_demo.tscn`** — transactional **Apply / Cancel** + **`UiReactTabContainer`** / **`UiReactOptionButton`** with **`wire_rules`** + **`action_targets`** (**CB-052** / **CB-054** / **CB-055**); **`UiReactCheckBox`** **`state_watch`** **`SET_VISIBLE`** (**CB-056**).
-- **`res://addons/ui_react/examples/shop_computed_demo.tscn`** — **`UiComputedFloatGeProductBool`** / **`UiComputedBoolInvert`** / **`UiComputedOrderSummaryThreeFloatString`** + **`UiReactRichTextLabel`**; **`UiReactProgressBar`** / **`UiReactSpinBox`**; **Buy** via **`action_targets`** **`SUBTRACT_PRODUCT_FROM_FLOAT`**; no root script, no **`examples/*.gd`** for shop computeds.
+- **`res://addons/ui_react/examples/shop_computed_demo.tscn`** — **`UiComputedFloatGeProductBool`** / **`UiComputedBoolInvert`** / **`UiComputedOrderSummaryThreeFloatString`** + **`UiReactRichTextLabel`**; **`UiReactProgressBar`** / **`UiReactSpinBox`**; **Buy** + **Sell / Deposit / Add tickets / Tip** via **`action_targets`** (**`SUBTRACT_PRODUCT_FROM_FLOAT`**, **`ADD_PRODUCT_TO_FLOAT`**, **`TRANSFER_FLOAT_PRODUCT_CLAMPED`**, **`ADD_PRODUCT_TO_INT`**, **`TRANSFER_INT_PRODUCT_CLAMPED`**); no root script, no **`examples/*.gd`** for shop computeds.
 - **`res://addons/ui_react/examples/anim_targets_catalog_demo.tscn`** — catalog of **`UiAnimTarget.AnimationAction`** ( **`animation_targets`** with **`selection_slot`** per row + **`play_selected_row_animation`**) + trigger playground; no root script.
 
 **Examples at a glance** (which layers each scene stresses):
@@ -68,7 +68,7 @@ The addon ships **four** runnable examples under **`res://addons/ui_react/exampl
 |-------|:------:|:--------:|:-------------:|:-------:|
 | **`inventory_screen_demo.tscn`** | yes | — | — | yes |
 | **`options_transactional_demo.tscn`** | — | yes (status line) | yes | yes |
-| **`shop_computed_demo.tscn`** | — | yes | — | yes (Buy) |
+| **`shop_computed_demo.tscn`** | — | yes | — | yes (Buy + CB-051 math row) |
 | **`anim_targets_catalog_demo.tscn`** | — | — | — | — |
 
 Use the scene tree to see how states and targets are wired.
@@ -315,7 +315,7 @@ The addon does not ship a generic virtualized list or a graph solver (**[`docs/R
 
 ## Imperative actions (command-style, CB-006)
 
-The addon does **not** ship a generic **`UiCommand`** graph (**[`docs/ROADMAP.md`](docs/ROADMAP.md)** — **CB-007** deferred). For **bounded** shop-style math (**accumulator −= a × b** when affordable), use **`UiReactButton`** **`action_targets`** **`SUBTRACT_PRODUCT_FROM_FLOAT`** ([**`ACTION_LAYER.md`**](docs/ACTION_LAYER.md) §3.2) — implementation **`UiReactStateOpService`**.
+The addon does **not** ship a generic **`UiCommand`** graph (**[`docs/ROADMAP.md`](docs/ROADMAP.md)** — **CB-007** deferred). For **bounded** shop-style math, use **`UiReactButton`** **`action_targets`** numeric presets (**`SUBTRACT_PRODUCT_FROM_FLOAT`**, **`ADD_PRODUCT_TO_FLOAT`**, **`TRANSFER_FLOAT_PRODUCT_CLAMPED`**, **`ADD_PRODUCT_TO_INT`**, **`TRANSFER_INT_PRODUCT_CLAMPED`** — [**`ACTION_LAYER.md`**](docs/ACTION_LAYER.md) §3.2) — implementation **`UiReactStateOpService`**.
 
 For **other** one-shot domain actions (**equip**, **delete**, server calls), use **game-layer** code: connect **`pressed`**, read **`UiState`**, **`set_value()`** on authoritative state.
 

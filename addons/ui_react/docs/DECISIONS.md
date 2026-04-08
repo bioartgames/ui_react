@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-04-07 — CB-051: closed `UiReactActionKind` presets for whitelisted math (`UiReactStateOpService`)
+
+**Context:** **`SUBTRACT_PRODUCT_FROM_FLOAT`** alone could not express refund-style add, pool-to-pool transfer, or **`UiIntState`** stacks without inventing ad hoc scripts or duplicating math in Computed-only paths.
+
+**Decision:** Add **four** additive enum values (**`ADD_PRODUCT_TO_FLOAT`**, **`TRANSFER_FLOAT_PRODUCT_CLAMPED`**, **`ADD_PRODUCT_TO_INT`**, **`TRANSFER_INT_PRODUCT_CLAMPED`**) with typed **`@export`** fields on **`UiReactActionTarget`**, each delegating to a **named** **`UiReactStateOpService`** static. **No** generic expression layer; **no** `state_watch` on numeric mutators (control-triggered only, validator **error** otherwise). Int math uses overflow-safe **no-op** when multiply/add would leave signed 64-bit range.
+
+**Consequences:** **`ACTION_LAYER.md`** §3.2 lists items 6–9; dock validates refs; **`shop_computed_demo.tscn`** exercises every new kind.
+
+**Links:** [ACTION_LAYER.md](ACTION_LAYER.md) §3, `ui_react_state_op_service.gd`, **CB-051**
+
+---
+
 ## 2026-04-06 — `SET_VISIBLE` branches on `state_watch` (mirror `SET_MOUSE_FILTER`)
 
 **Context:** State-driven **`SET_VISIBLE`** rows ignored **`state_watch`** and always applied **`visible_value`**, unlike **`SET_MOUSE_FILTER`**, which already branched on **`state_watch.get_value()`**.
