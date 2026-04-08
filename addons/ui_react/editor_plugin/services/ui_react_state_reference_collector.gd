@@ -2,6 +2,8 @@
 class_name UiReactStateReferenceCollector
 extends RefCounted
 
+const _SCRIPT_WIRE_SORT_ARRAY_BY_KEY := "res://addons/ui_react/scripts/api/models/ui_react_wire_sort_array_by_key.gd"
+
 
 static func collect_referenced_state_paths_for_scene(root: Node) -> Dictionary:
 	var out: Dictionary = {}
@@ -51,6 +53,10 @@ static func _register_states_from_wire_rule(rule: UiReactWireRule, out_paths: Di
 		_register_state_path(r2.category_kind_state, out_paths)
 		_register_state_path(r2.items_state, out_paths)
 		_register_state_path(r2.selected_state, out_paths)
+	elif rule.get_script() is Script and (rule.get_script() as Script).resource_path == _SCRIPT_WIRE_SORT_ARRAY_BY_KEY:
+		_register_state_path(rule.get(&"items_state") as UiState, out_paths)
+		_register_state_path(rule.get(&"sort_key_state") as UiState, out_paths)
+		_register_state_path(rule.get(&"descending_state") as UiState, out_paths)
 	elif rule is UiReactWireCopySelectionDetail:
 		var r3 := rule as UiReactWireCopySelectionDetail
 		_register_state_path(r3.selected_state, out_paths)

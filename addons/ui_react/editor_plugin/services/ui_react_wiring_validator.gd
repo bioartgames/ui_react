@@ -2,6 +2,13 @@
 class_name UiReactWiringValidator
 extends RefCounted
 
+const _SCRIPT_WIRE_SORT_ARRAY_BY_KEY := "res://addons/ui_react/scripts/api/models/ui_react_wire_sort_array_by_key.gd"
+
+
+static func _is_wire_sort_array_by_key(rule: UiReactWireRule) -> bool:
+	var sc: Script = rule.get_script() as Script
+	return sc != null and sc.resource_path == _SCRIPT_WIRE_SORT_ARRAY_BY_KEY
+
 
 static func validate_wire_rules(
 	component: String, owner: Control, node_path: NodePath
@@ -38,7 +45,7 @@ static func validate_wire_rules(
 					component,
 					str(owner.name),
 					"wire_rules[%d] must be a UiReactWireRule (got %s)." % [i, UiReactValidatorCommon.variant_type_name(item)],
-					"Assign a UiReactWireRule subresource (MapIntToString, RefreshItemsFromCatalog, CopySelectionDetail, SetStringOnBoolPulse, SyncBoolStateDebugLine).",
+					"Assign a UiReactWireRule subresource (MapIntToString, RefreshItemsFromCatalog, SortArrayByKey, CopySelectionDetail, SetStringOnBoolPulse, SyncBoolStateDebugLine).",
 					node_path,
 					&"wire_rules",
 					&"",
@@ -58,6 +65,8 @@ static func validate_wire_rules(
 					rule as UiReactWireRefreshItemsFromCatalog, component, owner, node_path, i
 				)
 			)
+		elif _is_wire_sort_array_by_key(rule):
+			out.append_array(_validate_wire_rule_sort_array_by_key(rule, component, owner, node_path, i))
 		elif rule is UiReactWireCopySelectionDetail:
 			out.append_array(
 				_validate_wire_rule_copy_detail(rule as UiReactWireCopySelectionDetail, component, owner, node_path, i)
@@ -187,6 +196,38 @@ static func _validate_wire_rule_refresh(
 		out.append(
 			_wire_rules_issue(
 				component, owner, node_path, index_i, "selected_state must be UiIntState when set.", "Assign UiIntState or clear."
+			)
+		)
+	return out
+
+
+static func _validate_wire_rule_sort_array_by_key(
+	rule: UiReactWireRule, component: String, owner: Control, node_path: NodePath, index_i: int
+) -> Array[UiReactDiagnosticModel.DiagnosticIssue]:
+	var out: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
+	var items_st: Variant = rule.get(&"items_state")
+	if items_st == null:
+		out.append(_wire_rules_issue(component, owner, node_path, index_i, "items_state is required.", "Assign UiArrayState."))
+	elif not (items_st is UiArrayState):
+		out.append(
+			_wire_rules_issue(
+				component, owner, node_path, index_i, "items_state must be UiArrayState.", "Assign UiArrayState."
+			)
+		)
+	var key_st: Variant = rule.get(&"sort_key_state")
+	if key_st == null:
+		out.append(_wire_rules_issue(component, owner, node_path, index_i, "sort_key_state is required.", "Assign UiStringState."))
+	elif not (key_st is UiStringState):
+		out.append(
+			_wire_rules_issue(
+				component, owner, node_path, index_i, "sort_key_state must be UiStringState.", "Assign UiStringState."
+			)
+		)
+	var desc_st: Variant = rule.get(&"descending_state")
+	if desc_st != null and not (desc_st is UiBoolState):
+		out.append(
+			_wire_rules_issue(
+				component, owner, node_path, index_i, "descending_state must be UiBoolState when set.", "Assign UiBoolState or clear."
 			)
 		)
 	return out

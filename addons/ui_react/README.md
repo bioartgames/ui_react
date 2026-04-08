@@ -293,7 +293,9 @@ Use a **`UiComputedStringState`** or **`UiComputedBoolState`** **subclass** when
 
 **Bindings (single-select):** assign **`items_state`** → **`UiArrayState`**, **`selected_state`** → **`UiIntState`**. The stored index is **the row index in the current list** (after any filter). See **Strict integer indices** under **Public API**—no floats for selection.
 
-**Filter / inventory recipe (recommended):** **`res://addons/ui_react/examples/inventory_screen_demo.tscn`** — **`wire_rules`** on the tree, filter **`UiReactLineEdit`**, and **`UiReactItemList`** (refresh from catalog, copy selection detail, bool-pulse suffix, debug lines per **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)**). **No** root script; declarative rules only.
+**Filter / inventory recipe (recommended):** **`res://addons/ui_react/examples/inventory_screen_demo.tscn`** — **`wire_rules`** on the tree, filter **`UiReactLineEdit`**, and **`UiReactItemList`** (refresh from catalog, **sort by key**, copy selection detail, bool-pulse suffix, debug lines per **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)**). **No** root script; declarative rules only.
+
+**Sort (stock wiring rule):** **`UiReactWireSortArrayByKey`** reorders **`items_state`** by a **`UiStringState`** sort key (flat **dictionary** field name). Key strings must match your row **`Dictionary`** keys (e.g. from **`UiReactWireRefreshItemsFromCatalog`**). Friendly labels (**“By name”**) require a **game-side** mapping to keys unless the option item text **is** the key—see **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)** §6 and **`inventory_screen_demo.tscn`**.
 
 **Alternative (game-layer):** If you are **not** using the wiring layer yet:
 

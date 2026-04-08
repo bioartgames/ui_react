@@ -4,6 +4,7 @@ class_name UiReactWireRuleHelper
 extends RefCounted
 
 const _META_CONNS := &"_ui_react_wire_helper_conns"
+const _SCRIPT_WIRE_SORT_ARRAY_BY_KEY := "res://addons/ui_react/scripts/api/models/ui_react_wire_sort_array_by_key.gd"
 
 
 static func schedule_attach(host: Node) -> void:
@@ -61,6 +62,11 @@ static func attach(host: Node) -> void:
 		_apply_rule(host, rule2)
 
 
+static func _is_wire_sort_array_by_key(rule: UiReactWireRule) -> bool:
+	var sc: Script = rule.get_script() as Script
+	return sc != null and sc.resource_path == _SCRIPT_WIRE_SORT_ARRAY_BY_KEY
+
+
 static func _has_bindable_rules(host: Node) -> bool:
 	if not &"wire_rules" in host:
 		return false
@@ -80,6 +86,8 @@ static func _bind_entry(host: Node, rule: UiReactWireRule, conns: Array[Dictiona
 		_bind_map_int_to_string(host, rule as UiReactWireMapIntToString, conns)
 	elif rule is UiReactWireRefreshItemsFromCatalog:
 		_bind_refresh_items(host, rule as UiReactWireRefreshItemsFromCatalog, conns)
+	elif _is_wire_sort_array_by_key(rule):
+		_bind_sort_array_by_key(host, rule, conns)
 	elif rule is UiReactWireCopySelectionDetail:
 		_bind_copy_detail(host, rule as UiReactWireCopySelectionDetail, conns)
 	elif rule is UiReactWireSetStringOnBoolPulse:
@@ -170,6 +178,19 @@ static func _bind_refresh_items(
 		_safe_connect(conns, rule.filter_text_state.changed, cb)
 	if rule.category_kind_state != null:
 		_safe_connect(conns, rule.category_kind_state.changed, cb)
+
+
+static func _bind_sort_array_by_key(host: Node, rule: UiReactWireRule, conns: Array[Dictionary]) -> void:
+	var cb := _make_rule_cb(host, rule)
+	var items_st: Variant = rule.get(&"items_state")
+	if items_st is UiState:
+		_safe_connect(conns, (items_st as UiState).changed, cb)
+	var key_st: Variant = rule.get(&"sort_key_state")
+	if key_st is UiState:
+		_safe_connect(conns, (key_st as UiState).changed, cb)
+	var desc_st: Variant = rule.get(&"descending_state")
+	if desc_st is UiState:
+		_safe_connect(conns, (desc_st as UiState).changed, cb)
 
 
 static func _bind_copy_detail(

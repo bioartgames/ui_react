@@ -1,4 +1,4 @@
-[gd_scene load_steps=60 format=3 uid="uid://ca8gfny15h7yc"]
+[gd_scene load_steps=61 format=3 uid="uid://ca8gfny15h7yc"]
 
 [ext_resource type="Script" uid="uid://dd4kr4kdd6cnc" path="res://addons/ui_react/scripts/controls/ui_react_tree.gd" id="2_tree"]
 [ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://addons/ui_react/scripts/controls/ui_react_line_edit.gd" id="3_le"]
@@ -22,6 +22,7 @@
 [ext_resource type="Script" uid="uid://d0qonr8j0o6lo" path="res://addons/ui_react/scripts/api/models/ui_react_tree_node.gd" id="21_tnode"]
 [ext_resource type="Script" uid="uid://bb8t2qrgil0ob" path="res://addons/ui_react/scripts/api/models/ui_react_wire_set_string_on_bool_pulse.gd" id="22_wpulse"]
 [ext_resource type="Script" uid="uid://ckxya8dq4gqug" path="res://addons/ui_react/scripts/api/models/ui_react_wire_sync_bool_state_debug_line.gd" id="23_wdbg"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_wire_sort_array_by_key.gd" id="24_wsort"]
 
 [sub_resource type="Resource" id="tn_all"]
 script = ExtResource("21_tnode")
@@ -234,7 +235,13 @@ rule_id = "debug_actions_disabled"
 
 [sub_resource type="Resource" id="sort_preset_str"]
 script = ExtResource("7_str")
-value = "By name"
+value = "name"
+
+[sub_resource type="Resource" id="wire_sort_items"]
+script = ExtResource("24_wsort")
+items_state = SubResource("items_arr")
+sort_key_state = SubResource("sort_preset_str")
+rule_id = "sort_items_by_key"
 
 [sub_resource type="Resource" id="anim_pop_use"]
 script = ExtResource("13_anim")
@@ -311,7 +318,7 @@ text = "Items"
 
 [node name="Help" type="Label" parent="MainHBox/CenterColumn"]
 layout_mode = 2
-text = "wire_rules on controls + UiReactWireRuleHelper (refresh + copy detail). Lock: action_targets SET_MOUSE_FILTER (P6.1). Uncheck Lock → GRAB_FOCUS on filter."
+text = "wire_rules (refresh, sort by dict key, copy detail, …). Lock: action_targets SET_MOUSE_FILTER (P6.1). Uncheck Lock → GRAB_FOCUS on filter."
 autowrap_mode = 3
 
 [node name="FilterLabel" type="Label" parent="MainHBox/CenterColumn"]
@@ -356,7 +363,7 @@ selected_state = SubResource("sel_int")
 items_state = SubResource("items_arr")
 animation_targets = Array[ExtResource("13_anim")]([SubResource("anim_list_detail_fade")])
 action_targets = Array[ExtResource("14_action")]([SubResource("action_lock_mousefilter")])
-wire_rules = Array[ExtResource("8_xha3j")]([SubResource("wire_copy"), SubResource("wire_use_suffix"), SubResource("wire_sort_suffix"), SubResource("wire_dbg_use"), SubResource("wire_dbg_sort"), SubResource("wire_dbg_dis")])
+wire_rules = Array[ExtResource("8_xha3j")]([SubResource("wire_sort_items"), SubResource("wire_copy"), SubResource("wire_use_suffix"), SubResource("wire_sort_suffix"), SubResource("wire_dbg_use"), SubResource("wire_dbg_sort"), SubResource("wire_dbg_dis")])
 
 [node name="InputBlocker" type="Control" parent="MainHBox/CenterColumn/ListSlot"]
 layout_mode = 1
@@ -390,21 +397,21 @@ text = "Actions"
 
 [node name="Help" type="Label" parent="MainHBox/RightColumn"]
 layout_mode = 2
-text = "UiReactTextureButton: Use and Sort use POP on press. Disable actions blocks both + Sort preset OptionButton (showcase)."
+text = "Sort preset: option text matches row dict keys (name/kind/qty). Map friendly labels in game data if needed. Use/Sort texture buttons: POP on press."
 autowrap_mode = 3
 
 [node name="SortPresetLabel" type="Label" parent="MainHBox/RightColumn"]
 layout_mode = 2
-text = "Sort preset"
+text = "Sort by key (dict field)"
 
 [node name="SortPreset" type="OptionButton" parent="MainHBox/RightColumn"]
 layout_mode = 2
 item_count = 3
-popup/item_0/text = "By name"
+popup/item_0/text = "name"
 popup/item_0/id = 0
-popup/item_1/text = "By kind"
+popup/item_1/text = "kind"
 popup/item_1/id = 1
-popup/item_2/text = "By quantity"
+popup/item_2/text = "qty"
 popup/item_2/id = 2
 script = ExtResource("15_opt")
 selected_state = SubResource("sort_preset_str")

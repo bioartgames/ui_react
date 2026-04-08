@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **`UiReactWireSortArrayByKey`**: wiring rule to sort **`UiArrayState`** rows by a flat dictionary key (**`UiStringState`**) with optional **`UiBoolState`** descending; **`inventory_screen_demo.tscn`** exercises it (**CB-011**).
 - **`UiTransactionalScreenConfig`**, **`UiReactTransactionalSession`**: tree-scoped Apply/Cancel cohort (**`begin_edit_all`** deferred one frame on first registration); **`UiReactButton`** / **`UiReactTextureButton`** exports **`transactional_group`**, **`transactional_screen`**, **`transactional_role`**.
 - **`UiReactTransactionalValidator.validate_transactional_under_root`**: dock **ERROR** when **`UiReactTransactionalActions`** and button **`transactional_*`** target the same **`UiTransactionalGroup`**; duplicate Apply/Cancel role checks; **`pressed_state` + `transactional_role`** warning (**CB-057**).
 
