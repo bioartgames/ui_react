@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Editor dock — Explain tab — Visual mode (**`CB-018A.1`**)**: read-only **scoped** node graph (focus + upstream/downstream) with **pan**, **zoom** (wheel), **Fit view**, and a **details** pane for selected node/edge; deterministic layout via **`UiReactExplainGraphLayout`**; rendering via **`UiReactExplainGraphView`**. **Text** mode preserves the full BBCode report. Truncation when node/edge caps hit.
 - **Editor dock — Explain tab (**`CB-018A`**)**: declarative dependency snapshot for a selected **`UiReact*`** node — registry **bindings**, **`wire_rules`** in/out flow (via **`UiReactWireRuleIntrospection`**), **`UiComputed*`** **`sources`**, and capped **static cycle candidates** (**`UiReactExplainGraphBuilder`**, **`UiReactExplainGraphSnapshot`**). Not a runtime causality trace.
 - **`UiAnimTarget.ResetBehavior`**: **`RESET_VISUAL_ONLY`** (restore unified snapshot only) vs **`RESET_AND_STOP`** (call **`UiAnimUtils.stop_all_animations`** on the target, then restore).
 - **`UiAnimUtils.animate_reset_all`**: optional **`stop_before_reset`** — when **true**, runs **`stop_all_animations`** first, then **`UiAnimStateUtils.animate_reset_all`**.
