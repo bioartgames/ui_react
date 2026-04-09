@@ -8,11 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Editor dock — Explain tab (**`CB-018A`**)**: declarative dependency snapshot for a selected **`UiReact*`** node — registry **bindings**, **`wire_rules`** in/out flow (via **`UiReactWireRuleIntrospection`**), **`UiComputed*`** **`sources`**, and capped **static cycle candidates** (**`UiReactExplainGraphBuilder`**, **`UiReactExplainGraphSnapshot`**). Not a runtime causality trace.
 - **`UiAnimTarget.ResetBehavior`**: **`RESET_VISUAL_ONLY`** (restore unified snapshot only) vs **`RESET_AND_STOP`** (call **`UiAnimUtils.stop_all_animations`** on the target, then restore).
 - **`UiAnimUtils.animate_reset_all`**: optional **`stop_before_reset`** — when **true**, runs **`stop_all_animations`** first, then **`UiAnimStateUtils.animate_reset_all`**.
 
 ### Changed
 
+- **`UiReactStateReferenceCollector`**: **`wire_rules`** state paths go through **`UiReactWireRuleIntrospection.list_io`** (**DRY** with Explain graph).
 - **`UiReactAnimValidator`**: no longer warns about unsupported **`UiAnimTarget.trigger`** on **`UiReactItemList`** / **`UiReactTree`** when **`selection_slot` ≥ 0** (row-play presets; trigger is not used for host dispatch).
 - **Lead-in preamble reset** (when **`reset_duration` ≥ 0**): internal copy always uses **`RESET_AND_STOP`**.
 - **`anim_targets_catalog_demo.tscn`**: removed standalone **`RESET`** catalog row; reset affordance is **`Reset Preview`** only; help text updated.

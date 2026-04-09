@@ -3,6 +3,7 @@ extends Control
 class_name UiReactDock
 
 const _WireRulesPanelScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_wire_rules_panel.gd")
+const _ExplainPanelScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_explain_panel.gd")
 
 const _EMPTY_ISSUES_NO_DIAGNOSTICS := "No issues reported for the current scan."
 const _EMPTY_ISSUES_FILTERED := "No issues match the current filters or search."
@@ -55,6 +56,8 @@ var _replace_confirm_dialog: ConfirmationDialog
 var _tabs: TabContainer
 ## [UiReactDockWireRulesPanel] — untyped so [method refresh] / [method setup] resolve without global class cache in the analyzer.
 var _wire_rules_panel: Variant = null
+## [UiReactDockExplainPanel]
+var _explain_panel: Variant = null
 
 ## group_key -> expanded (for grouped view)
 var _group_expanded: Dictionary = {}
@@ -96,6 +99,8 @@ func _run_startup_refresh() -> void:
 func notify_edited_scene_changed() -> void:
 	if _wire_rules_panel != null and _wire_rules_panel.has_method(&"refresh"):
 		_wire_rules_panel.call(&"refresh")
+	if _explain_panel != null and _explain_panel.has_method(&"refresh"):
+		_explain_panel.call(&"refresh")
 	request_refresh(&"scene_changed")
 
 
@@ -133,6 +138,13 @@ func _build_ui() -> void:
 	_wire_rules_panel = wr_panel
 	_tabs.add_child(wr_panel)
 	_tabs.set_tab_title(1, "Wire rules")
+
+	var ex_panel = _ExplainPanelScript.new()
+	ex_panel.setup(_plugin)
+	_explain_panel = ex_panel
+	_tabs.add_child(ex_panel)
+	_tabs.set_tab_title(2, "Explain")
+
 	if not _tabs.tab_selected.is_connected(_on_tabs_tab_selected):
 		_tabs.tab_selected.connect(_on_tabs_tab_selected)
 
@@ -374,6 +386,8 @@ func _on_selection_changed() -> void:
 func _on_tabs_tab_selected(tab_idx: int) -> void:
 	if _wire_rules_panel != null and tab_idx == 1 and _wire_rules_panel.has_method(&"refresh"):
 		_wire_rules_panel.call(&"refresh")
+	if _explain_panel != null and tab_idx == 2 and _explain_panel.has_method(&"refresh"):
+		_explain_panel.call(&"refresh")
 
 
 func _on_editor_filesystem_changed() -> void:

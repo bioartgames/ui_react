@@ -2,9 +2,6 @@
 class_name UiReactStateReferenceCollector
 extends RefCounted
 
-const _SCRIPT_WIRE_SORT_ARRAY_BY_KEY := "res://addons/ui_react/scripts/api/models/ui_react_wire_sort_array_by_key.gd"
-
-
 static func collect_referenced_state_paths_for_scene(root: Node) -> Dictionary:
 	var out: Dictionary = {}
 	if root == null:
@@ -42,37 +39,10 @@ static func add_bound_state_paths_from_react_node(node: Node, out_paths: Diction
 
 
 static func _register_states_from_wire_rule(rule: UiReactWireRule, out_paths: Dictionary) -> void:
-	if rule is UiReactWireMapIntToString:
-		var r := rule as UiReactWireMapIntToString
-		_register_state_path(r.source_int_state, out_paths)
-		_register_state_path(r.target_string_state, out_paths)
-		_register_state_path(r.hint_state, out_paths)
-	elif rule is UiReactWireRefreshItemsFromCatalog:
-		var r2 := rule as UiReactWireRefreshItemsFromCatalog
-		_register_state_path(r2.filter_text_state, out_paths)
-		_register_state_path(r2.category_kind_state, out_paths)
-		_register_state_path(r2.items_state, out_paths)
-		_register_state_path(r2.selected_state, out_paths)
-	elif rule.get_script() is Script and (rule.get_script() as Script).resource_path == _SCRIPT_WIRE_SORT_ARRAY_BY_KEY:
-		_register_state_path(rule.get(&"items_state") as UiState, out_paths)
-		_register_state_path(rule.get(&"sort_key_state") as UiState, out_paths)
-		_register_state_path(rule.get(&"descending_state") as UiState, out_paths)
-	elif rule is UiReactWireCopySelectionDetail:
-		var r3 := rule as UiReactWireCopySelectionDetail
-		_register_state_path(r3.selected_state, out_paths)
-		_register_state_path(r3.items_state, out_paths)
-		_register_state_path(r3.detail_state, out_paths)
-		_register_state_path(r3.suffix_note_state, out_paths)
-	elif rule is UiReactWireSetStringOnBoolPulse:
-		var r4 := rule as UiReactWireSetStringOnBoolPulse
-		_register_state_path(r4.pulse_bool, out_paths)
-		_register_state_path(r4.target_string_state, out_paths)
-		_register_state_path(r4.selected_state, out_paths)
-		_register_state_path(r4.items_state, out_paths)
-	elif rule is UiReactWireSyncBoolStateDebugLine:
-		var r5 := rule as UiReactWireSyncBoolStateDebugLine
-		_register_state_path(r5.bool_state, out_paths)
-		_register_state_path(r5.target_string_state, out_paths)
+	for ref in UiReactWireRuleIntrospection.list_io(rule):
+		var st: Variant = ref.get(&"state", null)
+		if st is UiState:
+			_register_state_path(st as UiState, out_paths)
 
 
 static func _register_state_path(state: UiState, out_paths: Dictionary) -> void:
