@@ -143,7 +143,7 @@ func _build_ui() -> void:
 	ex_panel.setup(_plugin)
 	_explain_panel = ex_panel
 	_tabs.add_child(ex_panel)
-	_tabs.set_tab_title(2, "Explain")
+	_tabs.set_tab_title(2, "Dependency Graph")
 
 	if not _tabs.tab_selected.is_connected(_on_tabs_tab_selected):
 		_tabs.tab_selected.connect(_on_tabs_tab_selected)

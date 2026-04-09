@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Editor dock — Dependency Graph tab (**`CB-018A.3`**)**: tab renamed from **Explain**; **Refresh** button + **debounced auto-refresh** on scene selection change; **legend** for node/edge colors; graph footer **Nodes / Edges / truncated** (no raw spacing debug); **rounded** node corners + **centered** labels; redesigned **details** copy (**select** wording); **Focus in Inspector** (control, `.tres` state/computed, binding host, wire host, computed target) with additive **edge provenance** metadata from **`UiReactExplainGraphBuilder`**; **Copy details** button. Declarative / read-only; **Text** mode unchanged in substance.
 - **Editor dock — Explain tab — Visual readability pass (**`CB-018A.2`**)**: **orthogonal (Manhattan)** edge routing with per-band **lanes** and **arrowheads** on the final segment; **short** node/edge tokens on-canvas with **full** labels/ids in the **bottom** details pane (diagnostics-style); **adaptive** spacing; darker **framed** graph viewport; **filters** for binding/computed/wire edges and optional **all edge labels**; **breadcrumb** line; **hover/selection** dimming of unrelated edges; progressive edge labels (hover/selection, or toggle). Declarative / read-only; **Text** mode unchanged.
 - **Editor dock — Explain tab — Visual mode (**`CB-018A.1`**)**: read-only **scoped** node graph (focus + upstream/downstream) with **pan**, **zoom** (wheel), **Fit view**, and a **details** pane for selected node/edge; deterministic layout via **`UiReactExplainGraphLayout`**; rendering via **`UiReactExplainGraphView`**. **Text** mode preserves the full BBCode report. Truncation when node/edge caps hit.
 - **Editor dock — Explain tab (**`CB-018A`**)**: declarative dependency snapshot for a selected **`UiReact*`** node — registry **bindings**, **`wire_rules`** in/out flow (via **`UiReactWireRuleIntrospection`**), **`UiComputed*`** **`sources`**, and capped **static cycle candidates** (**`UiReactExplainGraphBuilder`**, **`UiReactExplainGraphSnapshot`**). Not a runtime causality trace.
@@ -16,7 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- **`UiReactStateReferenceCollector`**: **`wire_rules`** state paths go through **`UiReactWireRuleIntrospection.list_io`** (**DRY** with Explain graph).
+- **`UiReactStateReferenceCollector`**: **`wire_rules`** state paths go through **`UiReactWireRuleIntrospection.list_io`** (**DRY** with Dependency Graph builder).
 - **`UiReactAnimValidator`**: no longer warns about unsupported **`UiAnimTarget.trigger`** on **`UiReactItemList`** / **`UiReactTree`** when **`selection_slot` ≥ 0** (row-play presets; trigger is not used for host dispatch).
 - **Lead-in preamble reset** (when **`reset_duration` ≥ 0**): internal copy always uses **`RESET_AND_STOP`**.
 - **`anim_targets_catalog_demo.tscn`**: removed standalone **`RESET`** catalog row; reset affordance is **`Reset Preview`** only; help text updated.

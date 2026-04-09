@@ -29,7 +29,7 @@ Quick index for **solo maintenance** and **AI agents**. Authoring narrative and 
 | Add a **new `UiReact*`** control or **export** | [ROADMAP.md](ROADMAP.md) Charter; `editor_plugin/ui_react_component_registry.gd` (**BINDINGS_BY_COMPONENT**, **ANIM_TRIGGERS_BY_COMPONENT**); `editor_plugin/services/ui_react_binding_validator.gd` |
 | **Dock diagnostics** (anim, actions, wiring, tree, computed) | `editor_plugin/services/ui_react_validator_service.gd` façade → `ui_react_*_validator.gd` |
 | **Dock Wire rules** tab (list / add / reorder **`wire_rules`**, P5.2 / **CB-035**) | `editor_plugin/dock/ui_react_dock_wire_rules_panel.gd` |
-| **Dock Explain — Visual graph** (**CB-018A.1** / **CB-018A.2**) | `editor_plugin/services/ui_react_explain_graph_layout.gd`, `editor_plugin/dock/ui_react_explain_graph_view.gd` |
+| **Dock Dependency Graph — Visual graph** (**CB-018A.1**–**CB-018A.3**) | `editor_plugin/services/ui_react_explain_graph_layout.gd`, `editor_plugin/dock/ui_react_explain_graph_view.gd`, `editor_plugin/dock/ui_react_dock_explain_panel.gd` |
 | **Animation triggers** vs host control | `editor_plugin/ui_react_component_registry.gd` (**ANIM_TRIGGERS_BY_COMPONENT**); [README animation triggers table](../README.md) (search “supported triggers per host”) |
 | **Phased capability** / backlog / CB IDs | [ROADMAP.md](ROADMAP.md) Appendix |
 | **Charter** evidence bar (new wrappers, widened **`@export`**) | [ROADMAP.md](ROADMAP.md) **Charter** + glossary (**Official example**); scenes in [`../examples/`](../examples/) |

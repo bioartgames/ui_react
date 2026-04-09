@@ -1,4 +1,4 @@
-## Builds a declarative dependency snapshot for the Explain dock tab ([code]CB-018A[/code]).
+## Builds a declarative dependency snapshot for the Dependency Graph dock tab ([code]CB-018A[/code]).
 class_name UiReactExplainGraphBuilder
 extends RefCounted
 
@@ -83,7 +83,13 @@ static func _state_id(
 	var kind := _SnapshotScript.NodeKind.UI_STATE
 	if st is UiComputedStringState or st is UiComputedBoolState:
 		kind = _SnapshotScript.NodeKind.UI_COMPUTED
-	ctx.ensure_node(sid, kind, disp)
+	var extra: Dictionary = {}
+	if not rp.is_empty():
+		extra[&"state_file_path"] = rp
+	else:
+		extra[&"embedded_host_path"] = str(host_path)
+		extra[&"embedded_context"] = context_seg
+	ctx.ensure_node(sid, kind, disp, extra)
 	return sid
 
 
@@ -96,22 +102,29 @@ class _BuildContext extends RefCounted:
 	func _init(p_root: Node) -> void:
 		root = p_root
 
-	func ensure_node(p_id: String, kind: int, p_label: String) -> void:
+	func ensure_node(p_id: String, kind: int, p_label: String, extra: Dictionary = {}) -> void:
 		if node_by_id.has(p_id):
 			return
-		node_by_id[p_id] = {&"id": p_id, &"kind": kind, &"label": p_label}
+		var d: Dictionary = {&"id": p_id, &"kind": kind, &"label": p_label}
+		for k: Variant in extra:
+			d[k] = extra[k]
+		node_by_id[p_id] = d
 
-	func add_edge(from_id: String, to_id: String, kind: int, label: String) -> void:
+	func add_edge(from_id: String, to_id: String, kind: int, label: String, meta: Dictionary = {}) -> void:
 		if from_id.is_empty() or to_id.is_empty() or from_id == to_id:
 			return
-		edges.append({&"from_id": from_id, &"to_id": to_id, &"kind": kind, &"label": label})
+		var e: Dictionary = {&"from_id": from_id, &"to_id": to_id, &"kind": kind, &"label": label}
+		for k: Variant in meta:
+			e[k] = meta[k]
+		edges.append(e)
 
 	func _index_host(component: String, ctl: Control, host_path: NodePath) -> void:
 		var cid := UiReactExplainGraphBuilder._control_id(host_path)
 		ensure_node(
 			cid,
 			_SnapshotScript.NodeKind.CONTROL,
-			"%s @ %s" % [String(ctl.name), str(host_path)]
+			"%s @ %s" % [String(ctl.name), str(host_path)],
+			{&"control_path": str(host_path)}
 		)
 
 		var bindings: Array = UiReactComponentRegistry.BINDINGS_BY_COMPONENT.get(component, [])
@@ -122,7 +135,13 @@ class _BuildContext extends RefCounted:
 			var property_value: Variant = ctl.get(prop)
 			if property_value is UiState:
 				var sid := state_id(host_path, str(prop), property_value as UiState)
-				add_edge(sid, cid, _SnapshotScript.EdgeKind.BINDING, str(prop))
+				add_edge(
+					sid,
+					cid,
+					_SnapshotScript.EdgeKind.BINDING,
+					str(prop),
+					{&"host_path": str(host_path), &"binding_property": str(prop)}
+				)
 				_walk_for_computed(host_path, "bind:" + str(prop), property_value)
 
 		if component == "UiReactTabContainer" and &"tab_config" in ctl:
@@ -183,7 +202,8 @@ class _BuildContext extends RefCounted:
 							src_id,
 							cid_node,
 							_SnapshotScript.EdgeKind.COMPUTED_SOURCE,
-							"sources[%d]" % si
+							"sources[%d]" % si,
+							{&"host_path": str(host_path), &"computed_source_index": si}
 						)
 						_variant_nested(it, host_path, base_ctx + ".src[%d]" % si)
 					si += 1
@@ -240,7 +260,13 @@ class _BuildContext extends RefCounted:
 					var out_id := state_id(hp, "wire.out", out_st as UiState)
 					if out_id.is_empty() or in_id == out_id:
 						continue
-					add_edge(in_id, out_id, _SnapshotScript.EdgeKind.WIRE_FLOW, label)
+					add_edge(
+						in_id,
+						out_id,
+						_SnapshotScript.EdgeKind.WIRE_FLOW,
+						label,
+						{&"wire_host_path": str(hp), &"wire_rule_index": ri}
+					)
 
 	func _copy_nodes_and_edges(snap: Variant) -> void:
 		for k in node_by_id:

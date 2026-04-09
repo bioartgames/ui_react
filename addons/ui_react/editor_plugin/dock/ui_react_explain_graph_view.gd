@@ -1,9 +1,9 @@
-## Read-only graph canvas for Explain visual mode ([code]CB-018A.1[/code], [code]CB-018A.2[/code]).
+## Read-only graph canvas for Dependency Graph visual mode ([code]CB-018A.1[/code], [code]CB-018A.2[/code], [code]CB-018A.3[/code]).
 class_name UiReactExplainGraphView
 extends Control
 
 signal node_selected(node_id: String)
-signal edge_selected(from_id: String, to_id: String, kind: int, label: String)
+signal edge_selected(from_id: String, to_id: String, kind: int, label: String, edge_index: int)
 signal selection_cleared
 
 const _Snap := preload("res://addons/ui_react/editor_plugin/models/ui_react_explain_graph_snapshot.gd")
@@ -13,7 +13,13 @@ const MAX_ZOOM := 1.75
 const LABEL_ZOOM_MIN := 0.82
 const NODE_W := 140.0
 const NODE_H := 32.0
+const NODE_FS := 12
+const NODE_RADIUS := 6.0
 const VIEW_PAD := 10.0
+
+var _sb_fill: StyleBoxFlat
+var _sb_sel: StyleBoxFlat
+var _sb_hover: StyleBoxFlat
 
 var _layout: Dictionary = {}
 var _pan := Vector2.ZERO
@@ -39,6 +45,18 @@ func _ready() -> void:
 	focus_mode = Control.FOCUS_CLICK
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	custom_minimum_size = Vector2(200, 160)
+	_sb_fill = StyleBoxFlat.new()
+	_sb_fill.set_corner_radius_all(int(NODE_RADIUS))
+	_sb_sel = StyleBoxFlat.new()
+	_sb_sel.bg_color = Color(0, 0, 0, 0)
+	_sb_sel.border_color = Color(1.0, 0.92, 0.35, 1.0)
+	_sb_sel.set_border_width_all(2)
+	_sb_sel.set_corner_radius_all(int(NODE_RADIUS) + 2)
+	_sb_hover = StyleBoxFlat.new()
+	_sb_hover.bg_color = Color(0, 0, 0, 0)
+	_sb_hover.border_color = Color(1.0, 1.0, 0.85, 0.55)
+	_sb_hover.set_border_width_all(1)
+	_sb_hover.set_corner_radius_all(int(NODE_RADIUS) + 1)
 
 
 func set_edge_filters(show_binding: bool, show_computed: bool, show_wire: bool, show_all_edge_labels: bool) -> void:
@@ -96,7 +114,6 @@ func _draw() -> void:
 	var node_by_id: Dictionary = _layout.get(&"node_by_id", {}) as Dictionary
 	var edges: Array = _layout.get(&"draw_edges", []) as Array
 	var focus_id: String = str(_layout.get(&"focus_id", ""))
-	var note: String = str(_layout.get(&"note", ""))
 
 	var focus_active := _selection_or_hover_active()
 	var ek := _Snap.EdgeKind
@@ -157,16 +174,17 @@ func _draw() -> void:
 			fill = Color(0.25, 0.42, 0.32, 1.0)
 		if focus_active and not _node_is_focused(id):
 			fill.a = 0.28
-		draw_rect(rect, fill, true)
+		_sb_fill.bg_color = fill
+		draw_style_box(_sb_fill, rect)
 		if id == _selected_node_id:
-			draw_rect(rect.grow(3), Color(1.0, 0.92, 0.35, 1.0), false, 2.0)
+			draw_style_box(_sb_sel, rect.grow(2.0))
 		elif id == _hover_node_id:
-			draw_rect(rect.grow(2), Color(1.0, 1.0, 0.85, 0.5), false, 1.5)
+			draw_style_box(_sb_hover, rect.grow(1.0))
 		var dct: Dictionary = node_by_id.get(id, {}) as Dictionary
 		var lab2 := str(dct.get(&"short_label", dct.get(&"label", id)))
 		if lab2.length() > 18:
 			lab2 = lab2.substr(0, 16) + "…"
-		draw_string(ThemeDB.fallback_font, c + Vector2(-NODE_W * 0.5 + 4, 4), lab2, HORIZONTAL_ALIGNMENT_LEFT, int(NODE_W - 8), 12, Color(0.92, 0.92, 0.95, 1.0))
+		_draw_centered_node_label(c, lab2, Color(0.92, 0.92, 0.95, 1.0))
 
 	ei = 0
 	for e2: Variant in edges:
@@ -187,8 +205,31 @@ func _draw() -> void:
 		ei += 1
 
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	if not note.is_empty():
-		draw_string(ThemeDB.fallback_font, Vector2(VIEW_PAD + 4, size.y - 6), note, HORIZONTAL_ALIGNMENT_LEFT, int(size.x - 16), 10, Color(0.95, 0.75, 0.45, 1.0))
+	var gs: Variant = _layout.get(&"graph_stats", null)
+	if gs is Dictionary:
+		var gsd: Dictionary = gs as Dictionary
+		var nc := int(gsd.get(&"node_count", 0))
+		var ec := int(gsd.get(&"edge_count", 0))
+		var tr := bool(gsd.get(&"truncated", false))
+		var line := "Nodes: %d  Edges: %d" % [nc, ec]
+		if tr:
+			line += "  (truncated)"
+		draw_string(ThemeDB.fallback_font, Vector2(VIEW_PAD + 4, size.y - 6), line, HORIZONTAL_ALIGNMENT_LEFT, int(size.x - 16), 10, Color(0.78, 0.8, 0.88, 0.95))
+
+
+func _draw_centered_node_label(center: Vector2, text: String, modulate: Color) -> void:
+	var font := ThemeDB.fallback_font
+	var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, NODE_FS).x
+	var baseline := center.y + font.get_ascent(NODE_FS) * 0.35
+	draw_string(
+		font,
+		Vector2(center.x - tw * 0.5, baseline),
+		text,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		NODE_FS,
+		modulate
+	)
 
 
 func _draw_polyline(pts: PackedVector2Array, col: Color, width: float) -> void:
@@ -478,7 +519,8 @@ func _pick(screen_local: Vector2) -> void:
 			str(ed2.get(&"from_id", "")),
 			str(ed2.get(&"to_id", "")),
 			int(ed2.get(&"kind", -1)),
-			str(ed2.get(&"label", ""))
+			str(ed2.get(&"label", "")),
+			best_i
 		)
 		queue_redraw()
 	else:
