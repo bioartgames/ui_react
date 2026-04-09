@@ -219,6 +219,7 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-018 | State graph / debug overlay (editor or runtime) | Development | P6+ | Deferred | **Editor MVP** shipped as **CB-018A** (**Explain** dock tab). Runtime / live overlay still deferred. |
 | CB-018A | Explain graph (editor): bindings + wiring + computeds + static cycle hints | Development | P6+ | Done | **`UiReactDockExplainPanel`**, **`UiReactExplainGraphBuilder`**, **`UiReactWireRuleIntrospection`** (shared with **`UiReactStateReferenceCollector`**). No new control exports. |
 | CB-018A.1 | Explain visual graph (editor): scoped graph + details pane | Development | P6+ | Done | **`UiReactExplainGraphLayout`**, **`UiReactExplainGraphView`**; **Text** / **Visual** modes; read-only; caps + pan/zoom. |
+| CB-018A.2 | Explain visual graph readability (editor): orthogonal routes, short labels, bottom details, filters | Development | P6+ | Done | **CB-018A.1** surfaces only; **Manhattan** routing + **lanes**, **adaptive** gaps, **framed** canvas, **hover/selection** focus, **breadcrumb**, edge-kind toggles. |
 | CB-019 | Dock modularization (internal refactor) | N/A | P6+ | Deferred | Maintainability; no user-facing v1.0 promise. |
 | CB-020 | Scanner + validator updates for new bindings | All new controls/states | Ongoing | Planned | Add/adjust stem + **`BINDINGS_BY_COMPONENT`** in **`UiReactComponentRegistry`** for each new **`UiReact*`** control; keep **`UiReactBindingValidator`** (and related modules) aligned. **`action_targets`** validation (**CB-046**) extends the same pattern. |
 | CB-021 | Semver + CHANGELOG discipline | Releases | Ongoing | InProgress | Keep `CHANGELOG.md` aligned with releases. |
@@ -261,4 +262,4 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 
 ---
 
-*Last updated: 2026-04-09 — **CB-018A.1**: Explain **Visual** graph mode. **CB-018A**: Explain tab (declarative graph). Prior: **2.22.0**: **CB-035** / **P5.2** dock **Wire rules** tab. **CB-053** remains (broader plugin UX). Quarterly review: **Review process** → **Last quarterly review**. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Examples remain **four** scenes.*
+*Last updated: 2026-04-09 — **CB-018A.2**: Explain **Visual** readability (orthogonal graph, bottom details). **CB-018A.1**: Visual graph MVP. **CB-018A**: Explain tab (declarative graph). Prior: **2.22.0**: **CB-035** / **P5.2** dock **Wire rules** tab. **CB-053** remains (broader plugin UX). Quarterly review: **Review process** → **Last quarterly review**. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Examples remain **four** scenes.*

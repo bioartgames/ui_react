@@ -8,9 +8,9 @@ This addon exposes three related but **non-overlapping** tools. Keep their contr
 - **Emits:** `UiReactDiagnosticModel.DiagnosticIssue` rows via `UiReactValidatorService`.
 - **CB-018B** adds declarative-graph hints (cycles with wire flow, multi-writer risk) using the same snapshot as Explain — **do not** duplicate graph construction logic outside `UiReactExplainGraphBuilder`.
 
-## Explain tab (CB-018A / CB-018A.1)
+## Explain tab (CB-018A / CB-018A.1 / CB-018A.2)
 
-- **Purpose:** **read-only** static dependency snapshot for a **selected** `UiReact*` node — **Text** mode: full BBCode report; **Visual** mode: scoped node graph + details pane (**CB-018A.1**).
+- **Purpose:** **read-only** static dependency snapshot for a **selected** `UiReact*` node — **Text** mode: full BBCode report; **Visual** mode: scoped node graph with **Manhattan** edge routing (**CB-018A.2**), **short** canvas labels, **edge filters**, breadcrumb, and a **bottom** details pane (diagnostics-style layout; **CB-018A.1** base).
 - **Does not** emit dock warnings or mutate resources.
 
 ## Runtime debug overlay (CB-018C)

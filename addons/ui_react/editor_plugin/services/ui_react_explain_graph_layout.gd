@@ -1,4 +1,4 @@
-## Deterministic focus-centric layout for Explain visual graph ([code]CB-018A.1[/code]).
+## Deterministic focus-centric layout + orthogonal routing for Explain visual graph ([code]CB-018A[/code], [code]CB-018A.2[/code]).
 class_name UiReactExplainGraphLayout
 extends RefCounted
 
@@ -6,13 +6,14 @@ const _Snap := preload("res://addons/ui_react/editor_plugin/models/ui_react_expl
 
 const DEFAULT_MAX_NODES := 200
 const DEFAULT_MAX_EDGES := 400
-const LAYER_GAP := 180.0
-const ROW_GAP := 44.0
+
 const NODE_HALF_W := 70.0
 const NODE_HALF_H := 16.0
 
+const LANE_SEP := 14.0
 
-## Returns [code]{ "node_centers": Dictionary id->Vector2, "draw_edges": Array[Dictionary], "truncated": bool, "note": String }[/code]
+
+## Returns node centers, enriched [code]node_by_id[/code] ([code]short_label[/code]), [code]draw_edges[/code] with [code]route_points[/code] and [code]short_label[/code], spacing metadata, truncation.
 static func layout_snapshot(
 	snap: Variant,
 	focus_control_id: String,
@@ -39,7 +40,7 @@ static func layout_snapshot(
 			var nid := str(d.get(&"id", ""))
 			if nid.is_empty() or not scope.has(nid):
 				continue
-			node_by_id[nid] = d
+			node_by_id[nid] = d.duplicate(true)
 
 	if not node_by_id.has(focus_control_id):
 		node_by_id[focus_control_id] = {
@@ -58,7 +59,7 @@ static func layout_snapshot(
 		var to := str(ed.get(&"to_id", ""))
 		if not scope.has(fr) or not scope.has(to):
 			continue
-		scoped_edges.append(ed)
+		scoped_edges.append(ed.duplicate(true))
 		if scoped_edges.size() >= max_edges:
 			edges_capped = true
 			break
@@ -119,6 +120,11 @@ static func layout_snapshot(
 			L = -512
 		layer[id] = L
 
+	var n_scoped := node_by_id.size()
+	var gaps: Vector2 = _adaptive_gaps(n_scoped)
+	var layer_gap: float = gaps.x
+	var row_gap: float = gaps.y
+
 	var by_layer: Dictionary = {}
 	for id: Variant in layer:
 		var L2: int = int(layer[id])
@@ -142,11 +148,10 @@ static func layout_snapshot(
 	var max_y := 0.0
 	for L5: int in layers_sorted:
 		var row: Array[String] = by_layer[L5] as Array[String]
-		var xi := float(L5) * LAYER_GAP
-		var yi := 0.0
+		var xi := float(L5) * layer_gap
 		var ri := 0
 		for nid2: String in row:
-			var cy := float(ri) * ROW_GAP
+			var cy := float(ri) * row_gap
 			var pos := Vector2(xi, cy)
 			node_centers[nid2] = pos
 			min_x = minf(min_x, pos.x - NODE_HALF_W)
@@ -159,18 +164,33 @@ static func layout_snapshot(
 	for k2: Variant in node_centers:
 		node_centers[k2] = (node_centers[k2] as Vector2) + offset
 
+	for nid3: Variant in node_by_id:
+		var ids := String(nid3)
+		var d0: Dictionary = node_by_id[ids] as Dictionary
+		var full_lab := str(d0.get(&"label", ids))
+		var kind0 := int(d0.get(&"kind", 0))
+		d0[&"short_label"] = _short_node_label(ids, kind0, full_lab)
+		node_by_id[ids] = d0
+
 	var draw_edges: Array[Dictionary] = []
 	for ed2: Dictionary in scoped_edges:
 		var fa := str(ed2.get(&"from_id", ""))
 		var ta := str(ed2.get(&"to_id", ""))
 		if not node_centers.has(fa) or not node_centers.has(ta):
 			continue
+		var k := int(ed2.get(&"kind", -1))
+		ed2[&"short_label"] = _short_edge_token(k)
 		draw_edges.append(ed2)
+
+	_assign_routes(draw_edges, node_centers, layer)
 
 	var truncated := nodes_capped or edges_capped
 	var note := ""
 	if truncated:
 		note = "Graph truncated (nodes=%s, edges=%s)." % [nodes_capped, edges_capped]
+	if not note.is_empty():
+		note += " "
+	note += "Spacing: layer_gap=%.0f row_gap=%.0f (nodes=%d)." % [layer_gap, row_gap, n_scoped]
 
 	return {
 		&"node_centers": node_centers,
@@ -179,7 +199,171 @@ static func layout_snapshot(
 		&"truncated": truncated,
 		&"note": note,
 		&"focus_id": focus_control_id,
+		&"layer_gap": layer_gap,
+		&"row_gap": row_gap,
 	}
+
+
+static func _adaptive_gaps(node_count: int) -> Vector2:
+	if node_count <= 20:
+		return Vector2(220.0, 56.0)
+	if node_count <= 80:
+		return Vector2(200.0, 48.0)
+	return Vector2(180.0, 44.0)
+
+
+static func _short_edge_token(kind: int) -> String:
+	match kind:
+		_Snap.EdgeKind.BINDING:
+			return "bind"
+		_Snap.EdgeKind.COMPUTED_SOURCE:
+			return "computed"
+		_Snap.EdgeKind.WIRE_FLOW:
+			return "wire"
+	return "edge"
+
+
+static func _short_node_label(id: String, kind: int, full_label: String) -> String:
+	if kind == _Snap.NodeKind.CONTROL:
+		if full_label.contains(" @ "):
+			return full_label.get_slice(" @ ", 0).strip_edges()
+		if id.begins_with("ctrl:"):
+			var p := id.substr(5)
+			var slash := p.rfind("/")
+			if slash >= 0:
+				return p.substr(slash + 1)
+			return p
+		return full_label
+	if kind == _Snap.NodeKind.UI_STATE:
+		if full_label.begins_with("embedded "):
+			var rest := full_label.substr(9)
+			var at := rest.find(" @ ")
+			if at > 0:
+				return rest.substr(0, at).strip_edges()
+			return rest.strip_edges()
+		var f := full_label.get_file()
+		if f.is_empty():
+			return full_label
+		return f.get_basename()
+	if kind == _Snap.NodeKind.UI_COMPUTED:
+		if full_label.begins_with("embedded "):
+			var rest2 := full_label.substr(9)
+			var at2 := rest2.find(" @ ")
+			if at2 > 0:
+				return rest2.substr(0, at2).strip_edges()
+			return rest2.strip_edges()
+		var f2 := full_label.get_file()
+		if f2.is_empty():
+			return full_label
+		return f2.get_basename()
+	return full_label
+
+
+static func _assign_routes(
+	draw_edges: Array[Dictionary],
+	node_centers: Dictionary,
+	layer: Dictionary,
+) -> void:
+	var bands: Dictionary = {}
+	for ed: Dictionary in draw_edges:
+		var fa := str(ed.get(&"from_id", ""))
+		var ta := str(ed.get(&"to_id", ""))
+		var la: int = int(layer.get(fa, 0))
+		var lb: int = int(layer.get(ta, 0))
+		var lo := mini(la, lb)
+		var hi := maxi(la, lb)
+		var key := "%d|%d" % [lo, hi]
+		if not bands.has(key):
+			bands[key] = [] as Array[Dictionary]
+		(bands[key] as Array[Dictionary]).append(ed)
+
+	for bkey: Variant in bands:
+		var arr: Array[Dictionary] = bands[bkey] as Array[Dictionary]
+		arr.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+			var fa := str(a.get(&"from_id", ""))
+			var ta := str(a.get(&"to_id", ""))
+			var fb := str(b.get(&"from_id", ""))
+			var tb := str(b.get(&"to_id", ""))
+			if fa != fb:
+				return fa < fb
+			if ta != tb:
+				return ta < tb
+			return int(a.get(&"kind", 0)) < int(b.get(&"kind", 0))
+		)
+		var n := arr.size()
+		for i in range(n):
+			var ed: Dictionary = arr[i]
+			var lane_offset := (float(i) - float(n - 1) * 0.5) * LANE_SEP
+			var pts: PackedVector2Array = _orthogonal_polyline(ed, node_centers, lane_offset)
+			ed[&"route_points"] = pts
+
+
+static func _orthogonal_polyline(ed: Dictionary, node_centers: Dictionary, lane_offset: float) -> PackedVector2Array:
+	var fa := str(ed.get(&"from_id", ""))
+	var ta := str(ed.get(&"to_id", ""))
+	var sa: Vector2 = node_centers[fa] as Vector2
+	var sb: Vector2 = node_centers[ta] as Vector2
+	var exit_entry: Array = _exit_entry_ports(sa, sb)
+	var exit_pt: Vector2 = exit_entry[0]
+	var entry_pt: Vector2 = exit_entry[1]
+	var mid_x := (exit_pt.x + entry_pt.x) * 0.5 + lane_offset
+	var p1 := Vector2(mid_x, exit_pt.y)
+	var p2 := Vector2(mid_x, entry_pt.y)
+	var raw: PackedVector2Array = PackedVector2Array()
+	raw.append(exit_pt)
+	raw.append(p1)
+	raw.append(p2)
+	raw.append(entry_pt)
+	return _dedupe_collinear(raw)
+
+
+static func _dedupe_collinear(pts: PackedVector2Array) -> PackedVector2Array:
+	if pts.size() <= 2:
+		return pts
+	var out: PackedVector2Array = PackedVector2Array()
+	out.append(pts[0])
+	for i in range(1, pts.size()):
+		var cur: Vector2 = pts[i]
+		if out[out.size() - 1].distance_to(cur) < 0.01:
+			continue
+		out.append(cur)
+	if out.size() >= 3:
+		var merged: PackedVector2Array = PackedVector2Array()
+		merged.append(out[0])
+		for j in range(1, out.size() - 1):
+			var prev: Vector2 = merged[merged.size() - 1]
+			var mid: Vector2 = out[j]
+			var nxt: Vector2 = out[j + 1]
+			var v1 := mid - prev
+			var v2 := nxt - mid
+			if absf(v1.x * v2.y - v1.y * v2.x) < 1e-3:
+				continue
+			merged.append(mid)
+		merged.append(out[out.size() - 1])
+		return merged
+	return out
+
+
+static func _exit_entry_ports(sa: Vector2, sb: Vector2) -> Array:
+	var dx := sb.x - sa.x
+	var half_w := NODE_HALF_W
+	var half_h := NODE_HALF_H
+	var exit_pt: Vector2
+	var entry_pt: Vector2
+	if absf(dx) < 1.0:
+		var jog := 1.0
+		if absf(sb.y - sa.y) > 0.01:
+			jog = signf(sb.y - sa.y)
+		exit_pt = Vector2(sa.x + half_w * jog, sa.y)
+		entry_pt = Vector2(sb.x - half_w * jog, sb.y)
+		if absf(exit_pt.x - entry_pt.x) < 1.0:
+			exit_pt = Vector2(sa.x + half_w, sa.y - signf(sb.y - sa.y) * half_h)
+			entry_pt = Vector2(sb.x - half_w, sb.y + signf(sb.y - sa.y) * half_h)
+	else:
+		var sx := signf(dx)
+		exit_pt = Vector2(sa.x + sx * half_w, sa.y)
+		entry_pt = Vector2(sb.x - sx * half_w, sb.y)
+	return [exit_pt, entry_pt]
 
 
 static func _bfs_backward_from(start: String, pred: Dictionary, allowed: Dictionary) -> Dictionary:
