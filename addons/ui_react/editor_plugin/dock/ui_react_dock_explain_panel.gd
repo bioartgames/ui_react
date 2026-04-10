@@ -1,4 +1,4 @@
-## Editor dock tab: declarative dependency graph ([code]CB-018A[/code]) + visual graph ([code]CB-018A.1[/code]–[code]CB-018A.3[/code]).
+## Editor dock tab: declarative dependency graph ([code]CB-018A[/code]) + visual graph ([code]CB-018A.5[/code]: graph-only, per-anchor narrative in details).
 class_name UiReactDockExplainPanel
 extends MarginContainer
 
@@ -6,10 +6,6 @@ const _ExplainBuilderScript := preload("res://addons/ui_react/editor_plugin/serv
 const _ExplainLayoutScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_explain_graph_layout.gd")
 const _ExplainGraphViewScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_explain_graph_view.gd")
 const _SnapScript := preload("res://addons/ui_react/editor_plugin/models/ui_react_explain_graph_snapshot.gd")
-
-const MODE_TEXT := 0
-const MODE_VISUAL := 1
-
 const _SEL_NONE := 0
 const _SEL_NODE := 1
 const _SEL_EDGE := 2
@@ -18,11 +14,8 @@ var _plugin: EditorPlugin
 
 var _hint: RichTextLabel
 var _btn_refresh: Button
-var _mode_option: OptionButton
 var _btn_fit: Button
-var _stack: TabContainer
-var _scroll_text: ScrollContainer
-var _body: RichTextLabel
+var _cb_full_lists: CheckBox
 var _visual_host: VBoxContainer
 var _visual_toolbar: HBoxContainer
 var _legend_row: HBoxContainer
@@ -39,14 +32,19 @@ var _btn_copy_details: Button
 
 var _auto_refresh_timer: Timer
 
-var _mode: int = MODE_TEXT
 var _last_snap: Variant = null
 var _last_focus_id: String = ""
 var _last_layout: Dictionary = {}
+var _narrative_cache: Dictionary = {}
+var _show_full_lists: bool = false
 
 var _selection_kind: int = _SEL_NONE
 var _graph_selected_node_id: String = ""
 var _graph_selected_edge_index: int = -1
+var _last_edge_from_id: String = ""
+var _last_edge_to_id: String = ""
+var _last_edge_kind: int = -1
+var _last_edge_label: String = ""
 var _last_details_plain: String = ""
 
 
@@ -59,7 +57,7 @@ func setup(plugin: EditorPlugin) -> void:
 
 
 func refresh() -> void:
-	if _body == null:
+	if _graph_view == null:
 		return
 	_set_idle()
 	if _plugin == null:
@@ -98,14 +96,13 @@ func refresh() -> void:
 		return
 
 	_set_hint_visible(false)
+	_narrative_cache.clear()
 	var snap = _ExplainBuilderScript.build(root, n as Control)
 	_last_snap = snap
 	var hp: NodePath = _ExplainBuilderScript._host_path_from_root(root, n as Control)
 	_last_focus_id = _ExplainBuilderScript._control_id(hp)
 
-	_render_text_report(snap)
 	_apply_visual_from_snap_safe(snap, _last_focus_id)
-	_apply_mode_visibility()
 
 
 func _on_editor_selection_changed() -> void:
@@ -121,34 +118,6 @@ func _on_debounced_auto_refresh() -> void:
 	refresh()
 
 
-func _render_text_report(snap: Variant) -> void:
-	var bbf := "[font_size=12]"
-	for line in snap.bound_state_lines:
-		bbf += line
-	bbf += "\n[b]Upstream[/b] (state/computed that flow into this control’s bindings):\n"
-	if snap.upstream_lines.is_empty():
-		bbf += "(none)\n"
-	else:
-		for line in snap.upstream_lines:
-			bbf += line
-	bbf += "\n[b]Downstream[/b] (nodes reachable from bound states):\n"
-	if snap.downstream_lines.is_empty():
-		bbf += "(none)\n"
-	else:
-		for line in snap.downstream_lines:
-			bbf += line
-	bbf += "\n[b]Cycle candidates[/b] (static, state/computed edges only):\n"
-	if snap.cycle_candidates.is_empty():
-		bbf += "(none)\n"
-	else:
-		for c: Variant in snap.cycle_candidates:
-			if c is Dictionary:
-				bbf += "• %s\n" % str((c as Dictionary).get(&"summary", "?"))
-	bbf += "\n[i]Declarative graph only — not a runtime causality trace.[/i]\n"
-	bbf += "[/font_size]"
-	_body.text = bbf
-
-
 func _apply_visual_from_snap_safe(snap: Variant, focus_id: String) -> void:
 	if _graph_view == null:
 		return
@@ -159,15 +128,12 @@ func _apply_visual_from_snap_safe(snap: Variant, focus_id: String) -> void:
 		_graph_view.clear_graph()
 		_set_details_empty()
 		_set_hint_visible(true)
-		_set_hint("No nodes in scope for this layout. Use Text mode for the full report.")
+		_set_hint("No nodes in scope for this layout. Lower layout caps, widen bindings, or Refresh after edits.")
 		return
 	(_graph_view as Object).call(&"set_layout", layout)
 	_push_visual_filters()
-	_set_details_placeholder()
-	_graph_selected_node_id = ""
-	_graph_selected_edge_index = -1
-	_selection_kind = _SEL_NONE
-	_update_focus_button_state()
+	if _graph_view.has_method(&"select_node_by_id"):
+		_graph_view.call(&"select_node_by_id", focus_id)
 
 
 func _push_visual_filters() -> void:
@@ -178,27 +144,6 @@ func _push_visual_filters() -> void:
 	var w := _cb_wire == null or _cb_wire.button_pressed
 	var lbl := _cb_edge_labels != null and _cb_edge_labels.button_pressed
 	(_graph_view as Object).call(&"set_edge_filters", b, c, w, lbl)
-
-
-func _apply_mode_visibility() -> void:
-	if _stack == null:
-		return
-	_stack.current_tab = 0 if _mode == MODE_TEXT else 1
-	if _visual_toolbar:
-		_visual_toolbar.visible = _mode == MODE_VISUAL
-	if _legend_row:
-		_legend_row.visible = _mode == MODE_VISUAL
-	if _btn_fit:
-		_btn_fit.visible = _mode == MODE_VISUAL
-
-
-func _on_mode_changed(index: int) -> void:
-	_mode = _mode_option.get_item_id(index)
-	if _stack:
-		_stack.current_tab = 0 if _mode == MODE_TEXT else 1
-	_apply_mode_visibility()
-	if _mode == MODE_VISUAL and _last_snap != null:
-		_apply_visual_from_snap_safe(_last_snap, _last_focus_id)
 
 
 func _on_fit_pressed() -> void:
@@ -217,6 +162,10 @@ func _on_graph_node(id: String) -> void:
 func _on_graph_edge(from_id: String, to_id: String, kind: int, label: String, edge_index: int) -> void:
 	_graph_selected_node_id = ""
 	_graph_selected_edge_index = edge_index
+	_last_edge_from_id = from_id
+	_last_edge_to_id = to_id
+	_last_edge_kind = kind
+	_last_edge_label = label
 	_selection_kind = _SEL_EDGE
 	_update_focus_button_state()
 	_fill_edge_details(from_id, to_id, kind, label, edge_index)
@@ -245,8 +194,8 @@ func _set_details_placeholder() -> void:
 
 func _set_details_empty() -> void:
 	_set_details_both(
-		"[i]No graph in scope. Try Text mode or Refresh after changing bindings.[/i]",
-		"No graph in scope. Try Text mode or Refresh after changing bindings."
+		"[i]No graph in scope. Refresh after changing bindings or selection.[/i]",
+		"No graph in scope. Refresh after changing bindings or selection."
 	)
 
 
@@ -254,6 +203,168 @@ func _set_details_both(bb: String, plain: String) -> void:
 	if _details:
 		_details.text = bb
 	_last_details_plain = plain
+
+
+func _plain_from_bbcode_line(line: String) -> String:
+	var t := line
+	t = t.replace("[b]", "").replace("[/b]", "")
+	t = t.replace("[i]", "").replace("[/i]", "")
+	t = t.replace("[code]", "").replace("[/code]", "")
+	return t
+
+
+func _get_narrative_cached(anchor_id: String) -> Variant:
+	if _narrative_cache.has(anchor_id):
+		return _narrative_cache[anchor_id]
+	if _plugin == null or _last_snap == null:
+		return null
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return null
+	var snap: UiReactExplainGraphSnapshot = _last_snap as UiReactExplainGraphSnapshot
+	var raw: Variant = UiReactExplainGraphBuilder.compute_narrative(
+		root,
+		snap,
+		anchor_id,
+		_show_full_lists
+	)
+	var narr: Object = raw as Object
+	if narr != null:
+		_narrative_cache[anchor_id] = narr
+	return narr
+
+
+func _snapshot_has_node_id(node_id: String) -> bool:
+	if _last_snap == null or node_id.is_empty():
+		return false
+	var snap: UiReactExplainGraphSnapshot = _last_snap as UiReactExplainGraphSnapshot
+	for nd: Variant in snap.nodes:
+		if nd is Dictionary and str((nd as Dictionary).get(&"id", "")) == node_id:
+			return true
+	return false
+
+
+func _edge_anchor_id(from_id: String, to_id: String) -> String:
+	if _snapshot_has_node_id(from_id):
+		return from_id
+	return to_id
+
+
+func _on_full_lists_toggled(pressed: bool) -> void:
+	_show_full_lists = pressed
+	_narrative_cache.clear()
+	if _selection_kind == _SEL_NODE and not _graph_selected_node_id.is_empty():
+		_fill_node_details(_graph_selected_node_id)
+	elif _selection_kind == _SEL_EDGE:
+		_fill_edge_details(
+			_last_edge_from_id,
+			_last_edge_to_id,
+			_last_edge_kind,
+			_last_edge_label,
+			_graph_selected_edge_index
+		)
+
+
+func _narrative_sections_bb_plain(narr: Object) -> PackedStringArray:
+	var bb := ""
+	var plain := ""
+	if narr == null:
+		return PackedStringArray([bb, plain])
+	for line: String in narr.bound_state_lines:
+		bb += line
+		plain += _plain_from_bbcode_line(line)
+	bb += "\n[b]Upstream[/b] (state/computed that flow into this control’s bindings):\n"
+	plain += "\nUpstream (state/computed that flow into this control's bindings):\n"
+	if narr.upstream_lines.is_empty():
+		bb += "(none)\n"
+		plain += "(none)\n"
+	else:
+		for line2: String in narr.upstream_lines:
+			bb += line2
+			plain += _plain_from_bbcode_line(line2)
+	bb += "\n[b]Downstream[/b] (nodes reachable from bound states):\n"
+	plain += "\nDownstream (nodes reachable from bound states):\n"
+	if narr.downstream_lines.is_empty():
+		bb += "(none)\n"
+		plain += "(none)\n"
+	else:
+		for line3: String in narr.downstream_lines:
+			bb += line3
+			plain += _plain_from_bbcode_line(line3)
+	return PackedStringArray([bb, plain])
+
+
+func _append_cycle_section_bb_plain(anchor_id: String) -> PackedStringArray:
+	var bb := "\n[b]Cycle candidates[/b] (static, state/computed edges only):\n"
+	var plain := "\nCycle candidates (static, state/computed edges only):\n"
+	if _last_snap == null:
+		bb += "(none)\n"
+		plain += "(none)\n"
+		return PackedStringArray([bb, plain])
+	var snap: UiReactExplainGraphSnapshot = _last_snap as UiReactExplainGraphSnapshot
+	var is_hub := anchor_id == _last_focus_id
+	var cap := 999999 if (is_hub or _show_full_lists) else _CYCLE_SUMMARY_CAP
+	var matching: Array[Dictionary] = []
+	for c: Variant in snap.cycle_candidates:
+		if c is not Dictionary:
+			continue
+		var cd: Dictionary = c as Dictionary
+		if is_hub:
+			matching.append(cd)
+		else:
+			var ids := cd.get(&"node_ids", PackedStringArray()) as PackedStringArray
+			if _id_in_packed(ids, anchor_id):
+				matching.append(cd)
+	if matching.is_empty():
+		bb += "(none)\n"
+		plain += "(none)\n"
+		return PackedStringArray([bb, plain])
+	var n_show := mini(matching.size(), cap)
+	for i in n_show:
+		var sm := str(matching[i].get(&"summary", "?"))
+		bb += "• [code]%s[/code]\n" % sm
+		plain += "• %s\n" % sm
+	var more := matching.size() - n_show
+	if more > 0:
+		bb += "• [i]+%d more[/i]\n" % more
+		plain += "• +%d more\n" % more
+	bb += "\n[i]Declarative graph only — not a runtime causality trace.[/i]\n"
+	plain += "\nDeclarative graph only — not a runtime causality trace.\n"
+	return PackedStringArray([bb, plain])
+
+
+func _mismatch_banner_bb_plain(narr: Object) -> PackedStringArray:
+	if narr == null:
+		return PackedStringArray(["", ""])
+	var layout_nb: Dictionary = _last_layout.get(&"node_by_id", {}) as Dictionary
+	var missing := false
+	for i in narr.upstream_node_ids.size():
+		var idu := String(narr.upstream_node_ids[i])
+		if not layout_nb.has(idu):
+			missing = true
+			break
+	if not missing:
+		for j in narr.downstream_node_ids.size():
+			var idd := String(narr.downstream_node_ids[j])
+			if not layout_nb.has(idd):
+				missing = true
+				break
+	var stats: Dictionary = _last_layout.get(&"graph_stats", {}) as Dictionary
+	var truncated := bool(stats.get(&"truncated", false))
+	if not missing and not truncated:
+		return PackedStringArray(["", ""])
+	var bb := "[b]Canvas note[/b]\n"
+	var plain := "Canvas note\n"
+	if missing:
+		bb += "Some nodes in this narrative are [b]not drawn[/b] (layout scope, caps, or edge filters).\n"
+		plain += "Some nodes in this narrative are not drawn (layout scope, caps, or edge filters).\n"
+	if truncated:
+		bb += "This graph layout is [b]truncated[/b] (node/edge caps).\n"
+		plain += "This graph layout is truncated (node/edge caps).\n"
+	bb += "\n"
+	plain += "\n"
+	return PackedStringArray([bb, plain])
 
 
 const _INCIDENT_EDGE_CAP := 8
@@ -284,10 +395,10 @@ func _format_incident_edge_bb_plain(ed: Dictionary) -> PackedStringArray:
 	return PackedStringArray([bb, plain])
 
 
-func _focus_relation_blurb_bb_plain(node_id: String, focus_id: String, node_layer: Dictionary) -> PackedStringArray:
-	var bb := "[b]Relative to focus[/b]\n"
-	var plain := "Relative to focus\n"
-	if node_id == focus_id:
+func _focus_relation_blurb_bb_plain(node_id: String, layout_focus_id: String, node_layer: Dictionary) -> PackedStringArray:
+	var bb := "[b]Relative to layout center[/b]\n"
+	var plain := "Relative to layout center\n"
+	if node_id == layout_focus_id:
 		bb += "At layout center — this is the focus control column in this layout.\n\n"
 		plain += "At layout center — this is the focus control column in this layout.\n\n"
 	else:
@@ -308,50 +419,6 @@ func _focus_relation_blurb_bb_plain(node_id: String, focus_id: String, node_laye
 			else:
 				bb += "Same layout tier as the focus column — neighbors in this horizontal band.\n\n"
 				plain += "Same layout tier as the focus column — neighbors in this horizontal band.\n\n"
-	if _last_snap != null:
-		var snap: UiReactExplainGraphSnapshot = _last_snap as UiReactExplainGraphSnapshot
-		if _id_in_packed(snap.upstream_ids, node_id):
-			bb += "Also listed as upstream of the focus in the full snapshot (state/computed walk).\n\n"
-			plain += "Also listed as upstream of the focus in the full snapshot (state/computed walk).\n\n"
-		if _id_in_packed(snap.downstream_ids, node_id):
-			bb += "Also listed as downstream of the focus in the full snapshot (state/computed walk).\n\n"
-			plain += "Also listed as downstream of the focus in the full snapshot (state/computed walk).\n\n"
-	return PackedStringArray([bb, plain])
-
-
-func _cycle_summaries_bb_plain(node_id: String) -> PackedStringArray:
-	if _last_snap == null:
-		return PackedStringArray(["", ""])
-	var snap: UiReactExplainGraphSnapshot = _last_snap as UiReactExplainGraphSnapshot
-	var collected: PackedStringArray = PackedStringArray()
-	var total_matching := 0
-	for c: Variant in snap.cycle_candidates:
-		if c is not Dictionary:
-			continue
-		var cd: Dictionary = c as Dictionary
-		var ids := cd.get(&"node_ids", PackedStringArray()) as PackedStringArray
-		if not _id_in_packed(ids, node_id):
-			continue
-		total_matching += 1
-		if collected.size() >= _CYCLE_SUMMARY_CAP:
-			continue
-		var sm := str(cd.get(&"summary", "")).strip_edges()
-		if sm.is_empty():
-			continue
-		collected.append(sm)
-	if collected.is_empty():
-		return PackedStringArray(["", ""])
-	var bb := "[b]Cycle hints[/b]\n"
-	var plain := "Cycle hints\n"
-	for i in collected.size():
-		bb += "• [code]%s[/code]\n" % collected[i]
-		plain += "• %s\n" % collected[i]
-	var more := total_matching - collected.size()
-	if more > 0:
-		bb += "• [i]+%d more[/i]\n" % more
-		plain += "• +%d more\n" % more
-	bb += "Static candidate (declarative edges only).\n\n"
-	plain += "Static candidate (declarative edges only).\n\n"
 	return PackedStringArray([bb, plain])
 
 
@@ -386,19 +453,33 @@ func _node_headline_bb_plain(node_id: String, d: Dictionary, focus_id: String) -
 func _fill_node_details(node_id: String) -> void:
 	if node_id.is_empty():
 		return
+	var narr: Object = _get_narrative_cached(node_id) as Object
 	var nb: Dictionary = _last_layout.get(&"node_by_id", {}) as Dictionary
 	var d: Dictionary = nb.get(node_id, {}) as Dictionary
 	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
-	var focus_id := str(_last_layout.get(&"focus_id", ""))
+	var layout_focus := str(_last_layout.get(&"focus_id", ""))
 	var node_layer: Dictionary = _last_layout.get(&"node_layer", {}) as Dictionary
-	var stats: Dictionary = _last_layout.get(&"graph_stats", {}) as Dictionary
-	var truncated := bool(stats.get(&"truncated", false))
 
-	var hl := _node_headline_bb_plain(node_id, d, focus_id)
-	var bb := hl[0]
-	var plain := hl[1]
+	var bb := "[font_size=12]"
+	var plain := ""
+	if narr != null:
+		var ns := _narrative_sections_bb_plain(narr)
+		bb += ns[0]
+		plain += ns[1]
+		var cyc := _append_cycle_section_bb_plain(node_id)
+		bb += cyc[0]
+		plain += cyc[1]
+		var mm := _mismatch_banner_bb_plain(narr)
+		bb += mm[0]
+		plain += mm[1]
+	bb += "[/font_size]\n"
 
-	var rel := _focus_relation_blurb_bb_plain(node_id, focus_id, node_layer)
+	bb += "[b]On canvas[/b]\n"
+	plain += "On canvas\n"
+	var hl := _node_headline_bb_plain(node_id, d, layout_focus)
+	bb += hl[0]
+	plain += hl[1]
+	var rel := _focus_relation_blurb_bb_plain(node_id, layout_focus, node_layer)
 	bb += rel[0]
 	plain += rel[1]
 
@@ -440,21 +521,6 @@ func _fill_node_details(node_id: String) -> void:
 			bb += "[i]+%d more in this graph[/i]\n\n" % overflow
 			plain += "+%d more in this graph\n\n" % overflow
 
-	var cyc := _cycle_summaries_bb_plain(node_id)
-	if not cyc[0].is_empty():
-		bb += cyc[0]
-		plain += cyc[1]
-
-	bb += "[b]Full detail[/b]\n"
-	plain += "Full detail\n"
-	bb += "Switch to [b]Text[/b] mode for full upstream/downstream narratives, binding lists, and the complete cycle section"
-	plain += "Switch to Text mode for full upstream/downstream narratives, binding lists, and the complete cycle section"
-	if truncated:
-		bb += " (this graph is truncated)"
-		plain += " (this graph is truncated)"
-	bb += ".\n\n"
-	plain += ".\n\n"
-
 	bb += "[b]Technical[/b]\n"
 	plain += "Technical\n"
 	var nk := int(d.get(&"kind", -1))
@@ -489,6 +555,8 @@ func _fill_node_details(node_id: String) -> void:
 
 
 func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String, edge_index: int) -> void:
+	var anchor_id := _edge_anchor_id(from_id, to_id)
+	var narr: Object = _get_narrative_cached(anchor_id) as Object
 	var token := _edge_short_token(kind)
 	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
 	var ed: Dictionary = {}
@@ -500,39 +568,52 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 	var from_short := _short_label_for_node_id(from_id)
 	var to_short := _short_label_for_node_id(to_id)
 
-	var bb := ""
+	var bb := "[font_size=12]"
 	var plain := ""
+	if narr != null:
+		var ns := _narrative_sections_bb_plain(narr)
+		bb += ns[0]
+		plain += ns[1]
+		var cyc := _append_cycle_section_bb_plain(anchor_id)
+		bb += cyc[0]
+		plain += cyc[1]
+		var mm := _mismatch_banner_bb_plain(narr)
+		bb += mm[0]
+		plain += mm[1]
+	bb += "[/font_size]\n"
+	bb += "[b]Selected edge[/b]\n"
+	plain += "Selected edge\n\n"
 
 	match kind:
 		_SnapScript.EdgeKind.BINDING:
 			var bp := str(ed.get(&"binding_property", label))
-			bb = "[b]Property binding[/b]\n"
+			bb += "[b]Property binding[/b]\n"
 			bb += "[code]%s[/code] feeds the [code]UiReact*[/code] control [code]%s[/code]'s [code]%s[/code] export.\n\n" % [
 				from_short,
 				to_short,
 				bp,
 			]
-			plain = "Property binding\n"
+			plain += "Property binding\n"
 			plain += "%s feeds the UiReact* control %s's %s export.\n\n" % [from_short, to_short, bp]
 		_SnapScript.EdgeKind.COMPUTED_SOURCE:
-			bb = "[b]Computed source[/b]\n"
+			bb += "[b]Computed source[/b]\n"
 			bb += "Upstream state [code]%s[/code] feeds an entry in the computed resource [code]%s[/code]'s [code]sources[/code] array.\n\n" % [
 				from_short,
 				to_short,
 			]
-			plain = "Computed source\n"
+			plain += "Computed source\n"
 			plain += "Upstream state %s feeds an entry in the computed resource %s's sources array.\n\n" % [from_short, to_short]
 		_SnapScript.EdgeKind.WIRE_FLOW:
-			bb = "[b]Wire flow[/b]\n"
+			bb += "[b]Wire flow[/b]\n"
 			bb += "A [code]wire_rules[/code] row connects input state [code]%s[/code] to output state [code]%s[/code].\n\n" % [
 				from_short,
 				to_short,
 			]
-			plain = "Wire flow\n"
+			plain += "Wire flow\n"
 			plain += "A wire_rules row connects input state %s to output state %s.\n\n" % [from_short, to_short]
 		_:
-			bb = "[b]Edge[/b]\nDeclarative dependency between two snapshot nodes.\n\n"
-			plain = "Edge\nDeclarative dependency between two snapshot nodes.\n\n"
+			bb += "[b]Edge[/b]\nDeclarative dependency between two snapshot nodes.\n\n"
+			plain += "Edge\nDeclarative dependency between two snapshot nodes.\n\n"
 
 	bb += "[b]Endpoints[/b]\n"
 	bb += "From: [code]%s[/code]  →  To: [code]%s[/code]\n" % [from_short, to_short]
@@ -741,18 +822,18 @@ func _build_ui() -> void:
 	_btn_refresh.pressed.connect(refresh)
 	row.add_child(_btn_refresh)
 
-	_mode_option = OptionButton.new()
-	_mode_option.add_item("Text", MODE_TEXT)
-	_mode_option.add_item("Visual", MODE_VISUAL)
-	_mode_option.tooltip_text = "Text: full BBCode report. Visual: scoped dependency graph (read-only)."
-	_mode_option.item_selected.connect(_on_mode_changed)
-	row.add_child(_mode_option)
-
 	_btn_fit = Button.new()
 	_btn_fit.text = "Fit view"
 	_btn_fit.tooltip_text = "Reset pan/zoom on the graph."
 	_btn_fit.pressed.connect(_on_fit_pressed)
 	row.add_child(_btn_fit)
+
+	_cb_full_lists = CheckBox.new()
+	_cb_full_lists.text = "Full lists"
+	_cb_full_lists.tooltip_text = "Show uncapped upstream/downstream lines in the narrative (details pane)."
+	_cb_full_lists.button_pressed = false
+	_cb_full_lists.toggled.connect(_on_full_lists_toggled)
+	row.add_child(_cb_full_lists)
 
 	_auto_refresh_timer = Timer.new()
 	_auto_refresh_timer.wait_time = 0.15
@@ -760,35 +841,11 @@ func _build_ui() -> void:
 	_auto_refresh_timer.timeout.connect(_on_debounced_auto_refresh)
 	add_child(_auto_refresh_timer)
 
-	_stack = TabContainer.new()
-	_stack.tabs_visible = false
-	_stack.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_stack.custom_minimum_size = Vector2(0, 220)
-	v.add_child(_stack)
-
-	_scroll_text = ScrollContainer.new()
-	_scroll_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_scroll_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_scroll_text.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_stack.add_child(_scroll_text)
-	_stack.set_tab_title(0, "text")
-
-	_body = RichTextLabel.new()
-	_body.bbcode_enabled = true
-	_body.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_body.scroll_active = false
-	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_body.fit_content = true
-	_body.custom_minimum_size = Vector2(400, 0)
-	_scroll_text.add_child(_body)
-
 	_visual_host = VBoxContainer.new()
 	_visual_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_visual_host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_stack.add_child(_visual_host)
-	_stack.set_tab_title(1, "visual")
+	_visual_host.custom_minimum_size = Vector2(0, 220)
+	v.add_child(_visual_host)
 
 	_visual_toolbar = HBoxContainer.new()
 	_visual_toolbar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -890,11 +947,6 @@ func _build_ui() -> void:
 	_btn_copy_details.pressed.connect(_on_copy_details_pressed)
 	_details_buttons.add_child(_btn_copy_details)
 
-	_mode = MODE_TEXT
-	_mode_option.select(_mode_option.get_item_index(MODE_TEXT))
-	_stack.current_tab = MODE_TEXT
-	_apply_mode_visibility()
-
 
 func _set_hint_visible(on: bool) -> void:
 	if _hint:
@@ -907,8 +959,13 @@ func _clear_stale_snapshot() -> void:
 	_last_snap = null
 	_last_layout.clear()
 	_last_focus_id = ""
+	_narrative_cache.clear()
 	_graph_selected_node_id = ""
 	_graph_selected_edge_index = -1
+	_last_edge_from_id = ""
+	_last_edge_to_id = ""
+	_last_edge_kind = -1
+	_last_edge_label = ""
 	_selection_kind = _SEL_NONE
 	_update_focus_button_state()
 	if _graph_view:
@@ -921,5 +978,4 @@ func _set_hint(t: String) -> void:
 
 
 func _set_idle() -> void:
-	if _body:
-		_body.clear()
+	pass

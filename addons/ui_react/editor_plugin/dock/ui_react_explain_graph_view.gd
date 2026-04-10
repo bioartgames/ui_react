@@ -87,6 +87,19 @@ func set_layout(layout: Dictionary) -> void:
 	reset_view()
 
 
+## Programmatic node selection (e.g. auto-select graph center after layout). Emits [signal node_selected].
+func select_node_by_id(node_id: String) -> void:
+	if _layout.is_empty():
+		return
+	var node_by_id: Dictionary = _layout.get(&"node_by_id", {}) as Dictionary
+	if not node_by_id.has(node_id):
+		return
+	_selected_node_id = node_id
+	_selected_edge_index = -1
+	queue_redraw()
+	node_selected.emit(node_id)
+
+
 func reset_view() -> void:
 	var ir := _inner_rect()
 	_pan = ir.position + ir.size * 0.5

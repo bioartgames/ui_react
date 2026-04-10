@@ -3,6 +3,7 @@ class_name UiReactExplainGraphBuilder
 extends RefCounted
 
 const _SnapshotScript := preload("res://addons/ui_react/editor_plugin/models/ui_react_explain_graph_snapshot.gd")
+const _ExplainNarrativeScript := preload("res://addons/ui_react/editor_plugin/models/ui_react_explain_graph_narrative.gd")
 const _WireRuleIntrospectionScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_wire_rule_introspection.gd")
 
 ## Set [code]true[/code] briefly to print graph metrics to the editor Output (declarative graph only).
@@ -38,11 +39,16 @@ static func build(root: Node, focus: Control):
 	ctx._finalize_wire_product_edges()
 	ctx._copy_nodes_and_edges(snap)
 	ctx._find_cycle_candidates(snap)
-	ctx._explain_focus(focus, snap)
+	var focus_path := _host_path_from_root(root, focus)
+	var focus_id := _control_id(focus_path)
+	ctx._apply_layout_scope_for_host(snap, focus_id)
+	snap.bound_state_lines.clear()
+	snap.upstream_lines.clear()
+	snap.downstream_lines.clear()
 	if EXPLAIN_GRAPH_DEBUG:
 		push_warning(
-			"UiReactExplainGraphBuilder: nodes=%d edges=%d cycles=%d upstream_lines=%d downstream_lines=%d"
-			% [snap.nodes.size(), snap.edges.size(), snap.cycle_candidates.size(), snap.upstream_lines.size(), snap.downstream_lines.size()]
+			"UiReactExplainGraphBuilder: nodes=%d edges=%d cycles=%d layout_upstream=%d layout_downstream=%d"
+			% [snap.nodes.size(), snap.edges.size(), snap.cycle_candidates.size(), snap.upstream_ids.size(), snap.downstream_ids.size()]
 		)
 	return snap
 
@@ -348,30 +354,19 @@ class _BuildContext extends RefCounted:
 			next_path.append(nb)
 			_dfs_cycles(start, nb, adj, next_path, seen_sig, found)
 
-	func _explain_focus(focus: Control, snap: Variant) -> void:
-		var focus_path := UiReactExplainGraphBuilder._host_path_from_root(root, focus)
-		var focus_id := UiReactExplainGraphBuilder._control_id(focus_path)
-		var comp := UiReactScannerService.get_component_name_from_script(focus.get_script() as Script)
-
-		# Use Array[String] adjacency — mutating PackedStringArray values inside Dictionary can fail to
-		# persist in some builds, breaking rev/fwd/cycle adjacency while direct edge scans still work.
-		var rev: Dictionary = {}
-		var fwd: Dictionary = {}
-		for e: Dictionary in edges:
-			var f: String = str(e.get(&"from_id", ""))
-			var t: String = str(e.get(&"to_id", ""))
-			if not rev.has(t):
-				rev[t] = [] as Array[String]
-			(rev[t] as Array[String]).append(f)
-			if not fwd.has(f):
-				fwd[f] = [] as Array[String]
-			(fwd[f] as Array[String]).append(t)
+	## Fills [code]snap.upstream_ids[/code] / [code]downstream_ids[/code] only (layout scope for graph center).
+	func _apply_layout_scope_for_host(snap: Variant, focus_control_id: String) -> void:
+		snap.upstream_ids.clear()
+		snap.downstream_ids.clear()
+		var ad := UiReactExplainGraphBuilder._adjacency_from_edges(edges)
+		var rev: Dictionary = ad[&"rev"]
+		var fwd: Dictionary = ad[&"fwd"]
 
 		var seed_states: Dictionary = {}
 		for e2: Dictionary in edges:
 			if int(e2.get(&"kind", -1)) != _SnapshotScript.EdgeKind.BINDING:
 				continue
-			if str(e2.get(&"to_id", "")) != focus_id:
+			if str(e2.get(&"to_id", "")) != focus_control_id:
 				continue
 			var fs := str(e2.get(&"from_id", ""))
 			if not fs.is_empty():
@@ -418,44 +413,222 @@ class _BuildContext extends RefCounted:
 		for k: Variant in down:
 			snap.downstream_ids.append(String(k))
 
-		snap.bound_state_lines.append(
-			"[b]Focus[/b]: [code]%s[/code]  path [code]%s[/code]  component [code]%s[/code]\n" % [focus.name, str(focus_path), comp]
-		)
-		snap.bound_state_lines.append(
-			"[i]Declarative graph only — not a runtime causality trace. Cycle rows are static candidates on state/computed edges.[/i]\n"
-		)
 
-		var nbind := 0
-		for e: Dictionary in edges:
-			if int(e.get(&"kind", -1)) != _SnapshotScript.EdgeKind.BINDING:
+static func _adjacency_from_edges(edge_list: Array) -> Dictionary:
+	var rev: Dictionary = {}
+	var fwd: Dictionary = {}
+	for e: Variant in edge_list:
+		if e is not Dictionary:
+			continue
+		var ed: Dictionary = e as Dictionary
+		var f: String = str(ed.get(&"from_id", ""))
+		var t: String = str(ed.get(&"to_id", ""))
+		if f.is_empty() or t.is_empty():
+			continue
+		if not rev.has(t):
+			rev[t] = [] as Array[String]
+		(rev[t] as Array[String]).append(f)
+		if not fwd.has(f):
+			fwd[f] = [] as Array[String]
+		(fwd[f] as Array[String]).append(t)
+	return {&"rev": rev, &"fwd": fwd}
+
+
+static func _node_by_id_from_snap(snap: UiReactExplainGraphSnapshot) -> Dictionary:
+	var nb: Dictionary = {}
+	for nd: Variant in snap.nodes:
+		if nd is not Dictionary:
+			continue
+		var d: Dictionary = nd as Dictionary
+		var id := str(d.get(&"id", ""))
+		if not id.is_empty():
+			nb[id] = d
+	return nb
+
+
+static func _fill_lines_into(
+	out_arr: PackedStringArray,
+	id_set: Dictionary,
+	node_by_id: Dictionary,
+	max_visible: int,
+) -> void:
+	var n := mini(id_set.size(), max_visible)
+	var i := 0
+	for k: Variant in id_set:
+		if i >= n:
+			break
+		var idstr := String(k)
+		var nl: Dictionary = node_by_id.get(idstr, {}) as Dictionary
+		var lab := str(nl.get(&"label", idstr))
+		out_arr.append("• %s — [code]%s[/code]\n" % [lab, idstr])
+		i += 1
+	if id_set.size() > n:
+		out_arr.append("• … (%d more)\n" % (id_set.size() - n))
+
+
+static func _pack_ids_from_set(id_set: Dictionary) -> PackedStringArray:
+	var out := PackedStringArray()
+	for k: Variant in id_set:
+		out.append(String(k))
+	return out
+
+
+static func compute_narrative(
+	root: Node,
+	snap: UiReactExplainGraphSnapshot,
+	anchor_id: String,
+	show_full: bool = false,
+) -> RefCounted:
+	var out: RefCounted = _ExplainNarrativeScript.new() as RefCounted
+	out.anchor_id = anchor_id
+	if anchor_id.is_empty() or root == null:
+		out.bound_state_lines.append("[i]No anchor.[/i]\n")
+		return out
+
+	var node_by_id := _node_by_id_from_snap(snap)
+	if not node_by_id.has(anchor_id):
+		out.bound_state_lines.append("[i]Unknown node id in snapshot.[/i]\n")
+		return out
+
+	var nk := int((node_by_id[anchor_id] as Dictionary).get(&"kind", -1))
+	var edges_arr: Array = snap.edges
+	var ad := _adjacency_from_edges(edges_arr)
+	var rev: Dictionary = ad[&"rev"]
+	var fwd: Dictionary = ad[&"fwd"]
+
+	var max_vis := 999999 if show_full else 96
+
+	var up: Dictionary = {}
+	var down: Dictionary = {}
+
+	if nk == _SnapshotScript.NodeKind.CONTROL:
+		var seed_states: Dictionary = {}
+		for e2: Variant in edges_arr:
+			if e2 is not Dictionary:
 				continue
-			if str(e.get(&"to_id", "")) != focus_id:
+			var ed2: Dictionary = e2 as Dictionary
+			if int(ed2.get(&"kind", -1)) != _SnapshotScript.EdgeKind.BINDING:
 				continue
-			var fid := str(e.get(&"from_id", ""))
-			var lab := str(e.get(&"label", ""))
-			var nl: Dictionary = node_by_id.get(fid, {}) as Dictionary
-			var disp := str(nl.get(&"label", fid))
-			snap.bound_state_lines.append("• Binding [code]%s[/code]: [code]%s[/code]  %s\n" % [lab, disp, fid])
-			nbind += 1
-			if nbind >= MAX_BINDING_LINES:
-				snap.bound_state_lines.append("• …\n")
-				break
-		if nbind == 0:
-			snap.bound_state_lines.append("(No direct [code]UiState[/code]/computed binding exports on this node.)\n")
+			if str(ed2.get(&"to_id", "")) != anchor_id:
+				continue
+			var fs := str(ed2.get(&"from_id", ""))
+			if not fs.is_empty():
+				seed_states[fs] = true
 
-		_fill_lines(snap.upstream_lines, up, &"Upstream")
-		_fill_lines(snap.downstream_lines, down, &"Downstream")
+		var dq: Array[String] = []
+		for s: Variant in seed_states:
+			var ss := String(s)
+			up[ss] = true
+			dq.append(ss)
+		var guard := 0
+		while not dq.is_empty() and guard < MAX_GRAPH_WALK:
+			guard += 1
+			var cur: String = dq.pop_front() as String
+			var pr: Variant = rev.get(cur, [] as Array[String])
+			for p: Variant in pr as Array[String]:
+				var ps := String(p)
+				if up.has(ps):
+					continue
+				up[ps] = true
+				dq.append(ps)
 
-	func _fill_lines(out_arr: PackedStringArray, id_set: Dictionary, title: StringName) -> void:
-		var n := mini(id_set.size(), 96)
-		var i := 0
-		for k: Variant in id_set:
-			if i >= n:
-				break
-			var idstr := String(k)
-			var nl: Dictionary = node_by_id.get(idstr, {}) as Dictionary
-			var lab := str(nl.get(&"label", idstr))
-			out_arr.append("• %s — [code]%s[/code]\n" % [lab, idstr])
-			i += 1
-		if id_set.size() > n:
-			out_arr.append("• … (%d more)\n" % (id_set.size() - n))
+		var q2: Array[String] = []
+		for s: Variant in seed_states:
+			var s2 := String(s)
+			down[s2] = true
+			q2.append(s2)
+		guard = 0
+		while not q2.is_empty() and guard < MAX_GRAPH_WALK:
+			guard += 1
+			var c2: String = q2.pop_front() as String
+			var nx: Variant = fwd.get(c2, [] as Array[String])
+			for nxt: Variant in nx as Array[String]:
+				var ns := String(nxt)
+				if down.has(ns):
+					continue
+				down[ns] = true
+				q2.append(ns)
+
+		if anchor_id.begins_with("ctrl:"):
+			var path_str := anchor_id.substr(5)
+			var np := NodePath(path_str)
+			if root.has_node(np):
+				var n: Node = root.get_node(np)
+				if n is Control and UiReactScannerService.is_react_node(n as Control):
+					var ctl := n as Control
+					var focus_path := _host_path_from_root(root, ctl)
+					var comp := UiReactScannerService.get_component_name_from_script(ctl.get_script() as Script)
+					out.bound_state_lines.append(
+						"[b]Focus[/b]: [code]%s[/code]  path [code]%s[/code]  component [code]%s[/code]\n" % [ctl.name, str(focus_path), comp]
+					)
+					out.bound_state_lines.append(
+						"[i]Declarative graph only — not a runtime causality trace. Cycle rows are static candidates on state/computed edges.[/i]\n"
+					)
+					var nbind := 0
+					for e: Variant in edges_arr:
+						if e is not Dictionary:
+							continue
+						var ed: Dictionary = e as Dictionary
+						if int(ed.get(&"kind", -1)) != _SnapshotScript.EdgeKind.BINDING:
+							continue
+						if str(ed.get(&"to_id", "")) != anchor_id:
+							continue
+						var fid := str(ed.get(&"from_id", ""))
+						var lab := str(ed.get(&"label", ""))
+						var nl: Dictionary = node_by_id.get(fid, {}) as Dictionary
+						var disp := str(nl.get(&"label", fid))
+						out.bound_state_lines.append("• Binding [code]%s[/code]: [code]%s[/code]  %s\n" % [lab, disp, fid])
+						nbind += 1
+						if nbind >= MAX_BINDING_LINES:
+							out.bound_state_lines.append("• …\n")
+							break
+					if nbind == 0:
+						out.bound_state_lines.append("(No direct [code]UiState[/code]/computed binding exports on this node.)\n")
+				else:
+					out.bound_state_lines.append("[i]Control anchor is not a UiReact* host in this scene.[/i]\n")
+			else:
+				out.bound_state_lines.append("[i]Control path not found under edited scene root.[/i]\n")
+		else:
+			out.bound_state_lines.append("[i]Invalid control id.[/i]\n")
+
+	elif nk == _SnapshotScript.NodeKind.UI_STATE or nk == _SnapshotScript.NodeKind.UI_COMPUTED:
+		# v1: full edge-wise reachability from this anchor (all edge kinds in snapshot).
+		up[anchor_id] = true
+		var dq2: Array[String] = [anchor_id]
+		var guard2 := 0
+		while not dq2.is_empty() and guard2 < MAX_GRAPH_WALK:
+			guard2 += 1
+			var cur2: String = dq2.pop_front() as String
+			var pr2: Variant = rev.get(cur2, [] as Array[String])
+			for p: Variant in pr2 as Array[String]:
+				var ps := String(p)
+				if up.has(ps):
+					continue
+				up[ps] = true
+				dq2.append(ps)
+
+		down[anchor_id] = true
+		var q3: Array[String] = [anchor_id]
+		guard2 = 0
+		while not q3.is_empty() and guard2 < MAX_GRAPH_WALK:
+			guard2 += 1
+			var c3: String = q3.pop_front() as String
+			var nx3: Variant = fwd.get(c3, [] as Array[String])
+			for nxt: Variant in nx3 as Array[String]:
+				var ns3 := String(nxt)
+				if down.has(ns3):
+					continue
+				down[ns3] = true
+				q3.append(ns3)
+
+		out.bound_state_lines.append(
+			"[i]Anchor is not a UiReact* host — no binding export list. Upstream/downstream follow all declarative edges in this snapshot.[/i]\n"
+		)
+	else:
+		out.bound_state_lines.append("[i]Unknown node kind for narrative.[/i]\n")
+
+	_fill_lines_into(out.upstream_lines, up, node_by_id, max_vis)
+	_fill_lines_into(out.downstream_lines, down, node_by_id, max_vis)
+	out.upstream_node_ids = _pack_ids_from_set(up)
+	out.downstream_node_ids = _pack_ids_from_set(down)
+	return out

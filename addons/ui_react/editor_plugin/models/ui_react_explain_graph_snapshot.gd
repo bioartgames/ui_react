@@ -23,12 +23,14 @@ var edges: Array[Dictionary] = []
 ## Keys: [code]node_ids[/code] [code]PackedStringArray[/code], [code]summary[/code] [String]
 var cycle_candidates: Array[Dictionary] = []
 
-## [code]PackedStringArray[/code] node ids (state/computed), upstream of focus control.
+## Layout scope for the graph centered on the refresh host (not the current narrative anchor).
+## [code]PackedStringArray[/code] node ids (state/computed), upstream of that host’s bindings.
 var upstream_ids: PackedStringArray = PackedStringArray()
 
-## [code]PackedStringArray[/code] node ids, downstream of focus-bound states.
+## Layout scope: node ids downstream of states bound to that host.
 var downstream_ids: PackedStringArray = PackedStringArray()
 
+## Legacy fields; narrative lines are produced by [method UiReactExplainGraphBuilder.compute_narrative].
 ## Human-readable lines for dock BBCode (pre-built by builder).
 var upstream_lines: PackedStringArray = PackedStringArray()
 var downstream_lines: PackedStringArray = PackedStringArray()
