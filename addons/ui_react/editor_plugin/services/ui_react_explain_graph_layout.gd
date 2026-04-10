@@ -187,6 +187,10 @@ static func layout_snapshot(
 	var truncated := nodes_capped or edges_capped
 	var n_draw_edges := draw_edges.size()
 
+	var node_layer_out: Dictionary = {}
+	for lk: Variant in layer:
+		node_layer_out[String(lk)] = int(layer[lk])
+
 	return {
 		&"node_centers": node_centers,
 		&"node_by_id": node_by_id,
@@ -196,6 +200,7 @@ static func layout_snapshot(
 		&"focus_id": focus_control_id,
 		&"layer_gap": layer_gap,
 		&"row_gap": row_gap,
+		&"node_layer": node_layer_out,
 		&"graph_stats": {
 			&"node_count": node_by_id.size(),
 			&"edge_count": n_draw_edges,

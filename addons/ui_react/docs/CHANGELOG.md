@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Editor dock — Dependency Graph details pane (**`CB-018A.4`**)**: task-oriented copy for selected nodes and edges — **focus-relative** placement via layout **`node_layer`**, capped **incident** edge lines, **cycle** hints from the snapshot, explicit pointer to **Text** mode for full narratives, and **technical** ids moved to the end; edge details lead with a plain-English **kind** sentence, **where to edit**, and a **focus-touch** note when applicable. Layout output adds **`node_layer`** (`String` id → int layer index); graph view unchanged.
 - **`UiReactStateReferenceCollector`**: **`wire_rules`** state paths go through **`UiReactWireRuleIntrospection.list_io`** (**DRY** with Dependency Graph builder).
 - **`UiReactAnimValidator`**: no longer warns about unsupported **`UiAnimTarget.trigger`** on **`UiReactItemList`** / **`UiReactTree`** when **`selection_slot` ≥ 0** (row-play presets; trigger is not used for host dispatch).
 - **Lead-in preamble reset** (when **`reset_duration` ≥ 0**): internal copy always uses **`RESET_AND_STOP`**.

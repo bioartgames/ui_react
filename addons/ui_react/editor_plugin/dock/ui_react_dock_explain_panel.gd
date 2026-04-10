@@ -256,100 +256,240 @@ func _set_details_both(bb: String, plain: String) -> void:
 	_last_details_plain = plain
 
 
+const _INCIDENT_EDGE_CAP := 8
+const _ORPHAN_LAYER := -512
+const _CYCLE_SUMMARY_CAP := 2
+
+
+func _id_in_packed(ids: PackedStringArray, needle: String) -> bool:
+	for i in ids.size():
+		if String(ids[i]) == needle:
+			return true
+	return false
+
+
+func _format_incident_edge_bb_plain(ed: Dictionary) -> PackedStringArray:
+	var fa := str(ed.get(&"from_id", ""))
+	var ta := str(ed.get(&"to_id", ""))
+	var k := int(ed.get(&"kind", -1))
+	var lab := str(ed.get(&"label", ""))
+	var tag := _edge_short_token(k)
+	var s_from := _short_label_for_node_id(fa)
+	var s_to := _short_label_for_node_id(ta)
+	var bb := "• [code][%s][/code] %s → %s" % [tag, s_from, s_to]
+	var plain := "• [%s] %s → %s" % [tag, s_from, s_to]
+	if not lab.is_empty():
+		bb += "  ([code]%s[/code])" % lab
+		plain += " (%s)" % lab
+	return PackedStringArray([bb, plain])
+
+
+func _focus_relation_blurb_bb_plain(node_id: String, focus_id: String, node_layer: Dictionary) -> PackedStringArray:
+	var bb := "[b]Relative to focus[/b]\n"
+	var plain := "Relative to focus\n"
+	if node_id == focus_id:
+		bb += "At layout center — this is the focus control column in this layout.\n\n"
+		plain += "At layout center — this is the focus control column in this layout.\n\n"
+	else:
+		if not node_layer.has(node_id):
+			bb += "Weakly connected in this layout — present in scope but not on the main upstream/downstream spine used for layering.\n\n"
+			plain += "Weakly connected in this layout — present in scope but not on the main upstream/downstream spine used for layering.\n\n"
+		else:
+			var L := int(node_layer[node_id])
+			if L == _ORPHAN_LAYER:
+				bb += "Weakly connected in this layout — present in scope but not on the main upstream/downstream spine used for layering.\n\n"
+				plain += "Weakly connected in this layout — present in scope but not on the main upstream/downstream spine used for layering.\n\n"
+			elif L < 0:
+				bb += "Upstream side — closer to sources that feed the focus control's bindings (left side of this layout).\n\n"
+				plain += "Upstream side — closer to sources that feed the focus control's bindings (left side of this layout).\n\n"
+			elif L > 0:
+				bb += "Downstream side — reachable from states bound to the focus (right side of this layout).\n\n"
+				plain += "Downstream side — reachable from states bound to the focus (right side of this layout).\n\n"
+			else:
+				bb += "Same layout tier as the focus column — neighbors in this horizontal band.\n\n"
+				plain += "Same layout tier as the focus column — neighbors in this horizontal band.\n\n"
+	if _last_snap != null:
+		var snap: UiReactExplainGraphSnapshot = _last_snap as UiReactExplainGraphSnapshot
+		if _id_in_packed(snap.upstream_ids, node_id):
+			bb += "Also listed as upstream of the focus in the full snapshot (state/computed walk).\n\n"
+			plain += "Also listed as upstream of the focus in the full snapshot (state/computed walk).\n\n"
+		if _id_in_packed(snap.downstream_ids, node_id):
+			bb += "Also listed as downstream of the focus in the full snapshot (state/computed walk).\n\n"
+			plain += "Also listed as downstream of the focus in the full snapshot (state/computed walk).\n\n"
+	return PackedStringArray([bb, plain])
+
+
+func _cycle_summaries_bb_plain(node_id: String) -> PackedStringArray:
+	if _last_snap == null:
+		return PackedStringArray(["", ""])
+	var snap: UiReactExplainGraphSnapshot = _last_snap as UiReactExplainGraphSnapshot
+	var collected: PackedStringArray = PackedStringArray()
+	var total_matching := 0
+	for c: Variant in snap.cycle_candidates:
+		if c is not Dictionary:
+			continue
+		var cd: Dictionary = c as Dictionary
+		var ids := cd.get(&"node_ids", PackedStringArray()) as PackedStringArray
+		if not _id_in_packed(ids, node_id):
+			continue
+		total_matching += 1
+		if collected.size() >= _CYCLE_SUMMARY_CAP:
+			continue
+		var sm := str(cd.get(&"summary", "")).strip_edges()
+		if sm.is_empty():
+			continue
+		collected.append(sm)
+	if collected.is_empty():
+		return PackedStringArray(["", ""])
+	var bb := "[b]Cycle hints[/b]\n"
+	var plain := "Cycle hints\n"
+	for i in collected.size():
+		bb += "• [code]%s[/code]\n" % collected[i]
+		plain += "• %s\n" % collected[i]
+	var more := total_matching - collected.size()
+	if more > 0:
+		bb += "• [i]+%d more[/i]\n" % more
+		plain += "• +%d more\n" % more
+	bb += "Static candidate (declarative edges only).\n\n"
+	plain += "Static candidate (declarative edges only).\n\n"
+	return PackedStringArray([bb, plain])
+
+
+func _node_headline_bb_plain(node_id: String, d: Dictionary, focus_id: String) -> PackedStringArray:
+	if node_id == focus_id:
+		var bb := "[b]Focus control[/b]\n"
+		bb += "This is the [code]UiReact*[/code] host you selected when building this graph. Relationships are [i]declarative[/i] (Inspector wiring), not a live runtime trace.\n\n"
+		var plain := "Focus control\n"
+		plain += "This is the UiReact* host you selected when building this graph. Relationships are declarative (Inspector wiring), not a live runtime trace.\n\n"
+		return PackedStringArray([bb, plain])
+	var nk := int(d.get(&"kind", -1))
+	var short_l := str(d.get(&"short_label", ""))
+	var label_disp := short_l if not short_l.is_empty() else node_id
+	var bb2 := "[b]%s[/b] — " % label_disp
+	var plain2 := "%s — " % label_disp
+	match nk:
+		_SnapScript.NodeKind.CONTROL:
+			bb2 += "Control ([code]UiReact*[/code] host) in this scoped graph.\n\n"
+			plain2 += "Control (UiReact* host) in this scoped graph.\n\n"
+		_SnapScript.NodeKind.UI_STATE:
+			bb2 += "[code]UiState[/code] resource node (bindings, wires, or computed inputs).\n\n"
+			plain2 += "UiState resource node (bindings, wires, or computed inputs).\n\n"
+		_SnapScript.NodeKind.UI_COMPUTED:
+			bb2 += "[code]UiComputed*[/code] resource node (aggregates [code]sources[/code]).\n\n"
+			plain2 += "UiComputed* resource node (aggregates sources).\n\n"
+		_:
+			bb2 += "Node in this scoped graph.\n\n"
+			plain2 += "Node in this scoped graph.\n\n"
+	return PackedStringArray([bb2, plain2])
+
+
 func _fill_node_details(node_id: String) -> void:
 	if node_id.is_empty():
 		return
 	var nb: Dictionary = _last_layout.get(&"node_by_id", {}) as Dictionary
 	var d: Dictionary = nb.get(node_id, {}) as Dictionary
-	var deg_in := 0
-	var deg_out := 0
 	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var focus_id := str(_last_layout.get(&"focus_id", ""))
+	var node_layer: Dictionary = _last_layout.get(&"node_layer", {}) as Dictionary
+	var stats: Dictionary = _last_layout.get(&"graph_stats", {}) as Dictionary
+	var truncated := bool(stats.get(&"truncated", false))
+
+	var hl := _node_headline_bb_plain(node_id, d, focus_id)
+	var bb := hl[0]
+	var plain := hl[1]
+
+	var rel := _focus_relation_blurb_bb_plain(node_id, focus_id, node_layer)
+	bb += rel[0]
+	plain += rel[1]
+
+	var incident: Array[Dictionary] = []
 	for e: Variant in edges:
 		if e is not Dictionary:
 			continue
 		var ed: Dictionary = e as Dictionary
-		if str(ed.get(&"to_id", "")) == node_id:
-			deg_in += 1
-		if str(ed.get(&"from_id", "")) == node_id:
-			deg_out += 1
+		if str(ed.get(&"from_id", "")) == node_id or str(ed.get(&"to_id", "")) == node_id:
+			incident.append(ed)
+	incident.sort_custom(
+		func(a: Dictionary, b: Dictionary) -> bool:
+			var ka := int(a.get(&"kind", -1))
+			var kb := int(b.get(&"kind", -1))
+			if ka != kb:
+				return ka < kb
+			var fa := str(a.get(&"from_id", ""))
+			var fb := str(b.get(&"from_id", ""))
+			if fa != fb:
+				return fa < fb
+			return str(a.get(&"to_id", "")) < str(b.get(&"to_id", ""))
+	)
 
-	var nk := int(d.get(&"kind", 0))
-	var type_user := "Control (UiReact host)"
-	if nk == _SnapScript.NodeKind.UI_STATE:
-		type_user = "UiState resource"
-	elif nk == _SnapScript.NodeKind.UI_COMPUTED:
-		type_user = "UiComputed* resource"
+	bb += "[b]Incident edges[/b]\n"
+	plain += "Incident edges\n"
+	if incident.is_empty():
+		bb += "No edges touch this node in the scoped graph (or it is isolated after filters).\n\n"
+		plain += "No edges touch this node in the scoped graph (or it is isolated after filters).\n\n"
+	else:
+		var n_show := mini(incident.size(), _INCIDENT_EDGE_CAP)
+		for i in n_show:
+			var pair := _format_incident_edge_bb_plain(incident[i])
+			bb += pair[0] + "\n"
+			plain += pair[1] + "\n"
+		bb += "\n"
+		plain += "\n"
+		var overflow := incident.size() - n_show
+		if overflow > 0:
+			bb += "[i]+%d more in this graph[/i]\n\n" % overflow
+			plain += "+%d more in this graph\n\n" % overflow
 
+	var cyc := _cycle_summaries_bb_plain(node_id)
+	if not cyc[0].is_empty():
+		bb += cyc[0]
+		plain += cyc[1]
+
+	bb += "[b]Full detail[/b]\n"
+	plain += "Full detail\n"
+	bb += "Switch to [b]Text[/b] mode for full upstream/downstream narratives, binding lists, and the complete cycle section"
+	plain += "Switch to Text mode for full upstream/downstream narratives, binding lists, and the complete cycle section"
+	if truncated:
+		bb += " (this graph is truncated)"
+		plain += " (this graph is truncated)"
+	bb += ".\n\n"
+	plain += ".\n\n"
+
+	bb += "[b]Technical[/b]\n"
+	plain += "Technical\n"
+	var nk := int(d.get(&"kind", -1))
 	var short_l := str(d.get(&"short_label", ""))
 	var full_l := str(d.get(&"label", ""))
-
-	var bb := "[b]What this is[/b]\n"
-	bb += "A [b]%s[/b] node in the static dependency graph" % type_user
-	bb += " — relationships are [i]declarative[/i] (Inspector wiring), not a live runtime trace.\n\n"
-
-	bb += "[b]Display name[/b]\n[code]%s[/code]\n\n" % short_l
-
+	if not short_l.is_empty():
+		bb += "Short label: [code]%s[/code]\n" % short_l
+		plain += "Short label: %s\n" % short_l
 	if nk == _SnapScript.NodeKind.CONTROL:
 		var cp := str(d.get(&"control_path", ""))
 		if not cp.is_empty():
-			bb += "[b]Scene location[/b]\n[code]%s[/code]\n\n" % cp
+			bb += "Scene path: [code]%s[/code]\n" % cp
+			plain += "Scene path: %s\n" % cp
 	elif nk == _SnapScript.NodeKind.UI_STATE or nk == _SnapScript.NodeKind.UI_COMPUTED:
 		var fp := str(d.get(&"state_file_path", ""))
 		if not fp.is_empty():
-			bb += "[b]Resource[/b]\n[code]%s[/code]\n\n" % fp
+			bb += "Resource: [code]%s[/code]\n" % fp
+			plain += "Resource: %s\n" % fp
 		else:
 			var eh := str(d.get(&"embedded_host_path", ""))
 			var ec := str(d.get(&"embedded_context", ""))
 			if not eh.is_empty():
-				bb += "[b]Embedded state[/b] (no standalone .tres file)\n"
-				bb += "Host: [code]%s[/code]\nContext: [code]%s[/code]\n\n" % [eh, ec]
-
-	bb += "[b]Connections in this graph[/b]\n"
-	bb += "Incoming: [b]%d[/b]  Outgoing: [b]%d[/b]\n\n" % [deg_in, deg_out]
-
-	bb += "[b]Full label[/b] (from builder)\n%s\n\n" % full_l
-	bb += "[b]Technical id[/b] (stable in this snapshot)\n[code]%s[/code]\n" % node_id
-
-	var plain := "What this is\n"
-	plain += "A %s node in the static dependency graph (declarative / Inspector wiring).\n\n" % type_user
-	plain += "Display name\n%s\n\n" % short_l
-	if nk == _SnapScript.NodeKind.CONTROL:
-		var cp2 := str(d.get(&"control_path", ""))
-		if not cp2.is_empty():
-			plain += "Scene location\n%s\n\n" % cp2
-	elif nk == _SnapScript.NodeKind.UI_STATE or nk == _SnapScript.NodeKind.UI_COMPUTED:
-		var fp2 := str(d.get(&"state_file_path", ""))
-		if not fp2.is_empty():
-			plain += "Resource\n%s\n\n" % fp2
-		else:
-			plain += "Embedded state — Host: %s  Context: %s\n\n" % [
-				str(d.get(&"embedded_host_path", "")),
-				str(d.get(&"embedded_context", "")),
-			]
-	plain += "Connections in this graph — Incoming: %d  Outgoing: %d\n\n" % [deg_in, deg_out]
-	plain += "Full label\n%s\n\nTechnical id\n%s\n" % [full_l, node_id]
-
-	if d.is_empty():
-		_set_details_both(
-			"[b]Node[/b]\n[code]%s[/code]\n\nIncoming: %d  Outgoing: %d" % [node_id, deg_in, deg_out],
-			"Node %s\nIncoming: %d Outgoing: %d" % [node_id, deg_in, deg_out]
-		)
-		return
+				bb += "Embedded — host: [code]%s[/code] context: [code]%s[/code]\n" % [eh, ec]
+				plain += "Embedded — host: %s context: %s\n" % [eh, ec]
+	if not full_l.is_empty():
+		bb += "Full label: %s\n" % full_l
+		plain += "Full label: %s\n" % full_l
+	bb += "Technical id: [code]%s[/code]\n" % node_id
+	plain += "Technical id: %s\n" % node_id
 
 	_set_details_both(bb, plain)
 
 
 func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String, edge_index: int) -> void:
 	var token := _edge_short_token(kind)
-	var kname := "?"
-	match kind:
-		_SnapScript.EdgeKind.BINDING:
-			kname = "Property binding"
-		_SnapScript.EdgeKind.COMPUTED_SOURCE:
-			kname = "Computed source"
-		_SnapScript.EdgeKind.WIRE_FLOW:
-			kname = "Wire rule flow"
-
 	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
 	var ed: Dictionary = {}
 	if edge_index >= 0 and edge_index < edges.size():
@@ -357,53 +497,96 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 		if ev is Dictionary:
 			ed = ev as Dictionary
 
-	var bb := "[b]What this is[/b]\n"
-	bb += "A [b]%s[/b] edge: data/flow dependency between two snapshot nodes (declarative).\n\n" % kname
-	bb += "[b]Summary[/b]\n"
-	bb += "From [code]%s[/code] → to [code]%s[/code]\n" % [_short_label_for_node_id(from_id), _short_label_for_node_id(to_id)]
-	bb += "Detail: [code]%s[/code]\n\n" % label
+	var from_short := _short_label_for_node_id(from_id)
+	var to_short := _short_label_for_node_id(to_id)
+
+	var bb := ""
+	var plain := ""
+
+	match kind:
+		_SnapScript.EdgeKind.BINDING:
+			var bp := str(ed.get(&"binding_property", label))
+			bb = "[b]Property binding[/b]\n"
+			bb += "[code]%s[/code] feeds the [code]UiReact*[/code] control [code]%s[/code]'s [code]%s[/code] export.\n\n" % [
+				from_short,
+				to_short,
+				bp,
+			]
+			plain = "Property binding\n"
+			plain += "%s feeds the UiReact* control %s's %s export.\n\n" % [from_short, to_short, bp]
+		_SnapScript.EdgeKind.COMPUTED_SOURCE:
+			bb = "[b]Computed source[/b]\n"
+			bb += "Upstream state [code]%s[/code] feeds an entry in the computed resource [code]%s[/code]'s [code]sources[/code] array.\n\n" % [
+				from_short,
+				to_short,
+			]
+			plain = "Computed source\n"
+			plain += "Upstream state %s feeds an entry in the computed resource %s's sources array.\n\n" % [from_short, to_short]
+		_SnapScript.EdgeKind.WIRE_FLOW:
+			bb = "[b]Wire flow[/b]\n"
+			bb += "A [code]wire_rules[/code] row connects input state [code]%s[/code] to output state [code]%s[/code].\n\n" % [
+				from_short,
+				to_short,
+			]
+			plain = "Wire flow\n"
+			plain += "A wire_rules row connects input state %s to output state %s.\n\n" % [from_short, to_short]
+		_:
+			bb = "[b]Edge[/b]\nDeclarative dependency between two snapshot nodes.\n\n"
+			plain = "Edge\nDeclarative dependency between two snapshot nodes.\n\n"
+
+	bb += "[b]Endpoints[/b]\n"
+	bb += "From: [code]%s[/code]  →  To: [code]%s[/code]\n" % [from_short, to_short]
+	if not label.is_empty():
+		bb += "Detail: [code]%s[/code]\n" % label
+	bb += "\n"
+	plain += "Endpoints\n"
+	plain += "From: %s  →  To: %s\n" % [from_short, to_short]
+	if not label.is_empty():
+		plain += "Detail: %s\n" % label
+	plain += "\n"
 
 	if kind == _SnapScript.EdgeKind.BINDING:
 		var hp := str(ed.get(&"host_path", ""))
 		var bp := str(ed.get(&"binding_property", ""))
 		if not hp.is_empty():
 			bb += "[b]Where to edit[/b]\nInspector on host [code]%s[/code], export [code]%s[/code].\n\n" % [hp, bp]
+			plain += "Where to edit\nInspector on host %s, export %s.\n\n" % [hp, bp]
 	elif kind == _SnapScript.EdgeKind.COMPUTED_SOURCE:
 		var hp2 := str(ed.get(&"host_path", ""))
-		var si := ed.get(&"computed_source_index", -1)
+		var si := int(ed.get(&"computed_source_index", -1))
 		bb += "[b]Where to edit[/b]\nComputed [code]sources[/code]"
-		if int(si) >= 0:
-			bb += " (index [code]%d[/code])" % int(si)
+		var plain_w := "Where to edit\nComputed sources"
+		if si >= 0:
+			bb += " (index [code]%d[/code])" % si
+			plain_w += " (index %d)" % si
 		bb += " on the owning host"
+		plain_w += " on the owning host"
 		if not hp2.is_empty():
 			bb += " [code]%s[/code]" % hp2
+			plain_w += " %s" % hp2
 		bb += ".\n\n"
+		plain += plain_w + ".\n\n"
 	elif kind == _SnapScript.EdgeKind.WIRE_FLOW:
 		var wh := str(ed.get(&"wire_host_path", ""))
 		var wi := int(ed.get(&"wire_rule_index", -1))
 		bb += "[b]Where to edit[/b]\n"
+		var plain_w2 := "Where to edit\n"
 		if not wh.is_empty():
 			bb += "Host [code]%s[/code], [code]wire_rules[/code]" % wh
+			plain_w2 += "Host %s, wire_rules" % wh
 			if wi >= 0:
 				bb += " row [code]%d[/code]" % wi
+				plain_w2 += " row %d" % wi
 			bb += ".\n\n"
+			plain_w2 += ".\n\n"
+			plain += plain_w2
+
+	if from_id == _last_focus_id or to_id == _last_focus_id:
+		bb += "[b]Relation to focus[/b]\nTouches the focus control directly.\n\n"
+		plain += "Relation to focus\nTouches the focus control directly.\n\n"
 
 	bb += "[b]Technical[/b]\nKind token: [code]%s[/code]\nFrom id: [code]%s[/code]\nTo id: [code]%s[/code]\n" % [token, from_id, to_id]
-
-	var plain := "What this is\n%s edge (declarative).\n\n" % kname
-	plain += "From %s → to %s\nDetail: %s\n\n" % [_short_label_for_node_id(from_id), _short_label_for_node_id(to_id), label]
-	if kind == _SnapScript.EdgeKind.BINDING:
-		var hp := str(ed.get(&"host_path", ""))
-		var bp := str(ed.get(&"binding_property", ""))
-		if not hp.is_empty():
-			plain += "Where to edit — Host %s, export %s.\n\n" % [hp, bp]
-	elif kind == _SnapScript.EdgeKind.WIRE_FLOW:
-		var wh := str(ed.get(&"wire_host_path", ""))
-		var wi := int(ed.get(&"wire_rule_index", -1))
-		if not wh.is_empty():
-			plain += "Where to edit — Host %s, wire_rules row %d.\n\n" % [wh, wi]
-
-	plain += "Technical — %s\nFrom: %s\nTo: %s\n" % [token, from_id, to_id]
+	plain += "Technical\nKind token: %s\nFrom id: %s\nTo id: %s\n" % [token, from_id, to_id]
 
 	_set_details_both(bb, plain)
 
