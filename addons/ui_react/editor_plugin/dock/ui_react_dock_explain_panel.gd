@@ -4,6 +4,7 @@ extends MarginContainer
 
 const _ExplainBuilderScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_explain_graph_builder.gd")
 const _ComputedRebindScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_computed_graph_rebind.gd")
+const _ResolverScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_graph_node_state_resolver.gd")
 const _ExplainLayoutScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_explain_graph_layout.gd")
 const _ExplainGraphViewScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_explain_graph_view.gd")
 const _SnapScript := preload("res://addons/ui_react/editor_plugin/models/ui_react_explain_graph_snapshot.gd")
@@ -221,23 +222,9 @@ func _update_focus_button_state() -> void:
 		_btn_rebind_computed_source.disabled = not _can_rebind_computed_source()
 
 
-func _can_rebind_binding_edge() -> bool:
-	if _plugin == null or _actions == null:
-		return false
-	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.BINDING:
-		return false
-	var ei := _plugin.get_editor_interface()
-	var root := ei.get_edited_scene_root()
+func _edge_allows_binding_rebind(ed: Dictionary, root: Node) -> bool:
 	if root == null:
 		return false
-	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
-	var idx := _graph_selected_edge_index
-	if idx < 0 or idx >= edges.size():
-		return false
-	var ev: Variant = edges[idx]
-	if ev is not Dictionary:
-		return false
-	var ed: Dictionary = ev as Dictionary
 	var hp := str(ed.get(&"host_path", ""))
 	var bp := str(ed.get(&"binding_property", ""))
 	if bp.is_empty():
@@ -249,27 +236,12 @@ func _can_rebind_binding_edge() -> bool:
 	var n: Node = root.get_node(NodePath(hp))
 	if not (n is Control):
 		return false
-	var prop_sn := StringName(bp)
-	return prop_sn in n
+	return StringName(bp) in n
 
 
-func _can_rebind_wire_endpoint(for_input: bool) -> bool:
-	if _plugin == null or _actions == null:
-		return false
-	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.WIRE_FLOW:
-		return false
-	var ei := _plugin.get_editor_interface()
-	var root := ei.get_edited_scene_root()
+func _edge_allows_wire_rebind(ed: Dictionary, root: Node, for_input: bool) -> bool:
 	if root == null:
 		return false
-	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
-	var idx := _graph_selected_edge_index
-	if idx < 0 or idx >= edges.size():
-		return false
-	var ev: Variant = edges[idx]
-	if ev is not Dictionary:
-		return false
-	var ed: Dictionary = ev as Dictionary
 	var wh := str(ed.get(&"wire_host_path", ""))
 	var wi := int(ed.get(&"wire_rule_index", -1))
 	var win := str(ed.get(&"wire_in_property", ""))
@@ -295,27 +267,12 @@ func _can_rebind_wire_endpoint(for_input: bool) -> bool:
 	if rule_var == null or not (rule_var is UiReactWireRule):
 		return false
 	var rule := rule_var as UiReactWireRule
-	var prop_sn := StringName(prop_str)
-	return prop_sn in rule
+	return StringName(prop_str) in rule
 
 
-func _can_rebind_computed_source() -> bool:
-	if _plugin == null or _actions == null:
-		return false
-	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.COMPUTED_SOURCE:
-		return false
-	var ei := _plugin.get_editor_interface()
-	var root := ei.get_edited_scene_root()
+func _edge_allows_computed_rebind(ed: Dictionary, root: Node) -> bool:
 	if root == null:
 		return false
-	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
-	var idx := _graph_selected_edge_index
-	if idx < 0 or idx >= edges.size():
-		return false
-	var ev: Variant = edges[idx]
-	if ev is not Dictionary:
-		return false
-	var ed: Dictionary = ev as Dictionary
 	var cc := str(ed.get(&"computed_context", ""))
 	var hp := str(ed.get(&"host_path", ""))
 	var si := int(ed.get(&"computed_source_index", -1))
@@ -334,6 +291,238 @@ func _can_rebind_computed_source() -> bool:
 		return false
 	var arr: Array = raw as Array
 	return si < arr.size()
+
+
+func _can_rebind_binding_edge() -> bool:
+	if _plugin == null or _actions == null:
+		return false
+	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.BINDING:
+		return false
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return false
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return false
+	var ev: Variant = edges[idx]
+	if ev is not Dictionary:
+		return false
+	return _edge_allows_binding_rebind(ev as Dictionary, root)
+
+
+func _can_rebind_wire_endpoint(for_input: bool) -> bool:
+	if _plugin == null or _actions == null:
+		return false
+	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.WIRE_FLOW:
+		return false
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return false
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return false
+	var ev: Variant = edges[idx]
+	if ev is not Dictionary:
+		return false
+	return _edge_allows_wire_rebind(ev as Dictionary, root, for_input)
+
+
+func _can_rebind_computed_source() -> bool:
+	if _plugin == null or _actions == null:
+		return false
+	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.COMPUTED_SOURCE:
+		return false
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return false
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return false
+	var ev: Variant = edges[idx]
+	if ev is not Dictionary:
+		return false
+	return _edge_allows_computed_rebind(ev as Dictionary, root)
+
+
+func _reconnect_can_start(edge_idx: int, node_id: String) -> bool:
+	if _plugin == null or _actions == null:
+		return false
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return false
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	if edge_idx < 0 or edge_idx >= edges.size():
+		return false
+	var ev: Variant = edges[edge_idx]
+	if ev is not Dictionary:
+		return false
+	var ed: Dictionary = ev as Dictionary
+	var k := int(ed.get(&"kind", -1))
+	if k == _SnapScript.EdgeKind.BINDING:
+		return node_id == str(ed.get(&"from_id", "")) and _edge_allows_binding_rebind(ed, root)
+	if k == _SnapScript.EdgeKind.COMPUTED_SOURCE:
+		return node_id == str(ed.get(&"from_id", "")) and _edge_allows_computed_rebind(ed, root)
+	if k == _SnapScript.EdgeKind.WIRE_FLOW:
+		var fid := str(ed.get(&"from_id", ""))
+		var tid := str(ed.get(&"to_id", ""))
+		if node_id == fid:
+			return _edge_allows_wire_rebind(ed, root, true)
+		if node_id == tid:
+			return _edge_allows_wire_rebind(ed, root, false)
+	return false
+
+
+func _reconnect_can_start_cb(edge_idx: int, node_id: String) -> bool:
+	return _reconnect_can_start(edge_idx, node_id)
+
+
+func _reconnect_is_valid_drop(edge_idx: int, origin_id: String, target_id: String) -> bool:
+	if origin_id == target_id or target_id.is_empty():
+		return false
+	if _plugin == null:
+		return false
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return false
+	var nb: Dictionary = _last_layout.get(&"node_by_id", {}) as Dictionary
+	var centers: Dictionary = _last_layout.get(&"node_centers", {}) as Dictionary
+	if not nb.has(target_id) or not centers.has(target_id):
+		return false
+	var td: Dictionary = nb[target_id] as Dictionary
+	var nk := int(td.get(&"kind", -1))
+	if nk != _SnapScript.NodeKind.UI_STATE and nk != _SnapScript.NodeKind.UI_COMPUTED:
+		return false
+	var new_st: UiState = _ResolverScript.try_resolve_uistate(root, target_id, nb)
+	var old_st: UiState = _ResolverScript.try_resolve_uistate(root, origin_id, nb)
+	if new_st == null or old_st == null:
+		return false
+	if new_st == old_st:
+		return false
+	return true
+
+
+func _reconnect_is_valid_target_cb(edge_idx: int, origin_id: String, target_id: String) -> bool:
+	return _reconnect_is_valid_drop(edge_idx, origin_id, target_id)
+
+
+func _try_commit_binding_rebind_from_edge(ed: Dictionary, ui_st: UiState, root: Node) -> bool:
+	var hp := str(ed.get(&"host_path", ""))
+	var bp := str(ed.get(&"binding_property", ""))
+	if bp.is_empty():
+		bp = str(ed.get(&"label", ""))
+	if hp.is_empty() or bp.is_empty():
+		return false
+	if not root.has_node(NodePath(hp)):
+		push_warning("Ui React: rebind host path is no longer valid: %s" % hp)
+		return false
+	var n: Node = root.get_node(NodePath(hp))
+	if not (n is Control):
+		return false
+	var prop_sn := StringName(bp)
+	if not prop_sn in n:
+		push_warning("Ui React: host no longer has export %s" % bp)
+		return false
+	_actions.assign_property_variant(n, prop_sn, ui_st, "Ui React: Rebind %s" % bp)
+	return true
+
+
+func _try_commit_wire_rebind_from_edge(ed: Dictionary, for_input: bool, ui_st: UiState, root: Node) -> bool:
+	var wh := str(ed.get(&"wire_host_path", ""))
+	var wi := int(ed.get(&"wire_rule_index", -1))
+	var win := str(ed.get(&"wire_in_property", ""))
+	var wout := str(ed.get(&"wire_out_property", ""))
+	var wprop := StringName(win if for_input else wout)
+	if wh.is_empty() or wi < 0 or wprop == &"":
+		return false
+	if not root.has_node(NodePath(wh)):
+		push_warning("Ui React: wire host path is no longer valid: %s" % wh)
+		return false
+	var host_n: Node = root.get_node(NodePath(wh))
+	if not (host_n is Control):
+		return false
+	var host := host_n as Control
+	if not (&"wire_rules" in host):
+		push_warning("Ui React: host has no wire_rules: %s" % wh)
+		return false
+	var arr := _duplicate_wire_rules_array(host)
+	if wi >= arr.size():
+		push_warning("Ui React: wire_rules index out of range: %d" % wi)
+		return false
+	var old_rule: Variant = arr[wi]
+	if old_rule == null or not (old_rule is UiReactWireRule):
+		push_warning("Ui React: wire_rules[%d] is not a UiReactWireRule." % wi)
+		return false
+	var dup_res: Resource = (old_rule as Resource).duplicate(true)
+	if dup_res == null or not (dup_res is UiReactWireRule):
+		push_warning("Ui React: could not duplicate wire rule at index %d." % wi)
+		return false
+	var new_rule := dup_res as UiReactWireRule
+	if not wprop in new_rule:
+		push_warning("Ui React: rule has no export %s" % str(wprop))
+		return false
+	new_rule.set(wprop, ui_st)
+	arr[wi] = new_rule
+	_actions.assign_property_variant(
+		host,
+		&"wire_rules",
+		arr,
+		"Ui React: wire_rules[%d] %s" % [wi, str(wprop)]
+	)
+	return true
+
+
+func _on_graph_reconnect_drag_ended(edge_idx: int, origin_id: String, target_id: String) -> void:
+	if _plugin == null or _actions == null or target_id.is_empty():
+		return
+	if not _reconnect_is_valid_drop(edge_idx, origin_id, target_id):
+		return
+	var root := _plugin.get_editor_interface().get_edited_scene_root()
+	if root == null:
+		return
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	if edge_idx < 0 or edge_idx >= edges.size():
+		return
+	var ev: Variant = edges[edge_idx]
+	if ev is not Dictionary:
+		return
+	var ed: Dictionary = ev as Dictionary
+	var nb: Dictionary = _last_layout.get(&"node_by_id", {}) as Dictionary
+	var new_st: UiState = _ResolverScript.try_resolve_uistate(root, target_id, nb)
+	if new_st == null:
+		return
+	var k := int(ed.get(&"kind", -1))
+	var committed := false
+	if k == _SnapScript.EdgeKind.BINDING:
+		committed = _try_commit_binding_rebind_from_edge(ed, new_st, root)
+	elif k == _SnapScript.EdgeKind.COMPUTED_SOURCE:
+		var hp_c := str(ed.get(&"host_path", ""))
+		var ctx := str(ed.get(&"computed_context", ""))
+		var csi := int(ed.get(&"computed_source_index", -1))
+		if not root.has_node(NodePath(hp_c)):
+			push_warning("Ui React: rebind host path is no longer valid: %s" % hp_c)
+			return
+		var host_c: Node = root.get_node(NodePath(hp_c))
+		if not (host_c is Control):
+			return
+		committed = _ComputedRebindScript.try_commit_replace_source(
+			host_c as Control, ctx, csi, new_st, _actions
+		)
+	elif k == _SnapScript.EdgeKind.WIRE_FLOW:
+		var for_input := origin_id == str(ed.get(&"from_id", ""))
+		committed = _try_commit_wire_rebind_from_edge(ed, for_input, new_st, root)
+	if not committed:
+		return
+	if _request_dock_refresh.is_valid():
+		_request_dock_refresh.call()
+	refresh()
 
 
 func _on_rebind_binding_pressed() -> void:
@@ -425,63 +614,24 @@ func _on_rebind_file_selected(path: String) -> void:
 	var committed := false
 	match _rebind_kind:
 		_REBIND_BINDING:
-			var hp := _rebind_host_path
-			var bp := _rebind_property
-			if hp.is_empty() or bp.is_empty():
+			var edges_b: Array = _last_layout.get(&"draw_edges", []) as Array
+			var idx_b := _graph_selected_edge_index
+			if idx_b < 0 or idx_b >= edges_b.size():
 				return
-			if not root.has_node(NodePath(hp)):
-				push_warning("Ui React: rebind host path is no longer valid: %s" % hp)
+			var ed_b: Variant = edges_b[idx_b]
+			if ed_b is not Dictionary:
 				return
-			var n: Node = root.get_node(NodePath(hp))
-			if not (n is Control):
-				return
-			var prop_sn := StringName(bp)
-			if not prop_sn in n:
-				push_warning("Ui React: host no longer has export %s" % bp)
-				return
-			_actions.assign_property_variant(n, prop_sn, ui_st, "Ui React: Rebind %s" % bp)
-			committed = true
+			committed = _try_commit_binding_rebind_from_edge(ed_b as Dictionary, ui_st, root)
 		_REBIND_WIRE_IN, _REBIND_WIRE_OUT:
-			var wh := _rebind_wire_host_path
-			var wi := _rebind_wire_rule_index
-			var wprop := _rebind_wire_prop
-			if wh.is_empty() or wi < 0 or wprop == &"":
+			var edges_w: Array = _last_layout.get(&"draw_edges", []) as Array
+			var idx_w := _graph_selected_edge_index
+			if idx_w < 0 or idx_w >= edges_w.size():
 				return
-			if not root.has_node(NodePath(wh)):
-				push_warning("Ui React: wire host path is no longer valid: %s" % wh)
+			var ed_w: Variant = edges_w[idx_w]
+			if ed_w is not Dictionary:
 				return
-			var host_n: Node = root.get_node(NodePath(wh))
-			if not (host_n is Control):
-				return
-			var host := host_n as Control
-			if not (&"wire_rules" in host):
-				push_warning("Ui React: host has no wire_rules: %s" % wh)
-				return
-			var arr := _duplicate_wire_rules_array(host)
-			if wi >= arr.size():
-				push_warning("Ui React: wire_rules index out of range: %d" % wi)
-				return
-			var old_rule: Variant = arr[wi]
-			if old_rule == null or not (old_rule is UiReactWireRule):
-				push_warning("Ui React: wire_rules[%d] is not a UiReactWireRule." % wi)
-				return
-			var dup_res: Resource = (old_rule as Resource).duplicate(true)
-			if dup_res == null or not (dup_res is UiReactWireRule):
-				push_warning("Ui React: could not duplicate wire rule at index %d." % wi)
-				return
-			var new_rule := dup_res as UiReactWireRule
-			if not wprop in new_rule:
-				push_warning("Ui React: rule has no export %s" % str(wprop))
-				return
-			new_rule.set(wprop, ui_st)
-			arr[wi] = new_rule
-			_actions.assign_property_variant(
-				host,
-				&"wire_rules",
-				arr,
-				"Ui React: wire_rules[%d] %s" % [wi, str(wprop)]
-			)
-			committed = true
+			var for_in := _rebind_kind == _REBIND_WIRE_IN
+			committed = _try_commit_wire_rebind_from_edge(ed_w as Dictionary, for_in, ui_st, root)
 		_REBIND_COMPUTED_SOURCE:
 			var hp_c := _rebind_host_path
 			var ctx := _rebind_computed_context
@@ -1266,6 +1416,15 @@ func _build_ui() -> void:
 	_graph_view.node_selected.connect(_on_graph_node)
 	_graph_view.edge_selected.connect(_on_graph_edge)
 	_graph_view.selection_cleared.connect(_on_graph_cleared)
+	_graph_view.reconnect_drag_ended.connect(_on_graph_reconnect_drag_ended)
+	_graph_view.set_reconnect_handlers(
+		Callable(self, &"_reconnect_can_start_cb"),
+		Callable(self, &"_reconnect_is_valid_target_cb")
+	)
+	_graph_view.tooltip_text = (
+		"Pan: middle-drag. Zoom: wheel. Select node or edge. "
+		+ "Reconnect: select an edge, then Shift+drag from the source endpoint node to another state node (undoable)."
+	)
 	_visual_host.add_child(_graph_view)
 
 	_details_scroll = ScrollContainer.new()

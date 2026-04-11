@@ -1,10 +1,14 @@
-## Read-only graph canvas for Dependency Graph visual mode ([code]CB-018A.1[/code], [code]CB-018A.2[/code], [code]CB-018A.3[/code]).
+## Graph canvas for Dependency Graph visual mode ([code]CB-018A.1[/code]–[code]CB-018A.3[/code]); [b]Shift+drag[/b] reconnect (**[code]CB-058[/code]** step 2).
 class_name UiReactExplainGraphView
 extends Control
 
 signal node_selected(node_id: String)
 signal edge_selected(from_id: String, to_id: String, kind: int, label: String, edge_index: int)
 signal selection_cleared
+## Fired when reconnect rubber-band drag crosses the movement threshold ([param edge_index] is [member _selected_edge_index]).
+signal reconnect_drag_started(edge_index: int, origin_node_id: String)
+## [param target_node_id] is empty if cancelled, released on canvas, or invalid; panel validates and commits.
+signal reconnect_drag_ended(edge_index: int, origin_node_id: String, target_node_id: String)
 
 const _Snap := preload("res://addons/ui_react/editor_plugin/models/ui_react_explain_graph_snapshot.gd")
 
@@ -20,6 +24,16 @@ const VIEW_PAD := 10.0
 var _sb_fill: StyleBoxFlat
 var _sb_sel: StyleBoxFlat
 var _sb_hover: StyleBoxFlat
+var _sb_valid: StyleBoxFlat
+
+var _reconnect_can_start_cb: Callable = Callable()
+var _reconnect_is_valid_target_cb: Callable = Callable()
+var _shift_reconnect_pending := false
+var _reconnect_active := false
+var _reconnect_origin_node_id: String = ""
+var _press_screen := Vector2.ZERO
+var _reconnect_cursor_graph := Vector2.ZERO
+const _RECONNECT_DRAG_THRESHOLD_PX := 6.0
 
 var _layout: Dictionary = {}
 var _pan := Vector2.ZERO
@@ -57,6 +71,17 @@ func _ready() -> void:
 	_sb_hover.border_color = Color(1.0, 1.0, 0.85, 0.55)
 	_sb_hover.set_border_width_all(1)
 	_sb_hover.set_corner_radius_all(int(NODE_RADIUS) + 1)
+	_sb_valid = StyleBoxFlat.new()
+	_sb_valid.bg_color = Color(0, 0, 0, 0)
+	_sb_valid.border_color = Color(0.35, 0.85, 0.45, 0.95)
+	_sb_valid.set_border_width_all(2)
+	_sb_valid.set_corner_radius_all(int(NODE_RADIUS) + 3)
+
+
+## Panel supplies policy for [b]Shift+drag[/b] reconnect; call with empty Callables to disable.
+func set_reconnect_handlers(can_start: Callable, is_valid_target: Callable) -> void:
+	_reconnect_can_start_cb = can_start
+	_reconnect_is_valid_target_cb = is_valid_target
 
 
 func set_edge_filters(show_binding: bool, show_computed: bool, show_wire: bool, show_all_edge_labels: bool) -> void:
@@ -75,6 +100,7 @@ func clear_graph() -> void:
 	_hover_edge_index = -1
 	_pan = Vector2.ZERO
 	_zoom = 1.0
+	_clear_reconnect_drag_state()
 	queue_redraw()
 
 
@@ -84,6 +110,7 @@ func set_layout(layout: Dictionary) -> void:
 	_selected_edge_index = -1
 	_hover_node_id = ""
 	_hover_edge_index = -1
+	_clear_reconnect_drag_state()
 	reset_view()
 
 
@@ -189,6 +216,13 @@ func _draw() -> void:
 			fill.a = 0.28
 		_sb_fill.bg_color = fill
 		draw_style_box(_sb_fill, rect)
+		if (
+			_reconnect_active
+			and _selected_edge_index >= 0
+			and _reconnect_is_valid_target_cb.is_valid()
+			and _reconnect_is_valid_target_cb.call(_selected_edge_index, _reconnect_origin_node_id, id)
+		):
+			draw_style_box(_sb_valid, rect.grow(3.0))
 		if id == _selected_node_id:
 			draw_style_box(_sb_sel, rect.grow(2.0))
 		elif id == _hover_node_id:
@@ -216,6 +250,11 @@ func _draw() -> void:
 		var pts2: Variant = edl.get(&"route_points", null)
 		_draw_edge_label_if_needed(ei, edl, centers, pts2)
 		ei += 1
+
+	if _reconnect_active and not _reconnect_origin_node_id.is_empty():
+		var oc: Variant = centers.get(_reconnect_origin_node_id, null)
+		if oc is Vector2:
+			draw_line(oc as Vector2, _reconnect_cursor_graph, Color(0.45, 0.92, 1.0, 0.92), 2.5, true)
 
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	var gs: Variant = _layout.get(&"graph_stats", null)
@@ -346,7 +385,55 @@ func _edge_at_index(i: int) -> Variant:
 	return edges[i]
 
 
+func _clear_reconnect_drag_state() -> void:
+	_shift_reconnect_pending = false
+	_reconnect_active = false
+	_reconnect_origin_node_id = ""
+
+
+func _hit_test_node_id(screen_local: Vector2) -> String:
+	if _layout.is_empty():
+		return ""
+	if not _inner_rect().has_point(screen_local):
+		return ""
+	var g := _screen_to_graph(screen_local, _zoom)
+	var centers: Dictionary = _layout.get(&"node_centers", {}) as Dictionary
+	var best_id := ""
+	var best_d := 1e12
+	for nid: Variant in centers:
+		var c: Vector2 = centers[nid] as Vector2
+		var rect := Rect2(c - Vector2(NODE_W * 0.5, NODE_H * 0.5), Vector2(NODE_W, NODE_H))
+		if rect.has_point(g):
+			var ds := g.distance_squared_to(c)
+			if ds < best_d:
+				best_d = ds
+				best_id = String(nid)
+	return best_id
+
+
+func _try_begin_shift_reconnect(screen_local: Vector2, shift_pressed: bool) -> bool:
+	if not shift_pressed or _selected_edge_index < 0:
+		return false
+	if not _reconnect_can_start_cb.is_valid():
+		return false
+	var nid := _hit_test_node_id(screen_local)
+	if nid.is_empty():
+		return false
+	if not bool(_reconnect_can_start_cb.call(_selected_edge_index, nid)):
+		return false
+	_shift_reconnect_pending = true
+	_reconnect_origin_node_id = nid
+	_press_screen = screen_local
+	return true
+
+
 func _gui_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		if _reconnect_active or _shift_reconnect_pending:
+			_clear_reconnect_drag_state()
+			queue_redraw()
+			accept_event()
+		return
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_WHEEL_UP and mb.pressed:
@@ -373,10 +460,28 @@ func _gui_input(event: InputEvent) -> void:
 			if mb.pressed:
 				accept_event()
 			return
-		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
-			_pick(mb.position)
-			accept_event()
-			return
+		if mb.button_index == MOUSE_BUTTON_LEFT:
+			if mb.pressed:
+				if _try_begin_shift_reconnect(mb.position, mb.shift_pressed):
+					accept_event()
+					return
+				_pick(mb.position)
+				accept_event()
+				return
+			if _reconnect_active:
+				var tgt := _hit_test_node_id(mb.position)
+				reconnect_drag_ended.emit(_selected_edge_index, _reconnect_origin_node_id, tgt)
+				_clear_reconnect_drag_state()
+				accept_event()
+				queue_redraw()
+				return
+			if _shift_reconnect_pending:
+				if not _reconnect_active:
+					_pick(_press_screen)
+				_clear_reconnect_drag_state()
+				accept_event()
+				queue_redraw()
+				return
 	if event is InputEventMouseMotion:
 		var mm := event as InputEventMouseMotion
 		if _dragging:
@@ -384,6 +489,15 @@ func _gui_input(event: InputEvent) -> void:
 			queue_redraw()
 			accept_event()
 			return
+		if _shift_reconnect_pending and (mm.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
+			if not _reconnect_active and _press_screen.distance_to(mm.position) > _RECONNECT_DRAG_THRESHOLD_PX:
+				_reconnect_active = true
+				reconnect_drag_started.emit(_selected_edge_index, _reconnect_origin_node_id)
+			if _reconnect_active:
+				_reconnect_cursor_graph = _screen_to_graph(mm.position, _zoom)
+				queue_redraw()
+				accept_event()
+				return
 		_pick_hover(mm.position)
 
 
