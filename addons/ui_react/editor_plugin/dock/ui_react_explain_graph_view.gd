@@ -1,4 +1,4 @@
-## Graph canvas for Dependency Graph visual mode ([code]CB-018A.1[/code]–[code]CB-018A.3[/code]); [b]Shift+drag[/b] reconnect (**[code]CB-058[/code]** step 2).
+## Graph canvas for Dependency Graph visual mode ([code]CB-018A.1[/code]–[code]CB-018A.3[/code]); [b]Shift+drag[/b] reconnect + [b]Ctrl+Shift+drag[/b] new link (**[code]CB-058[/code]**).
 class_name UiReactExplainGraphView
 extends Control
 
@@ -9,6 +9,9 @@ signal selection_cleared
 signal reconnect_drag_started(edge_index: int, origin_node_id: String)
 ## [param target_node_id] is empty if cancelled, released on canvas, or invalid; panel validates and commits.
 signal reconnect_drag_ended(edge_index: int, origin_node_id: String, target_node_id: String)
+signal newlink_drag_started(donor_node_id: String)
+## [param target_node_id] empty if cancel / no hit; requires no edge selected when starting (**[code]CB-058[/code]** phase 2b).
+signal newlink_drag_ended(donor_node_id: String, target_node_id: String)
 
 const _Snap := preload("res://addons/ui_react/editor_plugin/models/ui_react_explain_graph_snapshot.gd")
 
@@ -25,6 +28,7 @@ var _sb_fill: StyleBoxFlat
 var _sb_sel: StyleBoxFlat
 var _sb_hover: StyleBoxFlat
 var _sb_valid: StyleBoxFlat
+var _sb_valid_newlink: StyleBoxFlat
 
 var _reconnect_can_start_cb: Callable = Callable()
 var _reconnect_is_valid_target_cb: Callable = Callable()
@@ -34,6 +38,13 @@ var _reconnect_origin_node_id: String = ""
 var _press_screen := Vector2.ZERO
 var _reconnect_cursor_graph := Vector2.ZERO
 const _RECONNECT_DRAG_THRESHOLD_PX := 6.0
+
+var _newlink_can_start_cb: Callable = Callable()
+var _newlink_is_valid_drop_cb: Callable = Callable()
+var _newlink_pending := false
+var _newlink_active := false
+var _newlink_donor_id: String = ""
+var _newlink_cursor_graph := Vector2.ZERO
 
 var _layout: Dictionary = {}
 var _pan := Vector2.ZERO
@@ -76,12 +87,23 @@ func _ready() -> void:
 	_sb_valid.border_color = Color(0.35, 0.85, 0.45, 0.95)
 	_sb_valid.set_border_width_all(2)
 	_sb_valid.set_corner_radius_all(int(NODE_RADIUS) + 3)
+	_sb_valid_newlink = StyleBoxFlat.new()
+	_sb_valid_newlink.bg_color = Color(0, 0, 0, 0)
+	_sb_valid_newlink.border_color = Color(0.95, 0.72, 0.35, 0.95)
+	_sb_valid_newlink.set_border_width_all(2)
+	_sb_valid_newlink.set_corner_radius_all(int(NODE_RADIUS) + 3)
 
 
 ## Panel supplies policy for [b]Shift+drag[/b] reconnect; call with empty Callables to disable.
 func set_reconnect_handlers(can_start: Callable, is_valid_target: Callable) -> void:
 	_reconnect_can_start_cb = can_start
 	_reconnect_is_valid_target_cb = is_valid_target
+
+
+## Panel supplies policy for [b]Ctrl+Shift+drag[/b] new link (no edge selected); empty Callables disable.
+func set_newlink_handlers(can_start: Callable, is_valid_drop: Callable) -> void:
+	_newlink_can_start_cb = can_start
+	_newlink_is_valid_drop_cb = is_valid_drop
 
 
 func set_edge_filters(show_binding: bool, show_computed: bool, show_wire: bool, show_all_edge_labels: bool) -> void:
@@ -101,6 +123,7 @@ func clear_graph() -> void:
 	_pan = Vector2.ZERO
 	_zoom = 1.0
 	_clear_reconnect_drag_state()
+	_clear_newlink_drag_state()
 	queue_redraw()
 
 
@@ -111,6 +134,7 @@ func set_layout(layout: Dictionary) -> void:
 	_hover_node_id = ""
 	_hover_edge_index = -1
 	_clear_reconnect_drag_state()
+	_clear_newlink_drag_state()
 	reset_view()
 
 
@@ -223,6 +247,12 @@ func _draw() -> void:
 			and _reconnect_is_valid_target_cb.call(_selected_edge_index, _reconnect_origin_node_id, id)
 		):
 			draw_style_box(_sb_valid, rect.grow(3.0))
+		if (
+			_newlink_active
+			and _newlink_is_valid_drop_cb.is_valid()
+			and _newlink_is_valid_drop_cb.call(_newlink_donor_id, id)
+		):
+			draw_style_box(_sb_valid_newlink, rect.grow(3.0))
 		if id == _selected_node_id:
 			draw_style_box(_sb_sel, rect.grow(2.0))
 		elif id == _hover_node_id:
@@ -255,6 +285,16 @@ func _draw() -> void:
 		var oc: Variant = centers.get(_reconnect_origin_node_id, null)
 		if oc is Vector2:
 			draw_line(oc as Vector2, _reconnect_cursor_graph, Color(0.45, 0.92, 1.0, 0.92), 2.5, true)
+	if _newlink_active and not _newlink_donor_id.is_empty():
+		var ocn: Variant = centers.get(_newlink_donor_id, null)
+		if ocn is Vector2:
+			_draw_dashed_line(
+				ocn as Vector2,
+				_newlink_cursor_graph,
+				Color(0.95, 0.78, 0.4, 0.92),
+				2.2,
+				7.0
+			)
 
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	var gs: Variant = _layout.get(&"graph_stats", null)
@@ -282,6 +322,22 @@ func _draw_centered_node_label(center: Vector2, text: String, modulate: Color) -
 		NODE_FS,
 		modulate
 	)
+
+
+func _draw_dashed_line(from: Vector2, to: Vector2, col: Color, width: float, dash_len: float) -> void:
+	var seg := to - from
+	var slen := seg.length()
+	if slen < 0.001:
+		return
+	var dir := seg / slen
+	var t := 0.0
+	var draw_seg := true
+	while t < slen:
+		var t2 := minf(t + dash_len, slen)
+		if draw_seg:
+			draw_line(from + dir * t, from + dir * t2, col, width, true)
+		t = t2
+		draw_seg = not draw_seg
 
 
 func _draw_polyline(pts: PackedVector2Array, col: Color, width: float) -> void:
@@ -391,6 +447,12 @@ func _clear_reconnect_drag_state() -> void:
 	_reconnect_origin_node_id = ""
 
 
+func _clear_newlink_drag_state() -> void:
+	_newlink_pending = false
+	_newlink_active = false
+	_newlink_donor_id = ""
+
+
 func _hit_test_node_id(screen_local: Vector2) -> String:
 	if _layout.is_empty():
 		return ""
@@ -427,10 +489,30 @@ func _try_begin_shift_reconnect(screen_local: Vector2, shift_pressed: bool) -> b
 	return true
 
 
+func _try_begin_ctrl_shift_newlink(screen_local: Vector2, ctrl: bool, shift: bool) -> bool:
+	if not ctrl or not shift or _selected_edge_index >= 0:
+		return false
+	if not _newlink_can_start_cb.is_valid():
+		return false
+	var nid := _hit_test_node_id(screen_local)
+	if nid.is_empty():
+		return false
+	if not bool(_newlink_can_start_cb.call(nid)):
+		return false
+	_newlink_pending = true
+	_newlink_donor_id = nid
+	_press_screen = screen_local
+	return true
+
+
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		if _reconnect_active or _shift_reconnect_pending:
 			_clear_reconnect_drag_state()
+			queue_redraw()
+			accept_event()
+		elif _newlink_active or _newlink_pending:
+			_clear_newlink_drag_state()
 			queue_redraw()
 			accept_event()
 		return
@@ -462,16 +544,35 @@ func _gui_input(event: InputEvent) -> void:
 			return
 		if mb.button_index == MOUSE_BUTTON_LEFT:
 			if mb.pressed:
+				if _try_begin_ctrl_shift_newlink(
+					mb.position, mb.ctrl_pressed, mb.shift_pressed
+				):
+					accept_event()
+					return
 				if _try_begin_shift_reconnect(mb.position, mb.shift_pressed):
 					accept_event()
 					return
 				_pick(mb.position)
 				accept_event()
 				return
+			if _newlink_active:
+				var tgt_n := _hit_test_node_id(mb.position)
+				newlink_drag_ended.emit(_newlink_donor_id, tgt_n)
+				_clear_newlink_drag_state()
+				accept_event()
+				queue_redraw()
+				return
 			if _reconnect_active:
 				var tgt := _hit_test_node_id(mb.position)
 				reconnect_drag_ended.emit(_selected_edge_index, _reconnect_origin_node_id, tgt)
 				_clear_reconnect_drag_state()
+				accept_event()
+				queue_redraw()
+				return
+			if _newlink_pending:
+				if not _newlink_active:
+					_pick(_press_screen)
+				_clear_newlink_drag_state()
 				accept_event()
 				queue_redraw()
 				return
@@ -489,6 +590,15 @@ func _gui_input(event: InputEvent) -> void:
 			queue_redraw()
 			accept_event()
 			return
+		if _newlink_pending and (mm.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
+			if not _newlink_active and _press_screen.distance_to(mm.position) > _RECONNECT_DRAG_THRESHOLD_PX:
+				_newlink_active = true
+				newlink_drag_started.emit(_newlink_donor_id)
+			if _newlink_active:
+				_newlink_cursor_graph = _screen_to_graph(mm.position, _zoom)
+				queue_redraw()
+				accept_event()
+				return
 		if _shift_reconnect_pending and (mm.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
 			if not _reconnect_active and _press_screen.distance_to(mm.position) > _RECONNECT_DRAG_THRESHOLD_PX:
 				_reconnect_active = true

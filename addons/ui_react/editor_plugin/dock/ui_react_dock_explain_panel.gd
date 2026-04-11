@@ -4,6 +4,7 @@ extends MarginContainer
 
 const _ExplainBuilderScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_explain_graph_builder.gd")
 const _ComputedRebindScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_computed_graph_rebind.gd")
+const _NewBindingScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_graph_new_binding_service.gd")
 const _ResolverScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_graph_node_state_resolver.gd")
 const _ExplainLayoutScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_explain_graph_layout.gd")
 const _ExplainGraphViewScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_explain_graph_view.gd")
@@ -53,6 +54,12 @@ var _rebind_wire_rule_index: int = -1
 var _rebind_wire_prop: StringName = &""
 var _rebind_computed_context: String = ""
 var _rebind_computed_source_index: int = -1
+
+var _newlink_binding_popup: PopupMenu
+var _newlink_pick_host: Control
+var _newlink_pick_component: String = ""
+var _newlink_pick_donor: UiState
+var _newlink_pick_candidates: Array = []
 
 var _auto_refresh_timer: Timer
 
@@ -411,6 +418,180 @@ func _reconnect_is_valid_drop(edge_idx: int, origin_id: String, target_id: Strin
 
 func _reconnect_is_valid_target_cb(edge_idx: int, origin_id: String, target_id: String) -> bool:
 	return _reconnect_is_valid_drop(edge_idx, origin_id, target_id)
+
+
+func _newlink_can_start_cb(node_id: String) -> bool:
+	return _newlink_can_start(node_id)
+
+
+func _newlink_can_start(node_id: String) -> bool:
+	if _plugin == null or _actions == null:
+		return false
+	var root := _plugin.get_editor_interface().get_edited_scene_root()
+	if root == null:
+		return false
+	var nb: Dictionary = _last_layout.get(&"node_by_id", {}) as Dictionary
+	if not nb.has(node_id):
+		return false
+	var d: Dictionary = nb[node_id] as Dictionary
+	var nk := int(d.get(&"kind", -1))
+	if nk != _SnapScript.NodeKind.UI_STATE and nk != _SnapScript.NodeKind.UI_COMPUTED:
+		return false
+	return _ResolverScript.try_resolve_uistate(root, node_id, nb) != null
+
+
+func _newlink_is_valid_drop_cb(donor_id: String, target_id: String) -> bool:
+	return _newlink_is_valid_drop(donor_id, target_id)
+
+
+func _newlink_is_valid_drop(donor_id: String, target_id: String) -> bool:
+	if donor_id == target_id or donor_id.is_empty() or target_id.is_empty():
+		return false
+	if _plugin == null:
+		return false
+	var root := _plugin.get_editor_interface().get_edited_scene_root()
+	if root == null:
+		return false
+	var nb: Dictionary = _last_layout.get(&"node_by_id", {}) as Dictionary
+	var centers: Dictionary = _last_layout.get(&"node_centers", {}) as Dictionary
+	if not nb.has(donor_id) or not nb.has(target_id):
+		return false
+	if not centers.has(target_id):
+		return false
+	var donor_st: UiState = _ResolverScript.try_resolve_uistate(root, donor_id, nb)
+	if donor_st == null:
+		return false
+	var td: Dictionary = nb[target_id] as Dictionary
+	var tk := int(td.get(&"kind", -1))
+	if tk == _SnapScript.NodeKind.CONTROL:
+		var cp := str(td.get(&"control_path", ""))
+		if cp.is_empty() or not root.has_node(NodePath(cp)):
+			return false
+		var n: Node = root.get_node(NodePath(cp))
+		if not (n is Control):
+			return false
+		var host := n as Control
+		var comp := UiReactScannerService.get_component_name_from_script(host.get_script() as Script)
+		if comp.is_empty():
+			return false
+		return not _NewBindingScript.list_assignable_empty_exports(host, comp, donor_st).is_empty()
+	if tk == _SnapScript.NodeKind.UI_COMPUTED:
+		var ehp := str(td.get(&"embedded_host_path", ""))
+		var ctx := str(td.get(&"embedded_context", ""))
+		if ehp.is_empty() or ctx.is_empty():
+			return false
+		if not root.has_node(NodePath(ehp)):
+			return false
+		var hn: Node = root.get_node(NodePath(ehp))
+		if not (hn is Control):
+			return false
+		return _ComputedRebindScript.can_fill_or_append_computed_sources(hn as Control, ctx)
+	return false
+
+
+func _ensure_newlink_binding_popup() -> PopupMenu:
+	if _newlink_binding_popup != null:
+		return _newlink_binding_popup
+	_newlink_binding_popup = PopupMenu.new()
+	var bc: Control = _plugin.get_editor_interface().get_base_control()
+	bc.add_child(_newlink_binding_popup)
+	_newlink_binding_popup.id_pressed.connect(_on_newlink_binding_menu_id)
+	return _newlink_binding_popup
+
+
+func _open_newlink_binding_picker(host: Control, component: String, donor: UiState, candidates: Array) -> void:
+	_newlink_pick_host = host
+	_newlink_pick_component = component
+	_newlink_pick_donor = donor
+	_newlink_pick_candidates = candidates.duplicate()
+	var m := _ensure_newlink_binding_popup()
+	m.clear()
+	for i: int in range(_newlink_pick_candidates.size()):
+		var row: Variant = _newlink_pick_candidates[i]
+		var lab := str((row as Dictionary).get(&"label", ""))
+		m.add_item(lab, i)
+	var mp: Vector2i = DisplayServer.mouse_get_position()
+	m.position = mp
+	m.popup()
+
+
+func _on_newlink_binding_menu_id(menu_id: int) -> void:
+	if _newlink_pick_host == null or _newlink_pick_donor == null:
+		return
+	if menu_id < 0 or menu_id >= _newlink_pick_candidates.size():
+		return
+	var row: Dictionary = _newlink_pick_candidates[menu_id] as Dictionary
+	var prop: StringName = row[&"property"] as StringName
+	if not _NewBindingScript.try_commit_assign(
+		_newlink_pick_host, _newlink_pick_component, prop, _newlink_pick_donor, _actions
+	):
+		_newlink_pick_host = null
+		_newlink_pick_donor = null
+		_newlink_pick_candidates.clear()
+		return
+	if _request_dock_refresh.is_valid():
+		_request_dock_refresh.call()
+	refresh()
+	_newlink_pick_host = null
+	_newlink_pick_donor = null
+	_newlink_pick_candidates.clear()
+
+
+func _on_graph_newlink_drag_ended(donor_id: String, target_id: String) -> void:
+	if _plugin == null or _actions == null or donor_id.is_empty() or target_id.is_empty():
+		return
+	if not _newlink_is_valid_drop(donor_id, target_id):
+		return
+	var root := _plugin.get_editor_interface().get_edited_scene_root()
+	if root == null:
+		return
+	var nb: Dictionary = _last_layout.get(&"node_by_id", {}) as Dictionary
+	var donor_st: UiState = _ResolverScript.try_resolve_uistate(root, donor_id, nb)
+	if donor_st == null:
+		return
+	var td: Dictionary = nb[target_id] as Dictionary
+	var tk := int(td.get(&"kind", -1))
+	var committed := false
+	if tk == _SnapScript.NodeKind.CONTROL:
+		var cp := str(td.get(&"control_path", ""))
+		if cp.is_empty() or not root.has_node(NodePath(cp)):
+			return
+		var n: Node = root.get_node(NodePath(cp))
+		if not (n is Control):
+			return
+		var host := n as Control
+		var comp := UiReactScannerService.get_component_name_from_script(host.get_script() as Script)
+		var cands: Array = _NewBindingScript.list_assignable_empty_exports(host, comp, donor_st)
+		if cands.is_empty():
+			push_warning("Ui React: no compatible empty binding exports for this control.")
+			return
+		if cands.size() == 1:
+			var prop: StringName = (cands[0] as Dictionary)[&"property"] as StringName
+			committed = _NewBindingScript.try_commit_assign(host, comp, prop, donor_st, _actions)
+		else:
+			_open_newlink_binding_picker(host, comp, donor_st, cands)
+			return
+	elif tk == _SnapScript.NodeKind.UI_COMPUTED:
+		var ehp := str(td.get(&"embedded_host_path", ""))
+		var ctx := str(td.get(&"embedded_context", ""))
+		if ehp.is_empty() or ctx.is_empty():
+			push_warning(
+				"Ui React: new computed source on canvas requires an embedded computed node (file-backed not supported here)."
+			)
+			return
+		if not root.has_node(NodePath(ehp)):
+			return
+		var hn: Node = root.get_node(NodePath(ehp))
+		if not (hn is Control):
+			return
+		committed = _ComputedRebindScript.try_commit_append_or_fill_source(
+			hn as Control, ctx, donor_st, _actions
+		)
+	if not committed:
+		return
+	if _request_dock_refresh.is_valid():
+		_request_dock_refresh.call()
+	refresh()
 
 
 func _try_commit_binding_rebind_from_edge(ed: Dictionary, ui_st: UiState, root: Node) -> bool:
@@ -1417,13 +1598,19 @@ func _build_ui() -> void:
 	_graph_view.edge_selected.connect(_on_graph_edge)
 	_graph_view.selection_cleared.connect(_on_graph_cleared)
 	_graph_view.reconnect_drag_ended.connect(_on_graph_reconnect_drag_ended)
+	_graph_view.newlink_drag_ended.connect(_on_graph_newlink_drag_ended)
 	_graph_view.set_reconnect_handlers(
 		Callable(self, &"_reconnect_can_start_cb"),
 		Callable(self, &"_reconnect_is_valid_target_cb")
 	)
+	_graph_view.set_newlink_handlers(
+		Callable(self, &"_newlink_can_start_cb"),
+		Callable(self, &"_newlink_is_valid_drop_cb")
+	)
 	_graph_view.tooltip_text = (
 		"Pan: middle-drag. Zoom: wheel. Select node or edge. "
-		+ "Reconnect: select an edge, then Shift+drag from the source endpoint node to another state node (undoable)."
+		+ "Reconnect: select an edge, then Shift+drag from the source endpoint node to another state node (undoable). "
+		+ "New link: clear edge selection, Ctrl+Shift+drag from a state/computed donor to a control (empty binding) or embedded computed (fill/append sources; undoable)."
 	)
 	_visual_host.add_child(_graph_view)
 

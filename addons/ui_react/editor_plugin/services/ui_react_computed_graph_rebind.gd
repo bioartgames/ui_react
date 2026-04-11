@@ -2,6 +2,8 @@
 class_name UiReactComputedGraphRebind
 extends RefCounted
 
+const _MAX_COMPUTED_SOURCES := 32
+
 
 static func try_resolve_computed(host: Control, computed_context: String) -> Variant:
 	if host == null or computed_context.is_empty():
@@ -108,6 +110,143 @@ static func try_commit_replace_source(
 			)
 		_:
 			return false
+
+
+## Fills first null / non-[UiState] [code]sources[/code] slot, or appends if all slots hold [UiState] and size [i]<[/i] [_MAX_COMPUTED_SOURCES] (**[code]CB-058[/code]** phase 2b).
+static func try_commit_append_or_fill_source(
+	host: Control,
+	computed_context: String,
+	new_src: UiState,
+	actions: UiReactActionController,
+) -> bool:
+	if host == null or actions == null or computed_context.is_empty() or new_src == null:
+		return false
+	var c0: Variant = try_resolve_computed(host, computed_context)
+	if c0 == null:
+		push_warning("Ui React: could not resolve computed at context: %s" % computed_context)
+		return false
+	var raw: Variant = c0.get(&"sources")
+	if typeof(raw) != TYPE_ARRAY:
+		return false
+	var arr: Array = raw as Array
+	var idx := _source_index_for_fill_or_append(arr)
+	if idx < 0:
+		push_warning("Ui React: computed sources full or invalid (max %d)." % _MAX_COMPUTED_SOURCES)
+		return false
+
+	var head: Dictionary = _parse_control_prefix(host, computed_context)
+	if head.is_empty() or not bool(head.get(&"ok", false)):
+		push_warning("Ui React: invalid computed_context for commit: %s" % computed_context)
+		return false
+	var rest: String = str(head.get(&"rest", ""))
+	var first_child: Variant = head[&"next"]
+	if first_child == null and not rest.is_empty():
+		push_warning("Ui React: null path segment in computed_context: %s" % computed_context)
+		return false
+
+	var new_subtree: Variant
+	if rest.is_empty():
+		new_subtree = _patch_computed_leaf_write_index(first_child, idx, new_src)
+	else:
+		new_subtree = _mutate_path_write_index(first_child, rest, idx, new_src)
+	if new_subtree == null:
+		return false
+
+	var kind: StringName = head[&"kind"]
+	match kind:
+		&"bind":
+			var prop: StringName = head[&"export"]
+			actions.assign_property_variant(
+				host,
+				prop,
+				new_subtree,
+				"Ui React: computed sources[%d] append/fill (%s)" % [idx, computed_context]
+			)
+			return true
+		&"wire":
+			var wi: int = int(head[&"rule_index"])
+			var wp: StringName = head[&"rule_prop"]
+			return _commit_wire_field(host, wi, wp, new_subtree, idx, computed_context, actions)
+		&"tab_config":
+			return _commit_tab_config_field(host, head, new_subtree, idx, computed_context, actions)
+		&"anim":
+			return _commit_array_element(
+				host,
+				head[&"export"],
+				int(head[&"array_index"]),
+				new_subtree,
+				idx,
+				computed_context,
+				actions
+			)
+		&"action":
+			return _commit_array_element(
+				host,
+				head[&"export"],
+				int(head[&"array_index"]),
+				new_subtree,
+				idx,
+				computed_context,
+				actions
+			)
+		_:
+			return false
+
+
+static func can_fill_or_append_computed_sources(host: Control, computed_context: String) -> bool:
+	if host == null or computed_context.is_empty():
+		return false
+	var c0: Variant = try_resolve_computed(host, computed_context)
+	if c0 == null:
+		return false
+	var raw: Variant = c0.get(&"sources")
+	if typeof(raw) != TYPE_ARRAY:
+		return false
+	return _source_index_for_fill_or_append(raw as Array) >= 0
+
+
+static func _source_index_for_fill_or_append(arr: Array) -> int:
+	for i in range(arr.size()):
+		if not (arr[i] is UiState):
+			return i
+	if arr.size() < _MAX_COMPUTED_SOURCES:
+		return arr.size()
+	return -1
+
+
+static func _patch_computed_leaf_write_index(cur: Variant, source_index: int, new_src: UiState) -> Variant:
+	if not (cur is UiComputedStringState or cur is UiComputedBoolState):
+		return null
+	var c: Resource = cur as Resource
+	var c2: Resource = c.duplicate(true)
+	if c2 == null:
+		return null
+	var raw2: Variant = c2.get(&"sources")
+	if typeof(raw2) != TYPE_ARRAY:
+		return null
+	var arr: Array = (raw2 as Array).duplicate()
+	if source_index == arr.size():
+		arr.append(new_src)
+	elif source_index >= 0 and source_index < arr.size():
+		arr[source_index] = new_src
+	else:
+		return null
+	c2.set(&"sources", arr)
+	return c2
+
+
+static func _mutate_path_write_index(cur: Variant, path: String, source_index: int, new_src: UiState) -> Variant:
+	if path.is_empty():
+		return _patch_computed_leaf_write_index(cur, source_index, new_src)
+	var step: Dictionary = _pop_segment_deep(cur, path)
+	if step.is_empty() or not bool(step.get(&"ok", false)):
+		return null
+	var child_val: Variant = step[&"next"]
+	var rest: String = str(step.get(&"rest", ""))
+	var inner_new: Variant = _mutate_path_write_index(child_val, rest, source_index, new_src)
+	if inner_new == null:
+		return null
+	return _replace_child(cur, step, inner_new)
 
 
 static func _rx_wire() -> RegEx:
