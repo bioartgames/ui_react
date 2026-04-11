@@ -226,18 +226,21 @@ class _BuildContext extends RefCounted:
 			return
 
 	func queue_wire_rule_edges(host_path: NodePath, rule_index: int, rule: UiReactWireRule, type_name: String) -> void:
-		var ins: Array[UiState] = []
-		var outs: Array[UiState] = []
+		var ins: Array = []
+		var outs: Array = []
 		for ref in _WireRuleIntrospectionScript.list_io(rule):
 			var role: StringName = ref.get(&"role", &"")
 			var st: Variant = ref.get(&"state", null)
 			if not (st is UiState):
 				continue
+			var prop: Variant = ref.get(&"property", &"")
+			var prop_sn: StringName = prop if prop is StringName else StringName(str(prop))
 			var u := st as UiState
+			var entry: Dictionary = {&"state": u, &"property": prop_sn}
 			if role == &"in":
-				ins.append(u)
+				ins.append(entry)
 			elif role == &"out":
-				outs.append(u)
+				outs.append(entry)
 		_wire_pairs.append({
 			&"host_path": host_path,
 			&"index": rule_index,
@@ -254,15 +257,29 @@ class _BuildContext extends RefCounted:
 			var ins: Array = pack[&"ins"] as Array
 			var outs: Array = pack[&"outs"] as Array
 			var label := "wire_rules[%d] (%s)" % [ri, tname]
-			for in_st in ins:
+			for in_ev in ins:
+				if in_ev is not Dictionary:
+					continue
+				var in_ent: Dictionary = in_ev as Dictionary
+				var in_st: Variant = in_ent.get(&"state", null)
 				if not (in_st is UiState):
 					continue
+				var in_prop_v: Variant = in_ent.get(&"property", &"")
+				var in_prop: StringName = in_prop_v if in_prop_v is StringName else StringName(str(in_prop_v))
 				var in_id := state_id(hp, "wire.in", in_st as UiState)
 				if in_id.is_empty():
 					continue
-				for out_st in outs:
+				for out_ev in outs:
+					if out_ev is not Dictionary:
+						continue
+					var out_ent: Dictionary = out_ev as Dictionary
+					var out_st: Variant = out_ent.get(&"state", null)
 					if not (out_st is UiState):
 						continue
+					var out_prop_v: Variant = out_ent.get(&"property", &"")
+					var out_prop: StringName = (
+						out_prop_v if out_prop_v is StringName else StringName(str(out_prop_v))
+					)
 					var out_id := state_id(hp, "wire.out", out_st as UiState)
 					if out_id.is_empty() or in_id == out_id:
 						continue
@@ -271,7 +288,12 @@ class _BuildContext extends RefCounted:
 						out_id,
 						_SnapshotScript.EdgeKind.WIRE_FLOW,
 						label,
-						{&"wire_host_path": str(hp), &"wire_rule_index": ri}
+						{
+							&"wire_host_path": str(hp),
+							&"wire_rule_index": ri,
+							&"wire_in_property": str(in_prop),
+							&"wire_out_property": str(out_prop),
+						}
 					)
 
 	func _copy_nodes_and_edges(snap: Variant) -> void:

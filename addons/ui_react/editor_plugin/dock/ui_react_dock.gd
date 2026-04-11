@@ -143,7 +143,7 @@ func _build_ui() -> void:
 	# callv: avoid stale arity diagnostics on UiReactDockExplainPanel.setup (plugin, actions, dock refresh).
 	ex_panel.callv(
 		&"setup",
-		[_plugin, _actions, func(): request_refresh(&"binding_reconnect")]
+		[_plugin, _actions, func(): request_refresh(&"dependency_graph_edit")]
 	)
 	_explain_panel = ex_panel
 	_tabs.add_child(ex_panel)

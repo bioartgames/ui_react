@@ -10,6 +10,11 @@ const _SEL_NONE := 0
 const _SEL_NODE := 1
 const _SEL_EDGE := 2
 
+const _REBIND_NONE := 0
+const _REBIND_BINDING := 1
+const _REBIND_WIRE_IN := 2
+const _REBIND_WIRE_OUT := 3
+
 var _plugin: EditorPlugin
 var _actions: UiReactActionController
 var _request_dock_refresh: Callable = Callable()
@@ -31,11 +36,17 @@ var _details: RichTextLabel
 var _details_buttons: HBoxContainer
 var _btn_focus_inspector: Button
 var _btn_rebind_binding: Button
+var _btn_rebind_wire_in: Button
+var _btn_rebind_wire_out: Button
 var _btn_copy_details: Button
 
 var _rebind_file_dialog: EditorFileDialog
+var _rebind_kind: int = _REBIND_NONE
 var _rebind_host_path: String = ""
 var _rebind_property: String = ""
+var _rebind_wire_host_path: String = ""
+var _rebind_wire_rule_index: int = -1
+var _rebind_wire_prop: StringName = &""
 
 var _auto_refresh_timer: Timer
 
@@ -197,6 +208,10 @@ func _update_focus_button_state() -> void:
 		_btn_focus_inspector.disabled = _selection_kind == _SEL_NONE
 	if _btn_rebind_binding != null:
 		_btn_rebind_binding.disabled = not _can_rebind_binding_edge()
+	if _btn_rebind_wire_in != null:
+		_btn_rebind_wire_in.disabled = not _can_rebind_wire_endpoint(true)
+	if _btn_rebind_wire_out != null:
+		_btn_rebind_wire_out.disabled = not _can_rebind_wire_endpoint(false)
 
 
 func _can_rebind_binding_edge() -> bool:
@@ -231,16 +246,92 @@ func _can_rebind_binding_edge() -> bool:
 	return prop_sn in n
 
 
+func _can_rebind_wire_endpoint(for_input: bool) -> bool:
+	if _plugin == null or _actions == null:
+		return false
+	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.WIRE_FLOW:
+		return false
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return false
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return false
+	var ev: Variant = edges[idx]
+	if ev is not Dictionary:
+		return false
+	var ed: Dictionary = ev as Dictionary
+	var wh := str(ed.get(&"wire_host_path", ""))
+	var wi := int(ed.get(&"wire_rule_index", -1))
+	var win := str(ed.get(&"wire_in_property", ""))
+	var wout := str(ed.get(&"wire_out_property", ""))
+	var prop_str := win if for_input else wout
+	if wh.is_empty() or wi < 0 or prop_str.is_empty():
+		return false
+	if not root.has_node(NodePath(wh)):
+		return false
+	var host: Node = root.get_node(NodePath(wh))
+	if not (host is Control):
+		return false
+	var ctl := host as Control
+	if not (&"wire_rules" in ctl):
+		return false
+	var wr: Variant = ctl.get(&"wire_rules")
+	if wr == null:
+		return false
+	var arr: Array = wr as Array if wr is Array else []
+	if wi >= arr.size():
+		return false
+	var rule_var: Variant = arr[wi]
+	if rule_var == null or not (rule_var is UiReactWireRule):
+		return false
+	var rule := rule_var as UiReactWireRule
+	var prop_sn := StringName(prop_str)
+	return prop_sn in rule
+
+
 func _on_rebind_binding_pressed() -> void:
 	if not _can_rebind_binding_edge():
 		return
 	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
 	var ed: Dictionary = edges[_graph_selected_edge_index] as Dictionary
+	_rebind_kind = _REBIND_BINDING
 	_rebind_host_path = str(ed.get(&"host_path", ""))
 	_rebind_property = str(ed.get(&"binding_property", ""))
 	if _rebind_property.is_empty():
 		_rebind_property = str(ed.get(&"label", ""))
 	var dlg := _ensure_rebind_file_dialog()
+	dlg.title = "Pick UiState resource"
+	dlg.popup_centered_ratio(0.6)
+
+
+func _on_rebind_wire_in_pressed() -> void:
+	if not _can_rebind_wire_endpoint(true):
+		return
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var ed: Dictionary = edges[_graph_selected_edge_index] as Dictionary
+	_rebind_kind = _REBIND_WIRE_IN
+	_rebind_wire_host_path = str(ed.get(&"wire_host_path", ""))
+	_rebind_wire_rule_index = int(ed.get(&"wire_rule_index", -1))
+	_rebind_wire_prop = StringName(str(ed.get(&"wire_in_property", "")))
+	var dlg := _ensure_rebind_file_dialog()
+	dlg.title = "Pick UiState for wire input"
+	dlg.popup_centered_ratio(0.6)
+
+
+func _on_rebind_wire_out_pressed() -> void:
+	if not _can_rebind_wire_endpoint(false):
+		return
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var ed: Dictionary = edges[_graph_selected_edge_index] as Dictionary
+	_rebind_kind = _REBIND_WIRE_OUT
+	_rebind_wire_host_path = str(ed.get(&"wire_host_path", ""))
+	_rebind_wire_rule_index = int(ed.get(&"wire_rule_index", -1))
+	_rebind_wire_prop = StringName(str(ed.get(&"wire_out_property", "")))
+	var dlg := _ensure_rebind_file_dialog()
+	dlg.title = "Pick UiState for wire output"
 	dlg.popup_centered_ratio(0.6)
 
 
@@ -265,20 +356,6 @@ func _on_rebind_file_selected(path: String) -> void:
 	var root := _plugin.get_editor_interface().get_edited_scene_root()
 	if root == null:
 		return
-	var hp := _rebind_host_path
-	var bp := _rebind_property
-	if hp.is_empty() or bp.is_empty():
-		return
-	if not root.has_node(NodePath(hp)):
-		push_warning("Ui React: rebind host path is no longer valid: %s" % hp)
-		return
-	var n: Node = root.get_node(NodePath(hp))
-	if not (n is Control):
-		return
-	var prop_sn := StringName(bp)
-	if not prop_sn in n:
-		push_warning("Ui React: host no longer has export %s" % bp)
-		return
 	var res: Resource = load(path)
 	if res == null:
 		push_warning("Ui React: could not load resource: %s" % path)
@@ -286,10 +363,89 @@ func _on_rebind_file_selected(path: String) -> void:
 	if not (res is UiState):
 		push_warning("Ui React: selected file is not a UiState: %s" % path)
 		return
-	_actions.assign_property_variant(n, prop_sn, res as UiState, "Ui React: Rebind %s" % bp)
+	var ui_st := res as UiState
+	var committed := false
+	match _rebind_kind:
+		_REBIND_BINDING:
+			var hp := _rebind_host_path
+			var bp := _rebind_property
+			if hp.is_empty() or bp.is_empty():
+				return
+			if not root.has_node(NodePath(hp)):
+				push_warning("Ui React: rebind host path is no longer valid: %s" % hp)
+				return
+			var n: Node = root.get_node(NodePath(hp))
+			if not (n is Control):
+				return
+			var prop_sn := StringName(bp)
+			if not prop_sn in n:
+				push_warning("Ui React: host no longer has export %s" % bp)
+				return
+			_actions.assign_property_variant(n, prop_sn, ui_st, "Ui React: Rebind %s" % bp)
+			committed = true
+		_REBIND_WIRE_IN, _REBIND_WIRE_OUT:
+			var wh := _rebind_wire_host_path
+			var wi := _rebind_wire_rule_index
+			var wprop := _rebind_wire_prop
+			if wh.is_empty() or wi < 0 or wprop == &"":
+				return
+			if not root.has_node(NodePath(wh)):
+				push_warning("Ui React: wire host path is no longer valid: %s" % wh)
+				return
+			var host_n: Node = root.get_node(NodePath(wh))
+			if not (host_n is Control):
+				return
+			var host := host_n as Control
+			if not (&"wire_rules" in host):
+				push_warning("Ui React: host has no wire_rules: %s" % wh)
+				return
+			var arr := _duplicate_wire_rules_array(host)
+			if wi >= arr.size():
+				push_warning("Ui React: wire_rules index out of range: %d" % wi)
+				return
+			var old_rule: Variant = arr[wi]
+			if old_rule == null or not (old_rule is UiReactWireRule):
+				push_warning("Ui React: wire_rules[%d] is not a UiReactWireRule." % wi)
+				return
+			var dup_res: Resource = (old_rule as Resource).duplicate(true)
+			if dup_res == null or not (dup_res is UiReactWireRule):
+				push_warning("Ui React: could not duplicate wire rule at index %d." % wi)
+				return
+			var new_rule := dup_res as UiReactWireRule
+			if not wprop in new_rule:
+				push_warning("Ui React: rule has no export %s" % str(wprop))
+				return
+			new_rule.set(wprop, ui_st)
+			arr[wi] = new_rule
+			_actions.assign_property_variant(
+				host,
+				&"wire_rules",
+				arr,
+				"Ui React: wire_rules[%d] %s" % [wi, str(wprop)]
+			)
+			committed = true
+		_:
+			return
+	if not committed:
+		return
+	_rebind_kind = _REBIND_NONE
 	if _request_dock_refresh.is_valid():
 		_request_dock_refresh.call()
 	refresh()
+
+
+func _duplicate_wire_rules_array(host: Control) -> Array[UiReactWireRule]:
+	var wr: Variant = host.get(&"wire_rules")
+	if wr == null:
+		return []
+	if wr is Array[UiReactWireRule]:
+		return (wr as Array[UiReactWireRule]).duplicate()
+	var plain: Array = wr as Array
+	var out: Array[UiReactWireRule] = []
+	for it in plain:
+		if it is UiReactWireRule:
+			out.append(it as UiReactWireRule)
+	return out
 
 
 func _set_details_placeholder() -> void:
@@ -768,6 +924,16 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 			bb += ".\n\n"
 			plain_w2 += ".\n\n"
 			plain += plain_w2
+		var win := str(ed.get(&"wire_in_property", ""))
+		var wout := str(ed.get(&"wire_out_property", ""))
+		if not win.is_empty() and not wout.is_empty():
+			bb += "[b]Rule exports[/b]\n"
+			bb += "Input export [code]%s[/code] → output export [code]%s[/code] (see Rebind wire input / output below).\n\n" % [
+				win,
+				wout,
+			]
+			plain += "Rule exports\n"
+			plain += "Input export %s → output export %s (Rebind wire input / output).\n\n" % [win, wout]
 
 	if from_id == _last_focus_id or to_id == _last_focus_id:
 		bb += "[b]Relation to focus[/b]\nTouches the focus control directly.\n\n"
@@ -1051,12 +1217,32 @@ func _build_ui() -> void:
 	_btn_rebind_binding = Button.new()
 	_btn_rebind_binding.text = "Rebind to resource…"
 	_btn_rebind_binding.tooltip_text = (
-	"Replace the bound UiState on this binding edge with another .tres resource (undoable). "
-		+ "Wire-flow and computed edges are not supported in this slice."
+		"Replace the bound UiState on this binding edge with another .tres resource (undoable). "
+		+ "For wire-flow edges, use Rebind wire input / output."
 	)
 	_btn_rebind_binding.disabled = true
 	_btn_rebind_binding.pressed.connect(_on_rebind_binding_pressed)
 	_details_buttons.add_child(_btn_rebind_binding)
+
+	_btn_rebind_wire_in = Button.new()
+	_btn_rebind_wire_in.text = "Rebind wire input…"
+	_btn_rebind_wire_in.tooltip_text = (
+		"Replace the input-slot UiState on this wire_rules row (undoable). "
+		+ "Uses the edge’s input export; computed-source edges are not supported."
+	)
+	_btn_rebind_wire_in.disabled = true
+	_btn_rebind_wire_in.pressed.connect(_on_rebind_wire_in_pressed)
+	_details_buttons.add_child(_btn_rebind_wire_in)
+
+	_btn_rebind_wire_out = Button.new()
+	_btn_rebind_wire_out.text = "Rebind wire output…"
+	_btn_rebind_wire_out.tooltip_text = (
+		"Replace the output-slot UiState on this wire_rules row (undoable). "
+		+ "Uses the edge’s output export; computed-source edges are not supported."
+	)
+	_btn_rebind_wire_out.disabled = true
+	_btn_rebind_wire_out.pressed.connect(_on_rebind_wire_out_pressed)
+	_details_buttons.add_child(_btn_rebind_wire_out)
 
 	_btn_copy_details = Button.new()
 	_btn_copy_details.text = "Copy details"
