@@ -17,6 +17,8 @@ var _coalesced_refresh_pending: bool = false
 var _unused_cache_invalidate_pending: bool = false
 ## Set by [method _run_startup_refresh]; cleared after first successful root or one no-scene retry.
 var _expect_startup_scene_retry: bool = false
+## Coalesces [EditorUndoRedoManager] undo/redo into one deferred Dependency Graph rebuild per frame.
+var _undo_redo_graph_refresh_pending: bool = false
 
 var _plugin: EditorPlugin
 var _actions: UiReactActionController
@@ -88,6 +90,19 @@ func request_refresh(_reason: StringName = &"manual") -> void:
 func _execute_pending_refresh() -> void:
 	_coalesced_refresh_pending = false
 	refresh()
+
+
+func _on_undo_redo_version_changed() -> void:
+	if _undo_redo_graph_refresh_pending:
+		return
+	_undo_redo_graph_refresh_pending = true
+	call_deferred(&"_flush_undo_redo_graph_refresh")
+
+
+func _flush_undo_redo_graph_refresh() -> void:
+	_undo_redo_graph_refresh_pending = false
+	if _explain_panel != null and _explain_panel.has_method(&"refresh"):
+		_explain_panel.call(&"refresh")
 
 
 func _run_startup_refresh() -> void:
@@ -357,10 +372,11 @@ func _connect_editor_signals() -> void:
 	var selection := ei.get_selection()
 	if not selection.selection_changed.is_connected(_on_selection_changed):
 		selection.selection_changed.connect(_on_selection_changed)
+	var ur := _plugin.get_undo_redo()
+	if ur != null and not ur.version_changed.is_connected(_on_undo_redo_version_changed):
+		ur.version_changed.connect(_on_undo_redo_version_changed)
 	var fs := ei.get_resource_filesystem()
-	if fs == null:
-		return
-	if not fs.filesystem_changed.is_connected(_on_editor_filesystem_changed):
+	if fs != null and not fs.filesystem_changed.is_connected(_on_editor_filesystem_changed):
 		fs.filesystem_changed.connect(_on_editor_filesystem_changed)
 
 
@@ -371,6 +387,9 @@ func _disconnect_editor_signals() -> void:
 	var selection := ei.get_selection()
 	if selection.selection_changed.is_connected(_on_selection_changed):
 		selection.selection_changed.disconnect(_on_selection_changed)
+	var ur := _plugin.get_undo_redo()
+	if ur != null and ur.version_changed.is_connected(_on_undo_redo_version_changed):
+		ur.version_changed.disconnect(_on_undo_redo_version_changed)
 	var fs := ei.get_resource_filesystem()
 	if fs != null and fs.filesystem_changed.is_connected(_on_editor_filesystem_changed):
 		fs.filesystem_changed.disconnect(_on_editor_filesystem_changed)
