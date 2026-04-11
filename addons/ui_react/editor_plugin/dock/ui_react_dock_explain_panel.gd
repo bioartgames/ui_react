@@ -11,6 +11,8 @@ const _SEL_NODE := 1
 const _SEL_EDGE := 2
 
 var _plugin: EditorPlugin
+var _actions: UiReactActionController
+var _request_dock_refresh: Callable = Callable()
 
 var _hint: RichTextLabel
 var _btn_refresh: Button
@@ -28,7 +30,12 @@ var _details_scroll: ScrollContainer
 var _details: RichTextLabel
 var _details_buttons: HBoxContainer
 var _btn_focus_inspector: Button
+var _btn_rebind_binding: Button
 var _btn_copy_details: Button
+
+var _rebind_file_dialog: EditorFileDialog
+var _rebind_host_path: String = ""
+var _rebind_property: String = ""
 
 var _auto_refresh_timer: Timer
 
@@ -48,8 +55,14 @@ var _last_edge_label: String = ""
 var _last_details_plain: String = ""
 
 
-func setup(plugin: EditorPlugin) -> void:
+func setup(
+	plugin: EditorPlugin,
+	actions: UiReactActionController,
+	request_dock_refresh: Callable = Callable(),
+) -> void:
 	_plugin = plugin
+	_actions = actions
+	_request_dock_refresh = request_dock_refresh
 	_build_ui()
 	var ei := _plugin.get_editor_interface()
 	if not ei.get_selection().selection_changed.is_connected(_on_editor_selection_changed):
@@ -180,9 +193,103 @@ func _on_graph_cleared() -> void:
 
 
 func _update_focus_button_state() -> void:
-	if _btn_focus_inspector == null:
+	if _btn_focus_inspector != null:
+		_btn_focus_inspector.disabled = _selection_kind == _SEL_NONE
+	if _btn_rebind_binding != null:
+		_btn_rebind_binding.disabled = not _can_rebind_binding_edge()
+
+
+func _can_rebind_binding_edge() -> bool:
+	if _plugin == null or _actions == null:
+		return false
+	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.BINDING:
+		return false
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return false
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return false
+	var ev: Variant = edges[idx]
+	if ev is not Dictionary:
+		return false
+	var ed: Dictionary = ev as Dictionary
+	var hp := str(ed.get(&"host_path", ""))
+	var bp := str(ed.get(&"binding_property", ""))
+	if bp.is_empty():
+		bp = str(ed.get(&"label", ""))
+	if hp.is_empty() or bp.is_empty():
+		return false
+	if not root.has_node(NodePath(hp)):
+		return false
+	var n: Node = root.get_node(NodePath(hp))
+	if not (n is Control):
+		return false
+	var prop_sn := StringName(bp)
+	return prop_sn in n
+
+
+func _on_rebind_binding_pressed() -> void:
+	if not _can_rebind_binding_edge():
 		return
-	_btn_focus_inspector.disabled = _selection_kind == _SEL_NONE
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var ed: Dictionary = edges[_graph_selected_edge_index] as Dictionary
+	_rebind_host_path = str(ed.get(&"host_path", ""))
+	_rebind_property = str(ed.get(&"binding_property", ""))
+	if _rebind_property.is_empty():
+		_rebind_property = str(ed.get(&"label", ""))
+	var dlg := _ensure_rebind_file_dialog()
+	dlg.popup_centered_ratio(0.6)
+
+
+func _ensure_rebind_file_dialog() -> EditorFileDialog:
+	if _rebind_file_dialog != null:
+		return _rebind_file_dialog
+	var dlg := EditorFileDialog.new()
+	dlg.file_mode = EditorFileDialog.FILE_MODE_OPEN_FILE
+	dlg.access = EditorFileDialog.ACCESS_RESOURCES
+	dlg.title = "Pick UiState resource"
+	dlg.add_filter("*.tres", "Tres resources")
+	dlg.file_selected.connect(_on_rebind_file_selected)
+	var base: Control = _plugin.get_editor_interface().get_base_control()
+	base.add_child(dlg)
+	_rebind_file_dialog = dlg
+	return dlg
+
+
+func _on_rebind_file_selected(path: String) -> void:
+	if _plugin == null or _actions == null:
+		return
+	var root := _plugin.get_editor_interface().get_edited_scene_root()
+	if root == null:
+		return
+	var hp := _rebind_host_path
+	var bp := _rebind_property
+	if hp.is_empty() or bp.is_empty():
+		return
+	if not root.has_node(NodePath(hp)):
+		push_warning("Ui React: rebind host path is no longer valid: %s" % hp)
+		return
+	var n: Node = root.get_node(NodePath(hp))
+	if not (n is Control):
+		return
+	var prop_sn := StringName(bp)
+	if not prop_sn in n:
+		push_warning("Ui React: host no longer has export %s" % bp)
+		return
+	var res: Resource = load(path)
+	if res == null:
+		push_warning("Ui React: could not load resource: %s" % path)
+		return
+	if not (res is UiState):
+		push_warning("Ui React: selected file is not a UiState: %s" % path)
+		return
+	_actions.assign_property_variant(n, prop_sn, res as UiState, "Ui React: Rebind %s" % bp)
+	if _request_dock_refresh.is_valid():
+		_request_dock_refresh.call()
+	refresh()
 
 
 func _set_details_placeholder() -> void:
@@ -940,6 +1047,16 @@ func _build_ui() -> void:
 	_btn_focus_inspector.disabled = true
 	_btn_focus_inspector.pressed.connect(_on_focus_inspector_pressed)
 	_details_buttons.add_child(_btn_focus_inspector)
+
+	_btn_rebind_binding = Button.new()
+	_btn_rebind_binding.text = "Rebind to resource…"
+	_btn_rebind_binding.tooltip_text = (
+	"Replace the bound UiState on this binding edge with another .tres resource (undoable). "
+		+ "Wire-flow and computed edges are not supported in this slice."
+	)
+	_btn_rebind_binding.disabled = true
+	_btn_rebind_binding.pressed.connect(_on_rebind_binding_pressed)
+	_details_buttons.add_child(_btn_rebind_binding)
 
 	_btn_copy_details = Button.new()
 	_btn_copy_details.text = "Copy details"

@@ -140,7 +140,11 @@ func _build_ui() -> void:
 	_tabs.set_tab_title(1, "Wire rules")
 
 	var ex_panel = _ExplainPanelScript.new()
-	ex_panel.setup(_plugin)
+	# callv: avoid stale arity diagnostics on UiReactDockExplainPanel.setup (plugin, actions, dock refresh).
+	ex_panel.callv(
+		&"setup",
+		[_plugin, _actions, func(): request_refresh(&"binding_reconnect")]
+	)
 	_explain_panel = ex_panel
 	_tabs.add_child(ex_panel)
 	_tabs.set_tab_title(2, "Dependency Graph")
