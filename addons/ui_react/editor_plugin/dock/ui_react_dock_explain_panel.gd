@@ -3,6 +3,7 @@ class_name UiReactDockExplainPanel
 extends MarginContainer
 
 const _ExplainBuilderScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_explain_graph_builder.gd")
+const _ComputedRebindScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_computed_graph_rebind.gd")
 const _ExplainLayoutScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_explain_graph_layout.gd")
 const _ExplainGraphViewScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_explain_graph_view.gd")
 const _SnapScript := preload("res://addons/ui_react/editor_plugin/models/ui_react_explain_graph_snapshot.gd")
@@ -14,6 +15,7 @@ const _REBIND_NONE := 0
 const _REBIND_BINDING := 1
 const _REBIND_WIRE_IN := 2
 const _REBIND_WIRE_OUT := 3
+const _REBIND_COMPUTED_SOURCE := 4
 
 var _plugin: EditorPlugin
 var _actions: UiReactActionController
@@ -38,6 +40,7 @@ var _btn_focus_inspector: Button
 var _btn_rebind_binding: Button
 var _btn_rebind_wire_in: Button
 var _btn_rebind_wire_out: Button
+var _btn_rebind_computed_source: Button
 var _btn_copy_details: Button
 
 var _rebind_file_dialog: EditorFileDialog
@@ -47,6 +50,8 @@ var _rebind_property: String = ""
 var _rebind_wire_host_path: String = ""
 var _rebind_wire_rule_index: int = -1
 var _rebind_wire_prop: StringName = &""
+var _rebind_computed_context: String = ""
+var _rebind_computed_source_index: int = -1
 
 var _auto_refresh_timer: Timer
 
@@ -212,6 +217,8 @@ func _update_focus_button_state() -> void:
 		_btn_rebind_wire_in.disabled = not _can_rebind_wire_endpoint(true)
 	if _btn_rebind_wire_out != null:
 		_btn_rebind_wire_out.disabled = not _can_rebind_wire_endpoint(false)
+	if _btn_rebind_computed_source != null:
+		_btn_rebind_computed_source.disabled = not _can_rebind_computed_source()
 
 
 func _can_rebind_binding_edge() -> bool:
@@ -292,6 +299,43 @@ func _can_rebind_wire_endpoint(for_input: bool) -> bool:
 	return prop_sn in rule
 
 
+func _can_rebind_computed_source() -> bool:
+	if _plugin == null or _actions == null:
+		return false
+	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.COMPUTED_SOURCE:
+		return false
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return false
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return false
+	var ev: Variant = edges[idx]
+	if ev is not Dictionary:
+		return false
+	var ed: Dictionary = ev as Dictionary
+	var cc := str(ed.get(&"computed_context", ""))
+	var hp := str(ed.get(&"host_path", ""))
+	var si := int(ed.get(&"computed_source_index", -1))
+	if cc.is_empty() or hp.is_empty() or si < 0:
+		return false
+	if not root.has_node(NodePath(hp)):
+		return false
+	var n: Node = root.get_node(NodePath(hp))
+	if not (n is Control):
+		return false
+	var c: Variant = _ComputedRebindScript.try_resolve_computed(n as Control, cc)
+	if c == null:
+		return false
+	var raw: Variant = c.get(&"sources")
+	if typeof(raw) != TYPE_ARRAY:
+		return false
+	var arr: Array = raw as Array
+	return si < arr.size()
+
+
 func _on_rebind_binding_pressed() -> void:
 	if not _can_rebind_binding_edge():
 		return
@@ -332,6 +376,20 @@ func _on_rebind_wire_out_pressed() -> void:
 	_rebind_wire_prop = StringName(str(ed.get(&"wire_out_property", "")))
 	var dlg := _ensure_rebind_file_dialog()
 	dlg.title = "Pick UiState for wire output"
+	dlg.popup_centered_ratio(0.6)
+
+
+func _on_rebind_computed_source_pressed() -> void:
+	if not _can_rebind_computed_source():
+		return
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var ed: Dictionary = edges[_graph_selected_edge_index] as Dictionary
+	_rebind_kind = _REBIND_COMPUTED_SOURCE
+	_rebind_host_path = str(ed.get(&"host_path", ""))
+	_rebind_computed_context = str(ed.get(&"computed_context", ""))
+	_rebind_computed_source_index = int(ed.get(&"computed_source_index", -1))
+	var dlg := _ensure_rebind_file_dialog()
+	dlg.title = "Pick UiState for computed source"
 	dlg.popup_centered_ratio(0.6)
 
 
@@ -424,6 +482,25 @@ func _on_rebind_file_selected(path: String) -> void:
 				"Ui React: wire_rules[%d] %s" % [wi, str(wprop)]
 			)
 			committed = true
+		_REBIND_COMPUTED_SOURCE:
+			var hp_c := _rebind_host_path
+			var ctx := _rebind_computed_context
+			var csi := _rebind_computed_source_index
+			if hp_c.is_empty() or ctx.is_empty() or csi < 0:
+				return
+			if not root.has_node(NodePath(hp_c)):
+				push_warning("Ui React: rebind host path is no longer valid: %s" % hp_c)
+				return
+			var host_c: Node = root.get_node(NodePath(hp_c))
+			if not (host_c is Control):
+				return
+			committed = _ComputedRebindScript.try_commit_replace_source(
+				host_c as Control,
+				ctx,
+				csi,
+				ui_st,
+				_actions
+			)
 		_:
 			return
 	if not committed:
@@ -910,6 +987,13 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 			plain_w += " %s" % hp2
 		bb += ".\n\n"
 		plain += plain_w + ".\n\n"
+		var cc := str(ed.get(&"computed_context", ""))
+		if not cc.is_empty():
+			bb += "[b]Computed owner[/b]\n[code]%s[/code], [code]sources[%d][/code] — target for [b]Rebind computed source…[/b].\n\n" % [
+				cc,
+				si,
+			]
+			plain += "Computed owner\n%s, sources[%d] — target for Rebind computed source….\n\n" % [cc, si]
 	elif kind == _SnapScript.EdgeKind.WIRE_FLOW:
 		var wh := str(ed.get(&"wire_host_path", ""))
 		var wi := int(ed.get(&"wire_rule_index", -1))
@@ -1243,6 +1327,16 @@ func _build_ui() -> void:
 	_btn_rebind_wire_out.disabled = true
 	_btn_rebind_wire_out.pressed.connect(_on_rebind_wire_out_pressed)
 	_details_buttons.add_child(_btn_rebind_wire_out)
+
+	_btn_rebind_computed_source = Button.new()
+	_btn_rebind_computed_source.text = "Rebind computed source…"
+	_btn_rebind_computed_source.tooltip_text = (
+		"Replace one entry in the owning UiComputed* sources[] for this computed-source edge (undoable). "
+		+ "Requires a fresh graph (Refresh) so the edge carries computed_context."
+	)
+	_btn_rebind_computed_source.disabled = true
+	_btn_rebind_computed_source.pressed.connect(_on_rebind_computed_source_pressed)
+	_details_buttons.add_child(_btn_rebind_computed_source)
 
 	_btn_copy_details = Button.new()
 	_btn_copy_details.text = "Copy details"

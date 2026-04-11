@@ -170,7 +170,13 @@ class _BuildContext extends RefCounted:
 						for ref in _WireRuleIntrospectionScript.list_io(rule):
 							var st: Variant = ref.get(&"state", null)
 							if st is UiState:
-								_walk_for_computed(host_path, "wire[%d]" % idx, st)
+								var wp: Variant = ref.get(&"property", &"")
+								var wprop: StringName = wp if wp is StringName else StringName(str(wp))
+								_walk_for_computed(
+									host_path,
+									"wire[%d].%s" % [idx, str(wprop)],
+									st
+								)
 					idx += 1
 
 		for extra in [&"animation_targets", &"action_targets"]:
@@ -181,9 +187,11 @@ class _BuildContext extends RefCounted:
 		_walk_for_computed(host_path, "tab_config.tabs", cfg.tabs_state)
 		_walk_for_computed(host_path, "tab_config.disabled", cfg.disabled_tabs_state)
 		_walk_for_computed(host_path, "tab_config.visible", cfg.visible_tabs_state)
+		var ti := 0
 		for s in cfg.tab_content_states:
 			if s is UiState:
-				_walk_for_computed(host_path, "tab_config.content", s as UiState)
+				_walk_for_computed(host_path, "tab_config.content[%d]" % ti, s as UiState)
+			ti += 1
 
 	func state_id(host_path: NodePath, context_seg: String, st: UiState) -> String:
 		return UiReactExplainGraphBuilder._state_id(self, host_path, context_seg, st)
@@ -209,7 +217,11 @@ class _BuildContext extends RefCounted:
 							cid_node,
 							_SnapshotScript.EdgeKind.COMPUTED_SOURCE,
 							"sources[%d]" % si,
-							{&"host_path": str(host_path), &"computed_source_index": si}
+							{
+								&"host_path": str(host_path),
+								&"computed_source_index": si,
+								&"computed_context": base_ctx,
+							}
 						)
 						_variant_nested(it, host_path, base_ctx + ".src[%d]" % si)
 					si += 1
