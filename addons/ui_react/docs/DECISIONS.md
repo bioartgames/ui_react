@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-04-09 — CB-058 / North star: Dependency Graph as blessed designer workbench
+
+**Context:** Wiring, computeds, transactional, and actions are powerful but **spread** across Inspector, dock tabs, and scene tree. Designers benefit from a **single orchestration surface** (animation-tree-style) that **does not** fork the resource model.
+
+**Decision:** Treat the **Dependency Graph** as the **blessed editor path** for **seeing and building** scoped UI/data microcosms—**same** `*.tscn` / `*.tres` shapes, **same** undo stack (`EditorUndoRedoManager` + existing commit helpers). **Inspector** and **Wire rules** tab remain **full** alternatives (**DRY**). **Official examples** stay **Inspector-authored** so the **Charter** evidence bar stays objective; prose in **README** / **ROADMAP** steers **tool** users to the graph first.
+
+**Consequences:** **ROADMAP** Part I **North star** + **CB-058** Appendix row; **README** designer path; **WIRING_LAYER** / **ACTION_LAYER** editor callouts. Implementation milestones (disconnect, wire greenfield, file-backed targets, **Wiring** tab merge) remain **sequenced** in roadmap—not all shipped at once.
+
+**Links:** [`ROADMAP.md`](ROADMAP.md), [`../README.md`](../README.md), [`WIRING_LAYER.md`](WIRING_LAYER.md), [`ACTION_LAYER.md`](ACTION_LAYER.md)
+
+---
+
 ## 2026-04-07 — Button exports: `UiReactTransactionalHostBinding` + `SET_FLOAT_LITERAL` (replace flat transactional / press-write exports)
 
 **Context:** Apply/Cancel and one-off float writes on **`UiReactButton`** / **`UiReactTextureButton`** used five separate Inspector exports (`transactional_*` triple + **`press_writes_float_*`**), overlapping the Action layer’s job for imperative steps.

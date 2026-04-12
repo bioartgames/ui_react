@@ -4,6 +4,10 @@
 
 **Charter (one line):** Ui React adds inspector-authored **`action_targets`** on supported **`UiReact*`** controls—one **`UiReactActionTarget`** resource per row—so **non-motion** UI reactions (focus, visibility, `mouse_filter`, narrow **`UiBoolState`** UI flags, and **bounded** **`UiFloatState`** / **`UiIntState`** mutations via **`UiReactStateOpService`**) are serializable and validator-friendly **without** `UiAnimTarget` / `UiAnimUtils` inside Actions. Motion stays on **`animation_targets`**.
 
+### Editor: Dependency Graph (designer path)
+
+**Recommended:** Prefer the **Dependency Graph** to **navigate** the screen’s reactive structure (which controls host **`action_targets`**, how they relate to state and wiring). **Editing** **`action_targets`** rows remains **Inspector-first** today unless/until the graph exposes dedicated **action** authoring (**CB-058**); the **normative** row shape in this document is unchanged. Roadmap: [`ROADMAP.md`](ROADMAP.md) Part I **North star**.
+
 ---
 
 ## 1. Purpose and problem

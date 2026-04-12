@@ -4,6 +4,10 @@
 
 **Charter (one line):** Ui React adds a first-class, inspector-authored **wiring layer**—a **`UiReactWireRuleHelper`** plus a **family of narrow `UiReactWireRule` resources** and **per-control `wire_rules` entry points**—so framework-level orchestration is explicit, serializable, and teachable; the **P5.2** dock editor is optional convenience on the **same** resource model.
 
+### Editor: Dependency Graph (designer path)
+
+**Recommended:** Use the **Ui React** dock **Dependency Graph** (**CB-058**) as the **primary** place to **see** scoped **`wire_rules`**-related flow alongside bindings and computeds, and to **author** changes that touch **`wire_rules`**—**provided** the graph exposes that operation—using the **same** **`Array[UiReactWireRule]`** commits as the **Wire rules** tab and the **Inspector** (**DRY**; no parallel format). **Inspector** remains **fully authoritative** for every field for authors who prefer not to use the graph. Roadmap intent and sequencing: [`ROADMAP.md`](ROADMAP.md) Part I **North star** and **Visual wiring graph**.
+
 ---
 
 ## 1. Problem statement

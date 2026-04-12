@@ -32,6 +32,7 @@ Quick index for **solo maintenance** and **AI agents**. Authoring narrative and 
 | **Dock Dependency Graph — Visual graph** (**CB-018A.1**–**CB-018A.3**) | `editor_plugin/services/ui_react_explain_graph_layout.gd`, `editor_plugin/dock/ui_react_explain_graph_view.gd`, `editor_plugin/dock/ui_react_dock_explain_panel.gd` |
 | **Animation triggers** vs host control | `editor_plugin/ui_react_component_registry.gd` (**ANIM_TRIGGERS_BY_COMPONENT**); [README animation triggers table](../README.md) (search “supported triggers per host”) |
 | **Phased capability** / backlog / CB IDs | [ROADMAP.md](ROADMAP.md) Appendix |
+| **North star** — Dependency Graph as designer workbench (**CB-058**) | [ROADMAP.md](ROADMAP.md) Part I **North star** + **Visual wiring graph**; [DECISIONS.md](DECISIONS.md) **2026-04-09** |
 | **Charter** evidence bar (new wrappers, widened **`@export`**) | [ROADMAP.md](ROADMAP.md) **Charter** + glossary (**Official example**); scenes in [`../examples/`](../examples/) |
 | **`UiReact*`** **`animation_targets`** / **`action_targets`** / **`wire_rules`** parity | [ROADMAP.md](ROADMAP.md) Part I — **Inspector surface matrix (CB-052)**; **CB-052** Notes in Appendix |
 | **P5 exit / hub** readiness | [P5_CURRENT_STATE_AUDIT.md](P5_CURRENT_STATE_AUDIT.md), ROADMAP **CB-034** / **CB-041** |
