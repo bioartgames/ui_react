@@ -402,43 +402,28 @@ func _after_wire_rules_section_commit() -> void:
 func _fill_selection_actions_popup(popup: PopupMenu) -> void:
 	popup.clear()
 	const TT_REBIND_BINDING := (
-		"Replace the bound UiState on this binding edge with another .tres resource (undoable). "
-		+ "For wire-flow edges, use Rebind wire input / output."
+		"Choose another .tres for this binding (undoable). Wire flows: use Rebind wire in/out."
 	)
 	const TT_REBIND_WIRE_IN := (
-		"Replace the input-slot UiState on this wire_rules row (undoable). "
-		+ "Uses the edge’s input export; computed-source edges are not supported."
+		"Choose another input-slot state on this wire row (undoable). Not for computed-only edges."
 	)
 	const TT_REBIND_WIRE_OUT := (
-		"Replace the output-slot UiState on this wire_rules row (undoable). "
-		+ "Uses the edge’s output export; computed-source edges are not supported."
+		"Choose another output-slot state on this wire row (undoable). Not for computed-only edges."
 	)
 	const TT_REBIND_COMPUTED := (
-		"Replace one entry in the owning UiComputed* sources[] for this computed-source edge (undoable). "
-		+ "Requires a fresh graph (Refresh) so the edge carries computed_context."
+		"Replace one sources[] entry (undoable). Refresh the graph if this stays disabled."
 	)
-	const TT_CLEAR_BINDING := (
-		"Set this binding export to empty for optional registry slots only (undoable). "
-		+ "Required exports must be cleared in the Inspector."
-	)
-	const TT_REMOVE_COMPUTED := (
-		"Clear this UiComputed* sources[] slot to null (undoable). Requires computed_context on the edge; Refresh if missing."
-	)
-	const TT_CLEAR_WIRE := (
-		"Clear both input and output UiState exports for this wire-flow edge in one undo step (requires both set)."
-	)
-	const TT_MOVE_UP := "Swap this sources[] index with the previous entry (undoable)."
-	const TT_MOVE_DOWN := "Swap this sources[] index with the next entry (undoable)."
-	const TT_REMOVE_SLOT := (
-		"Remove this index from sources[] and compact the array (undoable; not the same as clearing to null)."
-	)
-	const TT_CREATE_ASSIGN := (
-		"For a selected optional empty binding edge: save a new matching UiState .tres and assign it (undoable)."
-	)
-	const TT_COPY := "Copy the plain-text details to the clipboard."
+	const TT_CLEAR_BINDING := "Clear optional binding here; required slots need the Inspector."
+	const TT_REMOVE_COMPUTED := "Clear this sources[] slot (undoable). Refresh if context is missing."
+	const TT_CLEAR_WIRE := "Clear both wire endpoints in one undo (both must be set)."
+	const TT_MOVE_UP := "Swap with previous sources[] entry (undoable)."
+	const TT_MOVE_DOWN := "Swap with next sources[] entry (undoable)."
+	const TT_REMOVE_SLOT := "Remove index and compact sources[] (undoable)."
+	const TT_CREATE_ASSIGN := "New matching .tres on an empty optional binding (undoable)."
+	const TT_COPY := "Copy plain-text details to the clipboard."
 	const TT_FOCUS := "Open the related scene node or resource in the Inspector when possible."
-	const TT_WIRE_REFRESH := "Resync the wire rules list from the scene after external edits or Undo."
-	const TT_WIRE_COPY_REP := "Copy the wire rule report for the selected row (right-click rows for more)."
+	const TT_WIRE_REFRESH := "Reload wire list after external edits or Undo."
+	const TT_WIRE_COPY_REP := "Copy selected rule report."
 
 	if _selection_kind != _SEL_NONE:
 		popup.add_item("Focus in Inspector", _SEL_ACT_FOCUS_INSPECTOR)
@@ -642,9 +627,7 @@ func _fill_canvas_view_popup(popup: PopupMenu) -> void:
 	popup.clear()
 	_canvas_view_preset_names.clear()
 	popup.add_item("Refresh", _CV_REFRESH)
-	popup.set_item_tooltip(
-		popup.item_count - 1, "Rebuild the dependency graph from the current selection and edited scene."
-	)
+	popup.set_item_tooltip(popup.item_count - 1, "Rebuild graph from current selection and scene.")
 	popup.add_item("Fit view", _CV_FIT)
 	popup.set_item_tooltip(popup.item_count - 1, "Reset pan/zoom on the graph.")
 	popup.add_separator()
@@ -655,9 +638,7 @@ func _fill_canvas_view_popup(popup: PopupMenu) -> void:
 	popup.add_separator()
 
 	popup.add_item("Full lists", _CV_TOGGLE_FULL_LISTS)
-	popup.set_item_tooltip(
-		popup.item_count - 1, "Show uncapped upstream/downstream lines in the narrative (details pane)."
-	)
+	popup.set_item_tooltip(popup.item_count - 1, "Uncap upstream/downstream lines in the details pane.")
 	popup.set_item_as_checkable(popup.item_count - 1, true)
 	popup.set_item_checked(popup.item_count - 1, _cb_full_lists != null and _cb_full_lists.button_pressed)
 	popup.add_item("Show binding edges", _CV_TOGGLE_BINDING)
@@ -674,7 +655,7 @@ func _fill_canvas_view_popup(popup: PopupMenu) -> void:
 	popup.set_item_checked(popup.item_count - 1, _cb_wire != null and _cb_wire.button_pressed)
 	popup.add_item("All edge labels", _CV_TOGGLE_EDGE_LABELS)
 	popup.set_item_tooltip(
-		popup.item_count - 1, "Show short edge tokens on all edges. Selection still shows full detail below."
+		popup.item_count - 1, "Short labels on every edge; selection still expands below."
 	)
 	popup.set_item_as_checkable(popup.item_count - 1, true)
 	popup.set_item_checked(popup.item_count - 1, _cb_edge_labels != null and _cb_edge_labels.button_pressed)
@@ -684,7 +665,7 @@ func _fill_canvas_view_popup(popup: PopupMenu) -> void:
 	popup.set_item_checked(popup.item_count - 1, _legend_row != null and _legend_row.visible)
 	popup.add_separator()
 	popup.add_item("Preset: Default", _CV_PRESET_DEFAULT)
-	popup.set_item_tooltip(popup.item_count - 1, "Reset scope to built-in defaults (not a named project preset).")
+	popup.set_item_tooltip(popup.item_count - 1, "Built-in scope (not a saved preset).")
 	var names: Array[String] = []
 	for it: Variant in UiReactDockConfig.load_graph_scope_presets_raw():
 		if it is Dictionary:
@@ -704,7 +685,7 @@ func _fill_canvas_view_popup(popup: PopupMenu) -> void:
 	popup.add_item("Pin node", _CV_SCOPE_PIN)
 	popup.set_item_tooltip(
 		popup.item_count - 1,
-		"Pin the selected graph node to the active named preset. If the active scope is Default, you are prompted to save a named preset first (current settings + pin).",
+		"Pin the selection to the active preset; Default prompts to save a named preset first.",
 	)
 	var pin_idx := popup.get_item_index(_CV_SCOPE_PIN)
 	if pin_idx >= 0:
@@ -2882,6 +2863,20 @@ func _add_legend_swatch(row: HBoxContainer, col: Color, text: String) -> void:
 	row.add_child(lab)
 
 
+func _add_legend_node_chip(row: HBoxContainer, col: Color, kind: int, text: String) -> void:
+	var chip := Panel.new()
+	chip.custom_minimum_size = Vector2(28, 12)
+	chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = col
+	sb.set_corner_radius_all(_ExplainLayoutScript.fill_corner_radius_px(kind))
+	chip.add_theme_stylebox_override(&"panel", sb)
+	row.add_child(chip)
+	var lab := Label.new()
+	lab.text = text
+	row.add_child(lab)
+
+
 func _clamp_layout_caps() -> void:
 	_layout_max_nodes = clampi(_layout_max_nodes, _SCOPE_MIN_NODES, _SCOPE_MAX_NODES)
 	_layout_max_edges = clampi(_layout_max_edges, _SCOPE_MIN_EDGES, _SCOPE_MAX_EDGES)
@@ -3388,15 +3383,13 @@ func _build_ui() -> void:
 
 	_scope_preset_option = OptionButton.new()
 	_scope_preset_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_scope_preset_option.tooltip_text = (
-		"Layout caps, edge filters, narrative Full lists, and pins — stored per project (Project Settings)."
-	)
+	_scope_preset_option.tooltip_text = "Scope layout, filters, and pins (project settings)."
 	_scope_preset_option.item_selected.connect(_on_scope_preset_selected)
 	_hidden_chrome_host.add_child(_scope_preset_option)
 
 	_cb_full_lists = CheckBox.new()
 	_cb_full_lists.text = "Full lists"
-	_cb_full_lists.tooltip_text = "Show uncapped upstream/downstream lines in the narrative (details pane)."
+	_cb_full_lists.tooltip_text = "Uncap upstream/downstream lines in the details pane."
 	_cb_full_lists.button_pressed = false
 	_cb_full_lists.toggled.connect(_on_full_lists_toggled)
 	_hidden_chrome_host.add_child(_cb_full_lists)
@@ -3425,7 +3418,7 @@ func _build_ui() -> void:
 	_cb_edge_labels = CheckBox.new()
 	_cb_edge_labels.text = "All edge labels"
 	_cb_edge_labels.button_pressed = false
-	_cb_edge_labels.tooltip_text = "Show short edge tokens on all edges. Selection still shows full detail below."
+	_cb_edge_labels.tooltip_text = "Short labels on every edge; selection still expands below."
 	_cb_edge_labels.toggled.connect(func(_on4: bool) -> void: _push_visual_filters())
 	_hidden_chrome_host.add_child(_cb_edge_labels)
 
@@ -3470,10 +3463,10 @@ func _build_ui() -> void:
 	var leg_title := Label.new()
 	leg_title.text = "Key:"
 	_legend_row.add_child(leg_title)
-	_add_legend_swatch(_legend_row, Color(0.25, 0.42, 0.32, 1.0), "Focus control")
-	_add_legend_swatch(_legend_row, Color(0.22, 0.24, 0.3, 1.0), "Control")
-	_add_legend_swatch(_legend_row, Color(0.18, 0.28, 0.42, 1.0), "State")
-	_add_legend_swatch(_legend_row, Color(0.28, 0.22, 0.4, 1.0), "Computed")
+	_add_legend_node_chip(_legend_row, Color(0.25, 0.42, 0.32, 1.0), _SnapScript.NodeKind.CONTROL, "Focus control")
+	_add_legend_node_chip(_legend_row, Color(0.22, 0.24, 0.3, 1.0), _SnapScript.NodeKind.CONTROL, "Control")
+	_add_legend_node_chip(_legend_row, Color(0.18, 0.28, 0.42, 1.0), _SnapScript.NodeKind.UI_STATE, "State")
+	_add_legend_node_chip(_legend_row, Color(0.28, 0.22, 0.4, 1.0), _SnapScript.NodeKind.UI_COMPUTED, "Computed")
 	var leg_sp := Label.new()
 	leg_sp.text = "  |  Edges:"
 	_legend_row.add_child(leg_sp)
@@ -3503,12 +3496,9 @@ func _build_ui() -> void:
 		Callable(self, &"_newlink_is_valid_drop_cb")
 	)
 	_graph_view.tooltip_text = (
-		"Pan: middle-drag. Zoom: wheel. Right-click empty canvas: Refresh, Fit, Create state, filters, presets. "
-		+ "Right-click node or edge: Focus, wire rules, rebind/clear, copy details. "
-		+ "Double-click node or edge: open in Inspector (same as Focus — node resource or edge edit target). "
-		+ "Reconnect: select an edge, then Shift+drag from the source endpoint node to another state node (undoable). "
-		+ "New link: clear edge selection, Ctrl+Shift+drag from a state donor to a control (empty binding and/or new wire rule) or to a computed (fill/append sources; file-backed computed resolves from scene binds). "
-		+ "Delete/Backspace with an edge selected clears optional bindings, computed sources, or wire links when the context menu would allow it."
+		"Pan: middle-drag · zoom: wheel · RMB: View or actions · double-click: Inspector (same as Focus).\n"
+		+ "Shift+drag on a selected edge: reconnect. Ctrl+Shift+drag: new link. Delete: clear edge when allowed.\n"
+		+ "Node outline shape encodes role (control / state / computed); see Key above."
 	)
 
 	_graph_body_split = VSplitContainer.new()
@@ -3555,7 +3545,7 @@ func _build_ui() -> void:
 	_wire_payload_box = VBoxContainer.new()
 	_wire_payload_box.visible = false
 	_wire_payload_box.add_theme_constant_override(&"separation", 4)
-	_wire_payload_box.tooltip_text = "Wire rule fields for the selected wire-flow edge (same subresource as Inspector)."
+	_wire_payload_box.tooltip_text = "Edit the selected wire row (mirrors Inspector)."
 	_below_graph_column.add_child(_wire_payload_box)
 
 	_wire_rule_id_row = HBoxContainer.new()
@@ -3583,7 +3573,7 @@ func _build_ui() -> void:
 	_wire_enabled_row.add_child(el)
 	_wire_enabled_cb = CheckBox.new()
 	_wire_enabled_cb.text = "Rule runs when enabled"
-	_wire_enabled_cb.tooltip_text = "Toggle UiReactWireRule.enabled (undoable, one step)."
+	_wire_enabled_cb.tooltip_text = "Enable or pause this rule (undoable)."
 	_wire_enabled_cb.toggled.connect(_on_wire_enabled_toggled)
 	_wire_enabled_row.add_child(_wire_enabled_cb)
 
@@ -3595,7 +3585,7 @@ func _build_ui() -> void:
 	_wire_trigger_row.add_child(tl)
 	_wire_trigger_option = OptionButton.new()
 	_wire_trigger_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_wire_trigger_option.tooltip_text = "UiReactWireRule.trigger — when the source widget fires (WIRING_LAYER §5)."
+	_wire_trigger_option.tooltip_text = "When the rule's source fires (see WIRING_LAYER.md)."
 	var tords: PackedInt32Array = _WireGraphEditScript.wire_trigger_kind_ordinals_in_ui_order()
 	for j in range(tords.size()):
 		var oid: int = int(tords[j])

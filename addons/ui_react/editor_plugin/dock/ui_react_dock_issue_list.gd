@@ -172,20 +172,20 @@ func _make_issue_row(issue: UiReactDiagnosticModel.DiagnosticIssue, flat_index: 
 		var btn_reveal := Button.new()
 		btn_reveal.text = "Reveal"
 		btn_reveal.pressed.connect(func(): _dock._on_row_reveal(fi))
-		btn_reveal.tooltip_text = "Show this file in the FileSystem dock. Unused-state rows only consider the edited, saved scene—not the whole project."
+		btn_reveal.tooltip_text = "Open this file in the FileSystem dock (unused-state scope: current scene)."
 		row.add_child(btn_reveal)
 
 		var btn_ignore_u := Button.new()
 		btn_ignore_u.text = "Ignore"
 		btn_ignore_u.pressed.connect(func(): _dock._on_row_ignore(fi))
-		btn_ignore_u.tooltip_text = "Hide this unused-file diagnostic for this project (edited-scene scope; stored in Project Settings)."
+		btn_ignore_u.tooltip_text = "Hide this hint for the project (Project Settings)."
 		row.add_child(btn_ignore_u)
 	else:
 		var btn_fix := Button.new()
 		btn_fix.text = "Fix"
 		btn_fix.disabled = not _dock._can_create_state_for_issue(issue)
 		btn_fix.pressed.connect(func(): _dock._on_row_fix(fi))
-		btn_fix.tooltip_text = "When eligible: create and assign a suggested Ui*State resource. Empty slot: no prompt. ERROR wrong-type rows with an existing resource: confirm before replace."
+		btn_fix.tooltip_text = "Create or assign suggested state; may confirm when replacing on errors."
 		row.add_child(btn_fix)
 
 		var btn_focus := Button.new()

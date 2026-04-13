@@ -160,14 +160,14 @@ func _build_ui() -> void:
 	_mode_option.add_item("Selection", UiReactDockConfig.SCAN_MODE_SELECTION)
 	_mode_option.add_item("Entire scene", UiReactDockConfig.SCAN_MODE_SCENE)
 	_mode_option.item_selected.connect(_on_scan_mode_selected)
-	_mode_option.tooltip_text = "Choose scan scope: Selection scans selected nodes and their subtrees; Entire scene scans all UiReact* nodes in the edited scene."
+	_mode_option.tooltip_text = "Selection: selected subtrees. Entire scene: all UiReact* nodes in the open scene."
 	mode_row.add_child(_mode_option)
 
 	_auto_refresh = CheckBox.new()
 	_auto_refresh.text = "Auto-refresh on selection"
 	_auto_refresh.button_pressed = true
 	_auto_refresh.toggled.connect(_on_auto_refresh_toggled)
-	_auto_refresh.tooltip_text = "When enabled in Selection mode, rescan diagnostics automatically when the editor selection changes."
+	_auto_refresh.tooltip_text = "In Selection mode, rescan when the editor selection changes."
 	mode_row.add_child(_auto_refresh)
 
 	var group_row := HBoxContainer.new()
@@ -179,7 +179,7 @@ func _build_ui() -> void:
 	_group_option.add_item("By node", UiReactDockConfig.GROUP_BY_NODE)
 	_group_option.add_item("By severity", UiReactDockConfig.GROUP_BY_SEVERITY)
 	_group_option.item_selected.connect(_on_group_mode_selected)
-	_group_option.tooltip_text = "Organize the issue list as a flat list, grouped by node, or grouped by severity."
+	_group_option.tooltip_text = "Flat list, by node, or by severity."
 	group_row.add_child(_group_option)
 
 	var filt_row := HBoxContainer.new()
@@ -230,7 +230,7 @@ func _build_ui() -> void:
 	_path_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_path_edit.text = UiReactStateFactoryService.default_output_dir()
 	_path_edit.text_submitted.connect(func(p): _on_path_changed(p))
-	_path_edit.tooltip_text = "Folder where Fix and Fix All save new .tres state files. If a filename already exists, the plugin uses _2, _3, … suffixes instead of overwriting."
+	_path_edit.tooltip_text = "Folder for new .tres from Fix / Fix All (adds _2, _3… if the name exists)."
 	path_row.add_child(_path_edit)
 
 	var split_main := VSplitContainer.new()
@@ -252,7 +252,7 @@ func _build_ui() -> void:
 	issues_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	issues_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	issues_panel.custom_minimum_size = Vector2(0, 56)
-	issues_panel.tooltip_text = "Issue list for this scan. Click a row to open its report below."
+	issues_panel.tooltip_text = "Click a row to show its report below."
 	issues_section.add_child(issues_panel)
 	UiReactDockTheme.apply_panelcontainer(issues_panel, _plugin)
 
@@ -268,7 +268,6 @@ func _build_ui() -> void:
 	_issues_scroll = ScrollContainer.new()
 	_issues_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_issues_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_issues_scroll.tooltip_text = "Scroll the issue list."
 	issues_panel_margin.add_child(_issues_scroll)
 
 	_issues_container = VBoxContainer.new()
@@ -312,7 +311,7 @@ func _build_ui() -> void:
 	_details_label.fit_content = true
 	_details_label.scroll_active = false
 	_details_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_details_label.tooltip_text = "Report body: full message, fix hint, metadata; binding rows may include value type and effective value preview."
+	_details_label.tooltip_text = "Full message, fix hint, metadata, and binding previews."
 	_details_scroll.add_child(_details_label)
 	UiReactDockTheme.apply_richtext_content(_details_label, _plugin)
 
@@ -323,7 +322,7 @@ func _build_ui() -> void:
 	vbox.add_child(btn_row)
 	_btn_refresh = Button.new()
 	_btn_refresh.text = "Rescan"
-	_btn_refresh.tooltip_text = "Run diagnostics now using the current Scan mode and filters. Clears Ignore hides."
+	_btn_refresh.tooltip_text = "Rescan now. Clears temporary ignores until next run."
 	_btn_refresh.pressed.connect(func(): request_refresh(&"manual"))
 	btn_row.add_child(_btn_refresh)
 	_btn_copy = Button.new()
@@ -333,7 +332,7 @@ func _build_ui() -> void:
 	btn_row.add_child(_btn_copy)
 	_btn_fix_all = Button.new()
 	_btn_fix_all.text = "Fix All"
-	_btn_fix_all.tooltip_text = "Create and assign state resources for all eligible empty-slot issues (INFO/WARNING only). ERROR rows use per-row Fix; replacing an existing resource asks for confirmation."
+	_btn_fix_all.tooltip_text = "Batch empty-slot fixes for INFO/WARNING. Use row Fix for errors and replaces."
 	_btn_fix_all.disabled = true
 	_btn_fix_all.pressed.connect(_on_fix_all_pressed)
 	btn_row.add_child(_btn_fix_all)

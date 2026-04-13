@@ -152,7 +152,7 @@ func _build_ui() -> void:
 	rules_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rules_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	rules_panel.custom_minimum_size = Vector2(0, 56)
-	rules_panel.tooltip_text = "Wire rules for the graph-selected host. Order matches wire_rules (WIRING_LAYER.md §3)."
+	rules_panel.tooltip_text = "Wire rules for the selected host; order matches wire_rules (see WIRING_LAYER.md)."
 	rules_section.add_child(rules_panel)
 	if _plugin:
 		UiReactDockTheme.apply_panelcontainer(rules_panel, _plugin)

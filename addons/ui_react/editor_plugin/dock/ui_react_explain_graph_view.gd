@@ -22,6 +22,7 @@ signal canvas_view_menu_requested(at_local_pos: Vector2)
 signal inspector_focus_selection_requested()
 
 const _Snap := preload("res://addons/ui_react/editor_plugin/models/ui_react_explain_graph_snapshot.gd")
+const _LayoutScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_explain_graph_layout.gd")
 
 const MIN_ZOOM := 0.55
 const MAX_ZOOM := 1.75
@@ -29,7 +30,6 @@ const LABEL_ZOOM_MIN := 0.82
 const NODE_W := 140.0
 const NODE_H := 32.0
 const NODE_FS := 12
-const NODE_RADIUS := 6.0
 const VIEW_PAD := 10.0
 
 var _sb_fill: StyleBoxFlat
@@ -79,27 +79,27 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	custom_minimum_size = Vector2(200, 160)
 	_sb_fill = StyleBoxFlat.new()
-	_sb_fill.set_corner_radius_all(int(NODE_RADIUS))
+	_sb_fill.set_corner_radius_all(_LayoutScript.NODE_RADIUS_CONTROL)
 	_sb_sel = StyleBoxFlat.new()
 	_sb_sel.bg_color = Color(0, 0, 0, 0)
 	_sb_sel.border_color = Color(1.0, 0.92, 0.35, 1.0)
 	_sb_sel.set_border_width_all(2)
-	_sb_sel.set_corner_radius_all(int(NODE_RADIUS) + 2)
+	_sb_sel.set_corner_radius_all(_LayoutScript.NODE_RADIUS_CONTROL + 2)
 	_sb_hover = StyleBoxFlat.new()
 	_sb_hover.bg_color = Color(0, 0, 0, 0)
 	_sb_hover.border_color = Color(1.0, 1.0, 0.85, 0.55)
 	_sb_hover.set_border_width_all(1)
-	_sb_hover.set_corner_radius_all(int(NODE_RADIUS) + 1)
+	_sb_hover.set_corner_radius_all(_LayoutScript.NODE_RADIUS_CONTROL + 1)
 	_sb_valid = StyleBoxFlat.new()
 	_sb_valid.bg_color = Color(0, 0, 0, 0)
 	_sb_valid.border_color = Color(0.35, 0.85, 0.45, 0.95)
 	_sb_valid.set_border_width_all(2)
-	_sb_valid.set_corner_radius_all(int(NODE_RADIUS) + 3)
+	_sb_valid.set_corner_radius_all(_LayoutScript.NODE_RADIUS_CONTROL + 3)
 	_sb_valid_newlink = StyleBoxFlat.new()
 	_sb_valid_newlink.bg_color = Color(0, 0, 0, 0)
 	_sb_valid_newlink.border_color = Color(0.95, 0.72, 0.35, 0.95)
 	_sb_valid_newlink.set_border_width_all(2)
-	_sb_valid_newlink.set_corner_radius_all(int(NODE_RADIUS) + 3)
+	_sb_valid_newlink.set_corner_radius_all(_LayoutScript.NODE_RADIUS_CONTROL + 3)
 
 
 ## Panel supplies policy for [b]Shift+drag[/b] reconnect; call with empty Callables to disable.
@@ -246,6 +246,8 @@ func _draw() -> void:
 			fill = Color(0.25, 0.42, 0.32, 1.0)
 		if focus_active and not _node_is_focused(id):
 			fill.a = 0.28
+		var cr: int = _LayoutScript.fill_corner_radius_px(nk)
+		_sb_fill.set_corner_radius_all(cr)
 		_sb_fill.bg_color = fill
 		draw_style_box(_sb_fill, rect)
 		if (
@@ -254,16 +256,20 @@ func _draw() -> void:
 			and _reconnect_is_valid_target_cb.is_valid()
 			and _reconnect_is_valid_target_cb.call(_selected_edge_index, _reconnect_origin_node_id, id)
 		):
+			_sb_valid.set_corner_radius_all(cr + 3)
 			draw_style_box(_sb_valid, rect.grow(3.0))
 		if (
 			_newlink_active
 			and _newlink_is_valid_drop_cb.is_valid()
 			and _newlink_is_valid_drop_cb.call(_newlink_donor_id, id)
 		):
+			_sb_valid_newlink.set_corner_radius_all(cr + 3)
 			draw_style_box(_sb_valid_newlink, rect.grow(3.0))
 		if id == _selected_node_id:
+			_sb_sel.set_corner_radius_all(cr + 2)
 			draw_style_box(_sb_sel, rect.grow(2.0))
 		elif id == _hover_node_id:
+			_sb_hover.set_corner_radius_all(cr + 1)
 			draw_style_box(_sb_hover, rect.grow(1.0))
 		var dct: Dictionary = node_by_id.get(id, {}) as Dictionary
 		var lab2 := str(dct.get(&"short_label", dct.get(&"label", id)))

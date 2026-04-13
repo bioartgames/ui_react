@@ -9,8 +9,23 @@ const DEFAULT_MAX_EDGES := 400
 
 const NODE_HALF_W := 70.0
 const NODE_HALF_H := 16.0
+## Moderate rounding for [enum UiReactExplainGraphSnapshot.NodeKind.CONTROL] nodes; must match graph view [code]_ready[/code] defaults.
+const NODE_RADIUS_CONTROL := 6
+## Nearly square [enum UiReactExplainGraphSnapshot.NodeKind.UI_COMPUTED] nodes.
+const NODE_RADIUS_COMPUTED := 2
 
 const LANE_SEP := 14.0
+
+
+## Corner radius for dependency graph node fills (canvas + legend); pill radius derives from [member NODE_HALF_H].
+static func fill_corner_radius_px(kind: int) -> int:
+	match kind:
+		_Snap.NodeKind.UI_STATE:
+			return int(round(NODE_HALF_H))
+		_Snap.NodeKind.UI_COMPUTED:
+			return NODE_RADIUS_COMPUTED
+		_:
+			return NODE_RADIUS_CONTROL
 
 
 ## Returns node centers, enriched [code]node_by_id[/code] ([code]short_label[/code]), [code]draw_edges[/code] with [code]route_points[/code] and [code]short_label[/code], spacing metadata, truncation.
