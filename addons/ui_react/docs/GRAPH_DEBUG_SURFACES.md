@@ -10,7 +10,7 @@ This addon exposes three related but **non-overlapping** tools. Keep their contr
 
 ## Wiring tab — Dependency Graph pane (CB-018A / CB-018A.1 / CB-018A.2 / CB-018A.3)
 
-- **Purpose:** static dependency snapshot for a **selected** `UiReact*` node — **Visual** graph: scoped canvas with **Manhattan** routing (**CB-018A.2**), **short** labels, **legend**, **edge filters**, **details** + authoring actions (**CB-058**), debounced **auto-refresh** on selection (**CB-018A.3**). (**Wiring** tab also hosts the **`wire_rules`** list; see `ui_react_dock_wiring_panel.gd`.) **Edge filter toggles** and related graph chrome are **session-only** unless you apply a **named scope preset** (saved under **ProjectSettings**); **Default** does not persist those choices across editor restarts.
+- **Purpose:** static dependency snapshot for a **selected** `UiReact*` node — **Visual** graph: scoped canvas with **Manhattan** routing (**CB-018A.2**), **short** labels, **legend**, **edge filters**, **details** + authoring actions (**CB-058**), debounced **auto-refresh** on selection (**CB-018A.3**). (**Wiring** tab also hosts the **`wire_rules`** list; see `ui_react_dock_wiring_panel.gd`.) **Edge filter toggles**, **legend**, and **scope preset** affordances are available from **right-click on empty canvas** (View menu); choices remain **session-only** unless you apply a **named scope preset** (saved under **ProjectSettings**); **Default** does not persist those choices across editor restarts.
 - **Does not** emit dock **validator** rows (that is **Diagnostics**); graph actions mutate via **`UiReactActionController`** (**CB-058**).
 
 ## Runtime debug overlay (CB-018C)

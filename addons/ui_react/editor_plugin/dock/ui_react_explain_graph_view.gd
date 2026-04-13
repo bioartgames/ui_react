@@ -14,8 +14,10 @@ signal newlink_drag_started(donor_node_id: String)
 signal newlink_drag_ended(donor_node_id: String, target_node_id: String)
 ## **Delete** / **Backspace** with an edge selected (**[code]CB-058[/code]** slice 1); panel decides if disconnect applies.
 signal edge_disconnect_requested(edge_index: int)
-## Right-click after [method _pick]: selection matches click target (same as LMB); panel shows Actions [PopupMenu].
+## Right-click on a **node or edge** hit (after [method _pick]); panel shows selection Actions [PopupMenu].
 signal context_menu_requested(at_local_pos: Vector2)
+## Right-click on empty canvas (no node/edge hit). Does **not** change selection.
+signal canvas_view_menu_requested(at_local_pos: Vector2)
 
 const _Snap := preload("res://addons/ui_react/editor_plugin/models/ui_react_explain_graph_snapshot.gd")
 
@@ -477,6 +479,46 @@ func _hit_test_node_id(screen_local: Vector2) -> String:
 	return best_id
 
 
+## Closest visible edge index under [param screen_local], or [code]-1[/code]. Matches [method _pick] edge priority (after nodes).
+func _hit_test_edge_index(screen_local: Vector2) -> int:
+	if _layout.is_empty():
+		return -1
+	if not _inner_rect().has_point(screen_local):
+		return -1
+	var g := _screen_to_graph(screen_local, _zoom)
+	var centers: Dictionary = _layout.get(&"node_centers", {}) as Dictionary
+	var edges: Array = _layout.get(&"draw_edges", []) as Array
+	var best_i := -1
+	var best_dist := 12.0 / _zoom
+	var idx := 0
+	for e: Variant in edges:
+		if e is not Dictionary:
+			idx += 1
+			continue
+		var ed: Dictionary = e as Dictionary
+		if not _edge_visible(ed):
+			idx += 1
+			continue
+		var fa := str(ed.get(&"from_id", ""))
+		var ta := str(ed.get(&"to_id", ""))
+		if not centers.has(fa) or not centers.has(ta):
+			idx += 1
+			continue
+		var d2: float
+		var pts_var: Variant = ed.get(&"route_points", null)
+		if pts_var is PackedVector2Array and (pts_var as PackedVector2Array).size() >= 2:
+			d2 = sqrt(_dist_point_to_polyline_sq(g, pts_var as PackedVector2Array))
+		else:
+			var pa: Vector2 = centers[fa] as Vector2
+			var pb: Vector2 = centers[ta] as Vector2
+			d2 = Geometry2D.get_closest_point_to_segment(g, pa, pb).distance_to(g)
+		if d2 < best_dist:
+			best_dist = d2
+			best_i = idx
+		idx += 1
+	return best_i
+
+
 func _try_begin_shift_reconnect(screen_local: Vector2, shift_pressed: bool) -> bool:
 	if not shift_pressed or _selected_edge_index < 0:
 		return false
@@ -565,11 +607,15 @@ func _gui_input(event: InputEvent) -> void:
 				or _newlink_pending
 			):
 				return
-			_pick(mb.position)
-			if _selected_node_id.is_empty() and _selected_edge_index < 0:
-				accept_event()
-				return
-			context_menu_requested.emit(mb.position)
+			var nid := _hit_test_node_id(mb.position)
+			var eidx := -1
+			if nid.is_empty():
+				eidx = _hit_test_edge_index(mb.position)
+			if not nid.is_empty() or eidx >= 0:
+				_pick(mb.position)
+				context_menu_requested.emit(mb.position)
+			else:
+				canvas_view_menu_requested.emit(mb.position)
 			accept_event()
 			return
 		if mb.button_index == MOUSE_BUTTON_LEFT:
@@ -749,34 +795,7 @@ func _pick(screen_local: Vector2) -> void:
 		return
 
 	var edges: Array = _layout.get(&"draw_edges", []) as Array
-	var best_i := -1
-	var best_dist := 12.0 / _zoom
-	var idx := 0
-	for e: Variant in edges:
-		if e is not Dictionary:
-			idx += 1
-			continue
-		var ed: Dictionary = e as Dictionary
-		if not _edge_visible(ed):
-			idx += 1
-			continue
-		var fa := str(ed.get(&"from_id", ""))
-		var ta := str(ed.get(&"to_id", ""))
-		if not centers.has(fa) or not centers.has(ta):
-			idx += 1
-			continue
-		var d2: float
-		var pts_var: Variant = ed.get(&"route_points", null)
-		if pts_var is PackedVector2Array and (pts_var as PackedVector2Array).size() >= 2:
-			d2 = sqrt(_dist_point_to_polyline_sq(g, pts_var as PackedVector2Array))
-		else:
-			var pa: Vector2 = centers[fa] as Vector2
-			var pb: Vector2 = centers[ta] as Vector2
-			d2 = Geometry2D.get_closest_point_to_segment(g, pa, pb).distance_to(g)
-		if d2 < best_dist:
-			best_dist = d2
-			best_i = idx
-		idx += 1
+	var best_i := _hit_test_edge_index(screen_local)
 
 	if best_i >= 0:
 		_selected_edge_index = best_i

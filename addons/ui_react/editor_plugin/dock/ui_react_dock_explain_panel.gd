@@ -42,9 +42,21 @@ const _SEL_ACT_REMOVE_SRC_SLOT := 1122
 const _SEL_ACT_CREATE_ASSIGN_BINDING := 1130
 const _SEL_ACT_COPY_DETAILS := 1199
 
-const _SCOPE_OVERFLOW_SAVE := 1
-const _SCOPE_OVERFLOW_MANAGE := 2
-const _SCOPE_OVERFLOW_PIN := 3
+## Empty-canvas [PopupMenu] ids — [method _fill_canvas_view_popup] / [method _on_canvas_view_menu_id].
+const _CV_REFRESH := 3001
+const _CV_FIT := 3002
+const _CV_CREATE_STATE_BASE := 3100
+const _CV_TOGGLE_FULL_LISTS := 3201
+const _CV_TOGGLE_BINDING := 3202
+const _CV_TOGGLE_COMPUTED := 3203
+const _CV_TOGGLE_WIRE := 3204
+const _CV_TOGGLE_EDGE_LABELS := 3205
+const _CV_TOGGLE_LEGEND := 3206
+const _CV_PRESET_DEFAULT := 3300
+const _CV_PRESET_NAMED_BASE := 3310
+const _CV_SCOPE_SAVE := 3500
+const _CV_SCOPE_MANAGE := 3501
+const _CV_SCOPE_PIN := 3502
 
 var _plugin: EditorPlugin
 var _actions: UiReactActionController
@@ -52,11 +64,9 @@ var _request_dock_refresh: Callable = Callable()
 var _on_wire_rule_row_focus: Callable = Callable()
 
 var _hint: RichTextLabel
-var _btn_refresh: Button
-var _btn_fit: Button
+var _hidden_chrome_host: Control
 var _cb_full_lists: CheckBox
 var _visual_host: VBoxContainer
-var _visual_toolbar: HBoxContainer
 var _legend_row: HBoxContainer
 var _cb_bind: CheckBox
 var _cb_computed: CheckBox
@@ -69,6 +79,8 @@ var _details_buttons: HBoxContainer
 var _btn_focus_inspector: Button
 var _btn_selection_actions: MenuButton
 var _selection_actions_context_popup: PopupMenu
+var _canvas_view_context_popup: PopupMenu
+var _canvas_view_preset_names: PackedStringArray
 
 var _wire_payload_box: VBoxContainer
 var _wire_rule_id_row: HBoxContainer
@@ -125,7 +137,6 @@ var _last_edge_kind: int = -1
 var _last_edge_label: String = ""
 var _last_details_plain: String = ""
 
-var _btn_create_state: MenuButton
 var _create_state_save_dialog: EditorFileDialog
 var _create_state_class_pending: String = ""
 var _create_and_assign_mode: bool = false
@@ -134,9 +145,7 @@ var _create_assign_prop: StringName = &""
 var _create_assign_component: String = ""
 var _create_assign_expected_class: StringName = &""
 
-var _scope_row: HBoxContainer
 var _scope_preset_option: OptionButton
-var _btn_scope_overflow: MenuButton
 var _scope_save_name_dialog: AcceptDialog
 var _scope_save_name_edit: LineEdit
 var _scope_manage_dialog: AcceptDialog
@@ -457,24 +466,192 @@ func _on_selection_action_id(id: int) -> void:
 			pass
 
 
-func _on_scope_overflow_about_to_popup() -> void:
-	if _btn_scope_overflow == null:
+func _sync_hidden_preset_option_index() -> void:
+	if _scope_preset_option == null:
 		return
-	var pop := _btn_scope_overflow.get_popup()
-	# Fixed order: Save, Manage, Pin (id3).
-	pop.set_item_disabled(2, not _can_pin_focused_node_to_preset())
+	var active: String = String(UiReactDockConfig.get_active_graph_scope_preset_name()).strip_edges()
+	_scope_preset_block_select = true
+	if active.is_empty() or active.to_lower() == "default":
+		_scope_preset_option.select(0)
+		_scope_preset_block_select = false
+		return
+	for i in range(_scope_preset_option.item_count):
+		if str(_scope_preset_option.get_item_metadata(i)) == active:
+			_scope_preset_option.select(i)
+			_scope_preset_block_select = false
+			return
+	_scope_preset_option.select(0)
+	_scope_preset_block_select = false
 
 
-func _on_scope_overflow_id(id: int) -> void:
-	match id:
-		_SCOPE_OVERFLOW_SAVE:
-			_on_scope_save_as_pressed()
-		_SCOPE_OVERFLOW_MANAGE:
-			_on_scope_manage_pressed()
-		_SCOPE_OVERFLOW_PIN:
-			_on_pin_node_pressed()
-		_:
-			pass
+func _apply_scope_preset_by_name(preset_name: String) -> void:
+	_rebuild_scope_preset_dropdown()
+	var name := preset_name.strip_edges()
+	UiReactDockConfig.set_active_graph_scope_preset_name(name)
+	if name.is_empty() or name.to_lower() == "default":
+		_apply_scope_dict_to_ui(_default_scope_dict())
+	else:
+		var found := false
+		for it: Variant in _scope_presets_cache:
+			if it is Dictionary:
+				var pd: Dictionary = _preset_from_variant(it)
+				if String(pd.get("name", "")) == name:
+					_apply_scope_dict_to_ui(pd)
+					found = true
+					break
+		if not found:
+			_apply_scope_dict_to_ui(_default_scope_dict())
+			UiReactDockConfig.set_active_graph_scope_preset_name("")
+	_sync_hidden_preset_option_index()
+	refresh()
+
+
+func _fill_canvas_view_popup(popup: PopupMenu) -> void:
+	popup.clear()
+	_canvas_view_preset_names.clear()
+	popup.add_item("Refresh", _CV_REFRESH)
+	popup.set_item_tooltip(
+		popup.item_count - 1, "Rebuild the dependency graph from the current selection and edited scene."
+	)
+	popup.add_item("Fit view", _CV_FIT)
+	popup.set_item_tooltip(popup.item_count - 1, "Reset pan/zoom on the graph.")
+	popup.add_separator()
+	var cnames: PackedStringArray = _GraphFactoryScript.factory_state_class_names()
+	for ci in range(cnames.size()):
+		var csn := String(cnames[ci])
+		popup.add_item("New %s…" % csn, _CV_CREATE_STATE_BASE + ci)
+	popup.add_separator()
+
+	popup.add_item("Full lists", _CV_TOGGLE_FULL_LISTS)
+	popup.set_item_tooltip(
+		popup.item_count - 1, "Show uncapped upstream/downstream lines in the narrative (details pane)."
+	)
+	popup.set_item_as_checkable(popup.item_count - 1, true)
+	popup.set_item_checked(popup.item_count - 1, _cb_full_lists != null and _cb_full_lists.button_pressed)
+	popup.add_item("Show binding edges", _CV_TOGGLE_BINDING)
+	popup.set_item_tooltip(popup.item_count - 1, "Toggle binding edges (state → control property).")
+	popup.set_item_as_checkable(popup.item_count - 1, true)
+	popup.set_item_checked(popup.item_count - 1, _cb_bind != null and _cb_bind.button_pressed)
+	popup.add_item("Show computed edges", _CV_TOGGLE_COMPUTED)
+	popup.set_item_tooltip(popup.item_count - 1, "Toggle computed-source edges.")
+	popup.set_item_as_checkable(popup.item_count - 1, true)
+	popup.set_item_checked(popup.item_count - 1, _cb_computed != null and _cb_computed.button_pressed)
+	popup.add_item("Show wire edges", _CV_TOGGLE_WIRE)
+	popup.set_item_tooltip(popup.item_count - 1, "Toggle wire-rule flow edges.")
+	popup.set_item_as_checkable(popup.item_count - 1, true)
+	popup.set_item_checked(popup.item_count - 1, _cb_wire != null and _cb_wire.button_pressed)
+	popup.add_item("All edge labels", _CV_TOGGLE_EDGE_LABELS)
+	popup.set_item_tooltip(
+		popup.item_count - 1, "Show short edge tokens on all edges. Selection still shows full detail below."
+	)
+	popup.set_item_as_checkable(popup.item_count - 1, true)
+	popup.set_item_checked(popup.item_count - 1, _cb_edge_labels != null and _cb_edge_labels.button_pressed)
+	popup.add_item("Show legend", _CV_TOGGLE_LEGEND)
+	popup.set_item_tooltip(popup.item_count - 1, "Show the node/edge color key above the graph.")
+	popup.set_item_as_checkable(popup.item_count - 1, true)
+	popup.set_item_checked(popup.item_count - 1, _legend_row != null and _legend_row.visible)
+	popup.add_separator()
+	popup.add_item("Preset: Default", _CV_PRESET_DEFAULT)
+	popup.set_item_tooltip(popup.item_count - 1, "Reset scope to built-in defaults (not a named project preset).")
+	var names: Array[String] = []
+	for it: Variant in UiReactDockConfig.load_graph_scope_presets_raw():
+		if it is Dictionary:
+			var nm := String((it as Dictionary).get("name", "")).strip_edges()
+			if not nm.is_empty() and nm.to_lower() != "default":
+				names.append(nm)
+	names.sort()
+	for i in range(names.size()):
+		var nm2: String = names[i]
+		popup.add_item("Preset: %s" % nm2, _CV_PRESET_NAMED_BASE + i)
+		_canvas_view_preset_names.append(nm2)
+	popup.add_separator()
+	popup.add_item("Save scope preset as…", _CV_SCOPE_SAVE)
+	popup.set_item_tooltip(popup.item_count - 1, "Save current scope settings as a named preset.")
+	popup.add_item("Manage scope presets…", _CV_SCOPE_MANAGE)
+	popup.set_item_tooltip(popup.item_count - 1, "Delete saved scope presets.")
+	popup.add_item("Pin node", _CV_SCOPE_PIN)
+	popup.set_item_tooltip(
+		popup.item_count - 1,
+		"Pin the selected graph node id to the active preset (requires a named preset).",
+	)
+	var pin_idx := popup.get_item_index(_CV_SCOPE_PIN)
+	if pin_idx >= 0:
+		popup.set_item_disabled(pin_idx, not _can_pin_focused_node_to_preset())
+
+
+func _on_canvas_view_menu_id(id: int) -> void:
+	if _canvas_view_context_popup == null:
+		return
+	var n_create := _GraphFactoryScript.factory_state_class_names().size()
+	if id == _CV_REFRESH:
+		refresh()
+		return
+	if id == _CV_FIT:
+		_on_fit_pressed()
+		return
+	if id >= _CV_CREATE_STATE_BASE and id < _CV_CREATE_STATE_BASE + n_create:
+		_on_create_state_menu_id(id - _CV_CREATE_STATE_BASE)
+		return
+	if id == _CV_TOGGLE_FULL_LISTS:
+		if _cb_full_lists != null:
+			var on := not _cb_full_lists.button_pressed
+			_cb_full_lists.button_pressed = on
+			_on_full_lists_toggled(on)
+		return
+	if id == _CV_TOGGLE_BINDING:
+		if _cb_bind != null:
+			_cb_bind.button_pressed = not _cb_bind.button_pressed
+			_push_visual_filters()
+			refresh()
+		return
+	if id == _CV_TOGGLE_COMPUTED:
+		if _cb_computed != null:
+			_cb_computed.button_pressed = not _cb_computed.button_pressed
+			_push_visual_filters()
+			refresh()
+		return
+	if id == _CV_TOGGLE_WIRE:
+		if _cb_wire != null:
+			_cb_wire.button_pressed = not _cb_wire.button_pressed
+			_push_visual_filters()
+			refresh()
+		return
+	if id == _CV_TOGGLE_EDGE_LABELS:
+		if _cb_edge_labels != null:
+			_cb_edge_labels.button_pressed = not _cb_edge_labels.button_pressed
+			_push_visual_filters()
+			refresh()
+		return
+	if id == _CV_TOGGLE_LEGEND:
+		if _legend_row != null:
+			_legend_row.visible = not _legend_row.visible
+		return
+	if id == _CV_PRESET_DEFAULT:
+		_apply_scope_preset_by_name("")
+		return
+	if id >= _CV_PRESET_NAMED_BASE:
+		var pi := id - _CV_PRESET_NAMED_BASE
+		if pi >= 0 and pi < _canvas_view_preset_names.size():
+			_apply_scope_preset_by_name(_canvas_view_preset_names[pi])
+		return
+	if id == _CV_SCOPE_SAVE:
+		_on_scope_save_as_pressed()
+		return
+	if id == _CV_SCOPE_MANAGE:
+		_on_scope_manage_pressed()
+		return
+	if id == _CV_SCOPE_PIN:
+		_on_pin_node_pressed()
+		return
+
+
+func _on_canvas_view_menu_requested(at_local: Vector2) -> void:
+	if _canvas_view_context_popup == null or _graph_view == null:
+		return
+	_fill_canvas_view_popup(_canvas_view_context_popup)
+	var gp: Vector2 = _graph_view.get_screen_transform() * at_local
+	_canvas_view_context_popup.position = Vector2i(gp)
+	_canvas_view_context_popup.popup()
 
 
 func _on_graph_context_menu_requested(at_local: Vector2) -> void:
@@ -2509,15 +2686,12 @@ func _rebuild_scope_preset_dropdown() -> void:
 	_scope_preset_block_select = false
 
 
-func _sync_active_scope_preset_from_settings(select_dropdown: bool) -> void:
+func _sync_active_scope_preset_from_settings(_select_dropdown: bool) -> void:
 	_rebuild_scope_preset_dropdown()
 	var active: String = String(UiReactDockConfig.get_active_graph_scope_preset_name()).strip_edges()
 	if active.is_empty() or active.to_lower() == "default":
 		_apply_scope_dict_to_ui(_default_scope_dict())
-		if _scope_preset_option:
-			_scope_preset_block_select = true
-			_scope_preset_option.select(0)
-			_scope_preset_block_select = false
+		_sync_hidden_preset_option_index()
 		return
 	var found: Dictionary = {}
 	for it: Variant in _scope_presets_cache:
@@ -2529,19 +2703,10 @@ func _sync_active_scope_preset_from_settings(select_dropdown: bool) -> void:
 	if found.is_empty():
 		_apply_scope_dict_to_ui(_default_scope_dict())
 		UiReactDockConfig.set_active_graph_scope_preset_name("")
-		if _scope_preset_option:
-			_scope_preset_block_select = true
-			_scope_preset_option.select(0)
-			_scope_preset_block_select = false
+		_sync_hidden_preset_option_index()
 		return
 	_apply_scope_dict_to_ui(found)
-	if select_dropdown and _scope_preset_option:
-		for i in range(_scope_preset_option.item_count):
-			if str(_scope_preset_option.get_item_metadata(i)) == active:
-				_scope_preset_block_select = true
-				_scope_preset_option.select(i)
-				_scope_preset_block_select = false
-				break
+	_sync_hidden_preset_option_index()
 
 
 func _persist_presets_array(arr: Array) -> void:
@@ -2553,18 +2718,7 @@ func _on_scope_preset_selected(index: int) -> void:
 	if _scope_preset_block_select or _scope_preset_option == null:
 		return
 	var meta: Variant = _scope_preset_option.get_item_metadata(index)
-	var name := str(meta).strip_edges()
-	UiReactDockConfig.set_active_graph_scope_preset_name(name)
-	if name.is_empty():
-		_apply_scope_dict_to_ui(_default_scope_dict())
-	else:
-		for it: Variant in _scope_presets_cache:
-			if it is Dictionary:
-				var pd: Dictionary = _preset_from_variant(it)
-				if String(pd.get("name", "")) == name:
-					_apply_scope_dict_to_ui(pd)
-					break
-	refresh()
+	_apply_scope_preset_by_name(str(meta).strip_edges())
 
 
 func _on_scope_save_as_pressed() -> void:
@@ -2854,73 +3008,60 @@ func _build_ui() -> void:
 	_hint.visible = false
 	v.add_child(_hint)
 
-	var row := HBoxContainer.new()
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	v.add_child(row)
-
-	_btn_refresh = Button.new()
-	_btn_refresh.text = "Refresh"
-	_btn_refresh.tooltip_text = "Rebuild the dependency graph from the current selection and edited scene."
-	_btn_refresh.pressed.connect(refresh)
-	row.add_child(_btn_refresh)
-
-	_btn_fit = Button.new()
-	_btn_fit.text = "Fit view"
-	_btn_fit.tooltip_text = "Reset pan/zoom on the graph."
-	_btn_fit.pressed.connect(_on_fit_pressed)
-	row.add_child(_btn_fit)
-
-	_btn_create_state = MenuButton.new()
-	_btn_create_state.text = "Create"
-	_btn_create_state.tooltip_text = "Save a new UiState .tres under a path you choose (no scene change)."
-	var cpop := _btn_create_state.get_popup()
-	var cnames: PackedStringArray = _GraphFactoryScript.factory_state_class_names()
-	for ci in range(cnames.size()):
-		var csn := String(cnames[ci])
-		cpop.add_item("New %s…" % csn, ci)
-	cpop.id_pressed.connect(_on_create_state_menu_id)
-	row.add_child(_btn_create_state)
-
-	_cb_full_lists = CheckBox.new()
-	_cb_full_lists.text = "Full lists"
-	_cb_full_lists.tooltip_text = "Show uncapped upstream/downstream lines in the narrative (details pane)."
-	_cb_full_lists.button_pressed = false
-	_cb_full_lists.toggled.connect(_on_full_lists_toggled)
-	row.add_child(_cb_full_lists)
-
 	_auto_refresh_timer = Timer.new()
 	_auto_refresh_timer.wait_time = 0.15
 	_auto_refresh_timer.one_shot = true
 	_auto_refresh_timer.timeout.connect(_on_debounced_auto_refresh)
 	add_child(_auto_refresh_timer)
 
-	_scope_row = HBoxContainer.new()
-	_scope_row.add_theme_constant_override(&"separation", 6)
-	_scope_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	v.add_child(_scope_row)
-	var slab := Label.new()
-	slab.text = "Scope preset:"
-	_scope_row.add_child(slab)
+	_hidden_chrome_host = Control.new()
+	_hidden_chrome_host.visible = false
+	_hidden_chrome_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hidden_chrome_host.custom_minimum_size = Vector2.ZERO
+	v.add_child(_hidden_chrome_host)
+
 	_scope_preset_option = OptionButton.new()
 	_scope_preset_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scope_preset_option.tooltip_text = (
-	"Layout caps, edge filters, narrative Full lists, and pins — stored per project (Project Settings)."
+		"Layout caps, edge filters, narrative Full lists, and pins — stored per project (Project Settings)."
 	)
 	_scope_preset_option.item_selected.connect(_on_scope_preset_selected)
-	_scope_row.add_child(_scope_preset_option)
-	_btn_scope_overflow = MenuButton.new()
-	_btn_scope_overflow.text = "…"
-	_btn_scope_overflow.tooltip_text = "Save, manage, or pin scope presets."
-	var sop := _btn_scope_overflow.get_popup()
-	sop.add_item("Save as…", _SCOPE_OVERFLOW_SAVE)
-	sop.set_item_tooltip(0, "Save current scope settings as a named preset.")
-	sop.add_item("Manage…", _SCOPE_OVERFLOW_MANAGE)
-	sop.set_item_tooltip(1, "Delete saved scope presets.")
-	sop.add_item("Pin node", _SCOPE_OVERFLOW_PIN)
-	sop.set_item_tooltip(2, "Pin the selected graph node id to the active preset (requires a named preset).")
-	sop.id_pressed.connect(_on_scope_overflow_id)
-	_btn_scope_overflow.about_to_popup.connect(_on_scope_overflow_about_to_popup)
-	_scope_row.add_child(_btn_scope_overflow)
+	_hidden_chrome_host.add_child(_scope_preset_option)
+
+	_cb_full_lists = CheckBox.new()
+	_cb_full_lists.text = "Full lists"
+	_cb_full_lists.tooltip_text = "Show uncapped upstream/downstream lines in the narrative (details pane)."
+	_cb_full_lists.button_pressed = false
+	_cb_full_lists.toggled.connect(_on_full_lists_toggled)
+	_hidden_chrome_host.add_child(_cb_full_lists)
+
+	_cb_bind = CheckBox.new()
+	_cb_bind.text = "Binding"
+	_cb_bind.button_pressed = true
+	_cb_bind.tooltip_text = "Toggle binding edges (state → control property)."
+	_cb_bind.toggled.connect(func(_on: bool) -> void: _push_visual_filters())
+	_hidden_chrome_host.add_child(_cb_bind)
+
+	_cb_computed = CheckBox.new()
+	_cb_computed.text = "Computed"
+	_cb_computed.button_pressed = true
+	_cb_computed.tooltip_text = "Toggle computed-source edges."
+	_cb_computed.toggled.connect(func(_on2: bool) -> void: _push_visual_filters())
+	_hidden_chrome_host.add_child(_cb_computed)
+
+	_cb_wire = CheckBox.new()
+	_cb_wire.text = "Wire"
+	_cb_wire.button_pressed = true
+	_cb_wire.tooltip_text = "Toggle wire-rule flow edges."
+	_cb_wire.toggled.connect(func(_on3: bool) -> void: _push_visual_filters())
+	_hidden_chrome_host.add_child(_cb_wire)
+
+	_cb_edge_labels = CheckBox.new()
+	_cb_edge_labels.text = "All edge labels"
+	_cb_edge_labels.button_pressed = false
+	_cb_edge_labels.tooltip_text = "Show short edge tokens on all edges. Selection still shows full detail below."
+	_cb_edge_labels.toggled.connect(func(_on4: bool) -> void: _push_visual_filters())
+	_hidden_chrome_host.add_child(_cb_edge_labels)
 
 	_scope_save_name_dialog = AcceptDialog.new()
 	_scope_save_name_dialog.title = "Save scope preset"
@@ -2955,44 +3096,9 @@ func _build_ui() -> void:
 	_visual_host.custom_minimum_size = Vector2(0, 220)
 	v.add_child(_visual_host)
 
-	_visual_toolbar = HBoxContainer.new()
-	_visual_toolbar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_visual_host.add_child(_visual_toolbar)
-
-	var leg := Label.new()
-	leg.text = "Show:"
-	_visual_toolbar.add_child(leg)
-
-	_cb_bind = CheckBox.new()
-	_cb_bind.text = "Binding"
-	_cb_bind.button_pressed = true
-	_cb_bind.tooltip_text = "Toggle binding edges (state → control property)."
-	_cb_bind.toggled.connect(func(_on: bool) -> void: _push_visual_filters())
-	_visual_toolbar.add_child(_cb_bind)
-
-	_cb_computed = CheckBox.new()
-	_cb_computed.text = "Computed"
-	_cb_computed.button_pressed = true
-	_cb_computed.tooltip_text = "Toggle computed-source edges."
-	_cb_computed.toggled.connect(func(_on2: bool) -> void: _push_visual_filters())
-	_visual_toolbar.add_child(_cb_computed)
-
-	_cb_wire = CheckBox.new()
-	_cb_wire.text = "Wire"
-	_cb_wire.button_pressed = true
-	_cb_wire.tooltip_text = "Toggle wire-rule flow edges."
-	_cb_wire.toggled.connect(func(_on3: bool) -> void: _push_visual_filters())
-	_visual_toolbar.add_child(_cb_wire)
-
-	_cb_edge_labels = CheckBox.new()
-	_cb_edge_labels.text = "All edge labels"
-	_cb_edge_labels.button_pressed = false
-	_cb_edge_labels.tooltip_text = "Show short edge tokens on all edges. Selection still shows full detail below."
-	_cb_edge_labels.toggled.connect(func(_on4: bool) -> void: _push_visual_filters())
-	_visual_toolbar.add_child(_cb_edge_labels)
-
 	_legend_row = HBoxContainer.new()
 	_legend_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_legend_row.visible = false
 	_visual_host.add_child(_legend_row)
 	var leg_title := Label.new()
 	leg_title.text = "Key:"
@@ -3021,6 +3127,7 @@ func _build_ui() -> void:
 	_graph_view.newlink_drag_ended.connect(_on_graph_newlink_drag_ended)
 	_graph_view.edge_disconnect_requested.connect(_on_graph_edge_disconnect_requested)
 	_graph_view.context_menu_requested.connect(_on_graph_context_menu_requested)
+	_graph_view.canvas_view_menu_requested.connect(_on_canvas_view_menu_requested)
 	_graph_view.set_reconnect_handlers(
 		Callable(self, &"_reconnect_can_start_cb"),
 		Callable(self, &"_reconnect_is_valid_target_cb")
@@ -3030,7 +3137,8 @@ func _build_ui() -> void:
 		Callable(self, &"_newlink_is_valid_drop_cb")
 	)
 	_graph_view.tooltip_text = (
-		"Pan: middle-drag. Zoom: wheel. Select node or edge (right-click for Actions menu). "
+		"Pan: middle-drag. Zoom: wheel. Right-click empty canvas: Refresh, Fit, Create state, filters, presets. "
+		+ "Right-click node or edge: Actions menu. "
 		+ "Reconnect: select an edge, then Shift+drag from the source endpoint node to another state node (undoable). "
 		+ "New link: clear edge selection, Ctrl+Shift+drag from a state donor to a control (empty binding and/or new wire rule) or to a computed (fill/append sources; file-backed computed resolves from scene binds). "
 		+ "Delete/Backspace with an edge selected clears optional bindings, computed sources, or wire links when the Actions menu would allow it."
@@ -3136,6 +3244,9 @@ func _build_ui() -> void:
 	_selection_actions_context_popup = PopupMenu.new()
 	base_ctl.add_child(_selection_actions_context_popup)
 	_selection_actions_context_popup.id_pressed.connect(_on_selection_action_id)
+	_canvas_view_context_popup = PopupMenu.new()
+	base_ctl.add_child(_canvas_view_context_popup)
+	_canvas_view_context_popup.id_pressed.connect(_on_canvas_view_menu_id)
 
 
 func _set_hint_visible(on: bool) -> void:
