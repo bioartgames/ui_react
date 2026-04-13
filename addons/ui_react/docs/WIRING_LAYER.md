@@ -6,7 +6,7 @@
 
 ### Editor: Dependency Graph (designer path)
 
-**Recommended:** Use the **Ui React** dock **Dependency Graph** (**CB-058**) as the **primary** place to **see** scoped **`wire_rules`**-related flow alongside bindings and computeds, and to **author** changes that touch **`wire_rules`**—**provided** the graph exposes that operation—using the **same** **`Array[UiReactWireRule]`** commits as the **Wire rules** tab and the **Inspector** (**DRY**; no parallel format). **Inspector** remains **fully authoritative** for every field for authors who prefer not to use the graph. Roadmap intent and sequencing: [`ROADMAP.md`](ROADMAP.md) Part I **North star** and **Visual wiring graph**.
+**Recommended:** Use the **Ui React** dock **Wiring** tab (**CB-058**) — **Dependency Graph** + **`wire_rules`** list — as the **primary** place to **see** scoped **`wire_rules`**-related flow alongside bindings and computeds, and to **author** changes that touch **`wire_rules`**—**provided** the graph exposes that operation—using the **same** **`Array[UiReactWireRule]`** commits as the **Inspector** (**DRY**; no parallel format). **Inspector** remains **fully authoritative** for every field for authors who prefer not to use the graph. Roadmap intent and sequencing: [`ROADMAP.md`](ROADMAP.md) Part I **North star** and **Visual wiring graph**.
 
 ---
 
@@ -126,7 +126,7 @@ Official **`inventory_screen_demo`** uses only **`wire_rules`** on **`UiReact*`*
 
 **Follow-up** (optional backlog): invalid `NodePath` targets when future rules use paths. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md).
 
-**P5.2 — Wire rules tab (editor):** The **Ui React** bottom dock (**Diagnostics** / **Wire rules**) includes a **Wire rules** tab that lists **`wire_rules`** for the **single** selected §5 host, adds concrete rules from the §6 set, removes/duplicates/reorders entries with **Undo**, and **Inspect rule** opens the Inspector on the same embedded **`UiReactWireRule`** subresources—**no** second on-disk format (**CB-035**).
+**P5.2 — Wire rules UI (editor):** The **Ui React** bottom dock **Wiring** tab includes a **`wire_rules`** list (right split) for the **single** selected §5 host, adds concrete rules from the §6 set, removes/duplicates/reorders entries with **Undo**, and **Inspect rule** opens the Inspector on the same embedded **`UiReactWireRule`** subresources—**no** second on-disk format (**CB-035**).
 
 ---
 

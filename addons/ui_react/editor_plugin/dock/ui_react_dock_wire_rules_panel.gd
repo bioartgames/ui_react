@@ -30,6 +30,18 @@ func setup(plugin: EditorPlugin, actions: UiReactActionController) -> void:
 	_build_ui()
 
 
+func focus_rule_index(idx: int) -> void:
+	if _target == null:
+		return
+	var wr: Variant = _target.get(&"wire_rules")
+	var arr: Array = wr as Array if wr is Array else []
+	if idx < 0 or idx >= arr.size():
+		return
+	_selected_rule_index = idx
+	_rebuild_rule_rows(arr)
+	_update_details_panel()
+
+
 func refresh() -> void:
 	var preserved_idx := _selected_rule_index
 	_target = null

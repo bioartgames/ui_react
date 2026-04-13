@@ -2,8 +2,7 @@
 extends Control
 class_name UiReactDock
 
-const _WireRulesPanelScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_wire_rules_panel.gd")
-const _ExplainPanelScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_explain_panel.gd")
+const _WiringPanelScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_wiring_panel.gd")
 
 const _EMPTY_ISSUES_NO_DIAGNOSTICS := "No issues reported for the current scan."
 const _EMPTY_ISSUES_FILTERED := "No issues match the current filters or search."
@@ -17,7 +16,7 @@ var _coalesced_refresh_pending: bool = false
 var _unused_cache_invalidate_pending: bool = false
 ## Set by [method _run_startup_refresh]; cleared after first successful root or one no-scene retry.
 var _expect_startup_scene_retry: bool = false
-## Coalesces [EditorUndoRedoManager] undo/redo into one deferred Dependency Graph rebuild per frame.
+## Coalesces [EditorUndoRedoManager] undo/redo into one deferred **Wiring** tab refresh per frame.
 var _undo_redo_graph_refresh_pending: bool = false
 
 var _plugin: EditorPlugin
@@ -56,10 +55,8 @@ var _btn_ignore_all: Button
 var _replace_confirm_dialog: ConfirmationDialog
 
 var _tabs: TabContainer
-## [UiReactDockWireRulesPanel] — untyped so [method refresh] / [method setup] resolve without global class cache in the analyzer.
-var _wire_rules_panel: Variant = null
-## [UiReactDockExplainPanel]
-var _explain_panel: Variant = null
+## [UiReactDockWiringPanel] — graph + wire rules workbench (**CB-058** tab merge).
+var _wiring_panel: Variant = null
 
 ## group_key -> expanded (for grouped view)
 var _group_expanded: Dictionary = {}
@@ -101,8 +98,8 @@ func _on_undo_redo_version_changed() -> void:
 
 func _flush_undo_redo_graph_refresh() -> void:
 	_undo_redo_graph_refresh_pending = false
-	if _explain_panel != null and _explain_panel.has_method(&"refresh"):
-		_explain_panel.call(&"refresh")
+	if _wiring_panel != null and _wiring_panel.has_method(&"refresh"):
+		_wiring_panel.call(&"refresh")
 
 
 func _run_startup_refresh() -> void:
@@ -112,10 +109,8 @@ func _run_startup_refresh() -> void:
 
 ## Called from [EditorPlugin] when the edited scene tab changes (open/switch/empty).
 func notify_edited_scene_changed() -> void:
-	if _wire_rules_panel != null and _wire_rules_panel.has_method(&"refresh"):
-		_wire_rules_panel.call(&"refresh")
-	if _explain_panel != null and _explain_panel.has_method(&"refresh"):
-		_explain_panel.call(&"refresh")
+	if _wiring_panel != null and _wiring_panel.has_method(&"refresh"):
+		_wiring_panel.call(&"refresh")
 	request_refresh(&"scene_changed")
 
 
@@ -148,21 +143,11 @@ func _build_ui() -> void:
 	_tabs.add_child(vbox)
 	_tabs.set_tab_title(0, "Diagnostics")
 
-	var wr_panel = _WireRulesPanelScript.new()
-	wr_panel.setup(_plugin, _actions)
-	_wire_rules_panel = wr_panel
-	_tabs.add_child(wr_panel)
-	_tabs.set_tab_title(1, "Wire rules")
-
-	var ex_panel = _ExplainPanelScript.new()
-	# callv: avoid stale arity diagnostics on UiReactDockExplainPanel.setup (plugin, actions, dock refresh).
-	ex_panel.callv(
-		&"setup",
-		[_plugin, _actions, func(): request_refresh(&"dependency_graph_edit")]
-	)
-	_explain_panel = ex_panel
-	_tabs.add_child(ex_panel)
-	_tabs.set_tab_title(2, "Dependency Graph")
+	var wiring = _WiringPanelScript.new()
+	wiring.setup(_plugin, _actions, func(): request_refresh(&"dependency_graph_edit"))
+	_wiring_panel = wiring
+	_tabs.add_child(wiring)
+	_tabs.set_tab_title(1, "Wiring")
 
 	if not _tabs.tab_selected.is_connected(_on_tabs_tab_selected):
 		_tabs.tab_selected.connect(_on_tabs_tab_selected)
@@ -400,17 +385,15 @@ func _exit_tree() -> void:
 
 
 func _on_selection_changed() -> void:
-	if _wire_rules_panel != null and _wire_rules_panel.has_method(&"refresh"):
-		_wire_rules_panel.call(&"refresh")
+	if _wiring_panel != null and _wiring_panel.has_method(&"refresh"):
+		_wiring_panel.call(&"refresh")
 	if _auto_refresh and _auto_refresh.button_pressed and _mode_option.get_item_id(_mode_option.selected) == UiReactDockConfig.SCAN_MODE_SELECTION:
 		request_refresh(&"selection_changed")
 
 
 func _on_tabs_tab_selected(tab_idx: int) -> void:
-	if _wire_rules_panel != null and tab_idx == 1 and _wire_rules_panel.has_method(&"refresh"):
-		_wire_rules_panel.call(&"refresh")
-	if _explain_panel != null and tab_idx == 2 and _explain_panel.has_method(&"refresh"):
-		_explain_panel.call(&"refresh")
+	if _wiring_panel != null and tab_idx == 1 and _wiring_panel.has_method(&"refresh"):
+		_wiring_panel.call(&"refresh")
 
 
 func _on_editor_filesystem_changed() -> void:

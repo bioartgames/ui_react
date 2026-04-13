@@ -1,8 +1,39 @@
-## Undo-safe [member Control.wire_rules] edits for Dependency Graph (**[code]CB-058[/code]** follow-on): rebind, disconnect, [rule_id], greenfield append.
+## Undo-safe [member Control.wire_rules] edits for Dependency Graph (**[code]CB-058[/code]** follow-on): rebind, disconnect, [rule_id], [enabled], [trigger], greenfield append.
 class_name UiReactWireGraphEditService
 extends RefCounted
 
 const _WireRuleCatalogScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_wire_rule_catalog.gd")
+
+
+static func _is_valid_trigger_ordinal(ord: int) -> bool:
+	return (
+		ord == UiReactWireRule.TriggerKind.TEXT_CHANGED
+		or ord == UiReactWireRule.TriggerKind.SELECTION_CHANGED
+		or ord == UiReactWireRule.TriggerKind.TEXT_ENTERED
+	)
+
+
+## Ordinals for [member UiReactWireRule.trigger] in stable UI order (see [code]WIRING_LAYER.md[/code] §5).
+static func wire_trigger_kind_ordinals_in_ui_order() -> PackedInt32Array:
+	return PackedInt32Array(
+		[
+			UiReactWireRule.TriggerKind.TEXT_CHANGED,
+			UiReactWireRule.TriggerKind.SELECTION_CHANGED,
+			UiReactWireRule.TriggerKind.TEXT_ENTERED,
+		]
+	)
+
+
+static func wire_trigger_kind_label(kind_ord: int) -> String:
+	match kind_ord:
+		UiReactWireRule.TriggerKind.TEXT_CHANGED:
+			return "TEXT_CHANGED"
+		UiReactWireRule.TriggerKind.SELECTION_CHANGED:
+			return "SELECTION_CHANGED"
+		UiReactWireRule.TriggerKind.TEXT_ENTERED:
+			return "TEXT_ENTERED"
+		_:
+			return "trigger(%d)" % kind_ord
 
 
 static func duplicate_wire_rules_array(host: Control) -> Array[UiReactWireRule]:
@@ -119,6 +150,51 @@ static func try_commit_wire_rule_id(
 		mut3,
 		actions,
 		"Ui React: wire_rules[%d] rule_id" % rule_index,
+	)
+
+
+static func try_commit_wire_rule_enabled(
+	host: Control,
+	rule_index: int,
+	enabled: bool,
+	actions: UiReactActionController,
+) -> bool:
+	var mut_en: Callable = func(rule: UiReactWireRule) -> bool:
+		if rule.enabled == enabled:
+			return false
+		rule.enabled = enabled
+		return true
+	return try_mutate_wire_rule_at_index(
+		host,
+		rule_index,
+		mut_en,
+		actions,
+		"Ui React: wire_rules[%d] enabled" % rule_index,
+	)
+
+
+static func try_commit_wire_rule_trigger(
+	host: Control,
+	rule_index: int,
+	trigger_ordinal: int,
+	actions: UiReactActionController,
+) -> bool:
+	if not _is_valid_trigger_ordinal(trigger_ordinal):
+		push_warning("Ui React: invalid wire rule trigger ordinal: %d" % trigger_ordinal)
+		return false
+	var ord_copy := trigger_ordinal
+	var mut_tr: Callable = func(rule: UiReactWireRule) -> bool:
+		var target_k: UiReactWireRule.TriggerKind = ord_copy as UiReactWireRule.TriggerKind
+		if rule.trigger == target_k:
+			return false
+		rule.trigger = target_k
+		return true
+	return try_mutate_wire_rule_at_index(
+		host,
+		rule_index,
+		mut_tr,
+		actions,
+		"Ui React: wire_rules[%d] trigger" % rule_index,
 	)
 
 

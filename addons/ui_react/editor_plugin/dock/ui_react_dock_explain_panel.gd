@@ -25,6 +25,7 @@ const _REBIND_COMPUTED_SOURCE := 4
 var _plugin: EditorPlugin
 var _actions: UiReactActionController
 var _request_dock_refresh: Callable = Callable()
+var _on_wire_rule_row_focus: Callable = Callable()
 
 var _hint: RichTextLabel
 var _btn_refresh: Button
@@ -54,9 +55,15 @@ var _btn_move_computed_source_down: Button
 var _btn_remove_computed_source_slot: Button
 var _btn_copy_details: Button
 
+var _wire_payload_box: VBoxContainer
 var _wire_rule_id_row: HBoxContainer
 var _wire_rule_id_edit: LineEdit
 var _btn_wire_rule_id_apply: Button
+var _wire_enabled_row: HBoxContainer
+var _wire_enabled_cb: CheckBox
+var _wire_trigger_row: HBoxContainer
+var _wire_trigger_option: OptionButton
+var _wire_payload_block_commit: bool = false
 
 var _rebind_file_dialog: EditorFileDialog
 var _rebind_kind: int = _REBIND_NONE
@@ -88,6 +95,8 @@ var _auto_refresh_timer: Timer
 
 var _last_snap: Variant = null
 var _last_focus_id: String = ""
+## Scene-relative path for the graph scope host ([method refresh] selection); for wire list focus guard.
+var _last_focus_host_path: String = ""
 var _last_layout: Dictionary = {}
 var _narrative_cache: Dictionary = {}
 var _show_full_lists: bool = false
@@ -106,10 +115,12 @@ func setup(
 	plugin: EditorPlugin,
 	actions: UiReactActionController,
 	request_dock_refresh: Callable = Callable(),
+	on_wire_rule_row_focus: Callable = Callable(),
 ) -> void:
 	_plugin = plugin
 	_actions = actions
 	_request_dock_refresh = request_dock_refresh
+	_on_wire_rule_row_focus = on_wire_rule_row_focus
 	_build_ui()
 	var ei := _plugin.get_editor_interface()
 	if not ei.get_selection().selection_changed.is_connected(_on_editor_selection_changed):
@@ -161,6 +172,7 @@ func refresh() -> void:
 	_last_snap = snap
 	var hp: NodePath = _ExplainBuilderScript._host_path_from_root(root, n as Control)
 	_last_focus_id = _ExplainBuilderScript._control_id(hp)
+	_last_focus_host_path = str(hp)
 
 	_apply_visual_from_snap_safe(snap, _last_focus_id)
 
@@ -401,10 +413,12 @@ func _computed_source_index_from_selection() -> int:
 
 
 func _sync_wire_rule_id_row() -> void:
-	if _wire_rule_id_row == null:
+	if _wire_payload_box == null:
 		return
 	var show_row := false
 	var rid := ""
+	var en := true
+	var trig_ord := int(UiReactWireRule.TriggerKind.SELECTION_CHANGED)
 	if (
 		_plugin != null
 		and _selection_kind == _SEL_EDGE
@@ -429,12 +443,29 @@ func _sync_wire_rule_id_row() -> void:
 									host_n as Control
 								)
 								if wi >= 0 and wi < arr.size() and arr[wi] is UiReactWireRule:
-									rid = (arr[wi] as UiReactWireRule).rule_id
+									var rule := arr[wi] as UiReactWireRule
+									rid = rule.rule_id
+									en = rule.enabled
+									trig_ord = int(rule.trigger)
 									show_row = true
-	_wire_rule_id_row.visible = show_row
+	_wire_payload_box.visible = show_row
 	if _wire_rule_id_edit != null and show_row:
 		if _wire_rule_id_edit.text != rid:
 			_wire_rule_id_edit.text = rid
+	if _wire_enabled_cb != null and show_row:
+		_wire_payload_block_commit = true
+		_wire_enabled_cb.button_pressed = en
+		_wire_payload_block_commit = false
+	if _wire_trigger_option != null and show_row:
+		var pick := -1
+		for ti in range(_wire_trigger_option.item_count):
+			if _wire_trigger_option.get_item_id(ti) == trig_ord:
+				pick = ti
+				break
+		_wire_payload_block_commit = true
+		if pick >= 0:
+			_wire_trigger_option.select(pick)
+		_wire_payload_block_commit = false
 
 
 func _attempt_graph_edge_disconnect() -> void:
@@ -620,6 +651,66 @@ func _on_wire_rule_id_apply_pressed() -> void:
 	var host_n: Node = root.get_node(NodePath(wh))
 	if not _WireGraphEditScript.try_commit_wire_rule_id(
 		host_n as Control, wi, _wire_rule_id_edit.text, _actions
+	):
+		return
+	if _request_dock_refresh.is_valid():
+		_request_dock_refresh.call()
+	refresh()
+
+
+func _on_wire_enabled_toggled(pressed: bool) -> void:
+	if _wire_payload_block_commit or _plugin == null or _actions == null:
+		return
+	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.WIRE_FLOW:
+		return
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return
+	var ed: Dictionary = edges[idx] as Dictionary
+	if not _edge_allows_wire_rebind(ed, root, true) or not _edge_allows_wire_rebind(ed, root, false):
+		return
+	var wh := str(ed.get(&"wire_host_path", ""))
+	var wi := int(ed.get(&"wire_rule_index", -1))
+	var host_n: Node = root.get_node(NodePath(wh))
+	if not _WireGraphEditScript.try_commit_wire_rule_enabled(
+		host_n as Control, wi, pressed, _actions
+	):
+		_wire_payload_block_commit = true
+		_wire_enabled_cb.button_pressed = not pressed
+		_wire_payload_block_commit = false
+		return
+	if _request_dock_refresh.is_valid():
+		_request_dock_refresh.call()
+	refresh()
+
+
+func _on_wire_trigger_selected(index: int) -> void:
+	if _wire_payload_block_commit or _plugin == null or _actions == null or _wire_trigger_option == null:
+		return
+	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.WIRE_FLOW:
+		return
+	var ord := _wire_trigger_option.get_item_id(index)
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return
+	var ed: Dictionary = edges[idx] as Dictionary
+	if not _edge_allows_wire_rebind(ed, root, true) or not _edge_allows_wire_rebind(ed, root, false):
+		return
+	var wh := str(ed.get(&"wire_host_path", ""))
+	var wi := int(ed.get(&"wire_rule_index", -1))
+	var host_n: Node = root.get_node(NodePath(wh))
+	if not _WireGraphEditScript.try_commit_wire_rule_trigger(
+		host_n as Control, wi, ord, _actions
 	):
 		return
 	if _request_dock_refresh.is_valid():
@@ -1931,8 +2022,8 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 			]
 			plain += "Rule exports\n"
 			plain += "Input export %s → output export %s (Rebind wire input / output).\n\n" % [win, wout]
-			bb += "[b]Graph[/b]\n[b]Clear wire link[/b] clears both exports for this edge (undoable). Edit [code]rule_id[/code] in the row below when enabled.\n\n"
-			plain += "Graph\nClear wire link clears both exports for this edge (undoable). Edit rule_id in the row below when enabled.\n\n"
+			bb += "[b]Graph[/b]\n[b]Clear wire link[/b] clears both exports for this edge (undoable). Edit [code]rule_id[/code] (Apply), [code]enabled[/code], or [code]trigger[/code] below; use Inspector for deeper rule fields.\n\n"
+			plain += "Graph\nClear wire link clears both exports for this edge (undoable). Edit rule_id (Apply), enabled, or trigger below; use Inspector for deeper rule fields.\n\n"
 
 	if from_id == _last_focus_id or to_id == _last_focus_id:
 		bb += "[b]Relation to focus[/b]\nTouches the focus control directly.\n\n"
@@ -1943,6 +2034,27 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 
 	_set_details_both(bb, plain)
 	_sync_wire_rule_id_row()
+	_try_focus_wire_rule_list_from_edge(kind, edge_index)
+
+
+func _try_focus_wire_rule_list_from_edge(kind: int, edge_index: int) -> void:
+	if not _on_wire_rule_row_focus.is_valid():
+		return
+	if kind != _SnapScript.EdgeKind.WIRE_FLOW:
+		return
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	if edge_index < 0 or edge_index >= edges.size():
+		return
+	var ev: Variant = edges[edge_index]
+	if ev is not Dictionary:
+		return
+	var edf: Dictionary = ev as Dictionary
+	var wh := str(edf.get(&"wire_host_path", ""))
+	if wh.is_empty() or wh != _last_focus_host_path:
+		return
+	var wi := int(edf.get(&"wire_rule_index", -1))
+	if wi >= 0:
+		_on_wire_rule_row_focus.call(wi)
 
 
 func _edge_short_token(kind: int) -> String:
@@ -2220,10 +2332,15 @@ func _build_ui() -> void:
 	_details_scroll.add_child(_details)
 	_last_details_plain = "Select a node or edge in the graph to see details."
 
+	_wire_payload_box = VBoxContainer.new()
+	_wire_payload_box.visible = false
+	_wire_payload_box.add_theme_constant_override(&"separation", 4)
+	_wire_payload_box.tooltip_text = "Wire rule fields for the selected wire-flow edge (same subresource as Inspector)."
+	_visual_host.add_child(_wire_payload_box)
+
 	_wire_rule_id_row = HBoxContainer.new()
-	_wire_rule_id_row.visible = false
 	_wire_rule_id_row.add_theme_constant_override(&"separation", 6)
-	_visual_host.add_child(_wire_rule_id_row)
+	_wire_payload_box.add_child(_wire_rule_id_row)
 	var rl := Label.new()
 	rl.text = "rule_id:"
 	rl.add_theme_font_size_override(&"font_size", 12)
@@ -2238,6 +2355,36 @@ func _build_ui() -> void:
 	_btn_wire_rule_id_apply.tooltip_text = "Save rule_id on this wire_rules row (undoable)."
 	_btn_wire_rule_id_apply.pressed.connect(_on_wire_rule_id_apply_pressed)
 	_wire_rule_id_row.add_child(_btn_wire_rule_id_apply)
+
+	_wire_enabled_row = HBoxContainer.new()
+	_wire_enabled_row.add_theme_constant_override(&"separation", 6)
+	_wire_payload_box.add_child(_wire_enabled_row)
+	var el := Label.new()
+	el.text = "enabled:"
+	el.add_theme_font_size_override(&"font_size", 12)
+	_wire_enabled_row.add_child(el)
+	_wire_enabled_cb = CheckBox.new()
+	_wire_enabled_cb.text = "Rule runs when enabled"
+	_wire_enabled_cb.tooltip_text = "Toggle UiReactWireRule.enabled (undoable, one step)."
+	_wire_enabled_cb.toggled.connect(_on_wire_enabled_toggled)
+	_wire_enabled_row.add_child(_wire_enabled_cb)
+
+	_wire_trigger_row = HBoxContainer.new()
+	_wire_trigger_row.add_theme_constant_override(&"separation", 6)
+	_wire_payload_box.add_child(_wire_trigger_row)
+	var tl := Label.new()
+	tl.text = "trigger:"
+	tl.add_theme_font_size_override(&"font_size", 12)
+	_wire_trigger_row.add_child(tl)
+	_wire_trigger_option = OptionButton.new()
+	_wire_trigger_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_wire_trigger_option.tooltip_text = "UiReactWireRule.trigger — when the source widget fires (WIRING_LAYER §5)."
+	var tords: PackedInt32Array = _WireGraphEditScript.wire_trigger_kind_ordinals_in_ui_order()
+	for j in range(tords.size()):
+		var oid: int = int(tords[j])
+		_wire_trigger_option.add_item(_WireGraphEditScript.wire_trigger_kind_label(oid), oid)
+	_wire_trigger_option.item_selected.connect(_on_wire_trigger_selected)
+	_wire_trigger_row.add_child(_wire_trigger_option)
 
 	_details_buttons = HBoxContainer.new()
 	_details_buttons.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -2366,6 +2513,7 @@ func _clear_stale_snapshot() -> void:
 	_last_edge_to_id = ""
 	_last_edge_kind = -1
 	_last_edge_label = ""
+	_last_focus_host_path = ""
 	_selection_kind = _SEL_NONE
 	_update_focus_button_state()
 	if _graph_view:
