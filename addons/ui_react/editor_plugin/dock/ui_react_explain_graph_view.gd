@@ -18,6 +18,8 @@ signal edge_disconnect_requested(edge_index: int)
 signal context_menu_requested(at_local_pos: Vector2)
 ## Right-click on empty canvas (no node/edge hit). Does **not** change selection.
 signal canvas_view_menu_requested(at_local_pos: Vector2)
+## Left **double-click** after [method _pick]: panel runs the same **Focus in Inspector** path as the context menu.
+signal inspector_focus_selection_requested()
 
 const _Snap := preload("res://addons/ui_react/editor_plugin/models/ui_react_explain_graph_snapshot.gd")
 
@@ -620,6 +622,17 @@ func _gui_input(event: InputEvent) -> void:
 			return
 		if mb.button_index == MOUSE_BUTTON_LEFT:
 			if mb.pressed:
+				if (
+					not _reconnect_active
+					and not _shift_reconnect_pending
+					and not _newlink_active
+					and not _newlink_pending
+					and mb.double_click
+				):
+					_pick(mb.position)
+					inspector_focus_selection_requested.emit()
+					accept_event()
+					return
 				if _try_begin_ctrl_shift_newlink(
 					mb.position, mb.ctrl_pressed, mb.shift_pressed
 				):

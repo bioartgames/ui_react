@@ -2704,6 +2704,10 @@ func _on_focus_inspector_pressed() -> void:
 		_focus_edge_in_editor(_graph_selected_edge_index, ei, root)
 
 
+func _on_graph_inspector_focus_selection_requested() -> void:
+	_on_focus_inspector_pressed()
+
+
 func _focus_node_in_editor(node_id: String, ei: EditorInterface, root: Node) -> void:
 	if node_id.begins_with("ctrl:"):
 		var path_str := node_id.substr(5)
@@ -3483,6 +3487,7 @@ func _build_ui() -> void:
 	_graph_view.custom_minimum_size = Vector2(280, 200)
 	_graph_view.node_selected.connect(_on_graph_node)
 	_graph_view.edge_selected.connect(_on_graph_edge)
+	_graph_view.inspector_focus_selection_requested.connect(_on_graph_inspector_focus_selection_requested)
 	_graph_view.selection_cleared.connect(_on_graph_cleared)
 	_graph_view.reconnect_drag_ended.connect(_on_graph_reconnect_drag_ended)
 	_graph_view.newlink_drag_ended.connect(_on_graph_newlink_drag_ended)
@@ -3500,6 +3505,7 @@ func _build_ui() -> void:
 	_graph_view.tooltip_text = (
 		"Pan: middle-drag. Zoom: wheel. Right-click empty canvas: Refresh, Fit, Create state, filters, presets. "
 		+ "Right-click node or edge: Focus, wire rules, rebind/clear, copy details. "
+		+ "Double-click node or edge: open in Inspector (same as Focus — node resource or edge edit target). "
 		+ "Reconnect: select an edge, then Shift+drag from the source endpoint node to another state node (undoable). "
 		+ "New link: clear edge selection, Ctrl+Shift+drag from a state donor to a control (empty binding and/or new wire rule) or to a computed (fill/append sources; file-backed computed resolves from scene binds). "
 		+ "Delete/Backspace with an edge selected clears optional bindings, computed sources, or wire links when the context menu would allow it."
