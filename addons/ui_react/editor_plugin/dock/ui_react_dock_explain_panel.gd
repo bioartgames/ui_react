@@ -43,6 +43,8 @@ var _btn_rebind_binding: Button
 var _btn_rebind_wire_in: Button
 var _btn_rebind_wire_out: Button
 var _btn_rebind_computed_source: Button
+var _btn_clear_optional_binding: Button
+var _btn_remove_computed_dependency: Button
 var _btn_copy_details: Button
 
 var _rebind_file_dialog: EditorFileDialog
@@ -227,6 +229,114 @@ func _update_focus_button_state() -> void:
 		_btn_rebind_wire_out.disabled = not _can_rebind_wire_endpoint(false)
 	if _btn_rebind_computed_source != null:
 		_btn_rebind_computed_source.disabled = not _can_rebind_computed_source()
+	if _btn_clear_optional_binding != null:
+		_btn_clear_optional_binding.disabled = not _can_disconnect_binding_edge()
+	if _btn_remove_computed_dependency != null:
+		_btn_remove_computed_dependency.disabled = not _can_disconnect_computed_source()
+
+
+func _can_disconnect_binding_edge() -> bool:
+	if not _can_rebind_binding_edge():
+		return false
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return false
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return false
+	var ev: Variant = edges[idx]
+	if ev is not Dictionary:
+		return false
+	var ed: Dictionary = ev as Dictionary
+	var hp := str(ed.get(&"host_path", ""))
+	var bp := str(ed.get(&"binding_property", ""))
+	if bp.is_empty():
+		bp = str(ed.get(&"label", ""))
+	if hp.is_empty() or bp.is_empty():
+		return false
+	if not root.has_node(NodePath(hp)):
+		return false
+	var n: Node = root.get_node(NodePath(hp))
+	if not (n is Control):
+		return false
+	var host := n as Control
+	var comp := UiReactScannerService.get_component_name_from_script(host.get_script() as Script)
+	if comp.is_empty():
+		return false
+	var prop_sn := StringName(bp)
+	if not UiReactGraphNewBindingService.binding_export_is_optional(comp, prop_sn):
+		return false
+	return host.get(prop_sn) != null
+
+
+func _can_disconnect_computed_source() -> bool:
+	return _can_rebind_computed_source()
+
+
+func _attempt_graph_edge_disconnect() -> void:
+	if _plugin == null or _actions == null:
+		return
+	if _selection_kind != _SEL_EDGE or _graph_selected_edge_index < 0:
+		return
+	var root := _plugin.get_editor_interface().get_edited_scene_root()
+	if root == null:
+		return
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return
+	var ev: Variant = edges[idx]
+	if ev is not Dictionary:
+		return
+	var ed: Dictionary = ev as Dictionary
+	var k := int(ed.get(&"kind", -1))
+	var committed := false
+	if k == _SnapScript.EdgeKind.BINDING:
+		if not _can_disconnect_binding_edge():
+			push_warning(
+				"Ui React: clear binding only for optional exports with a current assignment (use Inspector for required slots)."
+			)
+			return
+		var hp := str(ed.get(&"host_path", ""))
+		var bp := str(ed.get(&"binding_property", ""))
+		if bp.is_empty():
+			bp = str(ed.get(&"label", ""))
+		var host_n: Node = root.get_node(NodePath(hp))
+		var comp := UiReactScannerService.get_component_name_from_script((host_n as Control).get_script() as Script)
+		committed = UiReactGraphNewBindingService.try_commit_clear_binding_export(
+			host_n as Control, comp, StringName(bp), _actions
+		)
+	elif k == _SnapScript.EdgeKind.COMPUTED_SOURCE:
+		if not _can_disconnect_computed_source():
+			push_warning("Ui React: cannot clear this computed source (refresh the graph or check host path).")
+			return
+		var hp_c := str(ed.get(&"host_path", ""))
+		var ctx := str(ed.get(&"computed_context", ""))
+		var csi := int(ed.get(&"computed_source_index", -1))
+		var host_c: Node = root.get_node(NodePath(hp_c))
+		committed = UiReactComputedGraphRebind.try_commit_clear_source(host_c as Control, ctx, csi, _actions)
+	else:
+		push_warning("Ui React: Delete only clears binding or computed-source edges (not wire flow).")
+		return
+	if not committed:
+		return
+	if _request_dock_refresh.is_valid():
+		_request_dock_refresh.call()
+	refresh()
+
+
+func _on_clear_optional_binding_pressed() -> void:
+	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.BINDING:
+		return
+	_attempt_graph_edge_disconnect()
+
+
+func _on_remove_computed_dependency_pressed() -> void:
+	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.COMPUTED_SOURCE:
+		return
+	_attempt_graph_edge_disconnect()
 
 
 func _edge_allows_binding_rebind(ed: Dictionary, root: Node) -> bool:
@@ -592,6 +702,12 @@ func _on_graph_newlink_drag_ended(donor_id: String, target_id: String) -> void:
 	if _request_dock_refresh.is_valid():
 		_request_dock_refresh.call()
 	refresh()
+
+
+func _on_graph_edge_disconnect_requested(edge_idx: int) -> void:
+	if edge_idx != _graph_selected_edge_index:
+		return
+	_attempt_graph_edge_disconnect()
 
 
 func _try_commit_binding_rebind_from_edge(ed: Dictionary, ui_st: UiState, root: Node) -> bool:
@@ -1300,9 +1416,21 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 	if kind == _SnapScript.EdgeKind.BINDING:
 		var hp := str(ed.get(&"host_path", ""))
 		var bp := str(ed.get(&"binding_property", ""))
+		if bp.is_empty():
+			bp = str(ed.get(&"label", label))
 		if not hp.is_empty():
 			bb += "[b]Where to edit[/b]\nInspector on host [code]%s[/code], export [code]%s[/code].\n\n" % [hp, bp]
 			plain += "Where to edit\nInspector on host %s, export %s.\n\n" % [hp, bp]
+			if _plugin != null:
+				var ei2 := _plugin.get_editor_interface()
+				var root2 := ei2.get_edited_scene_root()
+				if root2 != null and root2.has_node(NodePath(hp)):
+					var hn: Node = root2.get_node(NodePath(hp))
+					if hn is Control:
+						var comp2 := UiReactScannerService.get_component_name_from_script((hn as Control).get_script() as Script)
+						if UiReactGraphNewBindingService.binding_export_is_optional(comp2, StringName(bp)):
+							bb += "[b]Graph[/b]\nUse [b]Clear optional binding[/b] below to set this export to empty (undoable).\n\n"
+							plain += "Graph\nUse Clear optional binding below to set this export to empty (undoable).\n\n"
 	elif kind == _SnapScript.EdgeKind.COMPUTED_SOURCE:
 		var hp2 := str(ed.get(&"host_path", ""))
 		var si := int(ed.get(&"computed_source_index", -1))
@@ -1318,13 +1446,15 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 			plain_w += " %s" % hp2
 		bb += ".\n\n"
 		plain += plain_w + ".\n\n"
+		bb += "[b]Graph[/b]\nUse [b]Remove computed dependency[/b] below to clear this [code]sources[/code] slot (undoable).\n\n"
+		plain += "Graph\nUse Remove computed dependency below to clear this sources slot (undoable).\n\n"
 		var cc := str(ed.get(&"computed_context", ""))
 		if not cc.is_empty():
-			bb += "[b]Computed owner[/b]\n[code]%s[/code], [code]sources[%d][/code] — target for [b]Rebind computed source…[/b].\n\n" % [
+			bb += "[b]Computed owner[/b]\n[code]%s[/code], [code]sources[%d][/code] — target for [b]Rebind computed source…[/b] or [b]Remove computed dependency[/b].\n\n" % [
 				cc,
 				si,
 			]
-			plain += "Computed owner\n%s, sources[%d] — target for Rebind computed source….\n\n" % [cc, si]
+			plain += "Computed owner\n%s, sources[%d] — target for Rebind computed source… or Remove computed dependency.\n\n" % [cc, si]
 	elif kind == _SnapScript.EdgeKind.WIRE_FLOW:
 		var wh := str(ed.get(&"wire_host_path", ""))
 		var wi := int(ed.get(&"wire_rule_index", -1))
@@ -1599,6 +1729,7 @@ func _build_ui() -> void:
 	_graph_view.selection_cleared.connect(_on_graph_cleared)
 	_graph_view.reconnect_drag_ended.connect(_on_graph_reconnect_drag_ended)
 	_graph_view.newlink_drag_ended.connect(_on_graph_newlink_drag_ended)
+	_graph_view.edge_disconnect_requested.connect(_on_graph_edge_disconnect_requested)
 	_graph_view.set_reconnect_handlers(
 		Callable(self, &"_reconnect_can_start_cb"),
 		Callable(self, &"_reconnect_is_valid_target_cb")
@@ -1610,7 +1741,8 @@ func _build_ui() -> void:
 	_graph_view.tooltip_text = (
 		"Pan: middle-drag. Zoom: wheel. Select node or edge. "
 		+ "Reconnect: select an edge, then Shift+drag from the source endpoint node to another state node (undoable). "
-		+ "New link: clear edge selection, Ctrl+Shift+drag from a state/computed donor to a control (empty binding) or embedded computed (fill/append sources; undoable)."
+		+ "New link: clear edge selection, Ctrl+Shift+drag from a state/computed donor to a control (empty binding) or embedded computed (fill/append sources; undoable). "
+		+ "Delete/Backspace with an edge selected clears optional bindings or computed sources when the details buttons allow it."
 	)
 	_visual_host.add_child(_graph_view)
 
@@ -1683,6 +1815,25 @@ func _build_ui() -> void:
 	_btn_rebind_computed_source.disabled = true
 	_btn_rebind_computed_source.pressed.connect(_on_rebind_computed_source_pressed)
 	_details_buttons.add_child(_btn_rebind_computed_source)
+
+	_btn_clear_optional_binding = Button.new()
+	_btn_clear_optional_binding.text = "Clear optional binding"
+	_btn_clear_optional_binding.tooltip_text = (
+		"Set this binding export to empty for optional registry slots only (undoable). "
+		+ "Required exports must be cleared in the Inspector."
+	)
+	_btn_clear_optional_binding.disabled = true
+	_btn_clear_optional_binding.pressed.connect(_on_clear_optional_binding_pressed)
+	_details_buttons.add_child(_btn_clear_optional_binding)
+
+	_btn_remove_computed_dependency = Button.new()
+	_btn_remove_computed_dependency.text = "Remove computed dependency"
+	_btn_remove_computed_dependency.tooltip_text = (
+		"Clear this UiComputed* sources[] slot to null (undoable). Requires computed_context on the edge; Refresh if missing."
+	)
+	_btn_remove_computed_dependency.disabled = true
+	_btn_remove_computed_dependency.pressed.connect(_on_remove_computed_dependency_pressed)
+	_details_buttons.add_child(_btn_remove_computed_dependency)
 
 	_btn_copy_details = Button.new()
 	_btn_copy_details.text = "Copy details"

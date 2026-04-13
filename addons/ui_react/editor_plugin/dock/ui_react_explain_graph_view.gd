@@ -12,6 +12,8 @@ signal reconnect_drag_ended(edge_index: int, origin_node_id: String, target_node
 signal newlink_drag_started(donor_node_id: String)
 ## [param target_node_id] empty if cancel / no hit; requires no edge selected when starting (**[code]CB-058[/code]** phase 2b).
 signal newlink_drag_ended(donor_node_id: String, target_node_id: String)
+## **Delete** / **Backspace** with an edge selected (**[code]CB-058[/code]** slice 1); panel decides if disconnect applies.
+signal edge_disconnect_requested(edge_index: int)
 
 const _Snap := preload("res://addons/ui_react/editor_plugin/models/ui_react_explain_graph_snapshot.gd")
 
@@ -506,6 +508,17 @@ func _try_begin_ctrl_shift_newlink(screen_local: Vector2, ctrl: bool, shift: boo
 
 
 func _gui_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and (event.keycode == KEY_DELETE or event.keycode == KEY_BACKSPACE):
+		if (
+			_selected_edge_index >= 0
+			and not _reconnect_active
+			and not _shift_reconnect_pending
+			and not _newlink_active
+			and not _newlink_pending
+		):
+			edge_disconnect_requested.emit(_selected_edge_index)
+			accept_event()
+		return
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		if _reconnect_active or _shift_reconnect_pending:
 			_clear_reconnect_drag_state()

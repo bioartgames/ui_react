@@ -1,6 +1,35 @@
-## Lists empty registry binding exports compatible with a donor [UiState] for Dependency Graph **new link** (**[code]CB-058[/code]** phase 2b).
+## Lists empty registry binding exports compatible with a donor [UiState] for Dependency Graph **new link** (**[code]CB-058[/code]** phase 2b); optional-only **clear** for slice1 disconnect.
 class_name UiReactGraphNewBindingService
 extends RefCounted
+
+
+static func binding_export_is_optional(component: String, prop: StringName) -> bool:
+	if component.is_empty() or prop == &"":
+		return false
+	var bindings: Array = UiReactComponentRegistry.BINDINGS_BY_COMPONENT.get(component, [])
+	for b in bindings:
+		if b.get("property", &"") == prop:
+			return bool(b.get("optional", true))
+	return false
+
+
+static func try_commit_clear_binding_export(
+	host: Control,
+	component: String,
+	prop: StringName,
+	actions: UiReactActionController,
+) -> bool:
+	if host == null or actions == null or prop == &"":
+		return false
+	if not binding_export_is_optional(component, prop):
+		push_warning("Ui React: graph clear refused — %s is not an optional binding for this control." % str(prop))
+		return false
+	if not prop in host:
+		return false
+	if host.get(prop) == null:
+		return false
+	actions.assign_property_variant(host, prop, null, "Ui React: Clear %s (graph)" % str(prop))
+	return true
 
 
 static func list_assignable_empty_exports(host: Control, component: String, donor: UiState) -> Array[Dictionary]:

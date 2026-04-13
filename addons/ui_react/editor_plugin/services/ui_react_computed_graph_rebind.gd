@@ -39,6 +39,43 @@ static func try_commit_replace_source(
 	new_src: UiState,
 	actions: UiReactActionController,
 ) -> bool:
+	if new_src == null:
+		return false
+	return _try_commit_sources_index(
+		host,
+		computed_context,
+		source_index,
+		new_src,
+		actions,
+		"Ui React: computed sources[%d] (%s)" % [source_index, computed_context],
+	)
+
+
+## Clears [code]sources[source_index][/code] to [code]null[/code] (**[code]CB-058[/code]** slice 1 graph disconnect).
+static func try_commit_clear_source(
+	host: Control,
+	computed_context: String,
+	source_index: int,
+	actions: UiReactActionController,
+) -> bool:
+	return _try_commit_sources_index(
+		host,
+		computed_context,
+		source_index,
+		null,
+		actions,
+		"Ui React: Clear computed sources[%d] (%s)" % [source_index, computed_context],
+	)
+
+
+static func _try_commit_sources_index(
+	host: Control,
+	computed_context: String,
+	source_index: int,
+	new_value: Variant,
+	actions: UiReactActionController,
+	undo_label: String,
+) -> bool:
 	if host == null or actions == null or computed_context.is_empty():
 		return false
 	var c0: Variant = try_resolve_computed(host, computed_context)
@@ -65,9 +102,9 @@ static func try_commit_replace_source(
 
 	var new_subtree: Variant
 	if rest.is_empty():
-		new_subtree = _patch_computed_leaf(first_child, source_index, new_src)
+		new_subtree = _patch_computed_leaf(first_child, source_index, new_value)
 	else:
-		new_subtree = _mutate_path(first_child, rest, source_index, new_src)
+		new_subtree = _mutate_path(first_child, rest, source_index, new_value)
 	if new_subtree == null:
 		return false
 
@@ -75,12 +112,7 @@ static func try_commit_replace_source(
 	match kind:
 		&"bind":
 			var prop: StringName = head[&"export"]
-			actions.assign_property_variant(
-				host,
-				prop,
-				new_subtree,
-				"Ui React: computed sources[%d] (%s)" % [source_index, computed_context]
-			)
+			actions.assign_property_variant(host, prop, new_subtree, undo_label)
 			return true
 		&"wire":
 			var wi: int = int(head[&"rule_index"])
@@ -146,9 +178,9 @@ static func try_commit_append_or_fill_source(
 
 	var new_subtree: Variant
 	if rest.is_empty():
-		new_subtree = _patch_computed_leaf_write_index(first_child, idx, new_src)
+		new_subtree = _patch_computed_leaf_write_index(first_child, idx, new_src as Variant)
 	else:
-		new_subtree = _mutate_path_write_index(first_child, rest, idx, new_src)
+		new_subtree = _mutate_path_write_index(first_child, rest, idx, new_src as Variant)
 	if new_subtree == null:
 		return false
 
@@ -214,7 +246,7 @@ static func _source_index_for_fill_or_append(arr: Array) -> int:
 	return -1
 
 
-static func _patch_computed_leaf_write_index(cur: Variant, source_index: int, new_src: UiState) -> Variant:
+static func _patch_computed_leaf_write_index(cur: Variant, source_index: int, new_src: Variant) -> Variant:
 	if not (cur is UiComputedStringState or cur is UiComputedBoolState):
 		return null
 	var c: Resource = cur as Resource
@@ -235,7 +267,7 @@ static func _patch_computed_leaf_write_index(cur: Variant, source_index: int, ne
 	return c2
 
 
-static func _mutate_path_write_index(cur: Variant, path: String, source_index: int, new_src: UiState) -> Variant:
+static func _mutate_path_write_index(cur: Variant, path: String, source_index: int, new_src: Variant) -> Variant:
 	if path.is_empty():
 		return _patch_computed_leaf_write_index(cur, source_index, new_src)
 	var step: Dictionary = _pop_segment_deep(cur, path)
@@ -389,7 +421,7 @@ static func _array_export_prefix(
 	}
 
 
-static func _patch_computed_leaf(cur: Variant, source_index: int, new_src: UiState) -> Variant:
+static func _patch_computed_leaf(cur: Variant, source_index: int, new_src: Variant) -> Variant:
 	if not (cur is UiComputedStringState or cur is UiComputedBoolState):
 		return null
 	var c: Resource = cur as Resource
@@ -407,7 +439,7 @@ static func _patch_computed_leaf(cur: Variant, source_index: int, new_src: UiSta
 	return c2
 
 
-static func _mutate_path(cur: Variant, path: String, source_index: int, new_src: UiState) -> Variant:
+static func _mutate_path(cur: Variant, path: String, source_index: int, new_src: Variant) -> Variant:
 	if path.is_empty():
 		return _patch_computed_leaf(cur, source_index, new_src)
 	var step: Dictionary = _pop_segment_deep(cur, path)
@@ -569,7 +601,7 @@ static func _commit_tab_config_field(
 			var ci: int = int(head[&"content_index"])
 			if ci < 0 or ci >= cfg.tab_content_states.size():
 				return false
-			cfg.tab_content_states[ci] = new_subtree as UiState
+			cfg.tab_content_states[ci] = new_subtree
 		_:
 			return false
 	actions.assign_property_variant(
