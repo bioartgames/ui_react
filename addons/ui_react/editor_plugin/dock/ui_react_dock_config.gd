@@ -19,6 +19,10 @@ const KEY_GROUP_MODE := "ui_react/plugin_group_mode"
 const KEY_IGNORED_UNUSED_STATE_PATHS := "ui_react/plugin_ignored_unused_state_paths"
 const KEY_GRAPH_SCOPE_PRESETS := "ui_react/plugin_graph_scope_presets_json"
 const KEY_GRAPH_ACTIVE_SCOPE_PRESET := "ui_react/plugin_graph_active_scope_preset_name"
+## Vertical split offset (px) between Dependency Graph canvas and details column; [code]-1[/code] = use engine default.
+const KEY_GRAPH_BODY_VSPLIT_OFFSET := "ui_react/plugin_graph_body_vsplit_offset"
+## Whether the graph color key row is visible by default (toggle persists).
+const KEY_GRAPH_LEGEND_VISIBLE := "ui_react/plugin_graph_legend_visible"
 
 const DEF_SHOW_ERRORS := true
 const DEF_SHOW_WARNINGS := true
@@ -64,6 +68,12 @@ static func register_default_project_settings() -> void:
 		added_defaults = true
 	if not ProjectSettings.has_setting(KEY_GRAPH_ACTIVE_SCOPE_PRESET):
 		ProjectSettings.set_setting(KEY_GRAPH_ACTIVE_SCOPE_PRESET, "")
+		added_defaults = true
+	if not ProjectSettings.has_setting(KEY_GRAPH_BODY_VSPLIT_OFFSET):
+		ProjectSettings.set_setting(KEY_GRAPH_BODY_VSPLIT_OFFSET, -1)
+		added_defaults = true
+	if not ProjectSettings.has_setting(KEY_GRAPH_LEGEND_VISIBLE):
+		ProjectSettings.set_setting(KEY_GRAPH_LEGEND_VISIBLE, true)
 		added_defaults = true
 	if added_defaults:
 		var err := ProjectSettings.save()

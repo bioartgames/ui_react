@@ -14,6 +14,7 @@ const _ExplainGraphViewScript := preload("res://addons/ui_react/editor_plugin/do
 const _WireRulesSectionScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_wire_rules_section.gd")
 const _SnapScript := preload("res://addons/ui_react/editor_plugin/models/ui_react_explain_graph_snapshot.gd")
 const _GraphFactoryScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_graph_resource_factory.gd")
+const _DockThemeScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_theme.gd")
 const _SEL_NONE := 0
 const _SEL_NODE := 1
 const _SEL_EDGE := 2
@@ -72,6 +73,10 @@ var _hint: RichTextLabel
 var _hidden_chrome_host: Control
 var _cb_full_lists: CheckBox
 var _visual_host: VBoxContainer
+var _graph_body_split: VSplitContainer
+var _below_graph_column: VBoxContainer
+var _graph_split_restored: bool = false
+var _graph_split_restore_attempts: int = 0
 var _legend_row: HBoxContainer
 var _cb_bind: CheckBox
 var _cb_computed: CheckBox
@@ -161,6 +166,8 @@ var _layout_max_edges: int = 400
 var _pinned_node_ids: PackedStringArray = PackedStringArray()
 var _scope_presets_cache: Array = []
 var _scope_preset_block_select: bool = false
+## When true, next [AcceptDialog] confirm from Save scope preset also pins [member _graph_selected_node_id].
+var _pin_pending_after_save: bool = false
 
 
 func setup(
@@ -172,8 +179,22 @@ func setup(
 	_actions = actions
 	_request_dock_refresh = request_dock_refresh
 	_build_ui()
+	if _details:
+		_DockThemeScript.apply_richtext_content(_details, _plugin)
+	if _hint:
+		_DockThemeScript.apply_richtext_content(_hint, _plugin)
+	_apply_graph_body_split_editor_theme()
+	_apply_legend_row_font_sizes()
+	_apply_wire_payload_label_font_sizes()
+	if _legend_row:
+		_legend_row.visible = bool(
+			ProjectSettings.get_setting(UiReactDockConfig.KEY_GRAPH_LEGEND_VISIBLE, true)
+		)
 	_rebuild_scope_preset_dropdown()
 	_sync_active_scope_preset_from_settings(true)
+	if not tree_exiting.is_connected(_on_explain_panel_tree_exiting):
+		tree_exiting.connect(_on_explain_panel_tree_exiting)
+	call_deferred(&"_restore_graph_body_split_offset")
 	var ei := _plugin.get_editor_interface()
 	if not ei.get_selection().selection_changed.is_connected(_on_editor_selection_changed):
 		ei.get_selection().selection_changed.connect(_on_editor_selection_changed)
@@ -317,14 +338,8 @@ func _update_focus_button_state() -> void:
 	_sync_wire_rule_id_row()
 
 
-func _can_pin_focused_node_to_preset() -> bool:
-	var actn: String = String(UiReactDockConfig.get_active_graph_scope_preset_name()).strip_edges()
-	return (
-		not actn.is_empty()
-		and actn.to_lower() != "default"
-		and _selection_kind == _SEL_NODE
-		and not _graph_selected_node_id.is_empty()
-	)
+func _can_pin_node_from_canvas_menu() -> bool:
+	return _selection_kind == _SEL_NODE and not _graph_selected_node_id.is_empty()
 
 
 func _resolve_wire_rules_host_control() -> Control:
@@ -689,11 +704,11 @@ func _fill_canvas_view_popup(popup: PopupMenu) -> void:
 	popup.add_item("Pin node", _CV_SCOPE_PIN)
 	popup.set_item_tooltip(
 		popup.item_count - 1,
-		"Pin the selected graph node id to the active preset (requires a named preset).",
+		"Pin the selected graph node to the active named preset. If the active scope is Default, you are prompted to save a named preset first (current settings + pin).",
 	)
 	var pin_idx := popup.get_item_index(_CV_SCOPE_PIN)
 	if pin_idx >= 0:
-		popup.set_item_disabled(pin_idx, not _can_pin_focused_node_to_preset())
+		popup.set_item_disabled(pin_idx, not _can_pin_node_from_canvas_menu())
 
 
 func _on_canvas_view_menu_id(id: int) -> void:
@@ -742,6 +757,9 @@ func _on_canvas_view_menu_id(id: int) -> void:
 	if id == _CV_TOGGLE_LEGEND:
 		if _legend_row != null:
 			_legend_row.visible = not _legend_row.visible
+			UiReactDockConfig.save_ui_preference(
+				UiReactDockConfig.KEY_GRAPH_LEGEND_VISIBLE, _legend_row.visible
+			)
 		return
 	if id == _CV_PRESET_DEFAULT:
 		_apply_scope_preset_by_name("")
@@ -2149,42 +2167,82 @@ func _on_full_lists_toggled(pressed: bool) -> void:
 		)
 
 
+func _narrative_anchor_kind(anchor_id: String) -> int:
+	if anchor_id.is_empty():
+		return -1
+	var nb: Dictionary = _last_layout.get(&"node_by_id", {}) as Dictionary
+	var d: Dictionary = nb.get(anchor_id, {}) as Dictionary
+	if d.is_empty():
+		return -1
+	return int(d.get(&"kind", -1))
+
+
+func _narrative_upstream_heading_bb_plain(anchor_kind: int) -> PackedStringArray:
+	if anchor_kind == _SnapScript.NodeKind.CONTROL:
+		return PackedStringArray(
+			[
+				"\n[b]Upstream[/b] (state/computed that flow into this control’s bindings):\n",
+				"\nUpstream (state/computed that flow into this control's bindings):\n",
+			]
+		)
+	return PackedStringArray(
+		[
+			"\n[b]Upstream[/b] (nodes that reach this anchor via declarative edges in this snapshot):\n",
+			"\nUpstream (nodes that reach this anchor via declarative edges in this snapshot):\n",
+		]
+	)
+
+
 func _narrative_sections_bb_plain(narr: Object) -> PackedStringArray:
 	var bb := ""
 	var plain := ""
 	if narr == null:
 		return PackedStringArray([bb, plain])
-	for line: String in narr.bound_state_lines:
+	var n_narr := narr as UiReactExplainGraphNarrative
+	if n_narr == null:
+		return PackedStringArray([bb, plain])
+	for line: String in n_narr.bound_state_lines:
 		bb += line
 		plain += _plain_from_bbcode_line(line)
-	bb += "\n[b]Upstream[/b] (state/computed that flow into this control’s bindings):\n"
-	plain += "\nUpstream (state/computed that flow into this control's bindings):\n"
-	if narr.upstream_lines.is_empty():
+	if not n_narr.omit_upstream_in_details:
+		var up_h := _narrative_upstream_heading_bb_plain(_narrative_anchor_kind(n_narr.anchor_id))
+		bb += up_h[0]
+		plain += up_h[1]
+		if n_narr.upstream_lines.is_empty():
+			bb += "(none)\n"
+			plain += "(none)\n"
+		else:
+			for line2: String in n_narr.upstream_lines:
+				bb += line2
+				plain += _plain_from_bbcode_line(line2)
+	bb += "\n[b]Downstream[/b] (from bound states in this snapshot)\n"
+	plain += "\nDownstream (from bound states in this snapshot)\n"
+	var dsl: PackedStringArray = n_narr.downstream_state_lines
+	var dcl: PackedStringArray = n_narr.downstream_control_lines
+	if dsl.is_empty() and dcl.is_empty():
 		bb += "(none)\n"
 		plain += "(none)\n"
 	else:
-		for line2: String in narr.upstream_lines:
-			bb += line2
-			plain += _plain_from_bbcode_line(line2)
-	bb += "\n[b]Downstream[/b] (nodes reachable from bound states):\n"
-	plain += "\nDownstream (nodes reachable from bound states):\n"
-	if narr.downstream_lines.is_empty():
-		bb += "(none)\n"
-		plain += "(none)\n"
-	else:
-		for line3: String in narr.downstream_lines:
-			bb += line3
-			plain += _plain_from_bbcode_line(line3)
+		if not dsl.is_empty():
+			bb += "[b]States / computed[/b]\n"
+			plain += "States / computed\n"
+			for line3: String in dsl:
+				bb += line3
+				plain += _plain_from_bbcode_line(line3)
+		if not dcl.is_empty():
+			bb += "[b]Controls[/b]\n"
+			plain += "Controls\n"
+			for line4: String in dcl:
+				bb += line4
+				plain += _plain_from_bbcode_line(line4)
+	bb += "\n" + _DETAILS_DECLARATIVE_ONE_LINER_BB
+	plain += "\n" + _plain_from_bbcode_line(_DETAILS_DECLARATIVE_ONE_LINER_BB)
 	return PackedStringArray([bb, plain])
 
 
 func _append_cycle_section_bb_plain(anchor_id: String) -> PackedStringArray:
-	var bb := "\n[b]Cycle candidates[/b] (static, state/computed edges only):\n"
-	var plain := "\nCycle candidates (static, state/computed edges only):\n"
 	if _last_snap == null:
-		bb += "(none)\n"
-		plain += "(none)\n"
-		return PackedStringArray([bb, plain])
+		return PackedStringArray(["", ""])
 	var snap: UiReactExplainGraphSnapshot = _last_snap as UiReactExplainGraphSnapshot
 	var is_hub := anchor_id == _last_focus_id
 	var cap := 999999 if (is_hub or _show_full_lists) else _CYCLE_SUMMARY_CAP
@@ -2200,9 +2258,9 @@ func _append_cycle_section_bb_plain(anchor_id: String) -> PackedStringArray:
 			if _id_in_packed(ids, anchor_id):
 				matching.append(cd)
 	if matching.is_empty():
-		bb += "(none)\n"
-		plain += "(none)\n"
-		return PackedStringArray([bb, plain])
+		return PackedStringArray(["", ""])
+	var bb := "\n[b]Cycle candidates[/b] (static, state/computed edges only):\n"
+	var plain := "\nCycle candidates (static, state/computed edges only):\n"
 	var n_show := mini(matching.size(), cap)
 	for i in n_show:
 		var sm := str(matching[i].get(&"summary", "?"))
@@ -2212,8 +2270,6 @@ func _append_cycle_section_bb_plain(anchor_id: String) -> PackedStringArray:
 	if more > 0:
 		bb += "• [i]+%d more[/i]\n" % more
 		plain += "• +%d more\n" % more
-	bb += "\n[i]Declarative graph only — not a runtime causality trace.[/i]\n"
-	plain += "\nDeclarative graph only — not a runtime causality trace.\n"
 	return PackedStringArray([bb, plain])
 
 
@@ -2253,6 +2309,10 @@ func _mismatch_banner_bb_plain(narr: Object) -> PackedStringArray:
 const _INCIDENT_EDGE_CAP := 8
 const _ORPHAN_LAYER := -512
 const _CYCLE_SUMMARY_CAP := 2
+## Single details-pane footer: declarative scope + static cycle hint ([method _narrative_sections_bb_plain]).
+const _DETAILS_DECLARATIVE_ONE_LINER_BB := (
+	"[i]Declarative snapshot only (not a runtime trace); cycle summaries are static candidates.[/i]\n"
+)
 
 
 func _id_in_packed(ids: PackedStringArray, needle: String) -> bool:
@@ -2308,9 +2368,9 @@ func _focus_relation_blurb_bb_plain(node_id: String, layout_focus_id: String, no
 func _node_headline_bb_plain(node_id: String, d: Dictionary, focus_id: String) -> PackedStringArray:
 	if node_id == focus_id:
 		var bb := "[b]Focus control[/b]\n"
-		bb += "This is the [code]UiReact*[/code] host you selected when building this graph. Relationships are [i]declarative[/i] (Inspector wiring), not a live runtime trace.\n\n"
+		bb += "This is the [code]UiReact*[/code] host you selected when refreshing this graph.\n\n"
 		var plain := "Focus control\n"
-		plain += "This is the UiReact* host you selected when building this graph. Relationships are declarative (Inspector wiring), not a live runtime trace.\n\n"
+		plain += "This is the UiReact* host you selected when refreshing this graph.\n\n"
 		return PackedStringArray([bb, plain])
 	var nk := int(d.get(&"kind", -1))
 	var short_l := str(d.get(&"short_label", ""))
@@ -2343,7 +2403,7 @@ func _fill_node_details(node_id: String) -> void:
 	var layout_focus := str(_last_layout.get(&"focus_id", ""))
 	var node_layer: Dictionary = _last_layout.get(&"node_layer", {}) as Dictionary
 
-	var bb := "[font_size=12]"
+	var bb := ""
 	var plain := ""
 	if narr != null:
 		var ns := _narrative_sections_bb_plain(narr)
@@ -2355,16 +2415,12 @@ func _fill_node_details(node_id: String) -> void:
 		var mm := _mismatch_banner_bb_plain(narr)
 		bb += mm[0]
 		plain += mm[1]
-	bb += "[/font_size]\n"
 
 	bb += "[b]On canvas[/b]\n"
 	plain += "On canvas\n"
 	var hl := _node_headline_bb_plain(node_id, d, layout_focus)
 	bb += hl[0]
 	plain += hl[1]
-	var rel := _focus_relation_blurb_bb_plain(node_id, layout_focus, node_layer)
-	bb += rel[0]
-	plain += rel[1]
 
 	var incident: Array[Dictionary] = []
 	for e: Variant in edges:
@@ -2404,6 +2460,10 @@ func _fill_node_details(node_id: String) -> void:
 			bb += "[i]+%d more in this graph[/i]\n\n" % overflow
 			plain += "+%d more in this graph\n\n" % overflow
 
+	var rel := _focus_relation_blurb_bb_plain(node_id, layout_focus, node_layer)
+	bb += rel[0]
+	plain += rel[1]
+
 	bb += "[b]Technical[/b]\n"
 	plain += "Technical\n"
 	var nk := int(d.get(&"kind", -1))
@@ -2437,36 +2497,19 @@ func _fill_node_details(node_id: String) -> void:
 	_set_details_both(bb, plain)
 
 
-func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String, edge_index: int) -> void:
-	var anchor_id := _edge_anchor_id(from_id, to_id)
-	var narr: Object = _get_narrative_cached(anchor_id) as Object
-	var token := _edge_short_token(kind)
+func _edge_details_summary_bb_plain(
+	from_id: String, to_id: String, kind: int, label: String, edge_index: int
+) -> PackedStringArray:
 	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
 	var ed: Dictionary = {}
 	if edge_index >= 0 and edge_index < edges.size():
 		var ev: Variant = edges[edge_index]
 		if ev is Dictionary:
 			ed = ev as Dictionary
-
 	var from_short := _short_label_for_node_id(from_id)
 	var to_short := _short_label_for_node_id(to_id)
-
-	var bb := "[font_size=12]"
-	var plain := ""
-	if narr != null:
-		var ns := _narrative_sections_bb_plain(narr)
-		bb += ns[0]
-		plain += ns[1]
-		var cyc := _append_cycle_section_bb_plain(anchor_id)
-		bb += cyc[0]
-		plain += cyc[1]
-		var mm := _mismatch_banner_bb_plain(narr)
-		bb += mm[0]
-		plain += mm[1]
-	bb += "[/font_size]\n"
-	bb += "[b]Selected edge[/b]\n"
-	plain += "Selected edge\n\n"
-
+	var bb := "[b]Selected edge[/b]\n"
+	var plain := "Selected edge\n\n"
 	match kind:
 		_SnapScript.EdgeKind.BINDING:
 			var bp := str(ed.get(&"binding_property", label))
@@ -2581,6 +2624,28 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 	if from_id == _last_focus_id or to_id == _last_focus_id:
 		bb += "[b]Relation to focus[/b]\nTouches the focus control directly.\n\n"
 		plain += "Relation to focus\nTouches the focus control directly.\n\n"
+	return PackedStringArray([bb, plain])
+
+
+func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String, edge_index: int) -> void:
+	var anchor_id := _edge_anchor_id(from_id, to_id)
+	var narr: Object = _get_narrative_cached(anchor_id) as Object
+	var token := _edge_short_token(kind)
+	var summ := _edge_details_summary_bb_plain(from_id, to_id, kind, label, edge_index)
+	var bb := summ[0]
+	var plain := summ[1]
+	if narr != null:
+		bb += "\n[b]Graph context[/b]\n"
+		plain += "\nGraph context\n"
+		var ns := _narrative_sections_bb_plain(narr)
+		bb += ns[0]
+		plain += ns[1]
+		var cyc := _append_cycle_section_bb_plain(anchor_id)
+		bb += cyc[0]
+		plain += cyc[1]
+		var mm := _mismatch_banner_bb_plain(narr)
+		bb += mm[0]
+		plain += mm[1]
 
 	bb += "[b]Technical[/b]\nKind token: [code]%s[/code]\nFrom id: [code]%s[/code]\nTo id: [code]%s[/code]\n" % [token, from_id, to_id]
 	plain += "Technical\nKind token: %s\nFrom id: %s\nTo id: %s\n" % [token, from_id, to_id]
@@ -2713,6 +2778,95 @@ func _on_copy_details_pressed() -> void:
 		DisplayServer.clipboard_set(_last_details_plain)
 
 
+func _editor_richtext_normal_font_size() -> int:
+	if _plugin == null:
+		return 13
+	var t := _DockThemeScript.editor_theme(_plugin)
+	if t != null and t.has_font_size(&"normal_font_size", &"RichTextLabel"):
+		return t.get_font_size(&"normal_font_size", &"RichTextLabel")
+	return 13
+
+
+## Wire payload row labels match editor [Label] (legend matches [RichTextLabel] body).
+func _editor_label_font_size() -> int:
+	if _plugin == null:
+		return 12
+	var t := _DockThemeScript.editor_theme(_plugin)
+	if t != null and t.has_font_size(&"font_size", &"Label"):
+		return t.get_font_size(&"font_size", &"Label")
+	return 12
+
+
+func _apply_legend_row_font_sizes() -> void:
+	if _legend_row == null or _plugin == null:
+		return
+	var fs := _editor_richtext_normal_font_size()
+	for ch: Node in _legend_row.get_children():
+		if ch is Label:
+			(ch as Label).add_theme_font_size_override(&"font_size", fs)
+
+
+func _apply_wire_payload_label_font_sizes() -> void:
+	if _plugin == null:
+		return
+	var fs := _editor_label_font_size()
+	for row: Node in [_wire_rule_id_row, _wire_enabled_row, _wire_trigger_row]:
+		if row == null:
+			continue
+		for ch: Node in (row as Node).get_children():
+			if ch is Label:
+				(ch as Label).add_theme_font_size_override(&"font_size", fs)
+
+
+func _apply_graph_body_split_editor_theme() -> void:
+	if _graph_body_split == null or _plugin == null:
+		return
+	_graph_body_split.add_theme_constant_override(&"minimum_grab_thickness", 10)
+	_graph_body_split.add_theme_constant_override(&"autohide", 0)
+	_DockThemeScript.apply_split_bar(_graph_body_split, _plugin)
+
+
+func _restore_graph_body_split_offset() -> void:
+	if _graph_split_restored or _graph_body_split == null:
+		return
+	var saved: Variant = ProjectSettings.get_setting(UiReactDockConfig.KEY_GRAPH_BODY_VSPLIT_OFFSET, -1)
+	var off := int(saved)
+	if off < 0:
+		_graph_split_restored = true
+		return
+	_graph_split_restore_attempts = 0
+	call_deferred(&"_apply_graph_body_split_offset_clamped", off)
+
+
+## Deferred until [VSplitContainer] has a valid height; see [member _graph_split_restore_attempts].
+func _apply_graph_body_split_offset_clamped(off: int) -> void:
+	if _graph_body_split == null:
+		return
+	var h := int(_graph_body_split.size.y)
+	if h <= 1:
+		_graph_split_restore_attempts += 1
+		if _graph_split_restore_attempts < 12:
+			call_deferred(&"_apply_graph_body_split_offset_clamped", off)
+		else:
+			_graph_split_restored = true
+		return
+	var graph_min := int(_graph_view.custom_minimum_size.y) if _graph_view else 120
+	var col_min := int(_details_scroll.custom_minimum_size.y) if _details_scroll else 120
+	var max_off := maxi(graph_min, h - col_min)
+	var clamped := clampi(off, graph_min, max_off)
+	_graph_body_split.split_offset = clamped
+	_graph_split_restored = true
+	_graph_split_restore_attempts = 0
+
+
+func _on_explain_panel_tree_exiting() -> void:
+	if _graph_body_split == null:
+		return
+	UiReactDockConfig.save_ui_preference(
+		UiReactDockConfig.KEY_GRAPH_BODY_VSPLIT_OFFSET, _graph_body_split.split_offset
+	)
+
+
 func _add_legend_swatch(row: HBoxContainer, col: Color, text: String) -> void:
 	var sw := ColorRect.new()
 	sw.custom_minimum_size = Vector2(12, 12)
@@ -2721,7 +2875,6 @@ func _add_legend_swatch(row: HBoxContainer, col: Color, text: String) -> void:
 	row.add_child(sw)
 	var lab := Label.new()
 	lab.text = text
-	lab.add_theme_font_size_override(&"font_size", 11)
 	row.add_child(lab)
 
 
@@ -2888,17 +3041,19 @@ func _on_scope_preset_selected(index: int) -> void:
 func _on_scope_save_as_pressed() -> void:
 	if _scope_save_name_dialog == null or _scope_save_name_edit == null:
 		return
+	_pin_pending_after_save = false
+	_scope_save_name_dialog.title = "Save scope preset"
+	_scope_save_name_dialog.dialog_text = ""
 	_scope_save_name_edit.text = ""
 	_scope_save_name_dialog.popup_centered()
 
 
-func _on_scope_save_name_confirmed() -> void:
-	var raw_name := _scope_save_name_edit.text.strip_edges() if _scope_save_name_edit else ""
+func _commit_upsert_preset_activate(rec: Dictionary) -> void:
+	var raw_name := String(rec.get(&"name", "")).strip_edges()
 	if raw_name.is_empty() or raw_name.to_lower() == "default":
 		push_warning("Ui React: choose a non-empty preset name other than “Default”.")
 		return
 	var arr: Array = UiReactDockConfig.load_graph_scope_presets_raw()
-	var rec := _capture_current_scope_settings(raw_name)
 	var replaced := false
 	var out: Array = []
 	for it: Variant in arr:
@@ -2909,14 +3064,50 @@ func _on_scope_save_name_confirmed() -> void:
 				replaced = true
 			else:
 				out.append(old)
-		else:
-			pass
 	if not replaced:
 		out.append(rec)
 	_persist_presets_array(out)
 	UiReactDockConfig.set_active_graph_scope_preset_name(raw_name)
 	_sync_active_scope_preset_from_settings(true)
 	refresh()
+
+
+func _on_scope_save_name_canceled() -> void:
+	_pin_pending_after_save = false
+	if _scope_save_name_dialog:
+		_scope_save_name_dialog.title = "Save scope preset"
+		_scope_save_name_dialog.dialog_text = ""
+
+
+func _on_scope_save_name_confirmed() -> void:
+	var raw_name := _scope_save_name_edit.text.strip_edges() if _scope_save_name_edit else ""
+	if raw_name.is_empty() or raw_name.to_lower() == "default":
+		push_warning("Ui React: choose a non-empty preset name other than “Default”.")
+		return
+	var rec := _capture_current_scope_settings(raw_name)
+	if _pin_pending_after_save:
+		_pin_pending_after_save = false
+		if _selection_kind == _SEL_NODE and not _graph_selected_node_id.is_empty():
+			var pins: PackedStringArray = PackedStringArray()
+			var pins_v: Variant = rec.get(&"pinned", PackedStringArray())
+			if pins_v is PackedStringArray:
+				pins = (pins_v as PackedStringArray).duplicate()
+			elif pins_v is Array:
+				for it in pins_v as Array:
+					var ps := String(it).strip_edges()
+					if not ps.is_empty():
+						pins.append(ps)
+			var sid := _graph_selected_node_id
+			var seen: Dictionary = {}
+			for i in range(pins.size()):
+				seen[pins[i]] = true
+			if not seen.has(sid):
+				pins.append(sid)
+				rec[&"pinned"] = pins
+	if _scope_save_name_dialog:
+		_scope_save_name_dialog.title = "Save scope preset"
+		_scope_save_name_dialog.dialog_text = ""
+	_commit_upsert_preset_activate(rec)
 
 
 func _on_scope_manage_pressed() -> void:
@@ -2954,12 +3145,19 @@ func _on_scope_manage_delete_pressed() -> void:
 
 
 func _on_pin_node_pressed() -> void:
-	var active: String = String(UiReactDockConfig.get_active_graph_scope_preset_name()).strip_edges()
-	if active.is_empty() or active.to_lower() == "default":
-		push_warning("Ui React: save or select a named scope preset before pinning nodes.")
-		return
 	if _selection_kind != _SEL_NODE or _graph_selected_node_id.is_empty():
 		push_warning("Ui React: select a graph node to pin.")
+		return
+	var active: String = String(UiReactDockConfig.get_active_graph_scope_preset_name()).strip_edges()
+	if active.is_empty() or active.to_lower() == "default":
+		_pin_pending_after_save = true
+		if _scope_save_name_dialog != null and _scope_save_name_edit != null:
+			_scope_save_name_dialog.title = "Save scope preset and pin node"
+			_scope_save_name_dialog.dialog_text = (
+				"Creates a named preset from the current scope settings and adds the selected graph node to its pin list."
+			)
+			_scope_save_name_edit.text = "Pinned scope"
+			_scope_save_name_dialog.popup_centered()
 		return
 	var pid := _graph_selected_node_id
 	for i in range(_pinned_node_ids.size()):
@@ -3237,6 +3435,7 @@ func _build_ui() -> void:
 	svb.add_child(_scope_save_name_edit)
 	_scope_save_name_dialog.add_child(svb)
 	_scope_save_name_dialog.confirmed.connect(_on_scope_save_name_confirmed)
+	_scope_save_name_dialog.canceled.connect(_on_scope_save_name_canceled)
 	add_child(_scope_save_name_dialog)
 
 	_scope_manage_dialog = AcceptDialog.new()
@@ -3262,11 +3461,10 @@ func _build_ui() -> void:
 
 	_legend_row = HBoxContainer.new()
 	_legend_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_legend_row.visible = false
+	_legend_row.visible = true
 	_visual_host.add_child(_legend_row)
 	var leg_title := Label.new()
 	leg_title.text = "Key:"
-	leg_title.add_theme_font_size_override(&"font_size", 11)
 	_legend_row.add_child(leg_title)
 	_add_legend_swatch(_legend_row, Color(0.25, 0.42, 0.32, 1.0), "Focus control")
 	_add_legend_swatch(_legend_row, Color(0.22, 0.24, 0.3, 1.0), "Control")
@@ -3274,7 +3472,6 @@ func _build_ui() -> void:
 	_add_legend_swatch(_legend_row, Color(0.28, 0.22, 0.4, 1.0), "Computed")
 	var leg_sp := Label.new()
 	leg_sp.text = "  |  Edges:"
-	leg_sp.add_theme_font_size_override(&"font_size", 11)
 	_legend_row.add_child(leg_sp)
 	_add_legend_swatch(_legend_row, Color(0.55, 0.55, 0.6, 1.0), "Binding")
 	_add_legend_swatch(_legend_row, Color(0.45, 0.65, 0.85, 1.0), "Computed src")
@@ -3307,7 +3504,19 @@ func _build_ui() -> void:
 		+ "New link: clear edge selection, Ctrl+Shift+drag from a state donor to a control (empty binding and/or new wire rule) or to a computed (fill/append sources; file-backed computed resolves from scene binds). "
 		+ "Delete/Backspace with an edge selected clears optional bindings, computed sources, or wire links when the context menu would allow it."
 	)
-	_visual_host.add_child(_graph_view)
+
+	_graph_body_split = VSplitContainer.new()
+	_graph_body_split.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_graph_body_split.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_graph_body_split.custom_minimum_size = Vector2(0, 220)
+	_graph_body_split.tooltip_text = "Drag to resize the graph and the details column."
+	_visual_host.add_child(_graph_body_split)
+	_graph_body_split.add_child(_graph_view)
+
+	_below_graph_column = VBoxContainer.new()
+	_below_graph_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_below_graph_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_graph_body_split.add_child(_below_graph_column)
 
 	_details_scroll = ScrollContainer.new()
 	_details_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -3315,7 +3524,7 @@ func _build_ui() -> void:
 	_details_scroll.custom_minimum_size = Vector2(0, 120)
 	_details_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_details_scroll.tooltip_text = "Details for the selected graph item."
-	_visual_host.add_child(_details_scroll)
+	_below_graph_column.add_child(_details_scroll)
 
 	_details = RichTextLabel.new()
 	_details.bbcode_enabled = true
@@ -3335,20 +3544,19 @@ func _build_ui() -> void:
 		_actions,
 		Callable(self, &"_after_wire_rules_section_commit"),
 	)
-	_visual_host.add_child(_wire_rules_section)
+	_below_graph_column.add_child(_wire_rules_section)
 
 	_wire_payload_box = VBoxContainer.new()
 	_wire_payload_box.visible = false
 	_wire_payload_box.add_theme_constant_override(&"separation", 4)
 	_wire_payload_box.tooltip_text = "Wire rule fields for the selected wire-flow edge (same subresource as Inspector)."
-	_visual_host.add_child(_wire_payload_box)
+	_below_graph_column.add_child(_wire_payload_box)
 
 	_wire_rule_id_row = HBoxContainer.new()
 	_wire_rule_id_row.add_theme_constant_override(&"separation", 6)
 	_wire_payload_box.add_child(_wire_rule_id_row)
 	var rl := Label.new()
 	rl.text = "rule_id:"
-	rl.add_theme_font_size_override(&"font_size", 12)
 	_wire_rule_id_row.add_child(rl)
 	_wire_rule_id_edit = LineEdit.new()
 	_wire_rule_id_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -3366,7 +3574,6 @@ func _build_ui() -> void:
 	_wire_payload_box.add_child(_wire_enabled_row)
 	var el := Label.new()
 	el.text = "enabled:"
-	el.add_theme_font_size_override(&"font_size", 12)
 	_wire_enabled_row.add_child(el)
 	_wire_enabled_cb = CheckBox.new()
 	_wire_enabled_cb.text = "Rule runs when enabled"
@@ -3379,7 +3586,6 @@ func _build_ui() -> void:
 	_wire_payload_box.add_child(_wire_trigger_row)
 	var tl := Label.new()
 	tl.text = "trigger:"
-	tl.add_theme_font_size_override(&"font_size", 12)
 	_wire_trigger_row.add_child(tl)
 	_wire_trigger_option = OptionButton.new()
 	_wire_trigger_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -3428,7 +3634,7 @@ func _clear_stale_snapshot() -> void:
 
 func _set_hint(t: String) -> void:
 	if _hint:
-		_hint.text = "[font_size=12]%s[/font_size]" % t
+		_hint.text = t
 
 
 func _set_idle() -> void:

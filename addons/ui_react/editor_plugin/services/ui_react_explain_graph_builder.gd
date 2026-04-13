@@ -507,6 +507,20 @@ static func _pack_ids_from_set(id_set: Dictionary) -> PackedStringArray:
 	return out
 
 
+static func _partition_down_by_kind(down: Dictionary, node_by_id: Dictionary) -> Array:
+	var down_states: Dictionary = {}
+	var down_ctrls: Dictionary = {}
+	for k: Variant in down:
+		var idstr := String(k)
+		var nl: Dictionary = node_by_id.get(idstr, {}) as Dictionary
+		var dkind := int(nl.get(&"kind", -1))
+		if dkind == _SnapshotScript.NodeKind.CONTROL:
+			down_ctrls[idstr] = true
+		else:
+			down_states[idstr] = true
+	return [down_states, down_ctrls]
+
+
 static func compute_narrative(
 	root: Node,
 	snap: UiReactExplainGraphSnapshot,
@@ -566,6 +580,8 @@ static func compute_narrative(
 				up[ps] = true
 				dq.append(ps)
 
+		(out as UiReactExplainGraphNarrative).omit_upstream_in_details = up.size() == seed_states.size()
+
 		var q2: Array[String] = []
 		for s: Variant in seed_states:
 			var s2 := String(s)
@@ -594,9 +610,6 @@ static func compute_narrative(
 					var comp := UiReactScannerService.get_component_name_from_script(ctl.get_script() as Script)
 					out.bound_state_lines.append(
 						"[b]Focus[/b]: [code]%s[/code]  path [code]%s[/code]  component [code]%s[/code]\n" % [ctl.name, str(focus_path), comp]
-					)
-					out.bound_state_lines.append(
-						"[i]Declarative graph only — not a runtime causality trace. Cycle rows are static candidates on state/computed edges.[/i]\n"
 					)
 					var nbind := 0
 					for e: Variant in edges_arr:
@@ -662,7 +675,13 @@ static func compute_narrative(
 		out.bound_state_lines.append("[i]Unknown node kind for narrative.[/i]\n")
 
 	_fill_lines_into(out.upstream_lines, up, node_by_id, max_vis)
-	_fill_lines_into(out.downstream_lines, down, node_by_id, max_vis)
+	var down_parts: Array = _partition_down_by_kind(down, node_by_id)
+	_fill_lines_into(
+		out.downstream_state_lines, down_parts[0] as Dictionary, node_by_id, max_vis
+	)
+	_fill_lines_into(
+		out.downstream_control_lines, down_parts[1] as Dictionary, node_by_id, max_vis
+	)
 	out.upstream_node_ids = _pack_ids_from_set(up)
 	out.downstream_node_ids = _pack_ids_from_set(down)
 	return out
