@@ -43,6 +43,11 @@ const _SCOPE_MAX_EDGES := 4000
 
 const _LEGEND_WRAP_THRESHOLD_PX := 520
 const _LEGEND_GROUP_FONT_COLOR := Color(0.72, 0.74, 0.8, 0.92)
+## Subtle outline so non-focus node swatches separate from the dock bar (focus chip keeps [member UiReactExplainGraphView.GRAPH_LEGEND_FOCUS_BORDER] at 2px).
+const _LEGEND_NODE_CHIP_BORDER := Color(1, 1, 1, 0.42)
+## Raised chip behind edge color strips so binding/computed/wire reads on dark UI.
+const _LEGEND_EDGE_SWATCH_BG := Color(0.11, 0.12, 0.14, 0.72)
+const _LEGEND_EDGE_SWATCH_BORDER := Color(1, 1, 1, 0.38)
 
 ## Selection [PopupMenu] ids — [method _fill_selection_actions_popup] / [method _on_selection_action_id].
 const _SEL_ACT_REBIND_BINDING := 1101
@@ -249,7 +254,7 @@ func refresh() -> void:
 		return
 	if not UiReactScannerService.is_react_node(n):
 		_set_hint_visible(true)
-		_set_hint("Selection is not a [code]UiReact*[/code] host (no ui_react_* script stem).")
+		_set_hint("Selection is not a [code]UiReact*[/code] control (no ui_react_* script stem).")
 		_clear_stale_snapshot()
 		return
 	if not (n == root or root.is_ancestor_of(n)):
@@ -2237,21 +2242,35 @@ func _narrative_upstream_heading_bb_plain(anchor_kind: int) -> PackedStringArray
 	if anchor_kind == _SnapScript.NodeKind.CONTROL:
 		return PackedStringArray(
 			[
-				"\n[b]Upstream[/b] (state/computed that flow into this control’s bindings):\n",
-				"\nUpstream (state/computed that flow into this control's bindings):\n",
+				"\n[b]Upstream[/b] (in this snapshot — state/computed feeding this control’s bindings):\n",
+				"\nUpstream (in this snapshot — state/computed feeding this control's bindings):\n",
 			]
 		)
 	return PackedStringArray(
 		[
-			"\n[b]Upstream[/b] (nodes that reach this anchor via declarative edges in this snapshot):\n",
-			"\nUpstream (nodes that reach this anchor via declarative edges in this snapshot):\n",
+			"\n[b]Upstream[/b] (in this snapshot — declarative reach toward this resource):\n",
+			"\nUpstream (in this snapshot — declarative reach toward this resource):\n",
 		]
 	)
 
 
-func _append_reachability_from_narrative(
-	narr: Object, for_edge_selection: bool = false
-) -> PackedStringArray:
+func _narrative_downstream_heading_bb_plain(anchor_kind: int) -> PackedStringArray:
+	if anchor_kind == _SnapScript.NodeKind.CONTROL:
+		return PackedStringArray(
+			[
+				"\n[b]Downstream[/b] (in this snapshot — states/computed or controls reached via this control’s bindings):\n",
+				"\nDownstream (in this snapshot — states/computed or controls reached via this control's bindings):\n",
+			]
+		)
+	return PackedStringArray(
+		[
+			"\n[b]Downstream[/b] (in this snapshot — states/computed or controls this resource feeds):\n",
+			"\nDownstream (in this snapshot — states/computed or controls this resource feeds):\n",
+		]
+	)
+
+
+func _append_reachability_from_narrative(narr: Object) -> PackedStringArray:
 	var bb := ""
 	var plain := ""
 	if narr == null:
@@ -2265,29 +2284,24 @@ func _append_reachability_from_narrative(
 	plain += up_h[1]
 	if n_narr.upstream_display_lines.is_empty():
 		if ak == _SnapScript.NodeKind.CONTROL:
-			var msg := "[i]No further upstream in this snapshot (only direct binding sources feed this host).[/i]\n"
+			var msg := "[i]No upstream in this snapshot—only direct bindings feed this control.[/i]\n"
 			bb += msg
 			plain += _plain_from_bbcode_line(msg)
-		elif (
-			for_edge_selection
-			and (
-				ak == _SnapScript.NodeKind.UI_STATE
-				or ak == _SnapScript.NodeKind.UI_COMPUTED
-			)
-		):
-			var msg_e := "[i]No declarative upstream for this resource in this snapshot.[/i]\n"
-			bb += msg_e
-			plain += _plain_from_bbcode_line(msg_e)
+		elif ak == _SnapScript.NodeKind.UI_STATE or ak == _SnapScript.NodeKind.UI_COMPUTED:
+			var msg_r := "[i]No upstream in this snapshot—no declarative sources reach this resource.[/i]\n"
+			bb += msg_r
+			plain += _plain_from_bbcode_line(msg_r)
 		else:
-			var msg2 := "[i]No upstream nodes in this snapshot beyond this anchor.[/i]\n"
+			var msg2 := "[i]No upstream in this snapshot.[/i]\n"
 			bb += msg2
 			plain += _plain_from_bbcode_line(msg2)
 	else:
 		for line2: String in n_narr.upstream_display_lines:
 			bb += line2
 			plain += _plain_from_bbcode_line(line2)
-	bb += "\n[b]Downstream[/b] (from bound states in this snapshot)\n"
-	plain += "\nDownstream (from bound states in this snapshot)\n"
+	var down_h := _narrative_downstream_heading_bb_plain(ak)
+	bb += down_h[0]
+	plain += down_h[1]
 	var dsl: PackedStringArray = n_narr.downstream_state_display_lines
 	var dcl: PackedStringArray = n_narr.downstream_control_display_lines
 	if dsl.is_empty() and dcl.is_empty():
@@ -2445,8 +2459,8 @@ func _connections_section_bb_plain(node_id: String, d: Dictionary, edges: Array)
 			return str(a.get(&"to_id", "")) < str(b.get(&"to_id", ""))
 	)
 	if host == null:
-		bb += "• [i]Could not list binding slots (host missing).[/i]\n"
-		plain += "• Could not list binding slots (host missing).\n"
+		bb += "• [i]Could not list binding slots (control missing).[/i]\n"
+		plain += "• Could not list binding slots (control missing).\n"
 		return PackedStringArray([bb, plain])
 	var comp := UiReactScannerService.get_component_name_from_script(host.get_script() as Script)
 	var rows: Array[Dictionary] = UiReactGraphNewBindingService.list_registry_binding_rows(host, comp)
@@ -2596,9 +2610,9 @@ func _focus_relation_blurb_bb_plain(node_id: String, layout_focus_id: String, no
 func _node_headline_bb_plain(node_id: String, d: Dictionary, focus_id: String) -> PackedStringArray:
 	if node_id == focus_id:
 		var bb := "[b]Focus control[/b]\n"
-		bb += "This is the [code]UiReact*[/code] host you selected when refreshing this graph.\n\n"
+		bb += "This is the [code]UiReact*[/code] control you selected when refreshing this graph.\n\n"
 		var plain := "Focus control\n"
-		plain += "This is the UiReact* host you selected when refreshing this graph.\n\n"
+		plain += "This is the UiReact* control you selected when refreshing this graph.\n\n"
 		return PackedStringArray([bb, plain])
 	var nk := int(d.get(&"kind", -1))
 	var short_l := str(d.get(&"short_label", ""))
@@ -2607,8 +2621,8 @@ func _node_headline_bb_plain(node_id: String, d: Dictionary, focus_id: String) -
 	var plain2 := "%s — " % label_disp
 	match nk:
 		_SnapScript.NodeKind.CONTROL:
-			bb2 += "Control ([code]UiReact*[/code] host) in this scoped graph.\n\n"
-			plain2 += "Control (UiReact* host) in this scoped graph.\n\n"
+			bb2 += "[code]UiReact*[/code] control in this scoped graph.\n\n"
+			plain2 += "UiReact* control in this scoped graph.\n\n"
 		_SnapScript.NodeKind.UI_STATE:
 			bb2 += "[code]UiState[/code] resource node (bindings, wires, or computed inputs).\n\n"
 			plain2 += "UiState resource node (bindings, wires, or computed inputs).\n\n"
@@ -2651,6 +2665,8 @@ func _fill_node_details(node_id: String) -> void:
 			plain += wrs[1]
 
 	if narr != null:
+		bb += "\n[b]Graph context[/b]\n"
+		plain += "\nGraph context\n"
 		var reach := _append_reachability_from_narrative(narr)
 		bb += reach[0]
 		plain += reach[1]
@@ -2774,20 +2790,20 @@ func _edge_details_summary_bb_plain(
 			plain += "%s feeds the UiReact* control %s's %s export.\n\n" % [from_short, to_short, bp]
 		_SnapScript.EdgeKind.COMPUTED_SOURCE:
 			bb += "[b]Computed source[/b]\n"
-			bb += "Upstream state [code]%s[/code] feeds an entry in the computed resource [code]%s[/code]'s [code]sources[/code] array.\n\n" % [
+			bb += "[code]%s[/code] feeds an entry in the computed resource [code]%s[/code]'s [code]sources[/code] array.\n\n" % [
 				from_short,
 				to_short,
 			]
 			plain += "Computed source\n"
-			plain += "Upstream state %s feeds an entry in the computed resource %s's sources array.\n\n" % [from_short, to_short]
+			plain += "%s feeds an entry in the computed resource %s's sources array.\n\n" % [from_short, to_short]
 		_SnapScript.EdgeKind.WIRE_FLOW:
 			bb += "[b]Wire flow[/b]\n"
-			bb += "A [code]wire_rules[/code] row connects input state [code]%s[/code] to output state [code]%s[/code].\n\n" % [
+			bb += "A [code]wire_rules[/code] row connects input [code]%s[/code] to output [code]%s[/code] (each endpoint is a state or computed resource in this snapshot).\n\n" % [
 				from_short,
 				to_short,
 			]
 			plain += "Wire flow\n"
-			plain += "A wire_rules row connects input state %s to output state %s.\n\n" % [from_short, to_short]
+			plain += "A wire_rules row connects input %s to output %s (each endpoint is a state or computed resource in this snapshot).\n\n" % [from_short, to_short]
 		_:
 			bb += "[b]Edge[/b]\nDeclarative dependency between two snapshot nodes.\n\n"
 			plain += "Edge\nDeclarative dependency between two snapshot nodes.\n\n"
@@ -2815,8 +2831,8 @@ func _edge_details_summary_bb_plain(
 		if bp.is_empty():
 			bp = str(ed.get(&"label", label))
 		if not hp.is_empty():
-			bb += "[b]Where to edit[/b]\nInspector on host [code]%s[/code], export [code]%s[/code].\n\n" % [hp, bp]
-			plain += "Where to edit\nInspector on host %s, export %s.\n\n" % [hp, bp]
+			bb += "[b]Where to edit[/b]\nInspector on control [code]%s[/code], export [code]%s[/code].\n\n" % [hp, bp]
+			plain += "Where to edit\nInspector on control %s, export %s.\n\n" % [hp, bp]
 			if _plugin != null:
 				var ei2 := _plugin.get_editor_interface()
 				var root2 := ei2.get_edited_scene_root()
@@ -2835,8 +2851,8 @@ func _edge_details_summary_bb_plain(
 		if si >= 0:
 			bb += " (index [code]%d[/code])" % si
 			plain_w += " (index %d)" % si
-		bb += " on the owning host"
-		plain_w += " on the owning host"
+		bb += " on the owning control"
+		plain_w += " on the owning control"
 		if not hp2.is_empty():
 			bb += " [code]%s[/code]" % hp2
 			plain_w += " %s" % hp2
@@ -2857,8 +2873,8 @@ func _edge_details_summary_bb_plain(
 		bb += "[b]Where to edit[/b]\n"
 		var plain_w2 := "Where to edit\n"
 		if not wh.is_empty():
-			bb += "Host [code]%s[/code], [code]wire_rules[/code]" % wh
-			plain_w2 += "Host %s, wire_rules" % wh
+			bb += "Control [code]%s[/code], [code]wire_rules[/code]" % wh
+			plain_w2 += "Control %s, wire_rules" % wh
 			if wi >= 0:
 				bb += " row [code]%d[/code]" % wi
 				plain_w2 += " row %d" % wi
@@ -2897,7 +2913,7 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 	if narr != null:
 		bb += "\n[b]Graph context[/b]\n"
 		plain += "\nGraph context\n"
-		var reach := _append_reachability_from_narrative(narr, true)
+		var reach := _append_reachability_from_narrative(narr)
 		bb += reach[0]
 		plain += reach[1]
 		var disc2 := _details_declarative_footer_bb_plain()
@@ -3150,11 +3166,24 @@ func _on_explain_panel_tree_exiting() -> void:
 func _add_legend_edge_sample(
 	row: HBoxContainer, col: Color, line_height_px: float, text: String, tip: String
 ) -> void:
+	var inner_h := maxf(2.0, line_height_px)
+	var wrap := Panel.new()
+	wrap.custom_minimum_size = Vector2(30, maxf(8.0, inner_h + 6.0))
+	wrap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var sb_wrap := StyleBoxFlat.new()
+	sb_wrap.bg_color = _LEGEND_EDGE_SWATCH_BG
+	sb_wrap.set_border_width_all(1)
+	sb_wrap.border_color = _LEGEND_EDGE_SWATCH_BORDER
+	sb_wrap.set_corner_radius_all(2)
+	wrap.add_theme_stylebox_override(&"panel", sb_wrap)
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	wrap.add_child(center)
 	var line := ColorRect.new()
-	line.custom_minimum_size = Vector2(22, maxf(2.0, line_height_px))
+	line.custom_minimum_size = Vector2(22, inner_h)
 	line.color = col
-	line.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(line)
+	center.add_child(line)
+	row.add_child(wrap)
 	var lab := Label.new()
 	lab.text = text
 	lab.tooltip_text = tip
@@ -3179,7 +3208,8 @@ func _add_legend_node_chip(
 		sb.set_border_width_all(2)
 		sb.border_color = _ExplainGraphViewScript.GRAPH_LEGEND_FOCUS_BORDER
 	else:
-		sb.set_border_width_all(0)
+		sb.set_border_width_all(1)
+		sb.border_color = _LEGEND_NODE_CHIP_BORDER
 	chip.add_theme_stylebox_override(&"panel", sb)
 	row.add_child(chip)
 	var lab := Label.new()
