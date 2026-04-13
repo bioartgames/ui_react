@@ -500,6 +500,32 @@ static func _fill_lines_into(
 		out_arr.append("• … (%d more)\n" % (id_set.size() - n))
 
 
+static func _sorted_id_keys(id_set: Dictionary) -> Array[String]:
+	var keys: Array[String] = []
+	for k: Variant in id_set:
+		keys.append(String(k))
+	keys.sort()
+	return keys
+
+
+## Human-only bullets for details pane (no technical ids); keys iterated in sorted order.
+static func _append_human_bullets_for_ids(
+	out_arr: PackedStringArray,
+	id_set: Dictionary,
+	node_by_id: Dictionary,
+	max_visible: int,
+) -> void:
+	var keys := _sorted_id_keys(id_set)
+	var n := mini(keys.size(), max_visible)
+	for i in range(n):
+		var idstr := keys[i]
+		var nl: Dictionary = node_by_id.get(idstr, {}) as Dictionary
+		var lab := str(nl.get(&"label", idstr)).strip_edges()
+		out_arr.append("• %s\n" % lab)
+	if keys.size() > n:
+		out_arr.append("• … (%d more)\n" % (keys.size() - n))
+
+
 static func _pack_ids_from_set(id_set: Dictionary) -> PackedStringArray:
 	var out := PackedStringArray()
 	for k: Variant in id_set:
@@ -548,6 +574,7 @@ static func compute_narrative(
 
 	var up: Dictionary = {}
 	var down: Dictionary = {}
+	var seed_states_meta: Dictionary = {}
 
 	if nk == _SnapshotScript.NodeKind.CONTROL:
 		var seed_states: Dictionary = {}
@@ -562,6 +589,7 @@ static func compute_narrative(
 			var fs := str(ed2.get(&"from_id", ""))
 			if not fs.is_empty():
 				seed_states[fs] = true
+		seed_states_meta = seed_states
 
 		var dq: Array[String] = []
 		for s: Variant in seed_states:
@@ -580,7 +608,7 @@ static func compute_narrative(
 				up[ps] = true
 				dq.append(ps)
 
-		(out as UiReactExplainGraphNarrative).omit_upstream_in_details = up.size() == seed_states.size()
+		(out as UiReactExplainGraphNarrative).omit_upstream_in_details = false
 
 		var q2: Array[String] = []
 		for s: Variant in seed_states:
@@ -611,26 +639,6 @@ static func compute_narrative(
 					out.bound_state_lines.append(
 						"[b]Focus[/b]: [code]%s[/code]  path [code]%s[/code]  component [code]%s[/code]\n" % [ctl.name, str(focus_path), comp]
 					)
-					var nbind := 0
-					for e: Variant in edges_arr:
-						if e is not Dictionary:
-							continue
-						var ed: Dictionary = e as Dictionary
-						if int(ed.get(&"kind", -1)) != _SnapshotScript.EdgeKind.BINDING:
-							continue
-						if str(ed.get(&"to_id", "")) != anchor_id:
-							continue
-						var fid := str(ed.get(&"from_id", ""))
-						var lab := str(ed.get(&"label", ""))
-						var nl: Dictionary = node_by_id.get(fid, {}) as Dictionary
-						var disp := str(nl.get(&"label", fid))
-						out.bound_state_lines.append("• Binding [code]%s[/code]: [code]%s[/code]  %s\n" % [lab, disp, fid])
-						nbind += 1
-						if nbind >= MAX_BINDING_LINES:
-							out.bound_state_lines.append("• …\n")
-							break
-					if nbind == 0:
-						out.bound_state_lines.append("(No direct [code]UiState[/code]/computed binding exports on this node.)\n")
 				else:
 					out.bound_state_lines.append("[i]Control anchor is not a UiReact* host in this scene.[/i]\n")
 			else:
@@ -674,14 +682,53 @@ static func compute_narrative(
 	else:
 		out.bound_state_lines.append("[i]Unknown node kind for narrative.[/i]\n")
 
-	_fill_lines_into(out.upstream_lines, up, node_by_id, max_vis)
-	var down_parts: Array = _partition_down_by_kind(down, node_by_id)
-	_fill_lines_into(
-		out.downstream_state_lines, down_parts[0] as Dictionary, node_by_id, max_vis
-	)
-	_fill_lines_into(
-		out.downstream_control_lines, down_parts[1] as Dictionary, node_by_id, max_vis
-	)
-	out.upstream_node_ids = _pack_ids_from_set(up)
-	out.downstream_node_ids = _pack_ids_from_set(down)
+	var narr_cast := out as UiReactExplainGraphNarrative
+	if nk == _SnapshotScript.NodeKind.CONTROL:
+		for sk: Variant in _sorted_id_keys(seed_states_meta):
+			narr_cast.seed_state_ids.append(String(sk))
+		var upstream_extra: Dictionary = {}
+		for k: Variant in up:
+			var ku := String(k)
+			if not seed_states_meta.has(ku):
+				upstream_extra[ku] = true
+		_append_human_bullets_for_ids(narr_cast.upstream_display_lines, upstream_extra, node_by_id, max_vis)
+		var down_disp: Dictionary = {}
+		for k2: Variant in down:
+			var kd := String(k2)
+			if seed_states_meta.has(kd):
+				continue
+			if kd == anchor_id:
+				continue
+			down_disp[kd] = true
+		var down_parts_c: Array = _partition_down_by_kind(down_disp, node_by_id)
+		_append_human_bullets_for_ids(
+			narr_cast.downstream_state_display_lines, down_parts_c[0] as Dictionary, node_by_id, max_vis
+		)
+		_append_human_bullets_for_ids(
+			narr_cast.downstream_control_display_lines, down_parts_c[1] as Dictionary, node_by_id, max_vis
+		)
+	elif nk == _SnapshotScript.NodeKind.UI_STATE or nk == _SnapshotScript.NodeKind.UI_COMPUTED:
+		var up_disp: Dictionary = {}
+		for k3: Variant in up:
+			var ku2 := String(k3)
+			if ku2 == anchor_id:
+				continue
+			up_disp[ku2] = true
+		_append_human_bullets_for_ids(narr_cast.upstream_display_lines, up_disp, node_by_id, max_vis)
+		var down_disp2: Dictionary = {}
+		for k4: Variant in down:
+			var kd2 := String(k4)
+			if kd2 == anchor_id:
+				continue
+			down_disp2[kd2] = true
+		var down_parts_s: Array = _partition_down_by_kind(down_disp2, node_by_id)
+		_append_human_bullets_for_ids(
+			narr_cast.downstream_state_display_lines, down_parts_s[0] as Dictionary, node_by_id, max_vis
+		)
+		_append_human_bullets_for_ids(
+			narr_cast.downstream_control_display_lines, down_parts_s[1] as Dictionary, node_by_id, max_vis
+		)
+
+	narr_cast.upstream_node_ids = _pack_ids_from_set(up)
+	narr_cast.downstream_node_ids = _pack_ids_from_set(down)
 	return out

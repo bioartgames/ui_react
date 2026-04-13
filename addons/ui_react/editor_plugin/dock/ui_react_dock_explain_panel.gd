@@ -19,6 +19,17 @@ const _SEL_NONE := 0
 const _SEL_NODE := 1
 const _SEL_EDGE := 2
 
+const _DETAILS_GRAPH_HELP_BB := (
+	"Pan: middle-drag · zoom: wheel · RMB: View or actions · double-click: Inspector (same as Focus).\n"
+	+ "Shift+drag on a selected edge: reconnect. Ctrl+Shift+drag: new link. Delete: clear edge when allowed.\n"
+	+ "Node outline shape encodes role (control / state / computed); see Key above."
+)
+const _DETAILS_GRAPH_HELP_PLAIN := (
+	"Pan: middle-drag · zoom: wheel · RMB: View or actions · double-click: Inspector (same as Focus).\n"
+	+ "Shift+drag on a selected edge: reconnect. Ctrl+Shift+drag: new link. Delete: clear edge when allowed.\n"
+	+ "Node outline shape encodes role (control / state / computed); see Key above."
+)
+
 const _REBIND_NONE := 0
 const _REBIND_BINDING := 1
 const _REBIND_WIRE_IN := 2
@@ -373,6 +384,24 @@ func _resolve_wire_rules_host_control() -> Control:
 		var n3: Node = sel[0]
 		if (&"wire_rules" in n3) and n3 is Control and (n3 == root or root.is_ancestor_of(n3)):
 			return n3 as Control
+	return null
+
+
+func _resolve_control_host_from_node(node_id: String, d: Dictionary) -> Control:
+	if _plugin == null:
+		return null
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return null
+	var path_str := str(d.get(&"control_path", ""))
+	if path_str.is_empty() and node_id.begins_with("ctrl:"):
+		path_str = node_id.substr(5)
+	if path_str.is_empty() or not root.has_node(NodePath(path_str)):
+		return null
+	var n: Node = root.get_node(NodePath(path_str))
+	if n is Control and UiReactScannerService.is_react_node(n as Control):
+		return n as Control
 	return null
 
 
@@ -2069,15 +2098,15 @@ func _on_rebind_file_selected(path: String) -> void:
 
 func _set_details_placeholder() -> void:
 	_set_details_both(
-		"[i]Select a node or edge in the graph to see details.[/i]",
-		"Select a node or edge in the graph to see details."
+		"[i]Select a node or edge in the graph to see details.[/i]\n\n" + _DETAILS_GRAPH_HELP_BB,
+		"Select a node or edge in the graph to see details.\n\n" + _DETAILS_GRAPH_HELP_PLAIN,
 	)
 
 
 func _set_details_empty() -> void:
 	_set_details_both(
-		"[i]No graph in scope. Refresh after changing bindings or selection.[/i]",
-		"No graph in scope. Refresh after changing bindings or selection."
+		"[i]No graph in scope. Refresh after changing bindings or selection.[/i]\n\n" + _DETAILS_GRAPH_HELP_BB,
+		"No graph in scope. Refresh after changing bindings or selection.\n\n" + _DETAILS_GRAPH_HELP_PLAIN,
 	)
 
 
@@ -2174,7 +2203,7 @@ func _narrative_upstream_heading_bb_plain(anchor_kind: int) -> PackedStringArray
 	)
 
 
-func _narrative_sections_bb_plain(narr: Object) -> PackedStringArray:
+func _append_reachability_from_narrative(narr: Object) -> PackedStringArray:
 	var bb := ""
 	var plain := ""
 	if narr == null:
@@ -2182,24 +2211,27 @@ func _narrative_sections_bb_plain(narr: Object) -> PackedStringArray:
 	var n_narr := narr as UiReactExplainGraphNarrative
 	if n_narr == null:
 		return PackedStringArray([bb, plain])
-	for line: String in n_narr.bound_state_lines:
-		bb += line
-		plain += _plain_from_bbcode_line(line)
-	if not n_narr.omit_upstream_in_details:
-		var up_h := _narrative_upstream_heading_bb_plain(_narrative_anchor_kind(n_narr.anchor_id))
-		bb += up_h[0]
-		plain += up_h[1]
-		if n_narr.upstream_lines.is_empty():
-			bb += "(none)\n"
-			plain += "(none)\n"
+	var ak := _narrative_anchor_kind(n_narr.anchor_id)
+	var up_h := _narrative_upstream_heading_bb_plain(ak)
+	bb += up_h[0]
+	plain += up_h[1]
+	if n_narr.upstream_display_lines.is_empty():
+		if ak == _SnapScript.NodeKind.CONTROL:
+			var msg := "[i]No further upstream in this snapshot (only direct binding sources feed this host).[/i]\n"
+			bb += msg
+			plain += _plain_from_bbcode_line(msg)
 		else:
-			for line2: String in n_narr.upstream_lines:
-				bb += line2
-				plain += _plain_from_bbcode_line(line2)
+			var msg2 := "[i]No upstream nodes in this snapshot beyond this anchor.[/i]\n"
+			bb += msg2
+			plain += _plain_from_bbcode_line(msg2)
+	else:
+		for line2: String in n_narr.upstream_display_lines:
+			bb += line2
+			plain += _plain_from_bbcode_line(line2)
 	bb += "\n[b]Downstream[/b] (from bound states in this snapshot)\n"
 	plain += "\nDownstream (from bound states in this snapshot)\n"
-	var dsl: PackedStringArray = n_narr.downstream_state_lines
-	var dcl: PackedStringArray = n_narr.downstream_control_lines
+	var dsl: PackedStringArray = n_narr.downstream_state_display_lines
+	var dcl: PackedStringArray = n_narr.downstream_control_display_lines
 	if dsl.is_empty() and dcl.is_empty():
 		bb += "(none)\n"
 		plain += "(none)\n"
@@ -2216,8 +2248,12 @@ func _narrative_sections_bb_plain(narr: Object) -> PackedStringArray:
 			for line4: String in dcl:
 				bb += line4
 				plain += _plain_from_bbcode_line(line4)
-	bb += "\n" + _DETAILS_DECLARATIVE_ONE_LINER_BB
-	plain += "\n" + _plain_from_bbcode_line(_DETAILS_DECLARATIVE_ONE_LINER_BB)
+	return PackedStringArray([bb, plain])
+
+
+func _details_declarative_footer_bb_plain() -> PackedStringArray:
+	var bb := "\n" + _DETAILS_DECLARATIVE_ONE_LINER_BB
+	var plain := "\n" + _plain_from_bbcode_line(_DETAILS_DECLARATIVE_ONE_LINER_BB)
 	return PackedStringArray([bb, plain])
 
 
@@ -2290,7 +2326,7 @@ func _mismatch_banner_bb_plain(narr: Object) -> PackedStringArray:
 const _INCIDENT_EDGE_CAP := 8
 const _ORPHAN_LAYER := -512
 const _CYCLE_SUMMARY_CAP := 2
-## Single details-pane footer: declarative scope + static cycle hint ([method _narrative_sections_bb_plain]).
+## Declarative-scope one-liner appended after human reachability in the details pane.
 const _DETAILS_DECLARATIVE_ONE_LINER_BB := (
 	"[i]Declarative snapshot only (not a runtime trace); cycle summaries are static candidates.[/i]\n"
 )
@@ -2301,6 +2337,159 @@ func _id_in_packed(ids: PackedStringArray, needle: String) -> bool:
 		if String(ids[i]) == needle:
 			return true
 	return false
+
+
+func _incident_edge_sig(ed: Dictionary) -> String:
+	return "%s|%s|%d|%s" % [
+		str(ed.get(&"from_id", "")),
+		str(ed.get(&"to_id", "")),
+		int(ed.get(&"kind", -1)),
+		str(ed.get(&"label", "")),
+	]
+
+
+func _find_binding_edge_for_prop(incident: Array[Dictionary], node_id: String, prop: String) -> Dictionary:
+	for ed: Dictionary in incident:
+		if int(ed.get(&"kind", -1)) != _SnapScript.EdgeKind.BINDING:
+			continue
+		if str(ed.get(&"to_id", "")) != node_id:
+			continue
+		var bp := str(ed.get(&"binding_property", ""))
+		var lab := str(ed.get(&"label", ""))
+		if bp == prop or lab == prop:
+			return ed
+	return {}
+
+
+func _connections_section_bb_plain(node_id: String, d: Dictionary, edges: Array) -> PackedStringArray:
+	if int(d.get(&"kind", -1)) != _SnapScript.NodeKind.CONTROL or not node_id.begins_with("ctrl:"):
+		return PackedStringArray(["", ""])
+	var bb := "\n[b]Connections[/b]\n"
+	var plain := "\nConnections\n"
+	var host := _resolve_control_host_from_node(node_id, d)
+	var incident: Array[Dictionary] = []
+	for e: Variant in edges:
+		if e is not Dictionary:
+			continue
+		var ed0: Dictionary = e as Dictionary
+		if str(ed0.get(&"from_id", "")) == node_id or str(ed0.get(&"to_id", "")) == node_id:
+			incident.append(ed0)
+	incident.sort_custom(
+		func(a: Dictionary, b: Dictionary) -> bool:
+			var ka := int(a.get(&"kind", -1))
+			var kb := int(b.get(&"kind", -1))
+			if ka != kb:
+				return ka < kb
+			var fa := str(a.get(&"from_id", ""))
+			var fb := str(b.get(&"from_id", ""))
+			if fa != fb:
+				return fa < fb
+			return str(a.get(&"to_id", "")) < str(b.get(&"to_id", ""))
+	)
+	if host == null:
+		bb += "• [i]Could not list binding slots (host missing).[/i]\n"
+		plain += "• Could not list binding slots (host missing).\n"
+		return PackedStringArray([bb, plain])
+	var comp := UiReactScannerService.get_component_name_from_script(host.get_script() as Script)
+	var rows: Array[Dictionary] = UiReactGraphNewBindingService.list_registry_binding_rows(host, comp)
+	var consumed: Dictionary = {}
+	if rows.is_empty():
+		var any_bind := false
+		for ed1: Dictionary in incident:
+			if int(ed1.get(&"kind", -1)) != _SnapScript.EdgeKind.BINDING:
+				continue
+			if str(ed1.get(&"to_id", "")) != node_id:
+				continue
+			any_bind = true
+			consumed[_incident_edge_sig(ed1)] = true
+			var pair0 := _format_incident_edge_bb_plain(ed1)
+			bb += pair0[0] + "\n"
+			plain += pair0[1] + "\n"
+		if not any_bind:
+			bb += "[i]No registry bindings listed for this component in this snapshot.[/i]\n"
+			plain += "No registry bindings listed for this component in this snapshot.\n"
+	else:
+		for row: Dictionary in rows:
+			var prop_sn: StringName = row.get(&"property", &"") as StringName
+			var ps := str(prop_sn)
+			var is_bound := bool(row.get(&"bound", false))
+			if not is_bound:
+				bb += "• [code]%s[/code] — unbound\n" % ps
+				plain += "• %s — unbound\n" % ps
+			else:
+				var vl := str(row.get(&"value_label", ""))
+				bb += "• [code]%s[/code] → [code]%s[/code]\n" % [ps, vl]
+				plain += "• %s → %s\n" % [ps, vl]
+				var bed := _find_binding_edge_for_prop(incident, node_id, ps)
+				if not bed.is_empty():
+					consumed[_incident_edge_sig(bed)] = true
+					var pair1 := _format_incident_edge_bb_plain(bed)
+					var subb := pair1[0].strip_edges()
+					if subb.begins_with("• "):
+						subb = subb.substr(2)
+					bb += "  " + subb + "\n"
+					var subp := pair1[1].strip_edges()
+					if subp.begins_with("• "):
+						subp = subp.substr(2)
+					plain += "  " + subp + "\n"
+	var others: Array[Dictionary] = []
+	for ed2: Dictionary in incident:
+		if consumed.has(_incident_edge_sig(ed2)):
+			continue
+		others.append(ed2)
+	if not others.is_empty():
+		bb += "\n[b]Other edges[/b]\n"
+		plain += "\nOther edges\n"
+		for ed3: Dictionary in others:
+			var pair2 := _format_incident_edge_bb_plain(ed3)
+			bb += pair2[0] + "\n"
+			plain += pair2[1] + "\n"
+	return PackedStringArray([bb, plain])
+
+
+func _wire_rules_summary_bb_plain(host: Control) -> PackedStringArray:
+	if host == null or not (&"wire_rules" in host):
+		return PackedStringArray(["", ""])
+	var wr: Variant = host.get(&"wire_rules")
+	if wr == null or wr is not Array:
+		return PackedStringArray(["", ""])
+	var arr: Array = wr as Array
+	if arr.is_empty():
+		return PackedStringArray(["", ""])
+	var bb := "\n[b]Wire rules[/b]\n"
+	var plain := "\nWire rules\n"
+	for i in arr.size():
+		var rule_var: Variant = arr[i]
+		if rule_var == null or not (rule_var is UiReactWireRule):
+			bb += "• (invalid row %d)\n" % i
+			plain += "• (invalid row %d)\n" % i
+			continue
+		var rule := rule_var as UiReactWireRule
+		var trig_label := _WireGraphEditScript.wire_trigger_kind_label(int(rule.trigger))
+		var io_list := UiReactWireRuleIntrospection.list_io(rule)
+		var ins: Array[String] = []
+		var outs: Array[String] = []
+		for entry: Dictionary in io_list:
+			var role := str(entry.get(&"role", ""))
+			var prop := str(entry.get(&"property", ""))
+			var st: Variant = entry.get(&"state", null)
+			var frag := prop
+			if st != null and st is UiState:
+				var us := st as UiState
+				var rp := str(us.resource_path)
+				if not rp.is_empty():
+					frag = rp.get_file()
+			if frag.is_empty():
+				frag = "?"
+			if role == "in":
+				ins.append(frag)
+			elif role == "out":
+				outs.append(frag)
+		var in_str := ", ".join(ins)
+		var out_str := ", ".join(outs)
+		bb += "• rule %d: %s — in: %s → out: %s\n" % [i, trig_label, in_str, out_str]
+		plain += "• rule %d: %s — in: %s → out: %s\n" % [i, trig_label, in_str, out_str]
+	return PackedStringArray([bb, plain])
 
 
 func _format_incident_edge_bb_plain(ed: Dictionary) -> PackedStringArray:
@@ -2383,25 +2572,47 @@ func _fill_node_details(node_id: String) -> void:
 	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
 	var layout_focus := str(_last_layout.get(&"focus_id", ""))
 	var node_layer: Dictionary = _last_layout.get(&"node_layer", {}) as Dictionary
+	var nk := int(d.get(&"kind", -1))
 
 	var bb := ""
 	var plain := ""
+	if narr != null and nk == _SnapScript.NodeKind.CONTROL:
+		for line0: String in (narr as UiReactExplainGraphNarrative).bound_state_lines:
+			bb += line0
+			plain += _plain_from_bbcode_line(line0)
+
+	var conn := _connections_section_bb_plain(node_id, d, edges)
+	bb += conn[0]
+	plain += conn[1]
+
+	if nk == _SnapScript.NodeKind.CONTROL:
+		var wh := _resolve_control_host_from_node(node_id, d)
+		if wh != null:
+			var wrs := _wire_rules_summary_bb_plain(wh)
+			bb += wrs[0]
+			plain += wrs[1]
+
 	if narr != null:
-		var ns := _narrative_sections_bb_plain(narr)
-		bb += ns[0]
-		plain += ns[1]
+		var reach := _append_reachability_from_narrative(narr)
+		bb += reach[0]
+		plain += reach[1]
 		var cyc := _append_cycle_section_bb_plain(node_id)
 		bb += cyc[0]
 		plain += cyc[1]
 		var mm := _mismatch_banner_bb_plain(narr)
 		bb += mm[0]
 		plain += mm[1]
+		var disc := _details_declarative_footer_bb_plain()
+		bb += disc[0]
+		plain += disc[1]
 
-	bb += "[b]On canvas[/b]\n"
-	plain += "On canvas\n"
-	var hl := _node_headline_bb_plain(node_id, d, layout_focus)
-	bb += hl[0]
-	plain += hl[1]
+	var skip_on_canvas := node_id == layout_focus and nk == _SnapScript.NodeKind.CONTROL
+	if not skip_on_canvas:
+		bb += "[b]On canvas[/b]\n"
+		plain += "On canvas\n"
+		var hl := _node_headline_bb_plain(node_id, d, layout_focus)
+		bb += hl[0]
+		plain += hl[1]
 
 	var incident: Array[Dictionary] = []
 	for e: Variant in edges:
@@ -2423,31 +2634,32 @@ func _fill_node_details(node_id: String) -> void:
 			return str(a.get(&"to_id", "")) < str(b.get(&"to_id", ""))
 	)
 
-	bb += "[b]Incident edges[/b]\n"
-	plain += "Incident edges\n"
-	if incident.is_empty():
-		bb += "No edges touch this node in the scoped graph (or it is isolated after filters).\n\n"
-		plain += "No edges touch this node in the scoped graph (or it is isolated after filters).\n\n"
-	else:
-		var n_show := mini(incident.size(), _INCIDENT_EDGE_CAP)
-		for i in n_show:
-			var pair := _format_incident_edge_bb_plain(incident[i])
-			bb += pair[0] + "\n"
-			plain += pair[1] + "\n"
-		bb += "\n"
-		plain += "\n"
-		var overflow := incident.size() - n_show
-		if overflow > 0:
-			bb += "[i]+%d more in this graph[/i]\n\n" % overflow
-			plain += "+%d more in this graph\n\n" % overflow
+	if nk != _SnapScript.NodeKind.CONTROL:
+		bb += "[b]Incident edges[/b]\n"
+		plain += "Incident edges\n"
+		if incident.is_empty():
+			bb += "No edges touch this node in the scoped graph (or it is isolated after filters).\n\n"
+			plain += "No edges touch this node in the scoped graph (or it is isolated after filters).\n\n"
+		else:
+			var n_show := mini(incident.size(), _INCIDENT_EDGE_CAP)
+			for i in n_show:
+				var pair := _format_incident_edge_bb_plain(incident[i])
+				bb += pair[0] + "\n"
+				plain += pair[1] + "\n"
+			bb += "\n"
+			plain += "\n"
+			var overflow := incident.size() - n_show
+			if overflow > 0:
+				bb += "[i]+%d more in this graph[/i]\n\n" % overflow
+				plain += "+%d more in this graph\n\n" % overflow
 
-	var rel := _focus_relation_blurb_bb_plain(node_id, layout_focus, node_layer)
-	bb += rel[0]
-	plain += rel[1]
+	if node_id != layout_focus:
+		var rel := _focus_relation_blurb_bb_plain(node_id, layout_focus, node_layer)
+		bb += rel[0]
+		plain += rel[1]
 
 	bb += "[b]Technical[/b]\n"
 	plain += "Technical\n"
-	var nk := int(d.get(&"kind", -1))
 	var short_l := str(d.get(&"short_label", ""))
 	var full_l := str(d.get(&"label", ""))
 	if not short_l.is_empty():
@@ -2618,9 +2830,12 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 	if narr != null:
 		bb += "\n[b]Graph context[/b]\n"
 		plain += "\nGraph context\n"
-		var ns := _narrative_sections_bb_plain(narr)
-		bb += ns[0]
-		plain += ns[1]
+		var reach := _append_reachability_from_narrative(narr)
+		bb += reach[0]
+		plain += reach[1]
+		var disc2 := _details_declarative_footer_bb_plain()
+		bb += disc2[0]
+		plain += disc2[1]
 		var cyc := _append_cycle_section_bb_plain(anchor_id)
 		bb += cyc[0]
 		plain += cyc[1]
@@ -3495,11 +3710,7 @@ func _build_ui() -> void:
 		Callable(self, &"_newlink_can_start_cb"),
 		Callable(self, &"_newlink_is_valid_drop_cb")
 	)
-	_graph_view.tooltip_text = (
-		"Pan: middle-drag · zoom: wheel · RMB: View or actions · double-click: Inspector (same as Focus).\n"
-		+ "Shift+drag on a selected edge: reconnect. Ctrl+Shift+drag: new link. Delete: clear edge when allowed.\n"
-		+ "Node outline shape encodes role (control / state / computed); see Key above."
-	)
+	_graph_view.tooltip_text = ""
 
 	_graph_body_split = VSplitContainer.new()
 	_graph_body_split.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -3529,9 +3740,8 @@ func _build_ui() -> void:
 	_details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_details.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	_details.text = "[i]Select a node or edge in the graph to see details.[/i]"
 	_details_scroll.add_child(_details)
-	_last_details_plain = "Select a node or edge in the graph to see details."
+	_set_details_placeholder()
 
 	_wire_rules_section = _WireRulesSectionScript.new()
 	_wire_rules_section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -3626,6 +3836,7 @@ func _clear_stale_snapshot() -> void:
 	_sync_wire_rules_section()
 	if _graph_view:
 		_graph_view.clear_graph()
+	_set_details_placeholder()
 
 
 func _set_hint(t: String) -> void:
