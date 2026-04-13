@@ -508,6 +508,23 @@ static func _sorted_id_keys(id_set: Dictionary) -> Array[String]:
 	return keys
 
 
+## Display-only: remove ids from a reachability dict before human bullets (full [member UiReactExplainGraphNarrative.upstream_node_ids] unchanged).
+static func _dict_minus_ids(d: Dictionary, exclude: PackedStringArray) -> Dictionary:
+	if exclude.is_empty():
+		return d
+	var out: Dictionary = {}
+	for k: Variant in d:
+		var ks := String(k)
+		var skip := false
+		for i in exclude.size():
+			if String(exclude[i]) == ks:
+				skip = true
+				break
+		if not skip:
+			out[ks] = true
+	return out
+
+
 ## Human-only bullets for details pane (no technical ids); keys iterated in sorted order.
 static func _append_human_bullets_for_ids(
 	out_arr: PackedStringArray,
@@ -552,6 +569,8 @@ static func compute_narrative(
 	snap: UiReactExplainGraphSnapshot,
 	anchor_id: String,
 	show_full: bool = false,
+	upstream_display_exclude_ids: PackedStringArray = PackedStringArray(),
+	downstream_display_exclude_ids: PackedStringArray = PackedStringArray(),
 ) -> RefCounted:
 	var out: RefCounted = _ExplainNarrativeScript.new() as RefCounted
 	out.anchor_id = anchor_id
@@ -691,7 +710,12 @@ static func compute_narrative(
 			var ku := String(k)
 			if not seed_states_meta.has(ku):
 				upstream_extra[ku] = true
-		_append_human_bullets_for_ids(narr_cast.upstream_display_lines, upstream_extra, node_by_id, max_vis)
+		_append_human_bullets_for_ids(
+			narr_cast.upstream_display_lines,
+			_dict_minus_ids(upstream_extra, upstream_display_exclude_ids),
+			node_by_id,
+			max_vis
+		)
 		var down_disp: Dictionary = {}
 		for k2: Variant in down:
 			var kd := String(k2)
@@ -700,7 +724,9 @@ static func compute_narrative(
 			if kd == anchor_id:
 				continue
 			down_disp[kd] = true
-		var down_parts_c: Array = _partition_down_by_kind(down_disp, node_by_id)
+		var down_parts_c: Array = _partition_down_by_kind(
+			_dict_minus_ids(down_disp, downstream_display_exclude_ids), node_by_id
+		)
 		_append_human_bullets_for_ids(
 			narr_cast.downstream_state_display_lines, down_parts_c[0] as Dictionary, node_by_id, max_vis
 		)
@@ -714,14 +740,21 @@ static func compute_narrative(
 			if ku2 == anchor_id:
 				continue
 			up_disp[ku2] = true
-		_append_human_bullets_for_ids(narr_cast.upstream_display_lines, up_disp, node_by_id, max_vis)
+		_append_human_bullets_for_ids(
+			narr_cast.upstream_display_lines,
+			_dict_minus_ids(up_disp, upstream_display_exclude_ids),
+			node_by_id,
+			max_vis
+		)
 		var down_disp2: Dictionary = {}
 		for k4: Variant in down:
 			var kd2 := String(k4)
 			if kd2 == anchor_id:
 				continue
 			down_disp2[kd2] = true
-		var down_parts_s: Array = _partition_down_by_kind(down_disp2, node_by_id)
+		var down_parts_s: Array = _partition_down_by_kind(
+			_dict_minus_ids(down_disp2, downstream_display_exclude_ids), node_by_id
+		)
 		_append_human_bullets_for_ids(
 			narr_cast.downstream_state_display_lines, down_parts_s[0] as Dictionary, node_by_id, max_vis
 		)

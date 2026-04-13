@@ -32,6 +32,19 @@ const NODE_H := 32.0
 const NODE_FS := 12
 const VIEW_PAD := 10.0
 
+## Shared with Dependency Graph legend ([code]UiReactDockExplainPanel[/code]); keep in sync for DRY.
+const GRAPH_NODE_FILL_CONTROL := Color(0.22, 0.24, 0.3, 1.0)
+const GRAPH_NODE_FILL_STATE := Color(0.18, 0.28, 0.42, 1.0)
+const GRAPH_NODE_FILL_COMPUTED := Color(0.28, 0.22, 0.4, 1.0)
+const GRAPH_NODE_FILL_FOCUS_HOST := Color(0.25, 0.42, 0.32, 1.0)
+const GRAPH_EDGE_COLOR_BINDING := Color(0.55, 0.55, 0.6, 1.0)
+const GRAPH_EDGE_COLOR_COMPUTED := Color(0.45, 0.65, 0.85, 1.0)
+const GRAPH_EDGE_COLOR_WIRE := Color(0.85, 0.45, 0.35, 1.0)
+const GRAPH_EDGE_WIDTH_BINDING := 1.5
+const GRAPH_EDGE_WIDTH_COMPUTED := 1.8
+const GRAPH_EDGE_WIDTH_WIRE := 2.2
+const GRAPH_LEGEND_FOCUS_BORDER := Color(0.35, 0.85, 0.45, 0.95)
+
 var _sb_fill: StyleBoxFlat
 var _sb_sel: StyleBoxFlat
 var _sb_hover: StyleBoxFlat
@@ -92,7 +105,7 @@ func _ready() -> void:
 	_sb_hover.set_corner_radius_all(_LayoutScript.NODE_RADIUS_CONTROL + 1)
 	_sb_valid = StyleBoxFlat.new()
 	_sb_valid.bg_color = Color(0, 0, 0, 0)
-	_sb_valid.border_color = Color(0.35, 0.85, 0.45, 0.95)
+	_sb_valid.border_color = GRAPH_LEGEND_FOCUS_BORDER
 	_sb_valid.set_border_width_all(2)
 	_sb_valid.set_corner_radius_all(_LayoutScript.NODE_RADIUS_CONTROL + 3)
 	_sb_valid_newlink = StyleBoxFlat.new()
@@ -204,15 +217,15 @@ func _draw() -> void:
 		if not centers.has(fa) or not centers.has(ta):
 			ei += 1
 			continue
-		var col := Color(0.55, 0.55, 0.6, 1.0)
-		var width := 1.5
+		var col := GRAPH_EDGE_COLOR_BINDING
+		var width := GRAPH_EDGE_WIDTH_BINDING
 		var k := int(ed.get(&"kind", -1))
 		if k == ek.WIRE_FLOW:
-			col = Color(0.85, 0.45, 0.35, 1.0)
-			width = 2.2
+			col = GRAPH_EDGE_COLOR_WIRE
+			width = GRAPH_EDGE_WIDTH_WIRE
 		elif k == ek.COMPUTED_SOURCE:
-			col = Color(0.45, 0.65, 0.85, 1.0)
-			width = 1.8
+			col = GRAPH_EDGE_COLOR_COMPUTED
+			width = GRAPH_EDGE_WIDTH_COMPUTED
 		if focus_active and not _edge_is_focused(ei):
 			col.a = 0.16
 			width *= 0.85
@@ -237,13 +250,13 @@ func _draw() -> void:
 		var c: Vector2 = centers[nid] as Vector2
 		var rect := Rect2(c - Vector2(NODE_W * 0.5, NODE_H * 0.5), Vector2(NODE_W, NODE_H))
 		var nk := int((node_by_id.get(id, {}) as Dictionary).get(&"kind", 0))
-		var fill := Color(0.22, 0.24, 0.3, 1.0)
+		var fill := GRAPH_NODE_FILL_CONTROL
 		if nk == _Snap.NodeKind.UI_STATE:
-			fill = Color(0.18, 0.28, 0.42, 1.0)
+			fill = GRAPH_NODE_FILL_STATE
 		elif nk == _Snap.NodeKind.UI_COMPUTED:
-			fill = Color(0.28, 0.22, 0.4, 1.0)
+			fill = GRAPH_NODE_FILL_COMPUTED
 		if id == focus_id:
-			fill = Color(0.25, 0.42, 0.32, 1.0)
+			fill = GRAPH_NODE_FILL_FOCUS_HOST
 		if focus_active and not _node_is_focused(id):
 			fill.a = 0.28
 		var cr: int = _LayoutScript.fill_corner_radius_px(nk)

@@ -41,6 +41,9 @@ const _SCOPE_MAX_NODES := 2000
 const _SCOPE_MIN_EDGES := 40
 const _SCOPE_MAX_EDGES := 4000
 
+const _LEGEND_WRAP_THRESHOLD_PX := 520
+const _LEGEND_GROUP_FONT_COLOR := Color(0.72, 0.74, 0.8, 0.92)
+
 ## Selection [PopupMenu] ids — [method _fill_selection_actions_popup] / [method _on_selection_action_id].
 const _SEL_ACT_REBIND_BINDING := 1101
 const _SEL_ACT_REBIND_WIRE_IN := 1102
@@ -88,7 +91,12 @@ var _graph_body_split: VSplitContainer
 var _below_graph_column: VBoxContainer
 var _graph_split_restored: bool = false
 var _graph_split_restore_attempts: int = 0
-var _legend_row: HBoxContainer
+var _legend_host: VBoxContainer
+var _legend_nodes_row: HBoxContainer
+var _legend_edges_row: HBoxContainer
+var _legend_mid_spacer: Control
+var _legend_group_nodes_label: Label
+var _legend_group_edges_label: Label
 var _cb_bind: CheckBox
 var _cb_computed: CheckBox
 var _cb_wire: CheckBox
@@ -195,10 +203,10 @@ func setup(
 	if _hint:
 		_DockThemeScript.apply_richtext_content(_hint, _plugin)
 	_apply_graph_body_split_editor_theme()
-	_apply_legend_row_font_sizes()
+	_apply_legend_font_sizes()
 	_apply_wire_payload_label_font_sizes()
-	if _legend_row:
-		_legend_row.visible = bool(
+	if _legend_host:
+		_legend_host.visible = bool(
 			ProjectSettings.get_setting(UiReactDockConfig.KEY_GRAPH_LEGEND_VISIBLE, true)
 		)
 	_rebuild_scope_preset_dropdown()
@@ -691,7 +699,7 @@ func _fill_canvas_view_popup(popup: PopupMenu) -> void:
 	popup.add_item("Show legend", _CV_TOGGLE_LEGEND)
 	popup.set_item_tooltip(popup.item_count - 1, "Show the node/edge color key above the graph.")
 	popup.set_item_as_checkable(popup.item_count - 1, true)
-	popup.set_item_checked(popup.item_count - 1, _legend_row != null and _legend_row.visible)
+	popup.set_item_checked(popup.item_count - 1, _legend_host != null and _legend_host.visible)
 	popup.add_separator()
 	popup.add_item("Preset: Default", _CV_PRESET_DEFAULT)
 	popup.set_item_tooltip(popup.item_count - 1, "Built-in scope (not a saved preset).")
@@ -765,10 +773,10 @@ func _on_canvas_view_menu_id(id: int) -> void:
 			refresh()
 		return
 	if id == _CV_TOGGLE_LEGEND:
-		if _legend_row != null:
-			_legend_row.visible = not _legend_row.visible
+		if _legend_host != null:
+			_legend_host.visible = not _legend_host.visible
 			UiReactDockConfig.save_ui_preference(
-				UiReactDockConfig.KEY_GRAPH_LEGEND_VISIBLE, _legend_row.visible
+				UiReactDockConfig.KEY_GRAPH_LEGEND_VISIBLE, _legend_host.visible
 			)
 		return
 	if id == _CV_PRESET_DEFAULT:
@@ -2125,8 +2133,31 @@ func _plain_from_bbcode_line(line: String) -> String:
 
 
 func _get_narrative_cached(anchor_id: String) -> Variant:
-	if _narrative_cache.has(anchor_id):
-		return _narrative_cache[anchor_id]
+	return _get_narrative_cached_ex(anchor_id, PackedStringArray(), PackedStringArray())
+
+
+func _join_sorted_ids(ids: PackedStringArray) -> String:
+	var arr: Array[String] = []
+	for i in ids.size():
+		arr.append(String(ids[i]))
+	arr.sort()
+	return ",".join(arr)
+
+
+func _narrative_cache_key(
+	anchor_id: String, up_ex: PackedStringArray, down_ex: PackedStringArray
+) -> String:
+	if up_ex.is_empty() and down_ex.is_empty():
+		return anchor_id
+	return "%s|u:%s|d:%s" % [anchor_id, _join_sorted_ids(up_ex), _join_sorted_ids(down_ex)]
+
+
+func _get_narrative_cached_ex(
+	anchor_id: String, up_ex: PackedStringArray, down_ex: PackedStringArray
+) -> Variant:
+	var cache_key := _narrative_cache_key(anchor_id, up_ex, down_ex)
+	if _narrative_cache.has(cache_key):
+		return _narrative_cache[cache_key]
 	if _plugin == null or _last_snap == null:
 		return null
 	var ei := _plugin.get_editor_interface()
@@ -2138,11 +2169,13 @@ func _get_narrative_cached(anchor_id: String) -> Variant:
 		root,
 		snap,
 		anchor_id,
-		_show_full_lists
+		_show_full_lists,
+		up_ex,
+		down_ex
 	)
 	var narr: Object = raw as Object
 	if narr != null:
-		_narrative_cache[anchor_id] = narr
+		_narrative_cache[cache_key] = narr
 	return narr
 
 
@@ -2160,6 +2193,19 @@ func _edge_anchor_id(from_id: String, to_id: String) -> String:
 	if _snapshot_has_node_id(from_id):
 		return from_id
 	return to_id
+
+
+## Returns [upstream_exclude, downstream_exclude] for edge Graph context display lines only.
+func _edge_graph_context_display_excludes(
+	from_id: String, to_id: String, _kind: int, anchor_id: String
+) -> Array:
+	var up_ex := PackedStringArray()
+	var down_ex := PackedStringArray()
+	if anchor_id == from_id and not to_id.is_empty() and to_id != anchor_id:
+		down_ex.append(to_id)
+	elif anchor_id == to_id and not from_id.is_empty() and from_id != anchor_id:
+		up_ex.append(from_id)
+	return [up_ex, down_ex]
 
 
 func _on_full_lists_toggled(pressed: bool) -> void:
@@ -2203,7 +2249,9 @@ func _narrative_upstream_heading_bb_plain(anchor_kind: int) -> PackedStringArray
 	)
 
 
-func _append_reachability_from_narrative(narr: Object) -> PackedStringArray:
+func _append_reachability_from_narrative(
+	narr: Object, for_edge_selection: bool = false
+) -> PackedStringArray:
 	var bb := ""
 	var plain := ""
 	if narr == null:
@@ -2220,6 +2268,16 @@ func _append_reachability_from_narrative(narr: Object) -> PackedStringArray:
 			var msg := "[i]No further upstream in this snapshot (only direct binding sources feed this host).[/i]\n"
 			bb += msg
 			plain += _plain_from_bbcode_line(msg)
+		elif (
+			for_edge_selection
+			and (
+				ak == _SnapScript.NodeKind.UI_STATE
+				or ak == _SnapScript.NodeKind.UI_COMPUTED
+			)
+		):
+			var msg_e := "[i]No declarative upstream for this resource in this snapshot.[/i]\n"
+			bb += msg_e
+			plain += _plain_from_bbcode_line(msg_e)
 		else:
 			var msg2 := "[i]No upstream nodes in this snapshot beyond this anchor.[/i]\n"
 			bb += msg2
@@ -2734,16 +2792,22 @@ func _edge_details_summary_bb_plain(
 			bb += "[b]Edge[/b]\nDeclarative dependency between two snapshot nodes.\n\n"
 			plain += "Edge\nDeclarative dependency between two snapshot nodes.\n\n"
 
-	bb += "[b]Endpoints[/b]\n"
-	bb += "From: [code]%s[/code]  →  To: [code]%s[/code]\n" % [from_short, to_short]
-	if not label.is_empty():
-		bb += "Detail: [code]%s[/code]\n" % label
-	bb += "\n"
-	plain += "Endpoints\n"
-	plain += "From: %s  →  To: %s\n" % [from_short, to_short]
-	if not label.is_empty():
-		plain += "Detail: %s\n" % label
-	plain += "\n"
+	var show_endpoints := not (
+		kind == _SnapScript.EdgeKind.BINDING
+		or kind == _SnapScript.EdgeKind.COMPUTED_SOURCE
+		or kind == _SnapScript.EdgeKind.WIRE_FLOW
+	)
+	if show_endpoints:
+		bb += "[b]Endpoints[/b]\n"
+		bb += "From: [code]%s[/code]  →  To: [code]%s[/code]\n" % [from_short, to_short]
+		if not label.is_empty():
+			bb += "Detail: [code]%s[/code]\n" % label
+		bb += "\n"
+		plain += "Endpoints\n"
+		plain += "From: %s  →  To: %s\n" % [from_short, to_short]
+		if not label.is_empty():
+			plain += "Detail: %s\n" % label
+		plain += "\n"
 
 	if kind == _SnapScript.EdgeKind.BINDING:
 		var hp := str(ed.get(&"host_path", ""))
@@ -2761,8 +2825,8 @@ func _edge_details_summary_bb_plain(
 					if hn is Control:
 						var comp2 := UiReactScannerService.get_component_name_from_script((hn as Control).get_script() as Script)
 						if UiReactGraphNewBindingService.binding_export_is_optional(comp2, StringName(bp)):
-							bb += "[b]Graph[/b]\nUse [b]Clear optional binding[/b] below to set this export to empty (undoable).\n\n"
-							plain += "Graph\nUse Clear optional binding below to set this export to empty (undoable).\n\n"
+							bb += "[b]Actions[/b]\nUse [b]Clear optional binding[/b] below to set this export to empty (undoable).\n\n"
+							plain += "Actions\nUse Clear optional binding below to set this export to empty (undoable).\n\n"
 	elif kind == _SnapScript.EdgeKind.COMPUTED_SOURCE:
 		var hp2 := str(ed.get(&"host_path", ""))
 		var si := int(ed.get(&"computed_source_index", -1))
@@ -2778,8 +2842,8 @@ func _edge_details_summary_bb_plain(
 			plain_w += " %s" % hp2
 		bb += ".\n\n"
 		plain += plain_w + ".\n\n"
-		bb += "[b]Graph[/b]\nUse [b]Remove computed dependency[/b] below to clear this [code]sources[/code] slot to null (undoable). [b]Remove source slot[/b] removes the array entry; [b]Move source up/down[/b] reorders.\n\n"
-		plain += "Graph\nRemove computed dependency clears this sources slot to null (undoable). Remove source slot removes the array entry; Move source up/down reorders.\n\n"
+		bb += "[b]Actions[/b]\nUse [b]Remove computed dependency[/b] below to clear this [code]sources[/code] slot to null (undoable). [b]Remove source slot[/b] removes the array entry; [b]Move source up/down[/b] reorders.\n\n"
+		plain += "Actions\nRemove computed dependency clears this sources slot to null (undoable). Remove source slot removes the array entry; Move source up/down reorders.\n\n"
 		var cc := str(ed.get(&"computed_context", ""))
 		if not cc.is_empty():
 			bb += "[b]Computed owner[/b]\n[code]%s[/code], [code]sources[%d][/code] — target for [b]Rebind computed source…[/b] or [b]Remove computed dependency[/b].\n\n" % [
@@ -2811,8 +2875,8 @@ func _edge_details_summary_bb_plain(
 			]
 			plain += "Rule exports\n"
 			plain += "Input export %s → output export %s (Rebind wire input / output).\n\n" % [win, wout]
-			bb += "[b]Graph[/b]\n[b]Clear wire link[/b] clears both exports for this edge (undoable). Edit [code]rule_id[/code] (Apply), [code]enabled[/code], or [code]trigger[/code] below; use Inspector for deeper rule fields.\n\n"
-			plain += "Graph\nClear wire link clears both exports for this edge (undoable). Edit rule_id (Apply), enabled, or trigger below; use Inspector for deeper rule fields.\n\n"
+			bb += "[b]Actions[/b]\n[b]Clear wire link[/b] clears both exports for this edge (undoable). Edit [code]rule_id[/code] (Apply), [code]enabled[/code], or [code]trigger[/code] below; use Inspector for deeper rule fields.\n\n"
+			plain += "Actions\nClear wire link clears both exports for this edge (undoable). Edit rule_id (Apply), enabled, or trigger below; use Inspector for deeper rule fields.\n\n"
 
 	if from_id == _last_focus_id or to_id == _last_focus_id:
 		bb += "[b]Relation to focus[/b]\nTouches the focus control directly.\n\n"
@@ -2822,7 +2886,10 @@ func _edge_details_summary_bb_plain(
 
 func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String, edge_index: int) -> void:
 	var anchor_id := _edge_anchor_id(from_id, to_id)
-	var narr: Object = _get_narrative_cached(anchor_id) as Object
+	var ex: Array = _edge_graph_context_display_excludes(from_id, to_id, kind, anchor_id)
+	var narr: Object = _get_narrative_cached_ex(
+		anchor_id, ex[0] as PackedStringArray, ex[1] as PackedStringArray
+	) as Object
 	var token := _edge_short_token(kind)
 	var summ := _edge_details_summary_bb_plain(from_id, to_id, kind, label, edge_index)
 	var bb := summ[0]
@@ -2830,7 +2897,7 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 	if narr != null:
 		bb += "\n[b]Graph context[/b]\n"
 		plain += "\nGraph context\n"
-		var reach := _append_reachability_from_narrative(narr)
+		var reach := _append_reachability_from_narrative(narr, true)
 		bb += reach[0]
 		plain += reach[1]
 		var disc2 := _details_declarative_footer_bb_plain()
@@ -2987,7 +3054,7 @@ func _editor_richtext_normal_font_size() -> int:
 	return 13
 
 
-## Wire payload row labels match editor [Label] (legend matches [RichTextLabel] body).
+## Wire payload row labels match editor [Label]; legend **item** labels match [RichTextLabel] body, **group** labels use [method _editor_label_font_size].
 func _editor_label_font_size() -> int:
 	if _plugin == null:
 		return 12
@@ -2997,13 +3064,26 @@ func _editor_label_font_size() -> int:
 	return 12
 
 
-func _apply_legend_row_font_sizes() -> void:
-	if _legend_row == null or _plugin == null:
+func _apply_legend_font_sizes() -> void:
+	if _legend_host == null or _plugin == null:
 		return
-	var fs := _editor_richtext_normal_font_size()
-	for ch: Node in _legend_row.get_children():
+	var item_fs := _editor_richtext_normal_font_size()
+	var grp_fs := maxi(_editor_label_font_size() - 1, 10)
+	if _legend_group_nodes_label != null:
+		_legend_group_nodes_label.add_theme_font_size_override(&"font_size", grp_fs)
+		_legend_group_nodes_label.add_theme_color_override(&"font_color", _LEGEND_GROUP_FONT_COLOR)
+	if _legend_group_edges_label != null:
+		_legend_group_edges_label.add_theme_font_size_override(&"font_size", grp_fs)
+		_legend_group_edges_label.add_theme_color_override(&"font_color", _LEGEND_GROUP_FONT_COLOR)
+	_apply_legend_item_label_font_sizes_recursive(_legend_host, item_fs)
+
+
+func _apply_legend_item_label_font_sizes_recursive(root: Node, item_fs: int) -> void:
+	for ch: Node in root.get_children():
 		if ch is Label:
-			(ch as Label).add_theme_font_size_override(&"font_size", fs)
+			if ch != _legend_group_nodes_label and ch != _legend_group_edges_label:
+				(ch as Label).add_theme_font_size_override(&"font_size", item_fs)
+		_apply_legend_item_label_font_sizes_recursive(ch, item_fs)
 
 
 func _apply_wire_payload_label_font_sizes() -> void:
@@ -3067,29 +3147,70 @@ func _on_explain_panel_tree_exiting() -> void:
 	)
 
 
-func _add_legend_swatch(row: HBoxContainer, col: Color, text: String) -> void:
-	var sw := ColorRect.new()
-	sw.custom_minimum_size = Vector2(12, 12)
-	sw.color = col
-	sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(sw)
+func _add_legend_edge_sample(
+	row: HBoxContainer, col: Color, line_height_px: float, text: String, tip: String
+) -> void:
+	var line := ColorRect.new()
+	line.custom_minimum_size = Vector2(22, maxf(2.0, line_height_px))
+	line.color = col
+	line.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(line)
 	var lab := Label.new()
 	lab.text = text
+	lab.tooltip_text = tip
 	row.add_child(lab)
 
 
-func _add_legend_node_chip(row: HBoxContainer, col: Color, kind: int, text: String) -> void:
+func _add_legend_node_chip(
+	row: HBoxContainer,
+	col: Color,
+	kind: int,
+	text: String,
+	is_focus_host: bool = false,
+	tooltip_text: String = "",
+) -> void:
 	var chip := Panel.new()
 	chip.custom_minimum_size = Vector2(28, 12)
 	chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = col
 	sb.set_corner_radius_all(_ExplainLayoutScript.fill_corner_radius_px(kind))
+	if is_focus_host:
+		sb.set_border_width_all(2)
+		sb.border_color = _ExplainGraphViewScript.GRAPH_LEGEND_FOCUS_BORDER
+	else:
+		sb.set_border_width_all(0)
 	chip.add_theme_stylebox_override(&"panel", sb)
 	row.add_child(chip)
 	var lab := Label.new()
 	lab.text = text
+	lab.tooltip_text = tooltip_text
 	row.add_child(lab)
+
+
+func _on_legend_host_resized() -> void:
+	if _legend_host == null or _legend_nodes_row == null or _legend_edges_row == null:
+		return
+	var wide := _legend_host.size.x >= float(_LEGEND_WRAP_THRESHOLD_PX)
+	if wide:
+		_legend_host.add_theme_constant_override(&"separation", 0)
+		if _legend_edges_row.get_parent() != _legend_nodes_row:
+			if _legend_edges_row.get_parent() == _legend_host:
+				_legend_host.remove_child(_legend_edges_row)
+			if _legend_mid_spacer.get_parent() != _legend_nodes_row:
+				_legend_nodes_row.add_child(_legend_mid_spacer)
+			_legend_mid_spacer.visible = true
+			_legend_nodes_row.add_child(_legend_edges_row)
+	else:
+		_legend_host.add_theme_constant_override(&"separation", 6)
+		if _legend_edges_row.get_parent() != _legend_host:
+			if _legend_edges_row.get_parent() == _legend_nodes_row:
+				_legend_nodes_row.remove_child(_legend_edges_row)
+			if _legend_mid_spacer.get_parent() == _legend_nodes_row:
+				_legend_nodes_row.remove_child(_legend_mid_spacer)
+			_legend_mid_spacer.visible = false
+			_legend_host.add_child(_legend_edges_row)
+			_legend_host.move_child(_legend_nodes_row, 0)
 
 
 func _clamp_layout_caps() -> void:
@@ -3671,23 +3792,89 @@ func _build_ui() -> void:
 	_visual_host.custom_minimum_size = Vector2(0, 220)
 	v.add_child(_visual_host)
 
-	_legend_row = HBoxContainer.new()
-	_legend_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_legend_row.visible = true
-	_visual_host.add_child(_legend_row)
-	var leg_title := Label.new()
-	leg_title.text = "Key:"
-	_legend_row.add_child(leg_title)
-	_add_legend_node_chip(_legend_row, Color(0.25, 0.42, 0.32, 1.0), _SnapScript.NodeKind.CONTROL, "Focus control")
-	_add_legend_node_chip(_legend_row, Color(0.22, 0.24, 0.3, 1.0), _SnapScript.NodeKind.CONTROL, "Control")
-	_add_legend_node_chip(_legend_row, Color(0.18, 0.28, 0.42, 1.0), _SnapScript.NodeKind.UI_STATE, "State")
-	_add_legend_node_chip(_legend_row, Color(0.28, 0.22, 0.4, 1.0), _SnapScript.NodeKind.UI_COMPUTED, "Computed")
-	var leg_sp := Label.new()
-	leg_sp.text = "  |  Edges:"
-	_legend_row.add_child(leg_sp)
-	_add_legend_swatch(_legend_row, Color(0.55, 0.55, 0.6, 1.0), "Binding")
-	_add_legend_swatch(_legend_row, Color(0.45, 0.65, 0.85, 1.0), "Computed src")
-	_add_legend_swatch(_legend_row, Color(0.85, 0.45, 0.35, 1.0), "Wire")
+	_legend_host = VBoxContainer.new()
+	_legend_host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_legend_host.add_theme_constant_override(&"separation", 6)
+	_legend_host.visible = true
+	_legend_host.resized.connect(_on_legend_host_resized)
+	_visual_host.add_child(_legend_host)
+
+	_legend_nodes_row = HBoxContainer.new()
+	_legend_nodes_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_legend_nodes_row.add_theme_constant_override(&"separation", 8)
+	_legend_group_nodes_label = Label.new()
+	_legend_group_nodes_label.text = "Nodes"
+	_legend_nodes_row.add_child(_legend_group_nodes_label)
+
+	_add_legend_node_chip(
+		_legend_nodes_row,
+		_ExplainGraphViewScript.GRAPH_NODE_FILL_FOCUS_HOST,
+		_SnapScript.NodeKind.CONTROL,
+		"Focus control",
+		true,
+		"The UiReact host you picked when refreshing; layout is centered on this control."
+	)
+	_add_legend_node_chip(
+		_legend_nodes_row,
+		_ExplainGraphViewScript.GRAPH_NODE_FILL_CONTROL,
+		_SnapScript.NodeKind.CONTROL,
+		"Control",
+		false,
+		"Other UiReact hosts in this scoped graph."
+	)
+	_add_legend_node_chip(
+		_legend_nodes_row,
+		_ExplainGraphViewScript.GRAPH_NODE_FILL_STATE,
+		_SnapScript.NodeKind.UI_STATE,
+		"State",
+		false,
+		"UiState resources (bindings, wires, computed inputs)."
+	)
+	_add_legend_node_chip(
+		_legend_nodes_row,
+		_ExplainGraphViewScript.GRAPH_NODE_FILL_COMPUTED,
+		_SnapScript.NodeKind.UI_COMPUTED,
+		"Computed",
+		false,
+		"UiComputed resources (sources[] aggregation)."
+	)
+
+	_legend_mid_spacer = Control.new()
+	_legend_mid_spacer.custom_minimum_size = Vector2(24, 0)
+	_legend_mid_spacer.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_legend_mid_spacer.visible = false
+
+	_legend_edges_row = HBoxContainer.new()
+	_legend_edges_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_legend_edges_row.add_theme_constant_override(&"separation", 8)
+	_legend_group_edges_label = Label.new()
+	_legend_group_edges_label.text = "Edges"
+	_legend_edges_row.add_child(_legend_group_edges_label)
+	_add_legend_edge_sample(
+		_legend_edges_row,
+		_ExplainGraphViewScript.GRAPH_EDGE_COLOR_BINDING,
+		3.0,
+		"Binding",
+		"Inspector binding export: state feeds a control property."
+	)
+	_add_legend_edge_sample(
+		_legend_edges_row,
+		_ExplainGraphViewScript.GRAPH_EDGE_COLOR_COMPUTED,
+		3.0,
+		"Computed src",
+		"sources[] entry: upstream state feeds a computed resource."
+	)
+	_add_legend_edge_sample(
+		_legend_edges_row,
+		_ExplainGraphViewScript.GRAPH_EDGE_COLOR_WIRE,
+		4.0,
+		"Wire",
+		"wire_rules row: input state(s) drive output state(s)."
+	)
+
+	_legend_host.add_child(_legend_nodes_row)
+	_legend_host.add_child(_legend_edges_row)
+	call_deferred(&"_on_legend_host_resized")
 
 	_graph_view = _ExplainGraphViewScript.new()
 	_graph_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
