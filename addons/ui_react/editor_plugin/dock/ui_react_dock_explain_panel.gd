@@ -4,6 +4,9 @@ extends MarginContainer
 
 const _ExplainBuilderScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_explain_graph_builder.gd")
 const _ComputedRebindScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_computed_graph_rebind.gd")
+const _WireGraphEditScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_wire_graph_edit_service.gd")
+const _WireRuleCatalogScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_wire_rule_catalog.gd")
+const _ComputedMountsScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_computed_resource_mounts.gd")
 const _NewBindingScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_graph_new_binding_service.gd")
 const _ResolverScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_graph_node_state_resolver.gd")
 const _ExplainLayoutScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_explain_graph_layout.gd")
@@ -45,7 +48,15 @@ var _btn_rebind_wire_out: Button
 var _btn_rebind_computed_source: Button
 var _btn_clear_optional_binding: Button
 var _btn_remove_computed_dependency: Button
+var _btn_clear_wire_link: Button
+var _btn_move_computed_source_up: Button
+var _btn_move_computed_source_down: Button
+var _btn_remove_computed_source_slot: Button
 var _btn_copy_details: Button
+
+var _wire_rule_id_row: HBoxContainer
+var _wire_rule_id_edit: LineEdit
+var _btn_wire_rule_id_apply: Button
 
 var _rebind_file_dialog: EditorFileDialog
 var _rebind_kind: int = _REBIND_NONE
@@ -62,6 +73,16 @@ var _newlink_pick_host: Control
 var _newlink_pick_component: String = ""
 var _newlink_pick_donor: UiState
 var _newlink_pick_candidates: Array = []
+
+var _newlink_mixed_popup: PopupMenu
+var _newlink_mixed_donor_st: UiState
+var _newlink_mixed_host: Control
+var _newlink_mixed_component: String = ""
+var _newlink_mixed_binding_cands: Array = []
+
+var _newlink_mount_popup: PopupMenu
+var _newlink_mount_donor_st: UiState
+var _newlink_mount_list: Array = []
 
 var _auto_refresh_timer: Timer
 
@@ -233,6 +254,15 @@ func _update_focus_button_state() -> void:
 		_btn_clear_optional_binding.disabled = not _can_disconnect_binding_edge()
 	if _btn_remove_computed_dependency != null:
 		_btn_remove_computed_dependency.disabled = not _can_disconnect_computed_source()
+	if _btn_clear_wire_link != null:
+		_btn_clear_wire_link.disabled = not _can_disconnect_wire_edge()
+	if _btn_move_computed_source_up != null:
+		_btn_move_computed_source_up.disabled = not _can_move_computed_source_up()
+	if _btn_move_computed_source_down != null:
+		_btn_move_computed_source_down.disabled = not _can_move_computed_source_down()
+	if _btn_remove_computed_source_slot != null:
+		_btn_remove_computed_source_slot.disabled = not _can_remove_computed_source_slot()
+	_sync_wire_rule_id_row()
 
 
 func _can_disconnect_binding_edge() -> bool:
@@ -273,6 +303,138 @@ func _can_disconnect_binding_edge() -> bool:
 
 func _can_disconnect_computed_source() -> bool:
 	return _can_rebind_computed_source()
+
+
+func _can_disconnect_wire_edge() -> bool:
+	if not _can_rebind_wire_endpoint(true) or not _can_rebind_wire_endpoint(false):
+		return false
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return false
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return false
+	var ev: Variant = edges[idx]
+	if ev is not Dictionary:
+		return false
+	var ed: Dictionary = ev as Dictionary
+	var wh := str(ed.get(&"wire_host_path", ""))
+	var wi := int(ed.get(&"wire_rule_index", -1))
+	var win := str(ed.get(&"wire_in_property", ""))
+	var wout := str(ed.get(&"wire_out_property", ""))
+	if wh.is_empty() or not root.has_node(NodePath(wh)):
+		return false
+	var host: Node = root.get_node(NodePath(wh))
+	if not (host is Control):
+		return false
+	var arr := _WireGraphEditScript.duplicate_wire_rules_array(host as Control)
+	if wi < 0 or wi >= arr.size():
+		return false
+	var rule: Variant = arr[wi]
+	if rule == null or not (rule is UiReactWireRule):
+		return false
+	var ip := StringName(win)
+	var op := StringName(wout)
+	if not ip in rule or not op in rule:
+		return false
+	return (rule as Object).get(ip) != null and (rule as Object).get(op) != null
+
+
+func _current_computed_edge_sources_size() -> int:
+	if not _can_rebind_computed_source():
+		return -1
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return -1
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return -1
+	var ed: Dictionary = edges[idx] as Dictionary
+	var hp := str(ed.get(&"host_path", ""))
+	var ctx := str(ed.get(&"computed_context", ""))
+	if hp.is_empty() or not root.has_node(NodePath(hp)):
+		return -1
+	var n: Node = root.get_node(NodePath(hp))
+	if not (n is Control):
+		return -1
+	var c: Variant = _ComputedRebindScript.try_resolve_computed(n as Control, ctx)
+	if c == null:
+		return -1
+	var raw: Variant = c.get(&"sources")
+	if typeof(raw) != TYPE_ARRAY:
+		return -1
+	return (raw as Array).size()
+
+
+func _can_move_computed_source_up() -> bool:
+	if not _can_rebind_computed_source():
+		return false
+	var si := _computed_source_index_from_selection()
+	return si > 0
+
+
+func _can_move_computed_source_down() -> bool:
+	if not _can_rebind_computed_source():
+		return false
+	var si := _computed_source_index_from_selection()
+	var sz := _current_computed_edge_sources_size()
+	return si >= 0 and sz > 0 and si < sz - 1
+
+
+func _can_remove_computed_source_slot() -> bool:
+	return _can_rebind_computed_source() and _current_computed_edge_sources_size() > 0
+
+
+func _computed_source_index_from_selection() -> int:
+	if _selection_kind != _SEL_EDGE or _graph_selected_edge_index < 0:
+		return -1
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return -1
+	var ed: Dictionary = edges[idx] as Dictionary
+	return int(ed.get(&"computed_source_index", -1))
+
+
+func _sync_wire_rule_id_row() -> void:
+	if _wire_rule_id_row == null:
+		return
+	var show_row := false
+	var rid := ""
+	if (
+		_plugin != null
+		and _selection_kind == _SEL_EDGE
+		and _last_edge_kind == _SnapScript.EdgeKind.WIRE_FLOW
+	):
+		var ei := _plugin.get_editor_interface()
+		var root := ei.get_edited_scene_root()
+		if root != null:
+			var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+			var idx := _graph_selected_edge_index
+			if idx >= 0 and idx < edges.size():
+				var ev: Variant = edges[idx]
+				if ev is Dictionary:
+					var ed: Dictionary = ev as Dictionary
+					if _edge_allows_wire_rebind(ed, root, true) and _edge_allows_wire_rebind(ed, root, false):
+						var wh := str(ed.get(&"wire_host_path", ""))
+						var wi := int(ed.get(&"wire_rule_index", -1))
+						if not wh.is_empty() and root.has_node(NodePath(wh)):
+							var host_n: Node = root.get_node(NodePath(wh))
+							if host_n is Control:
+								var arr := _WireGraphEditScript.duplicate_wire_rules_array(
+									host_n as Control
+								)
+								if wi >= 0 and wi < arr.size() and arr[wi] is UiReactWireRule:
+									rid = (arr[wi] as UiReactWireRule).rule_id
+									show_row = true
+	_wire_rule_id_row.visible = show_row
+	if _wire_rule_id_edit != null and show_row:
+		if _wire_rule_id_edit.text != rid:
+			_wire_rule_id_edit.text = rid
 
 
 func _attempt_graph_edge_disconnect() -> void:
@@ -316,9 +478,23 @@ func _attempt_graph_edge_disconnect() -> void:
 		var ctx := str(ed.get(&"computed_context", ""))
 		var csi := int(ed.get(&"computed_source_index", -1))
 		var host_c: Node = root.get_node(NodePath(hp_c))
-		committed = UiReactComputedGraphRebind.try_commit_clear_source(host_c as Control, ctx, csi, _actions)
+		committed = _ComputedRebindScript.try_commit_clear_source(host_c as Control, ctx, csi, _actions)
+	elif k == _SnapScript.EdgeKind.WIRE_FLOW:
+		if not _can_disconnect_wire_edge():
+			push_warning(
+				"Ui React: clear wire link only when both input and output slots are set on this edge (use Inspector otherwise)."
+			)
+			return
+		var wh := str(ed.get(&"wire_host_path", ""))
+		var wi := int(ed.get(&"wire_rule_index", -1))
+		var win := StringName(str(ed.get(&"wire_in_property", "")))
+		var wout := StringName(str(ed.get(&"wire_out_property", "")))
+		var host_w: Node = root.get_node(NodePath(wh))
+		committed = _WireGraphEditScript.try_commit_wire_edge_disconnect(
+			host_w as Control, wi, win, wout, _actions
+		)
 	else:
-		push_warning("Ui React: Delete only clears binding or computed-source edges (not wire flow).")
+		push_warning("Ui React: Delete clears binding, computed-source, or wire-flow edges only.")
 		return
 	if not committed:
 		return
@@ -337,6 +513,118 @@ func _on_remove_computed_dependency_pressed() -> void:
 	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.COMPUTED_SOURCE:
 		return
 	_attempt_graph_edge_disconnect()
+
+
+func _on_clear_wire_link_pressed() -> void:
+	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.WIRE_FLOW:
+		return
+	_attempt_graph_edge_disconnect()
+
+
+func _on_move_computed_source_up_pressed() -> void:
+	if _plugin == null or _actions == null:
+		return
+	if not _can_move_computed_source_up():
+		return
+	var root := _plugin.get_editor_interface().get_edited_scene_root()
+	if root == null:
+		return
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return
+	var ed: Dictionary = edges[idx] as Dictionary
+	var hp := str(ed.get(&"host_path", ""))
+	var ctx := str(ed.get(&"computed_context", ""))
+	var si := int(ed.get(&"computed_source_index", -1))
+	var host_n: Node = root.get_node(NodePath(hp))
+	if not _ComputedRebindScript.try_commit_swap_sources(
+		host_n as Control, ctx, si, si - 1, _actions
+	):
+		return
+	if _request_dock_refresh.is_valid():
+		_request_dock_refresh.call()
+	refresh()
+
+
+func _on_move_computed_source_down_pressed() -> void:
+	if _plugin == null or _actions == null:
+		return
+	if not _can_move_computed_source_down():
+		return
+	var root := _plugin.get_editor_interface().get_edited_scene_root()
+	if root == null:
+		return
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return
+	var ed: Dictionary = edges[idx] as Dictionary
+	var hp := str(ed.get(&"host_path", ""))
+	var ctx := str(ed.get(&"computed_context", ""))
+	var si := int(ed.get(&"computed_source_index", -1))
+	var host_n: Node = root.get_node(NodePath(hp))
+	if not _ComputedRebindScript.try_commit_swap_sources(
+		host_n as Control, ctx, si, si + 1, _actions
+	):
+		return
+	if _request_dock_refresh.is_valid():
+		_request_dock_refresh.call()
+	refresh()
+
+
+func _on_remove_computed_source_slot_pressed() -> void:
+	if _plugin == null or _actions == null:
+		return
+	if not _can_remove_computed_source_slot():
+		return
+	var root := _plugin.get_editor_interface().get_edited_scene_root()
+	if root == null:
+		return
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return
+	var ed: Dictionary = edges[idx] as Dictionary
+	var hp := str(ed.get(&"host_path", ""))
+	var ctx := str(ed.get(&"computed_context", ""))
+	var si := int(ed.get(&"computed_source_index", -1))
+	var host_n: Node = root.get_node(NodePath(hp))
+	if not _ComputedRebindScript.try_commit_remove_source_at(
+		host_n as Control, ctx, si, _actions
+	):
+		return
+	if _request_dock_refresh.is_valid():
+		_request_dock_refresh.call()
+	refresh()
+
+
+func _on_wire_rule_id_apply_pressed() -> void:
+	if _plugin == null or _actions == null or _wire_rule_id_edit == null:
+		return
+	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.WIRE_FLOW:
+		return
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return
+	var ed: Dictionary = edges[idx] as Dictionary
+	if not _edge_allows_wire_rebind(ed, root, true) or not _edge_allows_wire_rebind(ed, root, false):
+		return
+	var wh := str(ed.get(&"wire_host_path", ""))
+	var wi := int(ed.get(&"wire_rule_index", -1))
+	var host_n: Node = root.get_node(NodePath(wh))
+	if not _WireGraphEditScript.try_commit_wire_rule_id(
+		host_n as Control, wi, _wire_rule_id_edit.text, _actions
+	):
+		return
+	if _request_dock_refresh.is_valid():
+		_request_dock_refresh.call()
+	refresh()
 
 
 func _edge_allows_binding_rebind(ed: Dictionary, root: Node) -> bool:
@@ -584,18 +872,40 @@ func _newlink_is_valid_drop(donor_id: String, target_id: String) -> bool:
 		var comp := UiReactScannerService.get_component_name_from_script(host.get_script() as Script)
 		if comp.is_empty():
 			return false
-		return not _NewBindingScript.list_assignable_empty_exports(host, comp, donor_st).is_empty()
+		var dd: Dictionary = nb[donor_id] as Dictionary
+		var dk := int(dd.get(&"kind", -1))
+		var cands: Array = _NewBindingScript.list_assignable_empty_exports(host, comp, donor_st)
+		var has_bind := not cands.is_empty()
+		var has_wire := (&"wire_rules" in host) and dk == _SnapScript.NodeKind.UI_STATE
+		return has_bind or has_wire
 	if tk == _SnapScript.NodeKind.UI_COMPUTED:
 		var ehp := str(td.get(&"embedded_host_path", ""))
 		var ctx := str(td.get(&"embedded_context", ""))
-		if ehp.is_empty() or ctx.is_empty():
+		if not ehp.is_empty() and not ctx.is_empty():
+			if not root.has_node(NodePath(ehp)):
+				return false
+			var hn: Node = root.get_node(NodePath(ehp))
+			if not (hn is Control):
+				return false
+			return _ComputedRebindScript.can_fill_or_append_computed_sources(hn as Control, ctx)
+		var fp := str(td.get(&"state_file_path", ""))
+		if fp.is_empty():
 			return false
-		if not root.has_node(NodePath(ehp)):
+		var res: Resource = load(fp)
+		if not (res is UiComputedStringState or res is UiComputedBoolState):
 			return false
-		var hn: Node = root.get_node(NodePath(ehp))
-		if not (hn is Control):
+		var mounts: Array = _ComputedMountsScript.mounts_for_computed_resource(root, res)
+		if mounts.is_empty():
 			return false
-		return _ComputedRebindScript.can_fill_or_append_computed_sources(hn as Control, ctx)
+		var m0: Dictionary = mounts[0]
+		var mhp := str(m0.get(&"host_path", ""))
+		var mctx := str(m0.get(&"computed_context", ""))
+		if mhp.is_empty() or mctx.is_empty() or not root.has_node(NodePath(mhp)):
+			return false
+		var h0: Node = root.get_node(NodePath(mhp))
+		if not (h0 is Control):
+			return false
+		return _ComputedRebindScript.can_fill_or_append_computed_sources(h0 as Control, mctx)
 	return false
 
 
@@ -671,32 +981,212 @@ func _on_graph_newlink_drag_ended(donor_id: String, target_id: String) -> void:
 			return
 		var host := n as Control
 		var comp := UiReactScannerService.get_component_name_from_script(host.get_script() as Script)
+		var dd: Dictionary = nb[donor_id] as Dictionary
+		var dk := int(dd.get(&"kind", -1))
 		var cands: Array = _NewBindingScript.list_assignable_empty_exports(host, comp, donor_st)
-		if cands.is_empty():
-			push_warning("Ui React: no compatible empty binding exports for this control.")
+		var has_bind := not cands.is_empty()
+		var has_wire := (&"wire_rules" in host) and dk == _SnapScript.NodeKind.UI_STATE
+		if has_bind and has_wire:
+			_open_newlink_mixed_popup(host, comp, donor_st, cands)
 			return
-		if cands.size() == 1:
-			var prop: StringName = (cands[0] as Dictionary)[&"property"] as StringName
-			committed = _NewBindingScript.try_commit_assign(host, comp, prop, donor_st, _actions)
+		if has_bind:
+			if cands.size() == 1:
+				var prop: StringName = (cands[0] as Dictionary)[&"property"] as StringName
+				committed = _NewBindingScript.try_commit_assign(host, comp, prop, donor_st, _actions)
+			else:
+				_open_newlink_binding_picker(host, comp, donor_st, cands)
+				return
+		elif has_wire:
+			_open_newlink_wire_rules_only_popup(host, donor_st)
+			return
 		else:
-			_open_newlink_binding_picker(host, comp, donor_st, cands)
+			push_warning("Ui React: no empty binding slot or wire_rules host for this drop.")
 			return
 	elif tk == _SnapScript.NodeKind.UI_COMPUTED:
 		var ehp := str(td.get(&"embedded_host_path", ""))
 		var ctx := str(td.get(&"embedded_context", ""))
-		if ehp.is_empty() or ctx.is_empty():
-			push_warning(
-				"Ui React: new computed source on canvas requires an embedded computed node (file-backed not supported here)."
+		if not ehp.is_empty() and not ctx.is_empty():
+			if not root.has_node(NodePath(ehp)):
+				return
+			var hn: Node = root.get_node(NodePath(ehp))
+			if not (hn is Control):
+				return
+			committed = _ComputedRebindScript.try_commit_append_or_fill_source(
+				hn as Control, ctx, donor_st, _actions
 			)
-			return
-		if not root.has_node(NodePath(ehp)):
-			return
-		var hn: Node = root.get_node(NodePath(ehp))
-		if not (hn is Control):
-			return
-		committed = _ComputedRebindScript.try_commit_append_or_fill_source(
-			hn as Control, ctx, donor_st, _actions
+		else:
+			var fp := str(td.get(&"state_file_path", ""))
+			if fp.is_empty():
+				push_warning("Ui React: could not resolve file-backed computed target.")
+				return
+			var res: Resource = load(fp)
+			if not (res is UiComputedStringState or res is UiComputedBoolState):
+				return
+			var mounts: Array = _ComputedMountsScript.mounts_for_computed_resource(
+				root, res as Resource
+			)
+			if mounts.is_empty():
+				push_warning(
+					"Ui React: file-backed computed is not referenced from this scene (open the .tres or bind it on a host)."
+				)
+				return
+			if mounts.size() == 1:
+				committed = _commit_newlink_computed_append_to_mount(
+					root, mounts[0] as Dictionary, donor_st
+				)
+			else:
+				_open_newlink_computed_mount_picker(root, donor_st, mounts)
+				return
+	if not committed:
+		return
+	if _request_dock_refresh.is_valid():
+		_request_dock_refresh.call()
+	refresh()
+
+
+func _commit_newlink_computed_append_to_mount(
+	root: Node, mount: Dictionary, donor_st: UiState
+) -> bool:
+	var mhp := str(mount.get(&"host_path", ""))
+	var mctx := str(mount.get(&"computed_context", ""))
+	if mhp.is_empty() or mctx.is_empty() or not root.has_node(NodePath(mhp)):
+		return false
+	var host_n: Node = root.get_node(NodePath(mhp))
+	if not (host_n is Control):
+		return false
+	var host := host_n as Control
+	var prop := _ComputedMountsScript.bind_prop_from_context(mctx)
+	if prop != &"":
+		var cur: Variant = host.get(prop)
+		if cur is Resource and not (cur as Resource).resource_path.is_empty():
+			if not _ComputedMountsScript.try_commit_make_computed_unique_at_bind(
+				host, prop, _actions
+			):
+				return false
+	return _ComputedRebindScript.try_commit_append_or_fill_source(host, mctx, donor_st, _actions)
+
+
+func _ensure_newlink_mixed_popup() -> PopupMenu:
+	if _newlink_mixed_popup != null:
+		return _newlink_mixed_popup
+	_newlink_mixed_popup = PopupMenu.new()
+	var bc: Control = _plugin.get_editor_interface().get_base_control()
+	bc.add_child(_newlink_mixed_popup)
+	_newlink_mixed_popup.id_pressed.connect(_on_newlink_mixed_menu_id)
+	return _newlink_mixed_popup
+
+
+func _open_newlink_mixed_popup(host: Control, component: String, donor: UiState, cands: Array) -> void:
+	_newlink_mixed_host = host
+	_newlink_mixed_component = component
+	_newlink_mixed_donor_st = donor
+	_newlink_mixed_binding_cands = cands.duplicate()
+	var m := _ensure_newlink_mixed_popup()
+	m.clear()
+	var id := 0
+	for row in cands:
+		var lab := str((row as Dictionary).get(&"label", ""))
+		m.add_item("Binding: %s" % lab, id)
+		id += 1
+	m.add_separator()
+	var entries := _WireRuleCatalogScript.rule_script_entries()
+	var wire_base := id
+	for j: int in range(entries.size()):
+		m.add_item("New wire: %s" % String(entries[j][&"label"]), wire_base + j)
+	var mp: Vector2i = DisplayServer.mouse_get_position()
+	m.position = mp
+	m.popup()
+
+
+func _open_newlink_wire_rules_only_popup(host: Control, donor: UiState) -> void:
+	_newlink_mixed_host = host
+	_newlink_mixed_component = ""
+	_newlink_mixed_donor_st = donor
+	_newlink_mixed_binding_cands.clear()
+	var m := _ensure_newlink_mixed_popup()
+	m.clear()
+	var entries := _WireRuleCatalogScript.rule_script_entries()
+	for j: int in range(entries.size()):
+		m.add_item("New wire: %s" % String(entries[j][&"label"]), j)
+	var mp: Vector2i = DisplayServer.mouse_get_position()
+	m.position = mp
+	m.popup()
+
+
+func _on_newlink_mixed_menu_id(menu_id: int) -> void:
+	if _newlink_mixed_host == null or _newlink_mixed_donor_st == null:
+		return
+	var nbind := _newlink_mixed_binding_cands.size()
+	var committed := false
+	if nbind > 0:
+		if menu_id >= 0 and menu_id < nbind:
+			var row: Dictionary = _newlink_mixed_binding_cands[menu_id] as Dictionary
+			var prop: StringName = row[&"property"] as StringName
+			committed = _NewBindingScript.try_commit_assign(
+				_newlink_mixed_host,
+				_newlink_mixed_component,
+				prop,
+				_newlink_mixed_donor_st,
+				_actions
+			)
+		else:
+			var widx := menu_id - nbind
+			committed = _WireGraphEditScript.try_commit_append_wire_rule_with_in(
+				_newlink_mixed_host, widx, _newlink_mixed_donor_st, _actions
+			)
+	else:
+		committed = _WireGraphEditScript.try_commit_append_wire_rule_with_in(
+			_newlink_mixed_host, menu_id, _newlink_mixed_donor_st, _actions
 		)
+	_newlink_mixed_host = null
+	_newlink_mixed_donor_st = null
+	_newlink_mixed_binding_cands.clear()
+	_newlink_mixed_component = ""
+	if not committed:
+		return
+	if _request_dock_refresh.is_valid():
+		_request_dock_refresh.call()
+	refresh()
+
+
+func _ensure_newlink_mount_popup() -> PopupMenu:
+	if _newlink_mount_popup != null:
+		return _newlink_mount_popup
+	_newlink_mount_popup = PopupMenu.new()
+	var bc2: Control = _plugin.get_editor_interface().get_base_control()
+	bc2.add_child(_newlink_mount_popup)
+	_newlink_mount_popup.id_pressed.connect(_on_newlink_mount_menu_id)
+	return _newlink_mount_popup
+
+
+func _open_newlink_computed_mount_picker(root: Node, donor_st: UiState, mounts: Array) -> void:
+	_newlink_mount_donor_st = donor_st
+	_newlink_mount_list = mounts.duplicate()
+	var m := _ensure_newlink_mount_popup()
+	m.clear()
+	for i: int in range(mounts.size()):
+		var md: Dictionary = mounts[i] as Dictionary
+		m.add_item("%s  |  %s" % [str(md.get(&"host_path", "")), str(md.get(&"computed_context", ""))], i)
+	var mp2: Vector2i = DisplayServer.mouse_get_position()
+	m.position = mp2
+	m.popup()
+
+
+func _on_newlink_mount_menu_id(menu_id: int) -> void:
+	if _newlink_mount_donor_st == null:
+		return
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return
+	if menu_id < 0 or menu_id >= _newlink_mount_list.size():
+		_newlink_mount_donor_st = null
+		_newlink_mount_list.clear()
+		return
+	var mount: Dictionary = _newlink_mount_list[menu_id] as Dictionary
+	var committed := _commit_newlink_computed_append_to_mount(root, mount, _newlink_mount_donor_st)
+	_newlink_mount_donor_st = null
+	_newlink_mount_list.clear()
 	if not committed:
 		return
 	if _request_dock_refresh.is_valid():
@@ -749,31 +1239,7 @@ func _try_commit_wire_rebind_from_edge(ed: Dictionary, for_input: bool, ui_st: U
 	if not (&"wire_rules" in host):
 		push_warning("Ui React: host has no wire_rules: %s" % wh)
 		return false
-	var arr := _duplicate_wire_rules_array(host)
-	if wi >= arr.size():
-		push_warning("Ui React: wire_rules index out of range: %d" % wi)
-		return false
-	var old_rule: Variant = arr[wi]
-	if old_rule == null or not (old_rule is UiReactWireRule):
-		push_warning("Ui React: wire_rules[%d] is not a UiReactWireRule." % wi)
-		return false
-	var dup_res: Resource = (old_rule as Resource).duplicate(true)
-	if dup_res == null or not (dup_res is UiReactWireRule):
-		push_warning("Ui React: could not duplicate wire rule at index %d." % wi)
-		return false
-	var new_rule := dup_res as UiReactWireRule
-	if not wprop in new_rule:
-		push_warning("Ui React: rule has no export %s" % str(wprop))
-		return false
-	new_rule.set(wprop, ui_st)
-	arr[wi] = new_rule
-	_actions.assign_property_variant(
-		host,
-		&"wire_rules",
-		arr,
-		"Ui React: wire_rules[%d] %s" % [wi, str(wprop)]
-	)
-	return true
+	return _WireGraphEditScript.try_commit_wire_slot_rebind(host, wi, wprop, ui_st, _actions)
 
 
 func _on_graph_reconnect_drag_ended(edge_idx: int, origin_id: String, target_id: String) -> void:
@@ -956,20 +1422,6 @@ func _on_rebind_file_selected(path: String) -> void:
 	if _request_dock_refresh.is_valid():
 		_request_dock_refresh.call()
 	refresh()
-
-
-func _duplicate_wire_rules_array(host: Control) -> Array[UiReactWireRule]:
-	var wr: Variant = host.get(&"wire_rules")
-	if wr == null:
-		return []
-	if wr is Array[UiReactWireRule]:
-		return (wr as Array[UiReactWireRule]).duplicate()
-	var plain: Array = wr as Array
-	var out: Array[UiReactWireRule] = []
-	for it in plain:
-		if it is UiReactWireRule:
-			out.append(it as UiReactWireRule)
-	return out
 
 
 func _set_details_placeholder() -> void:
@@ -1446,8 +1898,8 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 			plain_w += " %s" % hp2
 		bb += ".\n\n"
 		plain += plain_w + ".\n\n"
-		bb += "[b]Graph[/b]\nUse [b]Remove computed dependency[/b] below to clear this [code]sources[/code] slot (undoable).\n\n"
-		plain += "Graph\nUse Remove computed dependency below to clear this sources slot (undoable).\n\n"
+		bb += "[b]Graph[/b]\nUse [b]Remove computed dependency[/b] below to clear this [code]sources[/code] slot to null (undoable). [b]Remove source slot[/b] removes the array entry; [b]Move source up/down[/b] reorders.\n\n"
+		plain += "Graph\nRemove computed dependency clears this sources slot to null (undoable). Remove source slot removes the array entry; Move source up/down reorders.\n\n"
 		var cc := str(ed.get(&"computed_context", ""))
 		if not cc.is_empty():
 			bb += "[b]Computed owner[/b]\n[code]%s[/code], [code]sources[%d][/code] — target for [b]Rebind computed source…[/b] or [b]Remove computed dependency[/b].\n\n" % [
@@ -1479,6 +1931,8 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 			]
 			plain += "Rule exports\n"
 			plain += "Input export %s → output export %s (Rebind wire input / output).\n\n" % [win, wout]
+			bb += "[b]Graph[/b]\n[b]Clear wire link[/b] clears both exports for this edge (undoable). Edit [code]rule_id[/code] in the row below when enabled.\n\n"
+			plain += "Graph\nClear wire link clears both exports for this edge (undoable). Edit rule_id in the row below when enabled.\n\n"
 
 	if from_id == _last_focus_id or to_id == _last_focus_id:
 		bb += "[b]Relation to focus[/b]\nTouches the focus control directly.\n\n"
@@ -1488,6 +1942,7 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 	plain += "Technical\nKind token: %s\nFrom id: %s\nTo id: %s\n" % [token, from_id, to_id]
 
 	_set_details_both(bb, plain)
+	_sync_wire_rule_id_row()
 
 
 func _edge_short_token(kind: int) -> String:
@@ -1741,8 +2196,8 @@ func _build_ui() -> void:
 	_graph_view.tooltip_text = (
 		"Pan: middle-drag. Zoom: wheel. Select node or edge. "
 		+ "Reconnect: select an edge, then Shift+drag from the source endpoint node to another state node (undoable). "
-		+ "New link: clear edge selection, Ctrl+Shift+drag from a state/computed donor to a control (empty binding) or embedded computed (fill/append sources; undoable). "
-		+ "Delete/Backspace with an edge selected clears optional bindings or computed sources when the details buttons allow it."
+		+ "New link: clear edge selection, Ctrl+Shift+drag from a state donor to a control (empty binding and/or new wire rule) or to a computed (fill/append sources; file-backed computed resolves from scene binds). "
+		+ "Delete/Backspace with an edge selected clears optional bindings, computed sources, or wire links when the details buttons allow it."
 	)
 	_visual_host.add_child(_graph_view)
 
@@ -1764,6 +2219,25 @@ func _build_ui() -> void:
 	_details.text = "[i]Select a node or edge in the graph to see details.[/i]"
 	_details_scroll.add_child(_details)
 	_last_details_plain = "Select a node or edge in the graph to see details."
+
+	_wire_rule_id_row = HBoxContainer.new()
+	_wire_rule_id_row.visible = false
+	_wire_rule_id_row.add_theme_constant_override(&"separation", 6)
+	_visual_host.add_child(_wire_rule_id_row)
+	var rl := Label.new()
+	rl.text = "rule_id:"
+	rl.add_theme_font_size_override(&"font_size", 12)
+	_wire_rule_id_row.add_child(rl)
+	_wire_rule_id_edit = LineEdit.new()
+	_wire_rule_id_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_wire_rule_id_edit.placeholder_text = "Wire rule id"
+	_wire_rule_id_edit.text_submitted.connect(func(_t: String) -> void: _on_wire_rule_id_apply_pressed())
+	_wire_rule_id_row.add_child(_wire_rule_id_edit)
+	_btn_wire_rule_id_apply = Button.new()
+	_btn_wire_rule_id_apply.text = "Apply"
+	_btn_wire_rule_id_apply.tooltip_text = "Save rule_id on this wire_rules row (undoable)."
+	_btn_wire_rule_id_apply.pressed.connect(_on_wire_rule_id_apply_pressed)
+	_wire_rule_id_row.add_child(_btn_wire_rule_id_apply)
 
 	_details_buttons = HBoxContainer.new()
 	_details_buttons.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1834,6 +2308,38 @@ func _build_ui() -> void:
 	_btn_remove_computed_dependency.disabled = true
 	_btn_remove_computed_dependency.pressed.connect(_on_remove_computed_dependency_pressed)
 	_details_buttons.add_child(_btn_remove_computed_dependency)
+
+	_btn_clear_wire_link = Button.new()
+	_btn_clear_wire_link.text = "Clear wire link"
+	_btn_clear_wire_link.tooltip_text = (
+		"Clear both input and output UiState exports for this wire-flow edge in one undo step (requires both set)."
+	)
+	_btn_clear_wire_link.disabled = true
+	_btn_clear_wire_link.pressed.connect(_on_clear_wire_link_pressed)
+	_details_buttons.add_child(_btn_clear_wire_link)
+
+	_btn_move_computed_source_up = Button.new()
+	_btn_move_computed_source_up.text = "Move source up"
+	_btn_move_computed_source_up.tooltip_text = "Swap this sources[] index with the previous entry (undoable)."
+	_btn_move_computed_source_up.disabled = true
+	_btn_move_computed_source_up.pressed.connect(_on_move_computed_source_up_pressed)
+	_details_buttons.add_child(_btn_move_computed_source_up)
+
+	_btn_move_computed_source_down = Button.new()
+	_btn_move_computed_source_down.text = "Move source down"
+	_btn_move_computed_source_down.tooltip_text = "Swap this sources[] index with the next entry (undoable)."
+	_btn_move_computed_source_down.disabled = true
+	_btn_move_computed_source_down.pressed.connect(_on_move_computed_source_down_pressed)
+	_details_buttons.add_child(_btn_move_computed_source_down)
+
+	_btn_remove_computed_source_slot = Button.new()
+	_btn_remove_computed_source_slot.text = "Remove source slot"
+	_btn_remove_computed_source_slot.tooltip_text = (
+		"Remove this index from sources[] and compact the array (undoable; not the same as clearing to null)."
+	)
+	_btn_remove_computed_source_slot.disabled = true
+	_btn_remove_computed_source_slot.pressed.connect(_on_remove_computed_source_slot_pressed)
+	_details_buttons.add_child(_btn_remove_computed_source_slot)
 
 	_btn_copy_details = Button.new()
 	_btn_copy_details.text = "Copy details"

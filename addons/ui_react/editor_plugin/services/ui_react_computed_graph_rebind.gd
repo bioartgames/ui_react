@@ -144,6 +144,151 @@ static func _try_commit_sources_index(
 			return false
 
 
+## Swaps [code]sources[index_a][/code] and [code]sources[index_b][/code] (**[code]CB-058[/code]** follow-on).
+static func try_commit_swap_sources(
+	host: Control,
+	computed_context: String,
+	index_a: int,
+	index_b: int,
+	actions: UiReactActionController,
+) -> bool:
+	var ul := "Ui React: Swap computed sources (%s)" % computed_context
+	var mut_swap: Callable = func(arr: Array) -> bool:
+		if index_a < 0 or index_b < 0 or index_a >= arr.size() or index_b >= arr.size():
+			return false
+		if index_a == index_b:
+			return false
+		var t: Variant = arr[index_a]
+		arr[index_a] = arr[index_b]
+		arr[index_b] = t
+		return true
+	return _try_commit_sources_array_mutation(host, computed_context, actions, ul, mut_swap)
+
+
+## Removes [code]sources[source_index][/code] and compacts the array (**[code]CB-058[/code]** follow-on).
+static func try_commit_remove_source_at(
+	host: Control,
+	computed_context: String,
+	source_index: int,
+	actions: UiReactActionController,
+) -> bool:
+	var ul2 := "Ui React: Remove computed source slot (%s)" % computed_context
+	var mut_rm: Callable = func(arr: Array) -> bool:
+		if source_index < 0 or source_index >= arr.size():
+			return false
+		arr.remove_at(source_index)
+		return true
+	return _try_commit_sources_array_mutation(host, computed_context, actions, ul2, mut_rm)
+
+
+static func _try_commit_sources_array_mutation(
+	host: Control,
+	computed_context: String,
+	actions: UiReactActionController,
+	undo_label: String,
+	mutator: Callable,
+) -> bool:
+	if host == null or actions == null or computed_context.is_empty() or not mutator.is_valid():
+		return false
+	var c0: Variant = try_resolve_computed(host, computed_context)
+	if c0 == null:
+		push_warning("Ui React: could not resolve computed at context: %s" % computed_context)
+		return false
+	var raw0: Variant = c0.get(&"sources")
+	if typeof(raw0) != TYPE_ARRAY:
+		return false
+
+	var head: Dictionary = _parse_control_prefix(host, computed_context)
+	if head.is_empty() or not bool(head.get(&"ok", false)):
+		push_warning("Ui React: invalid computed_context for commit: %s" % computed_context)
+		return false
+	var rest: String = str(head.get(&"rest", ""))
+	var first_child: Variant = head[&"next"]
+	if first_child == null and not rest.is_empty():
+		push_warning("Ui React: null path segment in computed_context: %s" % computed_context)
+		return false
+
+	var new_subtree: Variant
+	if rest.is_empty():
+		new_subtree = _patch_computed_leaf_sources_mutate(first_child, mutator)
+	else:
+		new_subtree = _mutate_path_sources_mutate(first_child, rest, mutator)
+	if new_subtree == null:
+		return false
+
+	var kind: StringName = head[&"kind"]
+	match kind:
+		&"bind":
+			var prop: StringName = head[&"export"]
+			actions.assign_property_variant(host, prop, new_subtree, undo_label)
+			return true
+		&"wire":
+			var wi: int = int(head[&"rule_index"])
+			var wp: StringName = head[&"rule_prop"]
+			return _commit_wire_field(
+				host, wi, wp, new_subtree, 0, computed_context, actions, undo_label
+			)
+		&"tab_config":
+			return _commit_tab_config_field(
+				host, head, new_subtree, 0, computed_context, actions, undo_label
+			)
+		&"anim":
+			return _commit_array_element(
+				host,
+				head[&"export"],
+				int(head[&"array_index"]),
+				new_subtree,
+				0,
+				computed_context,
+				actions,
+				undo_label,
+			)
+		&"action":
+			return _commit_array_element(
+				host,
+				head[&"export"],
+				int(head[&"array_index"]),
+				new_subtree,
+				0,
+				computed_context,
+				actions,
+				undo_label,
+			)
+		_:
+			return false
+
+
+static func _patch_computed_leaf_sources_mutate(cur: Variant, mutator: Callable) -> Variant:
+	if not (cur is UiComputedStringState or cur is UiComputedBoolState):
+		return null
+	var c: Resource = cur as Resource
+	var c2: Resource = c.duplicate(true)
+	if c2 == null:
+		return null
+	var raw2: Variant = c2.get(&"sources")
+	if typeof(raw2) != TYPE_ARRAY:
+		return null
+	var arr: Array = (raw2 as Array).duplicate()
+	if not bool(mutator.call(arr)):
+		return null
+	c2.set(&"sources", arr)
+	return c2
+
+
+static func _mutate_path_sources_mutate(cur: Variant, path: String, mutator: Callable) -> Variant:
+	if path.is_empty():
+		return _patch_computed_leaf_sources_mutate(cur, mutator)
+	var step: Dictionary = _pop_segment_deep(cur, path)
+	if step.is_empty() or not bool(step.get(&"ok", false)):
+		return null
+	var child_val: Variant = step[&"next"]
+	var rest: String = str(step.get(&"rest", ""))
+	var inner_new: Variant = _mutate_path_sources_mutate(child_val, rest, mutator)
+	if inner_new == null:
+		return null
+	return _replace_child(cur, step, inner_new)
+
+
 ## Fills first null / non-[UiState] [code]sources[/code] slot, or appends if all slots hold [UiState] and size [i]<[/i] [_MAX_COMPUTED_SOURCES] (**[code]CB-058[/code]** phase 2b).
 static func try_commit_append_or_fill_source(
 	host: Control,
@@ -547,6 +692,7 @@ static func _commit_wire_field(
 	source_index: int,
 	computed_context: String,
 	actions: UiReactActionController,
+	p_undo_label: String = "",
 ) -> bool:
 	var wr: Variant = host.get(&"wire_rules")
 	if wr == null:
@@ -568,12 +714,12 @@ static func _commit_wire_field(
 		return false
 	dup_r.set(rule_prop, new_subtree)
 	arr[rule_index] = dup_r as UiReactWireRule
-	actions.assign_property_variant(
-		host,
-		&"wire_rules",
-		arr,
-		"Ui React: computed sources[%d] (%s)" % [source_index, computed_context]
+	var ul := (
+		p_undo_label
+		if not p_undo_label.is_empty()
+		else "Ui React: computed sources[%d] (%s)" % [source_index, computed_context]
 	)
+	actions.assign_property_variant(host, &"wire_rules", arr, ul)
 	return true
 
 
@@ -584,6 +730,7 @@ static func _commit_tab_config_field(
 	source_index: int,
 	computed_context: String,
 	actions: UiReactActionController,
+	p_undo_label: String = "",
 ) -> bool:
 	if not (&"tab_config" in host):
 		return false
@@ -604,12 +751,12 @@ static func _commit_tab_config_field(
 			cfg.tab_content_states[ci] = new_subtree
 		_:
 			return false
-	actions.assign_property_variant(
-		host,
-		&"tab_config",
-		cfg,
-		"Ui React: computed sources[%d] (%s)" % [source_index, computed_context]
+	var ul2 := (
+		p_undo_label
+		if not p_undo_label.is_empty()
+		else "Ui React: computed sources[%d] (%s)" % [source_index, computed_context]
 	)
+	actions.assign_property_variant(host, &"tab_config", cfg, ul2)
 	return true
 
 
@@ -621,6 +768,7 @@ static func _commit_array_element(
 	source_index: int,
 	computed_context: String,
 	actions: UiReactActionController,
+	p_undo_label: String = "",
 ) -> bool:
 	if not export_sn in host:
 		return false
@@ -631,10 +779,10 @@ static func _commit_array_element(
 	if array_index < 0 or array_index >= a.size():
 		return false
 	a[array_index] = new_subtree
-	actions.assign_property_variant(
-		host,
-		export_sn,
-		a,
-		"Ui React: computed sources[%d] (%s)" % [source_index, computed_context]
+	var ul3 := (
+		p_undo_label
+		if not p_undo_label.is_empty()
+		else "Ui React: computed sources[%d] (%s)" % [source_index, computed_context]
 	)
+	actions.assign_property_variant(host, export_sn, a, ul3)
 	return true
