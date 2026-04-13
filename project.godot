@@ -31,5 +31,5 @@ plugin_group_mode=1
 plugin_ignored_unused_state_paths=PackedStringArray()
 plugin_graph_scope_presets_json="[]"
 plugin_graph_active_scope_preset_name=""
-plugin_graph_body_vsplit_offset=160
+plugin_graph_body_vsplit_offset=-52
 plugin_graph_legend_visible=true

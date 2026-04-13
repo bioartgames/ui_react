@@ -2396,6 +2396,7 @@ func _mismatch_banner_bb_plain(narr: Object) -> PackedStringArray:
 
 
 const _INCIDENT_EDGE_CAP := 8
+const _OTHER_EDGES_AT_ANCHOR_CAP := 6
 const _ORPHAN_LAYER := -512
 const _CYCLE_SUMMARY_CAP := 2
 ## Declarative-scope one-liner appended after human reachability in the details pane.
@@ -2418,6 +2419,98 @@ func _incident_edge_sig(ed: Dictionary) -> String:
 		int(ed.get(&"kind", -1)),
 		str(ed.get(&"label", "")),
 	]
+
+
+## When true, omit binding **Where to edit** (healthy path resolves to a Control in the edited scene).
+func _edge_binding_skip_inspector_blurb(ed: Dictionary) -> bool:
+	var hp := str(ed.get(&"host_path", ""))
+	if hp.is_empty():
+		return false
+	if _plugin == null:
+		return false
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return false
+	if not root.has_node(NodePath(hp)):
+		return false
+	var hn: Node = root.get_node(NodePath(hp))
+	return hn is Control
+
+
+func _optional_binding_dock_hint_bb_plain(ed: Dictionary, bp: StringName) -> PackedStringArray:
+	var hp := str(ed.get(&"host_path", ""))
+	if hp.is_empty() or _plugin == null:
+		return PackedStringArray(["", ""])
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null or not root.has_node(NodePath(hp)):
+		return PackedStringArray(["", ""])
+	var hn: Node = root.get_node(NodePath(hp))
+	if not hn is Control:
+		return PackedStringArray(["", ""])
+	var comp2 := UiReactScannerService.get_component_name_from_script((hn as Control).get_script() as Script)
+	if not UiReactGraphNewBindingService.binding_export_is_optional(comp2, bp):
+		return PackedStringArray(["", ""])
+	var msg := "[i]Optional export — [b]Clear optional binding[/b] is available in the dock action row (undoable).[/i]\n"
+	return PackedStringArray([msg, _plain_from_bbcode_line(msg)])
+
+
+func _other_edges_at_anchor_bb_plain(
+	anchor_id: String, selected_edge_index: int
+) -> PackedStringArray:
+	if anchor_id.is_empty():
+		return PackedStringArray(["", ""])
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	if selected_edge_index < 0 or selected_edge_index >= edges.size():
+		return PackedStringArray(["", ""])
+	var sel_ev: Variant = edges[selected_edge_index]
+	if sel_ev is not Dictionary:
+		return PackedStringArray(["", ""])
+	var sel_sig := _incident_edge_sig(sel_ev as Dictionary)
+	var others: Array[Dictionary] = []
+	for i: int in range(edges.size()):
+		if i == selected_edge_index:
+			continue
+		var ev2: Variant = edges[i]
+		if ev2 is not Dictionary:
+			continue
+		var ed2: Dictionary = ev2 as Dictionary
+		if _incident_edge_sig(ed2) == sel_sig:
+			continue
+		var fid := str(ed2.get(&"from_id", ""))
+		var tid := str(ed2.get(&"to_id", ""))
+		if fid == anchor_id or tid == anchor_id:
+			others.append(ed2)
+	if others.is_empty():
+		return PackedStringArray(["", ""])
+	others.sort_custom(
+		func(a: Dictionary, b: Dictionary) -> bool:
+			var ka := int(a.get(&"kind", -1))
+			var kb := int(b.get(&"kind", -1))
+			if ka != kb:
+				return ka < kb
+			var fa := str(a.get(&"from_id", ""))
+			var fb := str(b.get(&"from_id", ""))
+			if fa != fb:
+				return fa < fb
+			return str(a.get(&"to_id", "")) < str(b.get(&"to_id", ""))
+	)
+	var bb := "\n[b]Other edges at this anchor[/b]\n"
+	var plain := "\nOther edges at this anchor\n"
+	var cap := _OTHER_EDGES_AT_ANCHOR_CAP
+	var n_show := mini(others.size(), cap)
+	for j: int in n_show:
+		var pair := _format_incident_edge_bb_plain(others[j])
+		bb += pair[0] + "\n"
+		plain += pair[1] + "\n"
+	var overflow := others.size() - n_show
+	if overflow > 0:
+		bb += "[i]+%d more in this graph[/i]\n" % overflow
+		plain += "+%d more in this graph\n" % overflow
+	bb += "\n"
+	plain += "\n"
+	return PackedStringArray([bb, plain])
 
 
 func _find_binding_edge_for_prop(incident: Array[Dictionary], node_id: String, prop: String) -> Dictionary:
@@ -2775,38 +2868,39 @@ func _edge_details_summary_bb_plain(
 			ed = ev as Dictionary
 	var from_short := _short_label_for_node_id(from_id)
 	var to_short := _short_label_for_node_id(to_id)
-	var bb := "[b]Selected edge[/b]\n"
-	var plain := "Selected edge\n\n"
+	var bb := ""
+	var plain := ""
 	match kind:
 		_SnapScript.EdgeKind.BINDING:
-			var bp := str(ed.get(&"binding_property", label))
-			bb += "[b]Property binding[/b]\n"
-			bb += "[code]%s[/code] feeds the [code]UiReact*[/code] control [code]%s[/code]'s [code]%s[/code] export.\n\n" % [
+			var bp0 := str(ed.get(&"binding_property", label))
+			bb = "[b]Property binding[/b] — [code]%s[/code] → [code]%s[/code], export [code]%s[/code]\n\n" % [
 				from_short,
 				to_short,
-				bp,
+				bp0,
 			]
-			plain += "Property binding\n"
-			plain += "%s feeds the UiReact* control %s's %s export.\n\n" % [from_short, to_short, bp]
+			plain = "Property binding — %s → %s, export %s\n\n" % [from_short, to_short, bp0]
 		_SnapScript.EdgeKind.COMPUTED_SOURCE:
-			bb += "[b]Computed source[/b]\n"
+			bb = "[b]Computed source[/b] — [code]%s[/code] → [code]%s[/code]\n" % [from_short, to_short]
 			bb += "[code]%s[/code] feeds an entry in the computed resource [code]%s[/code]'s [code]sources[/code] array.\n\n" % [
 				from_short,
 				to_short,
 			]
-			plain += "Computed source\n"
+			plain = "Computed source — %s → %s\n" % [from_short, to_short]
 			plain += "%s feeds an entry in the computed resource %s's sources array.\n\n" % [from_short, to_short]
 		_SnapScript.EdgeKind.WIRE_FLOW:
-			bb += "[b]Wire flow[/b]\n"
+			bb = "[b]Wire flow[/b] — [code]%s[/code] → [code]%s[/code]\n" % [from_short, to_short]
 			bb += "A [code]wire_rules[/code] row connects input [code]%s[/code] to output [code]%s[/code] (each endpoint is a state or computed resource in this snapshot).\n\n" % [
 				from_short,
 				to_short,
 			]
-			plain += "Wire flow\n"
-			plain += "A wire_rules row connects input %s to output %s (each endpoint is a state or computed resource in this snapshot).\n\n" % [from_short, to_short]
+			plain = "Wire flow — %s → %s\n" % [from_short, to_short]
+			plain += "A wire_rules row connects input %s to output %s (each endpoint is a state or computed resource in this snapshot).\n\n" % [
+				from_short,
+				to_short,
+			]
 		_:
-			bb += "[b]Edge[/b]\nDeclarative dependency between two snapshot nodes.\n\n"
-			plain += "Edge\nDeclarative dependency between two snapshot nodes.\n\n"
+			bb = "[b]Edge[/b]\nDeclarative dependency between two snapshot nodes.\n\n"
+			plain = "Edge\nDeclarative dependency between two snapshot nodes.\n\n"
 
 	var show_endpoints := not (
 		kind == _SnapScript.EdgeKind.BINDING
@@ -2830,19 +2924,18 @@ func _edge_details_summary_bb_plain(
 		var bp := str(ed.get(&"binding_property", ""))
 		if bp.is_empty():
 			bp = str(ed.get(&"label", label))
-		if not hp.is_empty():
-			bb += "[b]Where to edit[/b]\nInspector on control [code]%s[/code], export [code]%s[/code].\n\n" % [hp, bp]
-			plain += "Where to edit\nInspector on control %s, export %s.\n\n" % [hp, bp]
-			if _plugin != null:
-				var ei2 := _plugin.get_editor_interface()
-				var root2 := ei2.get_edited_scene_root()
-				if root2 != null and root2.has_node(NodePath(hp)):
-					var hn: Node = root2.get_node(NodePath(hp))
-					if hn is Control:
-						var comp2 := UiReactScannerService.get_component_name_from_script((hn as Control).get_script() as Script)
-						if UiReactGraphNewBindingService.binding_export_is_optional(comp2, StringName(bp)):
-							bb += "[b]Actions[/b]\nUse [b]Clear optional binding[/b] below to set this export to empty (undoable).\n\n"
-							plain += "Actions\nUse Clear optional binding below to set this export to empty (undoable).\n\n"
+		if not _edge_binding_skip_inspector_blurb(ed):
+			bb += "[b]Where to edit[/b]\n"
+			plain += "Where to edit\n"
+			if hp.is_empty():
+				bb += "[i]No control path on this edge in the snapshot—use [b]Focus in Inspector[/b] or refresh the graph.[/i]\n\n"
+				plain += "No control path on this edge in the snapshot—use Focus in Inspector or refresh the graph.\n\n"
+			else:
+				bb += "Inspector on control [code]%s[/code], export [code]%s[/code].\n\n" % [hp, bp]
+				plain += "Inspector on control %s, export %s.\n\n" % [hp, bp]
+		var opt_hint := _optional_binding_dock_hint_bb_plain(ed, StringName(bp))
+		bb += opt_hint[0]
+		plain += opt_hint[1]
 	elif kind == _SnapScript.EdgeKind.COMPUTED_SOURCE:
 		var hp2 := str(ed.get(&"host_path", ""))
 		var si := int(ed.get(&"computed_source_index", -1))
@@ -2858,8 +2951,6 @@ func _edge_details_summary_bb_plain(
 			plain_w += " %s" % hp2
 		bb += ".\n\n"
 		plain += plain_w + ".\n\n"
-		bb += "[b]Actions[/b]\nUse [b]Remove computed dependency[/b] below to clear this [code]sources[/code] slot to null (undoable). [b]Remove source slot[/b] removes the array entry; [b]Move source up/down[/b] reorders.\n\n"
-		plain += "Actions\nRemove computed dependency clears this sources slot to null (undoable). Remove source slot removes the array entry; Move source up/down reorders.\n\n"
 		var cc := str(ed.get(&"computed_context", ""))
 		if not cc.is_empty():
 			bb += "[b]Computed owner[/b]\n[code]%s[/code], [code]sources[%d][/code] — target for [b]Rebind computed source…[/b] or [b]Remove computed dependency[/b].\n\n" % [
@@ -2885,14 +2976,12 @@ func _edge_details_summary_bb_plain(
 		var wout := str(ed.get(&"wire_out_property", ""))
 		if not win.is_empty() and not wout.is_empty():
 			bb += "[b]Rule exports[/b]\n"
-			bb += "Input export [code]%s[/code] → output export [code]%s[/code] (see Rebind wire input / output below).\n\n" % [
+			bb += "Input export [code]%s[/code] → output export [code]%s[/code] (dock action row: rebind input/output).\n\n" % [
 				win,
 				wout,
 			]
 			plain += "Rule exports\n"
-			plain += "Input export %s → output export %s (Rebind wire input / output).\n\n" % [win, wout]
-			bb += "[b]Actions[/b]\n[b]Clear wire link[/b] clears both exports for this edge (undoable). Edit [code]rule_id[/code] (Apply), [code]enabled[/code], or [code]trigger[/code] below; use Inspector for deeper rule fields.\n\n"
-			plain += "Actions\nClear wire link clears both exports for this edge (undoable). Edit rule_id (Apply), enabled, or trigger below; use Inspector for deeper rule fields.\n\n"
+			plain += "Input export %s → output export %s (dock action row: rebind input/output).\n\n" % [win, wout]
 
 	if from_id == _last_focus_id or to_id == _last_focus_id:
 		bb += "[b]Relation to focus[/b]\nTouches the focus control directly.\n\n"
@@ -2910,6 +2999,9 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 	var summ := _edge_details_summary_bb_plain(from_id, to_id, kind, label, edge_index)
 	var bb := summ[0]
 	var plain := summ[1]
+	var sib := _other_edges_at_anchor_bb_plain(anchor_id, edge_index)
+	bb += sib[0]
+	plain += sib[1]
 	if narr != null:
 		bb += "\n[b]Graph context[/b]\n"
 		plain += "\nGraph context\n"
