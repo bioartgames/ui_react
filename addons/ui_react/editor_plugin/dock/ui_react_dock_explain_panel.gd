@@ -28,6 +28,24 @@ const _SCOPE_MAX_NODES := 2000
 const _SCOPE_MIN_EDGES := 40
 const _SCOPE_MAX_EDGES := 4000
 
+## Selection [PopupMenu] ids — [method _fill_selection_actions_popup] / [method _on_selection_action_id].
+const _SEL_ACT_REBIND_BINDING := 1101
+const _SEL_ACT_REBIND_WIRE_IN := 1102
+const _SEL_ACT_REBIND_WIRE_OUT := 1103
+const _SEL_ACT_REBIND_COMPUTED_SRC := 1104
+const _SEL_ACT_CLEAR_OPT_BINDING := 1110
+const _SEL_ACT_REMOVE_COMPUTED_DEP := 1111
+const _SEL_ACT_CLEAR_WIRE_LINK := 1112
+const _SEL_ACT_MOVE_SRC_UP := 1120
+const _SEL_ACT_MOVE_SRC_DOWN := 1121
+const _SEL_ACT_REMOVE_SRC_SLOT := 1122
+const _SEL_ACT_CREATE_ASSIGN_BINDING := 1130
+const _SEL_ACT_COPY_DETAILS := 1199
+
+const _SCOPE_OVERFLOW_SAVE := 1
+const _SCOPE_OVERFLOW_MANAGE := 2
+const _SCOPE_OVERFLOW_PIN := 3
+
 var _plugin: EditorPlugin
 var _actions: UiReactActionController
 var _request_dock_refresh: Callable = Callable()
@@ -49,17 +67,8 @@ var _details_scroll: ScrollContainer
 var _details: RichTextLabel
 var _details_buttons: HBoxContainer
 var _btn_focus_inspector: Button
-var _btn_rebind_binding: Button
-var _btn_rebind_wire_in: Button
-var _btn_rebind_wire_out: Button
-var _btn_rebind_computed_source: Button
-var _btn_clear_optional_binding: Button
-var _btn_remove_computed_dependency: Button
-var _btn_clear_wire_link: Button
-var _btn_move_computed_source_up: Button
-var _btn_move_computed_source_down: Button
-var _btn_remove_computed_source_slot: Button
-var _btn_copy_details: Button
+var _btn_selection_actions: MenuButton
+var _selection_actions_context_popup: PopupMenu
 
 var _wire_payload_box: VBoxContainer
 var _wire_rule_id_row: HBoxContainer
@@ -117,7 +126,6 @@ var _last_edge_label: String = ""
 var _last_details_plain: String = ""
 
 var _btn_create_state: MenuButton
-var _btn_create_assign_binding: Button
 var _create_state_save_dialog: EditorFileDialog
 var _create_state_class_pending: String = ""
 var _create_and_assign_mode: bool = false
@@ -128,9 +136,7 @@ var _create_assign_expected_class: StringName = &""
 
 var _scope_row: HBoxContainer
 var _scope_preset_option: OptionButton
-var _btn_scope_save_as: Button
-var _btn_scope_manage: Button
-var _btn_pin_node: Button
+var _btn_scope_overflow: MenuButton
 var _scope_save_name_dialog: AcceptDialog
 var _scope_save_name_edit: LineEdit
 var _scope_manage_dialog: AcceptDialog
@@ -293,38 +299,191 @@ func _on_graph_cleared() -> void:
 func _update_focus_button_state() -> void:
 	if _btn_focus_inspector != null:
 		_btn_focus_inspector.disabled = _selection_kind == _SEL_NONE
-	if _btn_rebind_binding != null:
-		_btn_rebind_binding.disabled = not _can_rebind_binding_edge()
-	if _btn_rebind_wire_in != null:
-		_btn_rebind_wire_in.disabled = not _can_rebind_wire_endpoint(true)
-	if _btn_rebind_wire_out != null:
-		_btn_rebind_wire_out.disabled = not _can_rebind_wire_endpoint(false)
-	if _btn_rebind_computed_source != null:
-		_btn_rebind_computed_source.disabled = not _can_rebind_computed_source()
-	if _btn_clear_optional_binding != null:
-		_btn_clear_optional_binding.disabled = not _can_disconnect_binding_edge()
-	if _btn_remove_computed_dependency != null:
-		_btn_remove_computed_dependency.disabled = not _can_disconnect_computed_source()
-	if _btn_clear_wire_link != null:
-		_btn_clear_wire_link.disabled = not _can_disconnect_wire_edge()
-	if _btn_move_computed_source_up != null:
-		_btn_move_computed_source_up.disabled = not _can_move_computed_source_up()
-	if _btn_move_computed_source_down != null:
-		_btn_move_computed_source_down.disabled = not _can_move_computed_source_down()
-	if _btn_remove_computed_source_slot != null:
-		_btn_remove_computed_source_slot.disabled = not _can_remove_computed_source_slot()
-	if _btn_create_assign_binding != null:
-		_btn_create_assign_binding.disabled = not _can_create_and_assign_binding_edge()
-	if _btn_pin_node != null:
-		var actn: String = String(UiReactDockConfig.get_active_graph_scope_preset_name()).strip_edges()
-		var pin_ok: bool = (
-			not actn.is_empty()
-			and actn.to_lower() != "default"
-			and _selection_kind == _SEL_NODE
-			and not _graph_selected_node_id.is_empty()
-		)
-		_btn_pin_node.disabled = not pin_ok
 	_sync_wire_rule_id_row()
+
+
+func _can_pin_focused_node_to_preset() -> bool:
+	var actn: String = String(UiReactDockConfig.get_active_graph_scope_preset_name()).strip_edges()
+	return (
+		not actn.is_empty()
+		and actn.to_lower() != "default"
+		and _selection_kind == _SEL_NODE
+		and not _graph_selected_node_id.is_empty()
+	)
+
+
+## Actions… menu and graph context menu — single builder (plan: omit disabled rows; [member _btn_selection_actions] stays enabled even when only Copy applies).
+func _fill_selection_actions_popup(popup: PopupMenu) -> void:
+	popup.clear()
+	const TT_REBIND_BINDING := (
+		"Replace the bound UiState on this binding edge with another .tres resource (undoable). "
+		+ "For wire-flow edges, use Rebind wire input / output."
+	)
+	const TT_REBIND_WIRE_IN := (
+		"Replace the input-slot UiState on this wire_rules row (undoable). "
+		+ "Uses the edge’s input export; computed-source edges are not supported."
+	)
+	const TT_REBIND_WIRE_OUT := (
+		"Replace the output-slot UiState on this wire_rules row (undoable). "
+		+ "Uses the edge’s output export; computed-source edges are not supported."
+	)
+	const TT_REBIND_COMPUTED := (
+		"Replace one entry in the owning UiComputed* sources[] for this computed-source edge (undoable). "
+		+ "Requires a fresh graph (Refresh) so the edge carries computed_context."
+	)
+	const TT_CLEAR_BINDING := (
+		"Set this binding export to empty for optional registry slots only (undoable). "
+		+ "Required exports must be cleared in the Inspector."
+	)
+	const TT_REMOVE_COMPUTED := (
+		"Clear this UiComputed* sources[] slot to null (undoable). Requires computed_context on the edge; Refresh if missing."
+	)
+	const TT_CLEAR_WIRE := (
+		"Clear both input and output UiState exports for this wire-flow edge in one undo step (requires both set)."
+	)
+	const TT_MOVE_UP := "Swap this sources[] index with the previous entry (undoable)."
+	const TT_MOVE_DOWN := "Swap this sources[] index with the next entry (undoable)."
+	const TT_REMOVE_SLOT := (
+		"Remove this index from sources[] and compact the array (undoable; not the same as clearing to null)."
+	)
+	const TT_CREATE_ASSIGN := (
+		"For a selected optional empty binding edge: save a new matching UiState .tres and assign it (undoable)."
+	)
+	const TT_COPY := "Copy the plain-text details to the clipboard."
+
+	var rebind_added := false
+	if _can_rebind_binding_edge():
+		popup.add_item("Rebind to resource…", _SEL_ACT_REBIND_BINDING)
+		popup.set_item_tooltip(popup.item_count - 1, TT_REBIND_BINDING)
+		rebind_added = true
+	if _can_rebind_wire_endpoint(true):
+		popup.add_item("Rebind wire input…", _SEL_ACT_REBIND_WIRE_IN)
+		popup.set_item_tooltip(popup.item_count - 1, TT_REBIND_WIRE_IN)
+		rebind_added = true
+	if _can_rebind_wire_endpoint(false):
+		popup.add_item("Rebind wire output…", _SEL_ACT_REBIND_WIRE_OUT)
+		popup.set_item_tooltip(popup.item_count - 1, TT_REBIND_WIRE_OUT)
+		rebind_added = true
+	if _can_rebind_computed_source():
+		popup.add_item("Rebind computed source…", _SEL_ACT_REBIND_COMPUTED_SRC)
+		popup.set_item_tooltip(popup.item_count - 1, TT_REBIND_COMPUTED)
+		rebind_added = true
+
+	var disc_will := (
+		_can_disconnect_binding_edge()
+		or _can_disconnect_computed_source()
+		or _can_disconnect_wire_edge()
+	)
+	var slot_will := (
+		_can_move_computed_source_up()
+		or _can_move_computed_source_down()
+		or _can_remove_computed_source_slot()
+	)
+	var ca_will := _can_create_and_assign_binding_edge()
+	if rebind_added and (disc_will or slot_will or ca_will):
+		popup.add_separator()
+
+	var disc_added := false
+	if _can_disconnect_binding_edge():
+		popup.add_item("Clear optional binding", _SEL_ACT_CLEAR_OPT_BINDING)
+		popup.set_item_tooltip(popup.item_count - 1, TT_CLEAR_BINDING)
+		disc_added = true
+	if _can_disconnect_computed_source():
+		popup.add_item("Remove computed dependency", _SEL_ACT_REMOVE_COMPUTED_DEP)
+		popup.set_item_tooltip(popup.item_count - 1, TT_REMOVE_COMPUTED)
+		disc_added = true
+	if _can_disconnect_wire_edge():
+		popup.add_item("Clear wire link", _SEL_ACT_CLEAR_WIRE_LINK)
+		popup.set_item_tooltip(popup.item_count - 1, TT_CLEAR_WIRE)
+		disc_added = true
+
+	if disc_added and slot_will:
+		popup.add_separator()
+
+	if _can_move_computed_source_up():
+		popup.add_item("Move source up", _SEL_ACT_MOVE_SRC_UP)
+		popup.set_item_tooltip(popup.item_count - 1, TT_MOVE_UP)
+	if _can_move_computed_source_down():
+		popup.add_item("Move source down", _SEL_ACT_MOVE_SRC_DOWN)
+		popup.set_item_tooltip(popup.item_count - 1, TT_MOVE_DOWN)
+	if _can_remove_computed_source_slot():
+		popup.add_item("Remove source slot", _SEL_ACT_REMOVE_SRC_SLOT)
+		popup.set_item_tooltip(popup.item_count - 1, TT_REMOVE_SLOT)
+
+	if ca_will:
+		if popup.item_count > 0:
+			popup.add_separator()
+		popup.add_item("Create & assign…", _SEL_ACT_CREATE_ASSIGN_BINDING)
+		popup.set_item_tooltip(popup.item_count - 1, TT_CREATE_ASSIGN)
+
+	popup.add_separator()
+	popup.add_item("Copy details", _SEL_ACT_COPY_DETAILS)
+	popup.set_item_tooltip(popup.item_count - 1, TT_COPY)
+
+
+func _on_selection_actions_about_to_popup() -> void:
+	if _btn_selection_actions == null:
+		return
+	_fill_selection_actions_popup(_btn_selection_actions.get_popup())
+
+
+func _on_selection_action_id(id: int) -> void:
+	match id:
+		_SEL_ACT_REBIND_BINDING:
+			_on_rebind_binding_pressed()
+		_SEL_ACT_REBIND_WIRE_IN:
+			_on_rebind_wire_in_pressed()
+		_SEL_ACT_REBIND_WIRE_OUT:
+			_on_rebind_wire_out_pressed()
+		_SEL_ACT_REBIND_COMPUTED_SRC:
+			_on_rebind_computed_source_pressed()
+		_SEL_ACT_CLEAR_OPT_BINDING:
+			_on_clear_optional_binding_pressed()
+		_SEL_ACT_REMOVE_COMPUTED_DEP:
+			_on_remove_computed_dependency_pressed()
+		_SEL_ACT_CLEAR_WIRE_LINK:
+			_on_clear_wire_link_pressed()
+		_SEL_ACT_MOVE_SRC_UP:
+			_on_move_computed_source_up_pressed()
+		_SEL_ACT_MOVE_SRC_DOWN:
+			_on_move_computed_source_down_pressed()
+		_SEL_ACT_REMOVE_SRC_SLOT:
+			_on_remove_computed_source_slot_pressed()
+		_SEL_ACT_CREATE_ASSIGN_BINDING:
+			_on_create_assign_binding_pressed()
+		_SEL_ACT_COPY_DETAILS:
+			_on_copy_details_pressed()
+		_:
+			pass
+
+
+func _on_scope_overflow_about_to_popup() -> void:
+	if _btn_scope_overflow == null:
+		return
+	var pop := _btn_scope_overflow.get_popup()
+	# Fixed order: Save, Manage, Pin (id3).
+	pop.set_item_disabled(2, not _can_pin_focused_node_to_preset())
+
+
+func _on_scope_overflow_id(id: int) -> void:
+	match id:
+		_SCOPE_OVERFLOW_SAVE:
+			_on_scope_save_as_pressed()
+		_SCOPE_OVERFLOW_MANAGE:
+			_on_scope_manage_pressed()
+		_SCOPE_OVERFLOW_PIN:
+			_on_pin_node_pressed()
+		_:
+			pass
+
+
+func _on_graph_context_menu_requested(at_local: Vector2) -> void:
+	if _selection_actions_context_popup == null or _graph_view == null:
+		return
+	_fill_selection_actions_popup(_selection_actions_context_popup)
+	var gp: Vector2 = _graph_view.get_screen_transform() * at_local
+	_selection_actions_context_popup.position = Vector2i(gp)
+	_selection_actions_context_popup.popup()
 
 
 func _can_disconnect_binding_edge() -> bool:
@@ -2722,15 +2881,6 @@ func _build_ui() -> void:
 	cpop.id_pressed.connect(_on_create_state_menu_id)
 	row.add_child(_btn_create_state)
 
-	_btn_create_assign_binding = Button.new()
-	_btn_create_assign_binding.text = "Create & assign…"
-	_btn_create_assign_binding.tooltip_text = (
-		"For a selected optional empty binding edge: save a new matching UiState .tres and assign it (undoable)."
-	)
-	_btn_create_assign_binding.disabled = true
-	_btn_create_assign_binding.pressed.connect(_on_create_assign_binding_pressed)
-	row.add_child(_btn_create_assign_binding)
-
 	_cb_full_lists = CheckBox.new()
 	_cb_full_lists.text = "Full lists"
 	_cb_full_lists.tooltip_text = "Show uncapped upstream/downstream lines in the narrative (details pane)."
@@ -2758,21 +2908,19 @@ func _build_ui() -> void:
 	)
 	_scope_preset_option.item_selected.connect(_on_scope_preset_selected)
 	_scope_row.add_child(_scope_preset_option)
-	_btn_scope_save_as = Button.new()
-	_btn_scope_save_as.text = "Save as…"
-	_btn_scope_save_as.tooltip_text = "Save current scope settings as a named preset."
-	_btn_scope_save_as.pressed.connect(_on_scope_save_as_pressed)
-	_scope_row.add_child(_btn_scope_save_as)
-	_btn_scope_manage = Button.new()
-	_btn_scope_manage.text = "Manage…"
-	_btn_scope_manage.tooltip_text = "Delete saved scope presets."
-	_btn_scope_manage.pressed.connect(_on_scope_manage_pressed)
-	_scope_row.add_child(_btn_scope_manage)
-	_btn_pin_node = Button.new()
-	_btn_pin_node.text = "Pin node"
-	_btn_pin_node.tooltip_text = "Pin the selected graph node id to the active preset (requires a named preset)."
-	_btn_pin_node.pressed.connect(_on_pin_node_pressed)
-	_scope_row.add_child(_btn_pin_node)
+	_btn_scope_overflow = MenuButton.new()
+	_btn_scope_overflow.text = "…"
+	_btn_scope_overflow.tooltip_text = "Save, manage, or pin scope presets."
+	var sop := _btn_scope_overflow.get_popup()
+	sop.add_item("Save as…", _SCOPE_OVERFLOW_SAVE)
+	sop.set_item_tooltip(0, "Save current scope settings as a named preset.")
+	sop.add_item("Manage…", _SCOPE_OVERFLOW_MANAGE)
+	sop.set_item_tooltip(1, "Delete saved scope presets.")
+	sop.add_item("Pin node", _SCOPE_OVERFLOW_PIN)
+	sop.set_item_tooltip(2, "Pin the selected graph node id to the active preset (requires a named preset).")
+	sop.id_pressed.connect(_on_scope_overflow_id)
+	_btn_scope_overflow.about_to_popup.connect(_on_scope_overflow_about_to_popup)
+	_scope_row.add_child(_btn_scope_overflow)
 
 	_scope_save_name_dialog = AcceptDialog.new()
 	_scope_save_name_dialog.title = "Save scope preset"
@@ -2872,6 +3020,7 @@ func _build_ui() -> void:
 	_graph_view.reconnect_drag_ended.connect(_on_graph_reconnect_drag_ended)
 	_graph_view.newlink_drag_ended.connect(_on_graph_newlink_drag_ended)
 	_graph_view.edge_disconnect_requested.connect(_on_graph_edge_disconnect_requested)
+	_graph_view.context_menu_requested.connect(_on_graph_context_menu_requested)
 	_graph_view.set_reconnect_handlers(
 		Callable(self, &"_reconnect_can_start_cb"),
 		Callable(self, &"_reconnect_is_valid_target_cb")
@@ -2881,10 +3030,10 @@ func _build_ui() -> void:
 		Callable(self, &"_newlink_is_valid_drop_cb")
 	)
 	_graph_view.tooltip_text = (
-		"Pan: middle-drag. Zoom: wheel. Select node or edge. "
+		"Pan: middle-drag. Zoom: wheel. Select node or edge (right-click for Actions menu). "
 		+ "Reconnect: select an edge, then Shift+drag from the source endpoint node to another state node (undoable). "
 		+ "New link: clear edge selection, Ctrl+Shift+drag from a state donor to a control (empty binding and/or new wire rule) or to a computed (fill/append sources; file-backed computed resolves from scene binds). "
-		+ "Delete/Backspace with an edge selected clears optional bindings, computed sources, or wire links when the details buttons allow it."
+		+ "Delete/Backspace with an edge selected clears optional bindings, computed sources, or wire links when the Actions menu would allow it."
 	)
 	_visual_host.add_child(_graph_view)
 
@@ -2972,102 +3121,21 @@ func _build_ui() -> void:
 	_btn_focus_inspector.pressed.connect(_on_focus_inspector_pressed)
 	_details_buttons.add_child(_btn_focus_inspector)
 
-	_btn_rebind_binding = Button.new()
-	_btn_rebind_binding.text = "Rebind to resource…"
-	_btn_rebind_binding.tooltip_text = (
-		"Replace the bound UiState on this binding edge with another .tres resource (undoable). "
-		+ "For wire-flow edges, use Rebind wire input / output."
+	_btn_selection_actions = MenuButton.new()
+	_btn_selection_actions.text = "Actions…"
+	_btn_selection_actions.tooltip_text = (
+		"Rebind, clear, reorder, create & assign, or copy details for the current graph selection."
 	)
-	_btn_rebind_binding.disabled = true
-	_btn_rebind_binding.pressed.connect(_on_rebind_binding_pressed)
-	_details_buttons.add_child(_btn_rebind_binding)
+	_btn_selection_actions.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	var apop := _btn_selection_actions.get_popup()
+	apop.id_pressed.connect(_on_selection_action_id)
+	_btn_selection_actions.about_to_popup.connect(_on_selection_actions_about_to_popup)
+	_details_buttons.add_child(_btn_selection_actions)
 
-	_btn_rebind_wire_in = Button.new()
-	_btn_rebind_wire_in.text = "Rebind wire input…"
-	_btn_rebind_wire_in.tooltip_text = (
-		"Replace the input-slot UiState on this wire_rules row (undoable). "
-		+ "Uses the edge’s input export; computed-source edges are not supported."
-	)
-	_btn_rebind_wire_in.disabled = true
-	_btn_rebind_wire_in.pressed.connect(_on_rebind_wire_in_pressed)
-	_details_buttons.add_child(_btn_rebind_wire_in)
-
-	_btn_rebind_wire_out = Button.new()
-	_btn_rebind_wire_out.text = "Rebind wire output…"
-	_btn_rebind_wire_out.tooltip_text = (
-		"Replace the output-slot UiState on this wire_rules row (undoable). "
-		+ "Uses the edge’s output export; computed-source edges are not supported."
-	)
-	_btn_rebind_wire_out.disabled = true
-	_btn_rebind_wire_out.pressed.connect(_on_rebind_wire_out_pressed)
-	_details_buttons.add_child(_btn_rebind_wire_out)
-
-	_btn_rebind_computed_source = Button.new()
-	_btn_rebind_computed_source.text = "Rebind computed source…"
-	_btn_rebind_computed_source.tooltip_text = (
-		"Replace one entry in the owning UiComputed* sources[] for this computed-source edge (undoable). "
-		+ "Requires a fresh graph (Refresh) so the edge carries computed_context."
-	)
-	_btn_rebind_computed_source.disabled = true
-	_btn_rebind_computed_source.pressed.connect(_on_rebind_computed_source_pressed)
-	_details_buttons.add_child(_btn_rebind_computed_source)
-
-	_btn_clear_optional_binding = Button.new()
-	_btn_clear_optional_binding.text = "Clear optional binding"
-	_btn_clear_optional_binding.tooltip_text = (
-		"Set this binding export to empty for optional registry slots only (undoable). "
-		+ "Required exports must be cleared in the Inspector."
-	)
-	_btn_clear_optional_binding.disabled = true
-	_btn_clear_optional_binding.pressed.connect(_on_clear_optional_binding_pressed)
-	_details_buttons.add_child(_btn_clear_optional_binding)
-
-	_btn_remove_computed_dependency = Button.new()
-	_btn_remove_computed_dependency.text = "Remove computed dependency"
-	_btn_remove_computed_dependency.tooltip_text = (
-		"Clear this UiComputed* sources[] slot to null (undoable). Requires computed_context on the edge; Refresh if missing."
-	)
-	_btn_remove_computed_dependency.disabled = true
-	_btn_remove_computed_dependency.pressed.connect(_on_remove_computed_dependency_pressed)
-	_details_buttons.add_child(_btn_remove_computed_dependency)
-
-	_btn_clear_wire_link = Button.new()
-	_btn_clear_wire_link.text = "Clear wire link"
-	_btn_clear_wire_link.tooltip_text = (
-		"Clear both input and output UiState exports for this wire-flow edge in one undo step (requires both set)."
-	)
-	_btn_clear_wire_link.disabled = true
-	_btn_clear_wire_link.pressed.connect(_on_clear_wire_link_pressed)
-	_details_buttons.add_child(_btn_clear_wire_link)
-
-	_btn_move_computed_source_up = Button.new()
-	_btn_move_computed_source_up.text = "Move source up"
-	_btn_move_computed_source_up.tooltip_text = "Swap this sources[] index with the previous entry (undoable)."
-	_btn_move_computed_source_up.disabled = true
-	_btn_move_computed_source_up.pressed.connect(_on_move_computed_source_up_pressed)
-	_details_buttons.add_child(_btn_move_computed_source_up)
-
-	_btn_move_computed_source_down = Button.new()
-	_btn_move_computed_source_down.text = "Move source down"
-	_btn_move_computed_source_down.tooltip_text = "Swap this sources[] index with the next entry (undoable)."
-	_btn_move_computed_source_down.disabled = true
-	_btn_move_computed_source_down.pressed.connect(_on_move_computed_source_down_pressed)
-	_details_buttons.add_child(_btn_move_computed_source_down)
-
-	_btn_remove_computed_source_slot = Button.new()
-	_btn_remove_computed_source_slot.text = "Remove source slot"
-	_btn_remove_computed_source_slot.tooltip_text = (
-		"Remove this index from sources[] and compact the array (undoable; not the same as clearing to null)."
-	)
-	_btn_remove_computed_source_slot.disabled = true
-	_btn_remove_computed_source_slot.pressed.connect(_on_remove_computed_source_slot_pressed)
-	_details_buttons.add_child(_btn_remove_computed_source_slot)
-
-	_btn_copy_details = Button.new()
-	_btn_copy_details.text = "Copy details"
-	_btn_copy_details.tooltip_text = "Copy the plain-text details to the clipboard."
-	_btn_copy_details.pressed.connect(_on_copy_details_pressed)
-	_details_buttons.add_child(_btn_copy_details)
+	var base_ctl := _plugin.get_editor_interface().get_base_control()
+	_selection_actions_context_popup = PopupMenu.new()
+	base_ctl.add_child(_selection_actions_context_popup)
+	_selection_actions_context_popup.id_pressed.connect(_on_selection_action_id)
 
 
 func _set_hint_visible(on: bool) -> void:

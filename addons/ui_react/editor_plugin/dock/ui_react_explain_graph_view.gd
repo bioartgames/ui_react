@@ -14,6 +14,8 @@ signal newlink_drag_started(donor_node_id: String)
 signal newlink_drag_ended(donor_node_id: String, target_node_id: String)
 ## **Delete** / **Backspace** with an edge selected (**[code]CB-058[/code]** slice 1); panel decides if disconnect applies.
 signal edge_disconnect_requested(edge_index: int)
+## Right-click after [method _pick]: selection matches click target (same as LMB); panel shows Actions [PopupMenu].
+signal context_menu_requested(at_local_pos: Vector2)
 
 const _Snap := preload("res://addons/ui_react/editor_plugin/models/ui_react_explain_graph_snapshot.gd")
 
@@ -554,6 +556,21 @@ func _gui_input(event: InputEvent) -> void:
 			_last_mouse = mb.position
 			if mb.pressed:
 				accept_event()
+			return
+		if mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
+			if (
+				_reconnect_active
+				or _shift_reconnect_pending
+				or _newlink_active
+				or _newlink_pending
+			):
+				return
+			_pick(mb.position)
+			if _selected_node_id.is_empty() and _selected_edge_index < 0:
+				accept_event()
+				return
+			context_menu_requested.emit(mb.position)
+			accept_event()
 			return
 		if mb.button_index == MOUSE_BUTTON_LEFT:
 			if mb.pressed:
