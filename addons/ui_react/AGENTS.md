@@ -31,7 +31,7 @@ This file is the **checklist** before large refactors. The **documentation map**
 | Area | Path |
 |------|------|
 | Editor dock façade | `editor_plugin/services/ui_react_validator_service.gd` |
-| Dock **Wiring** tab — graph + **`wire_rules`** list (P5.2 / **CB-035** / **CB-058**) | `editor_plugin/dock/ui_react_dock_wiring_panel.gd` (`ui_react_dock_explain_panel.gd`, `ui_react_dock_wire_rules_panel.gd`; parent `ui_react_dock.gd`) |
+| Dock **Wiring** tab — graph + embedded **`wire_rules`** section (P5.2 / **CB-035** / **CB-058**) | `editor_plugin/dock/ui_react_dock_wiring_panel.gd` (`ui_react_dock_explain_panel.gd`, `ui_react_dock_wire_rules_section.gd`; parent `ui_react_dock.gd`) |
 | Dock Wire rules **details** report (BBCode) | `editor_plugin/dock/ui_react_dock_wire_details.gd` |
 | Binding / anim / action / wiring / transactional / tree / computed validators | `editor_plugin/services/ui_react_*_validator.gd` |
 | Component metadata (stems, bindings, **animation trigger allowlist**) | `editor_plugin/ui_react_component_registry.gd` |

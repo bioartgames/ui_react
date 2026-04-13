@@ -237,3 +237,47 @@ static func try_commit_append_wire_rule_with_in(
 	arr.append(rule)
 	actions.assign_property_variant(host, &"wire_rules", arr, "Ui React: Add wire rule (graph)")
 	return true
+
+
+static func _export_resource_hint_string(obj: Object, prop: StringName) -> String:
+	if obj == null or prop == &"":
+		return ""
+	var ps := String(prop)
+	for d: Dictionary in obj.get_property_list():
+		if str(d.get(&"name", "")) != ps:
+			continue
+		if int(d.get(&"hint", PROPERTY_HINT_NONE)) == PROPERTY_HINT_RESOURCE_TYPE:
+			return str(d.get(&"hint_string", ""))
+	return ""
+
+
+static func _donor_matches_export_hint(donor: UiState, hint: String) -> bool:
+	if donor == null or hint.is_empty():
+		return false
+	var ds: Script = donor.get_script() as Script
+	while ds != null:
+		if String(ds.get_global_name()) == hint:
+			return true
+		ds = ds.get_base_script() as Script
+	return false
+
+
+## Catalog indices whose first wire [b]in[/b] export accepts [param donor] (typed [code]@export[/code] hint).
+static func filter_rule_template_indices_for_donor(donor: UiState) -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	if donor == null:
+		return out
+	var n: int = _WireRuleCatalogScript.rule_script_entries().size()
+	for i: int in range(n):
+		var rule: UiReactWireRule = _WireRuleCatalogScript.instantiate_rule(i)
+		if rule == null:
+			continue
+		var in_prop := first_wire_in_property(rule)
+		if in_prop == &"":
+			continue
+		var hint := _export_resource_hint_string(rule, in_prop)
+		if hint.is_empty():
+			continue
+		if _donor_matches_export_hint(donor, hint):
+			out.append(i)
+	return out

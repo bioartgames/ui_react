@@ -1,12 +1,19 @@
-## P5.2 dock tab: edit [member Node.wire_rules] with the same [UiReactWireRule] subresources as the Inspector ([code]CB-035[/code]). Rule script list: keep aligned with [code]docs/WIRING_LAYER.md[/code] §6.
-class_name UiReactDockWireRulesPanel
-extends MarginContainer
+## Embedded [code]wire_rules[/code] list + rule report under the Dependency Graph details ([code]CB-058[/code] RMB-first). Row actions: right-click.
+class_name UiReactDockWireRulesSection
+extends VBoxContainer
 
 const _WireDetailsScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_wire_details.gd")
-## Rule list: [UiReactWireRuleCatalog] (aligned with [code]docs/WIRING_LAYER.md[/code] §6).
+
+const _ROW_MENU_MOVE_UP := 6001
+const _ROW_MENU_MOVE_DOWN := 6002
+const _ROW_MENU_DUPLICATE := 6003
+const _ROW_MENU_REMOVE := 6004
+const _ROW_MENU_COPY_REPORT := 6005
+const _ROW_MENU_INSPECT := 6006
 
 var _plugin: EditorPlugin
 var _actions: UiReactActionController
+var _after_wire_mutated: Callable = Callable()
 
 var _hint: RichTextLabel
 var _split_main: VSplitContainer
@@ -14,20 +21,46 @@ var _rules_scroll: ScrollContainer
 var _rules_container: VBoxContainer
 var _details_scroll: ScrollContainer
 var _details_label: RichTextLabel
-
-var _btn_add: MenuButton
-var _btn_copy: Button
-var _btn_refresh: Button
+var _row_context_popup: PopupMenu
 
 var _target: Node = null
 var _edited_scene_root: Node = null
 var _selected_rule_index: int = -1
+var _row_menu_index: int = -1
 
 
-func setup(plugin: EditorPlugin, actions: UiReactActionController) -> void:
+func setup(
+	plugin: EditorPlugin,
+	actions: UiReactActionController,
+	after_wire_mutated: Callable = Callable(),
+) -> void:
 	_plugin = plugin
 	_actions = actions
+	_after_wire_mutated = after_wire_mutated
 	_build_ui()
+
+
+func set_target_host(host: Control, root: Node) -> void:
+	if host == null or root == null:
+		_target = null
+		_edited_scene_root = null
+		_selected_rule_index = -1
+		_clear_rules_container()
+		_set_details_idle()
+		visible = false
+		return
+	_target = host
+	_edited_scene_root = root
+	visible = true
+	_set_hint(_format_target_hint(host, root))
+	var wr: Variant = host.get(&"wire_rules")
+	var arr: Array = wr as Array if wr is Array else []
+	if arr.is_empty():
+		_selected_rule_index = -1
+	else:
+		_selected_rule_index = clampi(_selected_rule_index, 0, arr.size() - 1)
+	_rebuild_rule_rows(arr)
+	_update_details_panel()
 
 
 func focus_rule_index(idx: int) -> void:
@@ -42,68 +75,50 @@ func focus_rule_index(idx: int) -> void:
 	_update_details_panel()
 
 
-func refresh() -> void:
-	var preserved_idx := _selected_rule_index
-	_target = null
-	_edited_scene_root = null
-	_selected_rule_index = -1
-	_clear_rules_container()
-	_set_details_idle()
-	if _plugin == null or _actions == null:
-		_set_hint("Plugin not ready.")
-		_set_global_actions_enabled(false)
-		return
-	var ei := _plugin.get_editor_interface()
-	var root := ei.get_edited_scene_root()
-	if root == null:
-		_set_hint("Open a scene to edit [code]wire_rules[/code].")
-		_set_global_actions_enabled(false)
-		return
-	var sel: Array[Node] = ei.get_selection().get_selected_nodes()
-	if sel.size() != 1:
-		_set_hint(
-			"Select exactly one node in the edited scene ([code]wire_rules[/code] is per [UiReact*] host; see [code]docs/WIRING_LAYER.md[/code] §5)."
-		)
-		_set_global_actions_enabled(false)
-		return
-	var n: Node = sel[0]
-	if not (&"wire_rules" in n):
-		_set_hint(
-			"No [code]wire_rules[/code] on this node. Use a §5 host (e.g. [UiReactItemList], [UiReactTree], [UiReactLineEdit])."
-		)
-		_set_global_actions_enabled(false)
-		return
-	if not (n == root or root.is_ancestor_of(n)):
-		_set_hint("Selection must be part of the current edited scene.")
-		_set_global_actions_enabled(false)
-		return
-	_target = n
-	_edited_scene_root = root
-	_set_hint(_format_target_hint(n, root))
-	var wr: Variant = n.get(&"wire_rules")
+func get_selected_rule_index() -> int:
+	return _selected_rule_index
+
+
+func copy_selected_report_to_clipboard() -> bool:
+	if _target == null or _edited_scene_root == null:
+		return false
+	var wr: Variant = _target.get(&"wire_rules")
 	var arr: Array = wr as Array if wr is Array else []
-	if arr.is_empty():
-		_selected_rule_index = -1
-	else:
-		if preserved_idx >= 0 and preserved_idx < arr.size():
-			_selected_rule_index = preserved_idx
-		else:
-			_selected_rule_index = 0
-	_rebuild_rule_rows(arr)
-	_update_details_panel()
-	_set_global_actions_enabled(true)
+	if _selected_rule_index < 0 or _selected_rule_index >= arr.size():
+		return false
+	var item: Variant = arr[_selected_rule_index]
+	var t: String = _WireDetailsScript.build_details_plain_text(
+		item, _selected_rule_index, _target, _edited_scene_root
+	)
+	DisplayServer.clipboard_set(t)
+	return true
+
+
+func refresh_from_host() -> void:
+	if _target == null or _edited_scene_root == null:
+		return
+	set_target_host(_target as Control, _edited_scene_root)
+
+
+func append_rule_from_catalog_index(catalog_idx: int) -> void:
+	if _target == null or _actions == null:
+		return
+	if catalog_idx < 0 or catalog_idx >= UiReactWireRuleCatalog.rule_script_entries().size():
+		return
+	var rule := UiReactWireRuleCatalog.instantiate_rule(catalog_idx)
+	if rule == null:
+		return
+	var arr := _get_wr_array_duplicate()
+	if rule.rule_id.is_empty():
+		rule.rule_id = "rule_%d" % arr.size()
+	arr.append(rule)
+	_selected_rule_index = arr.size() - 1
+	_commit_wire_rules(arr, "Ui React: Add wire rule")
 
 
 func _build_ui() -> void:
-	add_theme_constant_override(&"margin_left", 2)
-	add_theme_constant_override(&"margin_right", 2)
-	add_theme_constant_override(&"margin_top", 4)
-	add_theme_constant_override(&"margin_bottom", 4)
-	var v := VBoxContainer.new()
-	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	v.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	v.add_theme_constant_override(&"separation", 6)
-	add_child(v)
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	add_theme_constant_override(&"separation", 6)
 
 	_hint = RichTextLabel.new()
 	_hint.bbcode_enabled = true
@@ -111,20 +126,21 @@ func _build_ui() -> void:
 	_hint.scroll_active = false
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_hint.text = "Select one [UiReact*] node with [code]wire_rules[/code]."
+	_hint.text = "[b]Wire rules[/b] — right-click a row for reorder, duplicate, remove, copy report."
 	if _plugin:
 		UiReactDockTheme.apply_richtext_content(_hint, _plugin)
-	v.add_child(_hint)
+	add_child(_hint)
 
 	_split_main = VSplitContainer.new()
 	_split_main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_split_main.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_split_main.custom_minimum_size = Vector2(0, 140)
 	_split_main.add_theme_constant_override(&"autohide", 0)
 	_split_main.add_theme_constant_override(&"minimum_grab_thickness", 10)
 	if _plugin:
 		UiReactDockTheme.apply_split_bar(_split_main, _plugin)
-	_split_main.tooltip_text = "Drag to resize the rule list and the report below."
-	v.add_child(_split_main)
+	_split_main.tooltip_text = "Drag to resize the rule list and the report."
+	add_child(_split_main)
 
 	var rules_section := VBoxContainer.new()
 	rules_section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -136,7 +152,7 @@ func _build_ui() -> void:
 	rules_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rules_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	rules_panel.custom_minimum_size = Vector2(0, 56)
-	rules_panel.tooltip_text = "Wire rules for the selected host. Order matches wire_rules (WIRING_LAYER.md §3)."
+	rules_panel.tooltip_text = "Wire rules for the graph-selected host. Order matches wire_rules (WIRING_LAYER.md §3)."
 	rules_section.add_child(rules_panel)
 	if _plugin:
 		UiReactDockTheme.apply_panelcontainer(rules_panel, _plugin)
@@ -153,7 +169,6 @@ func _build_ui() -> void:
 	_rules_scroll = ScrollContainer.new()
 	_rules_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_rules_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_rules_scroll.tooltip_text = "Scroll the rule list."
 	rules_margin.add_child(_rules_scroll)
 
 	_rules_container = VBoxContainer.new()
@@ -170,7 +185,7 @@ func _build_ui() -> void:
 	report_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	report_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	report_panel.custom_minimum_size = Vector2(0, 56)
-	report_panel.tooltip_text = "Report: intent, states, runtime bindings, validation for the selected rule."
+	report_panel.tooltip_text = "Rule story and fields for the selected row."
 	report_section.add_child(report_panel)
 	if _plugin:
 		UiReactDockTheme.apply_panelcontainer(report_panel, _plugin)
@@ -187,7 +202,6 @@ func _build_ui() -> void:
 	_details_scroll = ScrollContainer.new()
 	_details_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_details_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_details_scroll.tooltip_text = "Rule story and fields for the selected row."
 	report_margin.add_child(_details_scroll)
 
 	_details_label = RichTextLabel.new()
@@ -203,50 +217,24 @@ func _build_ui() -> void:
 
 	_split_main.split_offset = 0
 
-	var btn_row := HBoxContainer.new()
-	btn_row.add_theme_constant_override(&"separation", 6)
-	v.add_child(btn_row)
-
-	_btn_add = MenuButton.new()
-	_btn_add.text = "Add rule…"
-	var pop := _btn_add.get_popup()
-	var entries := UiReactWireRuleCatalog.rule_script_entries()
-	for e in entries:
-		pop.add_item(String(e[&"label"]))
-	for i in range(entries.size()):
-		pop.set_item_id(i, i)
-	if not pop.id_pressed.is_connected(_on_add_menu_id):
-		pop.id_pressed.connect(_on_add_menu_id)
-	_btn_add.flat = false
-	_btn_add.theme_type_variation = &"Button"
 	if _plugin:
-		UiReactDockTheme.apply_basebutton_editor_panel_style(_btn_add, _plugin)
-	btn_row.add_child(_btn_add)
+		var bc: Control = _plugin.get_editor_interface().get_base_control()
+		_row_context_popup = PopupMenu.new()
+		bc.add_child(_row_context_popup)
+		_row_context_popup.id_pressed.connect(_on_row_menu_id)
 
-	_btn_copy = Button.new()
-	_btn_copy.text = "Copy report"
-	_btn_copy.tooltip_text = "Copy the wire rule report for the selected row to the clipboard."
-	_btn_copy.pressed.connect(_on_copy_report_pressed)
-	btn_row.add_child(_btn_copy)
-
-	_btn_refresh = Button.new()
-	_btn_refresh.text = "Refresh list"
-	_btn_refresh.tooltip_text = "Resync from the scene after external edits or Undo."
-	_btn_refresh.pressed.connect(refresh)
-	btn_row.add_child(_btn_refresh)
-
-	_set_global_actions_enabled(false)
+	visible = false
 	_set_details_idle()
 
 
 func _clear_rules_container() -> void:
-	for i in range(_rules_container.get_child_count() - 1, -1, -1):
+	for i: int in range(_rules_container.get_child_count() - 1, -1, -1):
 		_rules_container.get_child(i).queue_free()
 
 
 func _rebuild_rule_rows(arr: Array) -> void:
 	_clear_rules_container()
-	for i in range(arr.size()):
+	for i: int in range(arr.size()):
 		var item: Variant = arr[i]
 		_rules_container.add_child(_make_rule_row(i, item, arr.size()))
 
@@ -254,6 +242,7 @@ func _rebuild_rule_rows(arr: Array) -> void:
 func _make_rule_row(index: int, item: Variant, arr_size: int) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override(&"separation", 6)
+	row.mouse_filter = Control.MOUSE_FILTER_STOP
 	var sel_btn := Button.new()
 	sel_btn.text = _format_rule_line(index, item)
 	sel_btn.flat = false
@@ -261,8 +250,8 @@ func _make_rule_row(index: int, item: Variant, arr_size: int) -> Control:
 	sel_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sel_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	var fi := index
-	sel_btn.pressed.connect(func(): _select_rule(fi))
-	sel_btn.tooltip_text = "Select this rule; read the report below."
+	sel_btn.pressed.connect(func() -> void: _select_rule(fi))
+	sel_btn.tooltip_text = "Select this rule. Right-click the row for more actions."
 	if index == _selected_rule_index:
 		var sel_style := StyleBoxFlat.new()
 		sel_style.bg_color = Color(0.25, 0.45, 0.75, 0.28)
@@ -281,41 +270,73 @@ func _make_rule_row(index: int, item: Variant, arr_size: int) -> Control:
 		sel_btn.add_theme_stylebox_override(&"pressed", sel_pressed)
 	row.add_child(sel_btn)
 
-	var btn_insp := Button.new()
-	btn_insp.text = "Inspect"
-	btn_insp.disabled = item == null or not (item is Resource)
-	btn_insp.pressed.connect(func(): _inspect_at(fi))
-	btn_insp.tooltip_text = "Open the Inspector on this rule resource."
-	row.add_child(btn_insp)
-
-	var btn_up := Button.new()
-	btn_up.text = "Up"
-	btn_up.disabled = index <= 0
-	btn_up.pressed.connect(func(): _move_at(fi, -1))
-	btn_up.tooltip_text = "Move this rule earlier in wire_rules (Undo: Ctrl+Z)."
-	row.add_child(btn_up)
-
-	var btn_dn := Button.new()
-	btn_dn.text = "Down"
-	btn_dn.disabled = index >= arr_size - 1
-	btn_dn.pressed.connect(func(): _move_at(fi, 1))
-	btn_dn.tooltip_text = "Move this rule later in wire_rules (Undo: Ctrl+Z)."
-	row.add_child(btn_dn)
-
-	var btn_dup := Button.new()
-	btn_dup.text = "Dup"
-	btn_dup.disabled = item == null or not (item is Resource)
-	btn_dup.pressed.connect(func(): _duplicate_at(fi))
-	btn_dup.tooltip_text = "Duplicate this rule (deep duplicate) below this row."
-	row.add_child(btn_dup)
-
-	var btn_rm := Button.new()
-	btn_rm.text = "Remove"
-	btn_rm.pressed.connect(func(): _remove_at(fi))
-	btn_rm.tooltip_text = "Remove this rule from wire_rules (Undo: Ctrl+Z)."
-	row.add_child(btn_rm)
-
+	row.gui_input.connect(
+		func(ev: InputEvent) -> void: _on_rule_row_gui_input(ev, row, fi, arr_size, item)
+	)
 	return row
+
+
+func _on_rule_row_gui_input(ev: InputEvent, row_ctl: Control, index: int, arr_size: int, item: Variant) -> void:
+	if _row_context_popup == null:
+		return
+	if ev is InputEventMouseButton:
+		var mb := ev as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
+			row_ctl.accept_event()
+			_selected_rule_index = index
+			_row_menu_index = index
+			if _target != null:
+				var wr: Variant = _target.get(&"wire_rules")
+				var arr: Array = wr as Array if wr is Array else []
+				_rebuild_rule_rows(arr)
+			_update_details_panel()
+			_fill_row_context_menu(index, arr_size, item)
+			_row_context_popup.position = DisplayServer.mouse_get_position()
+			_row_context_popup.popup()
+
+
+func _fill_row_context_menu(index: int, arr_size: int, item: Variant) -> void:
+	var pop := _row_context_popup
+	pop.clear()
+	pop.add_item("Move up", _ROW_MENU_MOVE_UP)
+	pop.set_item_disabled(pop.item_count - 1, index <= 0)
+	pop.add_item("Move down", _ROW_MENU_MOVE_DOWN)
+	pop.set_item_disabled(pop.item_count - 1, index >= arr_size - 1)
+	pop.add_item("Duplicate", _ROW_MENU_DUPLICATE)
+	pop.set_item_disabled(pop.item_count - 1, item == null or not (item is Resource))
+	pop.add_item("Remove", _ROW_MENU_REMOVE)
+	pop.add_item("Copy report", _ROW_MENU_COPY_REPORT)
+	pop.add_item("Inspect rule", _ROW_MENU_INSPECT)
+	pop.set_item_disabled(pop.item_count - 1, item == null or not (item is Resource))
+
+
+func _on_row_menu_id(id: int) -> void:
+	if _target == null:
+		return
+	var wr: Variant = _target.get(&"wire_rules")
+	var arr: Array = wr as Array if wr is Array else []
+	var idx := _row_menu_index
+	if idx < 0 or idx >= arr.size():
+		return
+	match id:
+		_ROW_MENU_MOVE_UP:
+			_move_at(idx, -1)
+		_ROW_MENU_MOVE_DOWN:
+			_move_at(idx, 1)
+		_ROW_MENU_DUPLICATE:
+			_duplicate_at(idx)
+		_ROW_MENU_REMOVE:
+			_remove_at(idx)
+		_ROW_MENU_COPY_REPORT:
+			var item: Variant = arr[idx]
+			var t: String = _WireDetailsScript.build_details_plain_text(
+				item, idx, _target, _edited_scene_root
+			)
+			DisplayServer.clipboard_set(t)
+		_ROW_MENU_INSPECT:
+			_inspect_at(idx)
+		_:
+			pass
 
 
 func _select_rule(index: int) -> void:
@@ -332,7 +353,6 @@ func _set_details_idle() -> void:
 	_details_label.text = _WireDetailsScript.idle_placeholder_text()
 	if _plugin:
 		UiReactDockTheme.apply_richtext_content(_details_label, _plugin)
-	_sync_copy_button_state()
 
 
 func _update_details_panel() -> void:
@@ -350,56 +370,20 @@ func _update_details_panel() -> void:
 	)
 	if _plugin:
 		UiReactDockTheme.apply_richtext_content(_details_label, _plugin)
-	_sync_copy_button_state()
-
-
-func _sync_copy_button_state() -> void:
-	if _btn_copy == null:
-		return
-	var ok := false
-	if _target != null and _edited_scene_root != null and _selected_rule_index >= 0:
-		var wr2: Variant = _target.get(&"wire_rules")
-		var arr2: Array = wr2 as Array if wr2 is Array else []
-		ok = _selected_rule_index < arr2.size()
-	_btn_copy.disabled = not ok
-
-
-func _on_copy_report_pressed() -> void:
-	if _target == null or _edited_scene_root == null:
-		return
-	var wr: Variant = _target.get(&"wire_rules")
-	var arr: Array = wr as Array if wr is Array else []
-	if _selected_rule_index < 0 or _selected_rule_index >= arr.size():
-		return
-	var item: Variant = arr[_selected_rule_index]
-	var t: String = _WireDetailsScript.build_details_plain_text(
-		item, _selected_rule_index, _target, _edited_scene_root
-	)
-	DisplayServer.clipboard_set(t)
 
 
 func _format_target_hint(n: Node, root: Node) -> String:
 	var rel := root.get_path_to(n)
 	var rel_str := String(rel)
 	if rel_str == "." or rel.is_empty():
-		return "Wire rules: [b]%s[/b] · (scene root)" % n.name
-	return "Wire rules: [b]%s[/b] · [code]%s[/code]" % [n.name, rel_str]
+		return "[b]Wire rules[/b] — host [b]%s[/b] (scene root)" % n.name
+	return "[b]Wire rules[/b] — host [b]%s[/b] · [code]%s[/code]" % [n.name, rel_str]
 
 
 func _set_hint(bbcode: String) -> void:
 	_hint.text = bbcode
 	if _plugin:
 		UiReactDockTheme.apply_richtext_content(_hint, _plugin)
-
-
-func _set_global_actions_enabled(enabled: bool) -> void:
-	_btn_add.disabled = not enabled
-	_btn_refresh.disabled = not enabled
-	if not enabled:
-		if _btn_copy:
-			_btn_copy.disabled = true
-	else:
-		_sync_copy_button_state()
 
 
 func _format_rule_line(index: int, item: Variant) -> String:
@@ -427,13 +411,11 @@ func _get_wr_array_duplicate() -> Array[UiReactWireRule]:
 	var wr: Variant = _target.get(&"wire_rules")
 	if wr == null:
 		return []
-	## Typed export: duplicate preserves Array[UiReactWireRule].
 	if wr is Array[UiReactWireRule]:
 		return (wr as Array[UiReactWireRule]).duplicate()
-	## Rare: untyped Array — keep only [UiReactWireRule] entries.
 	var plain: Array = wr as Array
 	var out: Array[UiReactWireRule] = []
-	for it in plain:
+	for it: Variant in plain:
 		if it is UiReactWireRule:
 			out.append(it as UiReactWireRule)
 	return out
@@ -443,23 +425,10 @@ func _commit_wire_rules(next: Array[UiReactWireRule], action_label: String) -> v
 	if _target == null or _actions == null:
 		return
 	_actions.assign_property_variant(_target, &"wire_rules", next, action_label)
-	refresh()
-
-
-func _on_add_menu_id(menu_idx: int) -> void:
-	if _target == null:
-		return
-	if menu_idx < 0 or menu_idx >= UiReactWireRuleCatalog.rule_script_entries().size():
-		return
-	var rule := UiReactWireRuleCatalog.instantiate_rule(menu_idx)
-	if rule == null:
-		return
-	var arr := _get_wr_array_duplicate()
-	if rule.rule_id.is_empty():
-		rule.rule_id = "rule_%d" % arr.size()
-	arr.append(rule)
-	_selected_rule_index = arr.size() - 1
-	_commit_wire_rules(arr, "Ui React: Add wire rule")
+	if _after_wire_mutated.is_valid():
+		_after_wire_mutated.call()
+	else:
+		refresh_from_host()
 
 
 func _remove_at(index: int) -> void:
@@ -503,11 +472,14 @@ func _move_at(index: int, delta: int) -> void:
 	arr[j] = tmp
 	_selected_rule_index = j
 	_actions.assign_property_variant(_target, &"wire_rules", arr, "Ui React: Reorder wire rule")
-	refresh()
+	if _after_wire_mutated.is_valid():
+		_after_wire_mutated.call()
+	else:
+		refresh_from_host()
 
 
 func _inspect_at(index: int) -> void:
-	if _target == null:
+	if _target == null or _plugin == null:
 		return
 	var arr := _get_wr_array_duplicate()
 	if index < 0 or index >= arr.size():

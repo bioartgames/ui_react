@@ -11,6 +11,7 @@ const _NewBindingScript := preload("res://addons/ui_react/editor_plugin/services
 const _ResolverScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_graph_node_state_resolver.gd")
 const _ExplainLayoutScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_explain_graph_layout.gd")
 const _ExplainGraphViewScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_explain_graph_view.gd")
+const _WireRulesSectionScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_wire_rules_section.gd")
 const _SnapScript := preload("res://addons/ui_react/editor_plugin/models/ui_react_explain_graph_snapshot.gd")
 const _GraphFactoryScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_graph_resource_factory.gd")
 const _SEL_NONE := 0
@@ -40,6 +41,11 @@ const _SEL_ACT_MOVE_SRC_UP := 1120
 const _SEL_ACT_MOVE_SRC_DOWN := 1121
 const _SEL_ACT_REMOVE_SRC_SLOT := 1122
 const _SEL_ACT_CREATE_ASSIGN_BINDING := 1130
+## Wire rules + Focus — [method _fill_selection_actions_popup] / [method _on_selection_action_id].
+const _SEL_ACT_FOCUS_INSPECTOR := 1180
+const _SEL_ACT_WIRE_ADD_BASE := 1210
+const _SEL_ACT_WIRE_REFRESH_LIST := 1220
+const _SEL_ACT_WIRE_COPY_RULE_REPORT := 1221
 const _SEL_ACT_COPY_DETAILS := 1199
 
 ## Empty-canvas [PopupMenu] ids — [method _fill_canvas_view_popup] / [method _on_canvas_view_menu_id].
@@ -61,7 +67,6 @@ const _CV_SCOPE_PIN := 3502
 var _plugin: EditorPlugin
 var _actions: UiReactActionController
 var _request_dock_refresh: Callable = Callable()
-var _on_wire_rule_row_focus: Callable = Callable()
 
 var _hint: RichTextLabel
 var _hidden_chrome_host: Control
@@ -75,9 +80,8 @@ var _cb_edge_labels: CheckBox
 var _graph_view: Control
 var _details_scroll: ScrollContainer
 var _details: RichTextLabel
-var _details_buttons: HBoxContainer
-var _btn_focus_inspector: Button
-var _btn_selection_actions: MenuButton
+## [UiReactDockWireRulesSection]
+var _wire_rules_section: Variant = null
 var _selection_actions_context_popup: PopupMenu
 var _canvas_view_context_popup: PopupMenu
 var _canvas_view_preset_names: PackedStringArray
@@ -113,6 +117,8 @@ var _newlink_mixed_donor_st: UiState
 var _newlink_mixed_host: Control
 var _newlink_mixed_component: String = ""
 var _newlink_mixed_binding_cands: Array = []
+var _newlink_wire_filter_indices: PackedInt32Array = PackedInt32Array()
+var _newlink_no_wire_dialog: AcceptDialog
 
 var _newlink_mount_popup: PopupMenu
 var _newlink_mount_donor_st: UiState
@@ -161,12 +167,10 @@ func setup(
 	plugin: EditorPlugin,
 	actions: UiReactActionController,
 	request_dock_refresh: Callable = Callable(),
-	on_wire_rule_row_focus: Callable = Callable(),
 ) -> void:
 	_plugin = plugin
 	_actions = actions
 	_request_dock_refresh = request_dock_refresh
-	_on_wire_rule_row_focus = on_wire_rule_row_focus
 	_build_ui()
 	_rebuild_scope_preset_dropdown()
 	_sync_active_scope_preset_from_settings(true)
@@ -255,6 +259,7 @@ func _apply_visual_from_snap_safe(snap: Variant, focus_id: String) -> void:
 		_set_details_empty()
 		_set_hint_visible(true)
 		_set_hint("No nodes in scope for this layout. Lower layout caps, widen bindings, or Refresh after edits.")
+		_sync_wire_rules_section()
 		return
 	(_graph_view as Object).call(&"set_layout", layout)
 	_push_visual_filters()
@@ -283,6 +288,7 @@ func _on_graph_node(id: String) -> void:
 	_selection_kind = _SEL_NODE
 	_update_focus_button_state()
 	_fill_node_details(id)
+	_sync_wire_rules_section()
 
 
 func _on_graph_edge(from_id: String, to_id: String, kind: int, label: String, edge_index: int) -> void:
@@ -295,6 +301,7 @@ func _on_graph_edge(from_id: String, to_id: String, kind: int, label: String, ed
 	_selection_kind = _SEL_EDGE
 	_update_focus_button_state()
 	_fill_edge_details(from_id, to_id, kind, label, edge_index)
+	_sync_wire_rules_section()
 
 
 func _on_graph_cleared() -> void:
@@ -303,11 +310,10 @@ func _on_graph_cleared() -> void:
 	_selection_kind = _SEL_NONE
 	_update_focus_button_state()
 	_set_details_placeholder()
+	_sync_wire_rules_section()
 
 
 func _update_focus_button_state() -> void:
-	if _btn_focus_inspector != null:
-		_btn_focus_inspector.disabled = _selection_kind == _SEL_NONE
 	_sync_wire_rule_id_row()
 
 
@@ -321,7 +327,63 @@ func _can_pin_focused_node_to_preset() -> bool:
 	)
 
 
-## Actions… menu and graph context menu — single builder (plan: omit disabled rows; [member _btn_selection_actions] stays enabled even when only Copy applies).
+func _resolve_wire_rules_host_control() -> Control:
+	if _plugin == null:
+		return null
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return null
+	if _selection_kind == _SEL_EDGE and _last_edge_kind == _SnapScript.EdgeKind.WIRE_FLOW:
+		var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+		var idx := _graph_selected_edge_index
+		if idx < 0 or idx >= edges.size():
+			pass
+		else:
+			var ev: Variant = edges[idx]
+			if ev is Dictionary:
+				var wh := str((ev as Dictionary).get(&"wire_host_path", ""))
+				if not wh.is_empty() and root.has_node(NodePath(wh)):
+					var n: Node = root.get_node(NodePath(wh))
+					if n is Control and (&"wire_rules" in n):
+						return n as Control
+	if _selection_kind == _SEL_NODE and _graph_selected_node_id.begins_with("ctrl:"):
+		var pstr := _graph_selected_node_id.substr(5)
+		if root.has_node(NodePath(pstr)):
+			var n2: Node = root.get_node(NodePath(pstr))
+			if n2 is Control and (&"wire_rules" in n2):
+				return n2 as Control
+	var sel: Array[Node] = ei.get_selection().get_selected_nodes()
+	if sel.size() == 1:
+		var n3: Node = sel[0]
+		if (&"wire_rules" in n3) and n3 is Control and (n3 == root or root.is_ancestor_of(n3)):
+			return n3 as Control
+	return null
+
+
+func _sync_wire_rules_section() -> void:
+	if _wire_rules_section == null or _plugin == null:
+		return
+	var sec: Object = _wire_rules_section as Object
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		sec.call(&"set_target_host", null, null)
+		return
+	var h := _resolve_wire_rules_host_control()
+	if h != null:
+		sec.call(&"set_target_host", h, root)
+	else:
+		sec.call(&"set_target_host", null, null)
+
+
+func _after_wire_rules_section_commit() -> void:
+	if _request_dock_refresh.is_valid():
+		_request_dock_refresh.call()
+	refresh()
+
+
+## Graph RMB context menu — same builder as former Actions… MenuButton.
 func _fill_selection_actions_popup(popup: PopupMenu) -> void:
 	popup.clear()
 	const TT_REBIND_BINDING := (
@@ -359,6 +421,50 @@ func _fill_selection_actions_popup(popup: PopupMenu) -> void:
 		"For a selected optional empty binding edge: save a new matching UiState .tres and assign it (undoable)."
 	)
 	const TT_COPY := "Copy the plain-text details to the clipboard."
+	const TT_FOCUS := "Open the related scene node or resource in the Inspector when possible."
+	const TT_WIRE_REFRESH := "Resync the wire rules list from the scene after external edits or Undo."
+	const TT_WIRE_COPY_REP := "Copy the wire rule report for the selected row (right-click rows for more)."
+
+	if _selection_kind != _SEL_NONE:
+		popup.add_item("Focus in Inspector", _SEL_ACT_FOCUS_INSPECTOR)
+		popup.set_item_tooltip(popup.item_count - 1, TT_FOCUS)
+
+	var wire_host := _resolve_wire_rules_host_control()
+	if wire_host != null:
+		if popup.item_count > 0:
+			popup.add_separator()
+		var wentries := _WireRuleCatalogScript.rule_script_entries()
+		for j: int in range(wentries.size()):
+			popup.add_item(
+				"Add wire: %s" % String(wentries[j][&"label"]),
+				_SEL_ACT_WIRE_ADD_BASE + j,
+			)
+		popup.add_item("Refresh wire list", _SEL_ACT_WIRE_REFRESH_LIST)
+		popup.set_item_tooltip(popup.item_count - 1, TT_WIRE_REFRESH)
+		popup.add_item("Copy rule report", _SEL_ACT_WIRE_COPY_RULE_REPORT)
+		popup.set_item_tooltip(popup.item_count - 1, TT_WIRE_COPY_REP)
+		var cr_i := popup.get_item_index(_SEL_ACT_WIRE_COPY_RULE_REPORT)
+		if cr_i >= 0:
+			var sec2: Object = _wire_rules_section as Object
+			var sel_ix: int = int(sec2.call(&"get_selected_rule_index"))
+			popup.set_item_disabled(cr_i, sel_ix < 0)
+
+	var n_before_edge := popup.item_count
+	var any_edge_item_will := (
+		_can_rebind_binding_edge()
+		or _can_rebind_wire_endpoint(true)
+		or _can_rebind_wire_endpoint(false)
+		or _can_rebind_computed_source()
+		or _can_disconnect_binding_edge()
+		or _can_disconnect_computed_source()
+		or _can_disconnect_wire_edge()
+		or _can_move_computed_source_up()
+		or _can_move_computed_source_down()
+		or _can_remove_computed_source_slot()
+		or _can_create_and_assign_binding_edge()
+	)
+	if n_before_edge > 0 and any_edge_item_will:
+		popup.add_separator()
 
 	var rebind_added := false
 	if _can_rebind_binding_edge():
@@ -430,13 +536,24 @@ func _fill_selection_actions_popup(popup: PopupMenu) -> void:
 	popup.set_item_tooltip(popup.item_count - 1, TT_COPY)
 
 
-func _on_selection_actions_about_to_popup() -> void:
-	if _btn_selection_actions == null:
-		return
-	_fill_selection_actions_popup(_btn_selection_actions.get_popup())
-
-
 func _on_selection_action_id(id: int) -> void:
+	var nw := _WireRuleCatalogScript.rule_script_entries().size()
+	if id == _SEL_ACT_FOCUS_INSPECTOR:
+		_on_focus_inspector_pressed()
+		return
+	if id == _SEL_ACT_WIRE_REFRESH_LIST:
+		if _wire_rules_section != null:
+			(_wire_rules_section as Object).call(&"refresh_from_host")
+		return
+	if id == _SEL_ACT_WIRE_COPY_RULE_REPORT:
+		if _wire_rules_section != null:
+			(_wire_rules_section as Object).call(&"copy_selected_report_to_clipboard")
+		return
+	if id >= _SEL_ACT_WIRE_ADD_BASE and id < _SEL_ACT_WIRE_ADD_BASE + nw:
+		var cidx := id - _SEL_ACT_WIRE_ADD_BASE
+		if _wire_rules_section != null:
+			(_wire_rules_section as Object).call(&"append_rule_from_catalog_index", cidx)
+		return
 	match id:
 		_SEL_ACT_REBIND_BINDING:
 			_on_rebind_binding_pressed()
@@ -1553,11 +1670,31 @@ func _ensure_newlink_mixed_popup() -> PopupMenu:
 	return _newlink_mixed_popup
 
 
+func _ensure_newlink_no_wire_dialog() -> AcceptDialog:
+	if _newlink_no_wire_dialog != null:
+		return _newlink_no_wire_dialog
+	_newlink_no_wire_dialog = AcceptDialog.new()
+	_newlink_no_wire_dialog.title = "No compatible wire rules"
+	_newlink_no_wire_dialog.dialog_text = (
+		"No wire rule templates accept this state on the first input export. "
+		+ "Try a different donor state or add a rule from the graph context menu."
+	)
+	add_child(_newlink_no_wire_dialog)
+	return _newlink_no_wire_dialog
+
+
+func _show_newlink_no_wire_rules_dialog() -> void:
+	var d := _ensure_newlink_no_wire_dialog()
+	d.popup_centered()
+
+
 func _open_newlink_mixed_popup(host: Control, component: String, donor: UiState, cands: Array) -> void:
 	_newlink_mixed_host = host
 	_newlink_mixed_component = component
 	_newlink_mixed_donor_st = donor
 	_newlink_mixed_binding_cands = cands.duplicate()
+	var filtered: PackedInt32Array = _WireGraphEditScript.filter_rule_template_indices_for_donor(donor)
+	_newlink_wire_filter_indices = filtered
 	var m := _ensure_newlink_mixed_popup()
 	m.clear()
 	var id := 0
@@ -1565,11 +1702,18 @@ func _open_newlink_mixed_popup(host: Control, component: String, donor: UiState,
 		var lab := str((row as Dictionary).get(&"label", ""))
 		m.add_item("Binding: %s" % lab, id)
 		id += 1
-	m.add_separator()
 	var entries := _WireRuleCatalogScript.rule_script_entries()
-	var wire_base := id
-	for j: int in range(entries.size()):
-		m.add_item("New wire: %s" % String(entries[j][&"label"]), wire_base + j)
+	if filtered.is_empty():
+		if cands.is_empty():
+			_show_newlink_no_wire_rules_dialog()
+			return
+	else:
+		if not cands.is_empty():
+			m.add_separator()
+		var wire_base := id
+		for k: int in range(filtered.size()):
+			var ci := int(filtered[k])
+			m.add_item("New wire: %s" % String(entries[ci][&"label"]), wire_base + k)
 	var mp: Vector2i = DisplayServer.mouse_get_position()
 	m.position = mp
 	m.popup()
@@ -1580,11 +1724,17 @@ func _open_newlink_wire_rules_only_popup(host: Control, donor: UiState) -> void:
 	_newlink_mixed_component = ""
 	_newlink_mixed_donor_st = donor
 	_newlink_mixed_binding_cands.clear()
+	var filtered2: PackedInt32Array = _WireGraphEditScript.filter_rule_template_indices_for_donor(donor)
+	_newlink_wire_filter_indices = filtered2
+	if filtered2.is_empty():
+		_show_newlink_no_wire_rules_dialog()
+		return
 	var m := _ensure_newlink_mixed_popup()
 	m.clear()
 	var entries := _WireRuleCatalogScript.rule_script_entries()
-	for j: int in range(entries.size()):
-		m.add_item("New wire: %s" % String(entries[j][&"label"]), j)
+	for k: int in range(filtered2.size()):
+		var ci := int(filtered2[k])
+		m.add_item("New wire: %s" % String(entries[ci][&"label"]), k)
 	var mp: Vector2i = DisplayServer.mouse_get_position()
 	m.position = mp
 	m.popup()
@@ -1608,17 +1758,34 @@ func _on_newlink_mixed_menu_id(menu_id: int) -> void:
 			)
 		else:
 			var widx := menu_id - nbind
+			if widx < 0 or widx >= _newlink_wire_filter_indices.size():
+				_newlink_mixed_host = null
+				_newlink_mixed_donor_st = null
+				_newlink_mixed_binding_cands.clear()
+				_newlink_mixed_component = ""
+				_newlink_wire_filter_indices = PackedInt32Array()
+				return
+			var catalog_i := int(_newlink_wire_filter_indices[widx])
 			committed = _WireGraphEditScript.try_commit_append_wire_rule_with_in(
-				_newlink_mixed_host, widx, _newlink_mixed_donor_st, _actions
+				_newlink_mixed_host, catalog_i, _newlink_mixed_donor_st, _actions
 			)
 	else:
+		if menu_id < 0 or menu_id >= _newlink_wire_filter_indices.size():
+			_newlink_mixed_host = null
+			_newlink_mixed_donor_st = null
+			_newlink_mixed_binding_cands.clear()
+			_newlink_mixed_component = ""
+			_newlink_wire_filter_indices = PackedInt32Array()
+			return
+		var catalog_i2 := int(_newlink_wire_filter_indices[menu_id])
 		committed = _WireGraphEditScript.try_commit_append_wire_rule_with_in(
-			_newlink_mixed_host, menu_id, _newlink_mixed_donor_st, _actions
+			_newlink_mixed_host, catalog_i2, _newlink_mixed_donor_st, _actions
 		)
 	_newlink_mixed_host = null
 	_newlink_mixed_donor_st = null
 	_newlink_mixed_binding_cands.clear()
 	_newlink_mixed_component = ""
+	_newlink_wire_filter_indices = PackedInt32Array()
 	if not committed:
 		return
 	if _request_dock_refresh.is_valid():
@@ -2424,7 +2591,7 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 
 
 func _try_focus_wire_rule_list_from_edge(kind: int, edge_index: int) -> void:
-	if not _on_wire_rule_row_focus.is_valid():
+	if _wire_rules_section == null:
 		return
 	if kind != _SnapScript.EdgeKind.WIRE_FLOW:
 		return
@@ -2435,12 +2602,9 @@ func _try_focus_wire_rule_list_from_edge(kind: int, edge_index: int) -> void:
 	if ev is not Dictionary:
 		return
 	var edf: Dictionary = ev as Dictionary
-	var wh := str(edf.get(&"wire_host_path", ""))
-	if wh.is_empty() or wh != _last_focus_host_path:
-		return
 	var wi := int(edf.get(&"wire_rule_index", -1))
 	if wi >= 0:
-		_on_wire_rule_row_focus.call(wi)
+		(_wire_rules_section as Object).call(&"focus_rule_index", wi)
 
 
 func _edge_short_token(kind: int) -> String:
@@ -3138,10 +3302,10 @@ func _build_ui() -> void:
 	)
 	_graph_view.tooltip_text = (
 		"Pan: middle-drag. Zoom: wheel. Right-click empty canvas: Refresh, Fit, Create state, filters, presets. "
-		+ "Right-click node or edge: Actions menu. "
+		+ "Right-click node or edge: Focus, wire rules, rebind/clear, copy details. "
 		+ "Reconnect: select an edge, then Shift+drag from the source endpoint node to another state node (undoable). "
 		+ "New link: clear edge selection, Ctrl+Shift+drag from a state donor to a control (empty binding and/or new wire rule) or to a computed (fill/append sources; file-backed computed resolves from scene binds). "
-		+ "Delete/Backspace with an edge selected clears optional bindings, computed sources, or wire links when the Actions menu would allow it."
+		+ "Delete/Backspace with an edge selected clears optional bindings, computed sources, or wire links when the context menu would allow it."
 	)
 	_visual_host.add_child(_graph_view)
 
@@ -3163,6 +3327,15 @@ func _build_ui() -> void:
 	_details.text = "[i]Select a node or edge in the graph to see details.[/i]"
 	_details_scroll.add_child(_details)
 	_last_details_plain = "Select a node or edge in the graph to see details."
+
+	_wire_rules_section = _WireRulesSectionScript.new()
+	_wire_rules_section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_wire_rules_section.setup(
+		_plugin,
+		_actions,
+		Callable(self, &"_after_wire_rules_section_commit"),
+	)
+	_visual_host.add_child(_wire_rules_section)
 
 	_wire_payload_box = VBoxContainer.new()
 	_wire_payload_box.visible = false
@@ -3218,28 +3391,6 @@ func _build_ui() -> void:
 	_wire_trigger_option.item_selected.connect(_on_wire_trigger_selected)
 	_wire_trigger_row.add_child(_wire_trigger_option)
 
-	_details_buttons = HBoxContainer.new()
-	_details_buttons.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_visual_host.add_child(_details_buttons)
-
-	_btn_focus_inspector = Button.new()
-	_btn_focus_inspector.text = "Focus in Inspector"
-	_btn_focus_inspector.tooltip_text = "Open the related scene node or resource in the Inspector when possible."
-	_btn_focus_inspector.disabled = true
-	_btn_focus_inspector.pressed.connect(_on_focus_inspector_pressed)
-	_details_buttons.add_child(_btn_focus_inspector)
-
-	_btn_selection_actions = MenuButton.new()
-	_btn_selection_actions.text = "Actions…"
-	_btn_selection_actions.tooltip_text = (
-		"Rebind, clear, reorder, create & assign, or copy details for the current graph selection."
-	)
-	_btn_selection_actions.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	var apop := _btn_selection_actions.get_popup()
-	apop.id_pressed.connect(_on_selection_action_id)
-	_btn_selection_actions.about_to_popup.connect(_on_selection_actions_about_to_popup)
-	_details_buttons.add_child(_btn_selection_actions)
-
 	var base_ctl := _plugin.get_editor_interface().get_base_control()
 	_selection_actions_context_popup = PopupMenu.new()
 	base_ctl.add_child(_selection_actions_context_popup)
@@ -3270,6 +3421,7 @@ func _clear_stale_snapshot() -> void:
 	_last_focus_host_path = ""
 	_selection_kind = _SEL_NONE
 	_update_focus_button_state()
+	_sync_wire_rules_section()
 	if _graph_view:
 		_graph_view.clear_graph()
 
