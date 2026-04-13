@@ -39,7 +39,7 @@ The **Wiring** dock tab (**CB-018A**–**CB-018A.5** + **CB-035** list) is the *
 
 **Explicit non-goals (until specified otherwise):** **Runtime** graph editing while playing (**CB-018** remainder); any **second** snapshot file or rule engine.
 
-**Next milestones (committal intent, not a release promise):** (1) **In-tab** edge payloads — extend shallow fields beyond **rule_id** / **enabled** / **trigger** where high-value (deeper rule fields stay Inspector); (2) optional: **resource creation** from the graph (factory flows mirroring Inspector). **Polish:** scope presets, pins, or filters so designers control the microcosm without noise.
+**Next milestones (committal intent, not a release promise):** (1) **In-tab** edge payloads — extend shallow fields beyond **rule_id** / **enabled** / **trigger** where high-value (deeper rule fields stay Inspector). **Shipped (Track 3):** **UiState** `.tres` creation from the graph (**explicit save path**; optional assign on **optional empty** bindings only) via **`UiReactGraphResourceFactory`**; **named graph scope presets** (caps, filters, **Full lists**, pins) in **ProjectSettings** — see **`CHANGELOG`** and **`GRAPH_DEBUG_SURFACES`**. **Polish:** deeper preset ergonomics only if needed.
 
 ### Charter (lock-in)
 

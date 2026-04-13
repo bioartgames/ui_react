@@ -19,6 +19,7 @@ static func layout_snapshot(
 	focus_control_id: String,
 	max_nodes: int = DEFAULT_MAX_NODES,
 	max_edges: int = DEFAULT_MAX_EDGES,
+	extra_scope_ids: PackedStringArray = PackedStringArray(),
 ) -> Dictionary:
 	var snap_script: Object = snap
 	var nodes_arr: Array = snap_script.get("nodes") as Array
@@ -32,15 +33,26 @@ static func layout_snapshot(
 		scope[String(x)] = true
 	for x: Variant in down_ids:
 		scope[String(x)] = true
+	for i in range(extra_scope_ids.size()):
+		var px := String(extra_scope_ids[i]).strip_edges()
+		if not px.is_empty():
+			scope[px] = true
 
-	var node_by_id: Dictionary = {}
+	var all_nodes_by_id: Dictionary = {}
 	for nd: Variant in nodes_arr:
 		if nd is Dictionary:
-			var d: Dictionary = nd as Dictionary
-			var nid := str(d.get(&"id", ""))
-			if nid.is_empty() or not scope.has(nid):
+			var d0: Dictionary = nd as Dictionary
+			var nid0 := str(d0.get(&"id", ""))
+			if nid0.is_empty():
 				continue
-			node_by_id[nid] = d.duplicate(true)
+			all_nodes_by_id[nid0] = d0.duplicate(true)
+
+	var node_by_id: Dictionary = {}
+	for nid: Variant in scope:
+		var ks := String(nid)
+		if not all_nodes_by_id.has(ks):
+			continue
+		node_by_id[ks] = all_nodes_by_id[ks].duplicate(true)
 
 	if not node_by_id.has(focus_control_id):
 		node_by_id[focus_control_id] = {

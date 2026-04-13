@@ -12,6 +12,7 @@ const _ResolverScript := preload("res://addons/ui_react/editor_plugin/services/u
 const _ExplainLayoutScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_explain_graph_layout.gd")
 const _ExplainGraphViewScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_explain_graph_view.gd")
 const _SnapScript := preload("res://addons/ui_react/editor_plugin/models/ui_react_explain_graph_snapshot.gd")
+const _GraphFactoryScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_graph_resource_factory.gd")
 const _SEL_NONE := 0
 const _SEL_NODE := 1
 const _SEL_EDGE := 2
@@ -21,6 +22,11 @@ const _REBIND_BINDING := 1
 const _REBIND_WIRE_IN := 2
 const _REBIND_WIRE_OUT := 3
 const _REBIND_COMPUTED_SOURCE := 4
+
+const _SCOPE_MIN_NODES := 20
+const _SCOPE_MAX_NODES := 2000
+const _SCOPE_MIN_EDGES := 40
+const _SCOPE_MAX_EDGES := 4000
 
 var _plugin: EditorPlugin
 var _actions: UiReactActionController
@@ -110,6 +116,31 @@ var _last_edge_kind: int = -1
 var _last_edge_label: String = ""
 var _last_details_plain: String = ""
 
+var _btn_create_state: MenuButton
+var _btn_create_assign_binding: Button
+var _create_state_save_dialog: EditorFileDialog
+var _create_state_class_pending: String = ""
+var _create_and_assign_mode: bool = false
+var _create_assign_host_path: String = ""
+var _create_assign_prop: StringName = &""
+var _create_assign_component: String = ""
+var _create_assign_expected_class: StringName = &""
+
+var _scope_row: HBoxContainer
+var _scope_preset_option: OptionButton
+var _btn_scope_save_as: Button
+var _btn_scope_manage: Button
+var _btn_pin_node: Button
+var _scope_save_name_dialog: AcceptDialog
+var _scope_save_name_edit: LineEdit
+var _scope_manage_dialog: AcceptDialog
+var _scope_manage_list: ItemList
+var _layout_max_nodes: int = 200
+var _layout_max_edges: int = 400
+var _pinned_node_ids: PackedStringArray = PackedStringArray()
+var _scope_presets_cache: Array = []
+var _scope_preset_block_select: bool = false
+
 
 func setup(
 	plugin: EditorPlugin,
@@ -122,6 +153,8 @@ func setup(
 	_request_dock_refresh = request_dock_refresh
 	_on_wire_rule_row_focus = on_wire_rule_row_focus
 	_build_ui()
+	_rebuild_scope_preset_dropdown()
+	_sync_active_scope_preset_from_settings(true)
 	var ei := _plugin.get_editor_interface()
 	if not ei.get_selection().selection_changed.is_connected(_on_editor_selection_changed):
 		ei.get_selection().selection_changed.connect(_on_editor_selection_changed)
@@ -193,7 +226,13 @@ func _on_debounced_auto_refresh() -> void:
 func _apply_visual_from_snap_safe(snap: Variant, focus_id: String) -> void:
 	if _graph_view == null:
 		return
-	var layout: Dictionary = _ExplainLayoutScript.layout_snapshot(snap, focus_id)
+	var layout: Dictionary = _ExplainLayoutScript.layout_snapshot(
+		snap,
+		focus_id,
+		_layout_max_nodes,
+		_layout_max_edges,
+		_pinned_node_ids,
+	)
 	_last_layout = layout
 	var centers: Dictionary = layout.get(&"node_centers", {}) as Dictionary
 	if centers.is_empty():
@@ -274,6 +313,17 @@ func _update_focus_button_state() -> void:
 		_btn_move_computed_source_down.disabled = not _can_move_computed_source_down()
 	if _btn_remove_computed_source_slot != null:
 		_btn_remove_computed_source_slot.disabled = not _can_remove_computed_source_slot()
+	if _btn_create_assign_binding != null:
+		_btn_create_assign_binding.disabled = not _can_create_and_assign_binding_edge()
+	if _btn_pin_node != null:
+		var actn: String = String(UiReactDockConfig.get_active_graph_scope_preset_name()).strip_edges()
+		var pin_ok: bool = (
+			not actn.is_empty()
+			and actn.to_lower() != "default"
+			and _selection_kind == _SEL_NODE
+			and not _graph_selected_node_id.is_empty()
+		)
+		_btn_pin_node.disabled = not pin_ok
 	_sync_wire_rule_id_row()
 
 
@@ -2175,6 +2225,454 @@ func _add_legend_swatch(row: HBoxContainer, col: Color, text: String) -> void:
 	row.add_child(lab)
 
 
+func _clamp_layout_caps() -> void:
+	_layout_max_nodes = clampi(_layout_max_nodes, _SCOPE_MIN_NODES, _SCOPE_MAX_NODES)
+	_layout_max_edges = clampi(_layout_max_edges, _SCOPE_MIN_EDGES, _SCOPE_MAX_EDGES)
+
+
+func _default_scope_dict() -> Dictionary:
+	return {
+		&"name": "",
+		&"max_nodes": 200,
+		&"max_edges": 400,
+		&"show_binding": true,
+		&"show_computed": true,
+		&"show_wire": true,
+		&"show_all_edge_labels": false,
+		&"full_lists": false,
+		&"pinned": PackedStringArray(),
+	}
+
+
+func _preset_from_variant(v: Variant) -> Dictionary:
+	var d := _default_scope_dict()
+	if v is not Dictionary:
+		return d
+	var src: Dictionary = v as Dictionary
+	var n := String(src.get("name", "")).strip_edges()
+	d[&"name"] = n
+	d[&"max_nodes"] = clampi(int(src.get("max_nodes", 200)), _SCOPE_MIN_NODES, _SCOPE_MAX_NODES)
+	d[&"max_edges"] = clampi(int(src.get("max_edges", 400)), _SCOPE_MIN_EDGES, _SCOPE_MAX_EDGES)
+	d[&"show_binding"] = bool(src.get("show_binding", true))
+	d[&"show_computed"] = bool(src.get("show_computed", true))
+	d[&"show_wire"] = bool(src.get("show_wire", true))
+	d[&"show_all_edge_labels"] = bool(src.get("show_all_edge_labels", false))
+	d[&"full_lists"] = bool(src.get("full_lists", false))
+	var pins: Variant = src.get("pinned", PackedStringArray())
+	var ps: PackedStringArray = PackedStringArray()
+	if pins is Array:
+		for it in pins as Array:
+			var s := String(it).strip_edges()
+			if not s.is_empty():
+				ps.append(s)
+	elif pins is PackedStringArray:
+		ps = pins as PackedStringArray
+	var seen_pin: Dictionary = {}
+	var deduped: PackedStringArray = PackedStringArray()
+	for i in range(ps.size()):
+		var pid := String(ps[i]).strip_edges()
+		if pid.is_empty() or seen_pin.has(pid):
+			continue
+		seen_pin[pid] = true
+		deduped.append(pid)
+	d[&"pinned"] = deduped
+	return d
+
+
+func _capture_current_scope_settings(preset_name: String) -> Dictionary:
+	var pins_copy: PackedStringArray = PackedStringArray()
+	for i in range(_pinned_node_ids.size()):
+		pins_copy.append(String(_pinned_node_ids[i]))
+	return {
+		&"name": preset_name,
+		&"max_nodes": _layout_max_nodes,
+		&"max_edges": _layout_max_edges,
+		&"show_binding": _cb_bind != null and _cb_bind.button_pressed,
+		&"show_computed": _cb_computed != null and _cb_computed.button_pressed,
+		&"show_wire": _cb_wire != null and _cb_wire.button_pressed,
+		&"show_all_edge_labels": _cb_edge_labels != null and _cb_edge_labels.button_pressed,
+		&"full_lists": _show_full_lists,
+		&"pinned": pins_copy,
+	}
+
+
+func _apply_scope_dict_to_ui(d: Dictionary) -> void:
+	_layout_max_nodes = clampi(int(d.get("max_nodes", 200)), _SCOPE_MIN_NODES, _SCOPE_MAX_NODES)
+	_layout_max_edges = clampi(int(d.get("max_edges", 400)), _SCOPE_MIN_EDGES, _SCOPE_MAX_EDGES)
+	if _cb_bind:
+		_cb_bind.button_pressed = bool(d.get("show_binding", true))
+	if _cb_computed:
+		_cb_computed.button_pressed = bool(d.get("show_computed", true))
+	if _cb_wire:
+		_cb_wire.button_pressed = bool(d.get("show_wire", true))
+	if _cb_edge_labels:
+		_cb_edge_labels.button_pressed = bool(d.get("show_all_edge_labels", false))
+	var fl := bool(d.get("full_lists", false))
+	_show_full_lists = fl
+	if _cb_full_lists:
+		_cb_full_lists.button_pressed = fl
+	var pv: Variant = d.get("pinned", PackedStringArray())
+	if pv is PackedStringArray:
+		_pinned_node_ids = pv
+	elif pv is Array:
+		_pinned_node_ids = PackedStringArray()
+		for it in pv as Array:
+			var s := String(it).strip_edges()
+			if not s.is_empty():
+				_pinned_node_ids.append(s)
+	else:
+		_pinned_node_ids = PackedStringArray()
+	_clamp_layout_caps()
+	if _graph_view != null:
+		_push_visual_filters()
+
+
+func _rebuild_scope_preset_dropdown() -> void:
+	if _scope_preset_option == null:
+		return
+	_scope_preset_block_select = true
+	_scope_preset_option.clear()
+	_scope_preset_option.add_item("Default")
+	_scope_preset_option.set_item_metadata(0, "")
+	_scope_presets_cache = UiReactDockConfig.load_graph_scope_presets_raw()
+	var names: Array[String] = []
+	for it: Variant in _scope_presets_cache:
+		if it is Dictionary:
+			var nm := String((it as Dictionary).get("name", "")).strip_edges()
+			if not nm.is_empty() and nm.to_lower() != "default":
+				names.append(nm)
+	names.sort()
+	var idx := 1
+	for nm2 in names:
+		_scope_preset_option.add_item(nm2)
+		_scope_preset_option.set_item_metadata(idx, nm2)
+		idx += 1
+	_scope_preset_block_select = false
+
+
+func _sync_active_scope_preset_from_settings(select_dropdown: bool) -> void:
+	_rebuild_scope_preset_dropdown()
+	var active: String = String(UiReactDockConfig.get_active_graph_scope_preset_name()).strip_edges()
+	if active.is_empty() or active.to_lower() == "default":
+		_apply_scope_dict_to_ui(_default_scope_dict())
+		if _scope_preset_option:
+			_scope_preset_block_select = true
+			_scope_preset_option.select(0)
+			_scope_preset_block_select = false
+		return
+	var found: Dictionary = {}
+	for it: Variant in _scope_presets_cache:
+		if it is Dictionary:
+			var pd: Dictionary = _preset_from_variant(it)
+			if String(pd.get("name", "")) == active:
+				found = pd
+				break
+	if found.is_empty():
+		_apply_scope_dict_to_ui(_default_scope_dict())
+		UiReactDockConfig.set_active_graph_scope_preset_name("")
+		if _scope_preset_option:
+			_scope_preset_block_select = true
+			_scope_preset_option.select(0)
+			_scope_preset_block_select = false
+		return
+	_apply_scope_dict_to_ui(found)
+	if select_dropdown and _scope_preset_option:
+		for i in range(_scope_preset_option.item_count):
+			if str(_scope_preset_option.get_item_metadata(i)) == active:
+				_scope_preset_block_select = true
+				_scope_preset_option.select(i)
+				_scope_preset_block_select = false
+				break
+
+
+func _persist_presets_array(arr: Array) -> void:
+	UiReactDockConfig.save_graph_scope_presets_raw(arr)
+	_rebuild_scope_preset_dropdown()
+
+
+func _on_scope_preset_selected(index: int) -> void:
+	if _scope_preset_block_select or _scope_preset_option == null:
+		return
+	var meta: Variant = _scope_preset_option.get_item_metadata(index)
+	var name := str(meta).strip_edges()
+	UiReactDockConfig.set_active_graph_scope_preset_name(name)
+	if name.is_empty():
+		_apply_scope_dict_to_ui(_default_scope_dict())
+	else:
+		for it: Variant in _scope_presets_cache:
+			if it is Dictionary:
+				var pd: Dictionary = _preset_from_variant(it)
+				if String(pd.get("name", "")) == name:
+					_apply_scope_dict_to_ui(pd)
+					break
+	refresh()
+
+
+func _on_scope_save_as_pressed() -> void:
+	if _scope_save_name_dialog == null or _scope_save_name_edit == null:
+		return
+	_scope_save_name_edit.text = ""
+	_scope_save_name_dialog.popup_centered()
+
+
+func _on_scope_save_name_confirmed() -> void:
+	var raw_name := _scope_save_name_edit.text.strip_edges() if _scope_save_name_edit else ""
+	if raw_name.is_empty() or raw_name.to_lower() == "default":
+		push_warning("Ui React: choose a non-empty preset name other than “Default”.")
+		return
+	var arr: Array = UiReactDockConfig.load_graph_scope_presets_raw()
+	var rec := _capture_current_scope_settings(raw_name)
+	var replaced := false
+	var out: Array = []
+	for it: Variant in arr:
+		if it is Dictionary:
+			var old: Dictionary = _preset_from_variant(it)
+			if String(old.get("name", "")) == raw_name:
+				out.append(rec)
+				replaced = true
+			else:
+				out.append(old)
+		else:
+			pass
+	if not replaced:
+		out.append(rec)
+	_persist_presets_array(out)
+	UiReactDockConfig.set_active_graph_scope_preset_name(raw_name)
+	_sync_active_scope_preset_from_settings(true)
+	refresh()
+
+
+func _on_scope_manage_pressed() -> void:
+	if _scope_manage_list == null or _scope_manage_dialog == null:
+		return
+	_scope_manage_list.clear()
+	for it: Variant in UiReactDockConfig.load_graph_scope_presets_raw():
+		if it is Dictionary:
+			var nm := String((it as Dictionary).get("name", "")).strip_edges()
+			if not nm.is_empty():
+				_scope_manage_list.add_item(nm)
+	_scope_manage_dialog.popup_centered()
+
+
+func _on_scope_manage_delete_pressed() -> void:
+	if _scope_manage_list == null:
+		return
+	var sel: PackedInt32Array = _scope_manage_list.get_selected_items()
+	if sel.is_empty():
+		return
+	var del_name := _scope_manage_list.get_item_text(sel[0])
+	var arr: Array = UiReactDockConfig.load_graph_scope_presets_raw()
+	var out: Array = []
+	for it: Variant in arr:
+		if it is Dictionary:
+			var nm := String((it as Dictionary).get("name", "")).strip_edges()
+			if nm != del_name:
+				out.append(_preset_from_variant(it))
+	_persist_presets_array(out)
+	if UiReactDockConfig.get_active_graph_scope_preset_name() == del_name:
+		UiReactDockConfig.set_active_graph_scope_preset_name("")
+	_sync_active_scope_preset_from_settings(true)
+	_on_scope_manage_pressed()
+	refresh()
+
+
+func _on_pin_node_pressed() -> void:
+	var active: String = String(UiReactDockConfig.get_active_graph_scope_preset_name()).strip_edges()
+	if active.is_empty() or active.to_lower() == "default":
+		push_warning("Ui React: save or select a named scope preset before pinning nodes.")
+		return
+	if _selection_kind != _SEL_NODE or _graph_selected_node_id.is_empty():
+		push_warning("Ui React: select a graph node to pin.")
+		return
+	var pid := _graph_selected_node_id
+	for i in range(_pinned_node_ids.size()):
+		if _pinned_node_ids[i] == pid:
+			return
+	_pinned_node_ids.append(pid)
+	var arr: Array = UiReactDockConfig.load_graph_scope_presets_raw()
+	var out: Array = []
+	var updated := false
+	for it: Variant in arr:
+		if it is Dictionary:
+			var pd: Dictionary = _preset_from_variant(it)
+			if String(pd.get("name", "")) == active:
+				pd[&"pinned"] = _pinned_node_ids.duplicate()
+				updated = true
+			out.append(pd)
+	if not updated:
+		out.append(_capture_current_scope_settings(active))
+	_persist_presets_array(out)
+	refresh()
+
+
+func _on_create_state_menu_id(menu_id: int) -> void:
+	var names: PackedStringArray = _GraphFactoryScript.factory_state_class_names()
+	if menu_id < 0 or menu_id >= names.size():
+		return
+	_create_state_class_pending = String(names[menu_id])
+	_create_and_assign_mode = false
+	_popup_create_state_save_dialog(false)
+
+
+func _on_create_assign_binding_pressed() -> void:
+	if not _can_create_and_assign_binding_edge():
+		return
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return
+	var ed: Dictionary = edges[idx] as Dictionary
+	var hp := str(ed.get(&"host_path", ""))
+	var bp := str(ed.get(&"binding_property", ""))
+	if bp.is_empty():
+		bp = str(ed.get(&"label", ""))
+	var host: Node = root.get_node(NodePath(hp))
+	if not (host is Control):
+		return
+	var host_c := host as Control
+	var comp := UiReactScannerService.get_component_name_from_script(host_c.get_script() as Script)
+	var prop_sn := StringName(bp)
+	var kind := ""
+	var bindings: Array = UiReactComponentRegistry.BINDINGS_BY_COMPONENT.get(comp, [])
+	for b in bindings:
+		if b.get("property", &"") == prop_sn:
+			kind = str(b.get("kind", ""))
+			break
+	var expected := UiReactBindingValidator._expected_binding_state_class(comp, prop_sn, kind, host_c)
+	_create_assign_host_path = hp
+	_create_assign_prop = prop_sn
+	_create_assign_component = comp
+	_create_assign_expected_class = expected
+	_create_state_class_pending = String(expected)
+	_create_and_assign_mode = true
+	_popup_create_state_save_dialog(true)
+
+
+func _popup_create_state_save_dialog(_for_assign: bool) -> void:
+	var dlg := _ensure_create_state_save_dialog()
+	var out_dir := _GraphFactoryScript.output_dir_from_project_settings()
+	var err := UiReactStateFactoryService.ensure_output_dir(out_dir)
+	if err != OK:
+		push_error("Ui React: could not create output folder: %s" % out_dir)
+		return
+	var base_node := "state"
+	var base_prop := _create_state_class_pending.to_lower()
+	if _for_assign and not _create_assign_host_path.is_empty():
+		var root := _plugin.get_editor_interface().get_edited_scene_root()
+		if root != null and root.has_node(NodePath(_create_assign_host_path)):
+			var hn: Node = root.get_node(NodePath(_create_assign_host_path))
+			base_node = str(hn.name)
+			base_prop = str(_create_assign_prop)
+	var path := UiReactStateFactoryService.build_unique_file_path(out_dir, base_node, base_prop)
+	dlg.title = "Save new %s" % _create_state_class_pending
+	dlg.current_path = path
+	dlg.popup_centered_ratio(0.55)
+
+
+func _ensure_create_state_save_dialog() -> EditorFileDialog:
+	if _create_state_save_dialog != null:
+		return _create_state_save_dialog
+	var dlg := EditorFileDialog.new()
+	dlg.file_mode = EditorFileDialog.FILE_MODE_SAVE_FILE
+	dlg.access = EditorFileDialog.ACCESS_RESOURCES
+	dlg.add_filter("*.tres", "Resource")
+	dlg.file_selected.connect(_on_create_state_file_selected)
+	_plugin.get_editor_interface().get_base_control().add_child(dlg)
+	_create_state_save_dialog = dlg
+	return dlg
+
+
+func _on_create_state_file_selected(path: String) -> void:
+	var cls := _create_state_class_pending
+	_create_state_class_pending = ""
+	var assign_mode := _create_and_assign_mode
+	_create_and_assign_mode = false
+	if cls.is_empty() or _plugin == null:
+		return
+	var loaded := _GraphFactoryScript.save_new_state_at_path(StringName(cls), path)
+	if loaded == null:
+		push_error("Ui React: failed to save resource.")
+		return
+	if not (loaded is UiState):
+		push_error("Ui React: saved resource is not UiState.")
+		return
+	var ui_st := loaded as UiState
+	if assign_mode:
+		if _actions == null:
+			return
+		var root := _plugin.get_editor_interface().get_edited_scene_root()
+		if root == null or not root.has_node(NodePath(_create_assign_host_path)):
+			return
+		var hn: Node = root.get_node(NodePath(_create_assign_host_path))
+		if not (hn is Control):
+			return
+		if not UiReactGraphNewBindingService.try_commit_assign(
+			hn as Control, _create_assign_component, _create_assign_prop, ui_st, _actions
+		):
+			push_warning("Ui React: create and assign failed (type or slot).")
+			return
+	_create_assign_host_path = ""
+	_create_assign_prop = &""
+	_create_assign_component = ""
+	_create_assign_expected_class = &""
+	_plugin.get_editor_interface().get_resource_filesystem().scan()
+	if _request_dock_refresh.is_valid():
+		_request_dock_refresh.call()
+	refresh()
+
+
+func _can_create_and_assign_binding_edge() -> bool:
+	if _plugin == null or _actions == null:
+		return false
+	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.BINDING:
+		return false
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return false
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return false
+	var ed: Dictionary = edges[idx] as Dictionary
+	if not _edge_allows_binding_rebind(ed, root):
+		return false
+	var hp := str(ed.get(&"host_path", ""))
+	var bp := str(ed.get(&"binding_property", ""))
+	if bp.is_empty():
+		bp = str(ed.get(&"label", ""))
+	if hp.is_empty() or bp.is_empty():
+		return false
+	if not root.has_node(NodePath(hp)):
+		return false
+	var n: Node = root.get_node(NodePath(hp))
+	if not (n is Control):
+		return false
+	var host := n as Control
+	var comp := UiReactScannerService.get_component_name_from_script(host.get_script() as Script)
+	if comp.is_empty():
+		return false
+	var prop_sn := StringName(bp)
+	if not UiReactGraphNewBindingService.binding_export_is_optional(comp, prop_sn):
+		return false
+	if host.get(prop_sn) != null:
+		return false
+	var kind := ""
+	var bindings: Array = UiReactComponentRegistry.BINDINGS_BY_COMPONENT.get(comp, [])
+	for b in bindings:
+		if b.get("property", &"") == prop_sn:
+			kind = str(b.get("kind", ""))
+			break
+	var expected := UiReactBindingValidator._expected_binding_state_class(comp, prop_sn, kind, host)
+	if not _GraphFactoryScript.is_factory_supported_class(String(expected)):
+		return false
+	return true
+
+
 func _build_ui() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_theme_constant_override(&"margin_left", 8)
@@ -2213,6 +2711,26 @@ func _build_ui() -> void:
 	_btn_fit.pressed.connect(_on_fit_pressed)
 	row.add_child(_btn_fit)
 
+	_btn_create_state = MenuButton.new()
+	_btn_create_state.text = "Create"
+	_btn_create_state.tooltip_text = "Save a new UiState .tres under a path you choose (no scene change)."
+	var cpop := _btn_create_state.get_popup()
+	var cnames: PackedStringArray = _GraphFactoryScript.factory_state_class_names()
+	for ci in range(cnames.size()):
+		var csn := String(cnames[ci])
+		cpop.add_item("New %s…" % csn, ci)
+	cpop.id_pressed.connect(_on_create_state_menu_id)
+	row.add_child(_btn_create_state)
+
+	_btn_create_assign_binding = Button.new()
+	_btn_create_assign_binding.text = "Create & assign…"
+	_btn_create_assign_binding.tooltip_text = (
+		"For a selected optional empty binding edge: save a new matching UiState .tres and assign it (undoable)."
+	)
+	_btn_create_assign_binding.disabled = true
+	_btn_create_assign_binding.pressed.connect(_on_create_assign_binding_pressed)
+	row.add_child(_btn_create_assign_binding)
+
 	_cb_full_lists = CheckBox.new()
 	_cb_full_lists.text = "Full lists"
 	_cb_full_lists.tooltip_text = "Show uncapped upstream/downstream lines in the narrative (details pane)."
@@ -2225,6 +2743,63 @@ func _build_ui() -> void:
 	_auto_refresh_timer.one_shot = true
 	_auto_refresh_timer.timeout.connect(_on_debounced_auto_refresh)
 	add_child(_auto_refresh_timer)
+
+	_scope_row = HBoxContainer.new()
+	_scope_row.add_theme_constant_override(&"separation", 6)
+	_scope_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.add_child(_scope_row)
+	var slab := Label.new()
+	slab.text = "Scope preset:"
+	_scope_row.add_child(slab)
+	_scope_preset_option = OptionButton.new()
+	_scope_preset_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_scope_preset_option.tooltip_text = (
+	"Layout caps, edge filters, narrative Full lists, and pins — stored per project (Project Settings)."
+	)
+	_scope_preset_option.item_selected.connect(_on_scope_preset_selected)
+	_scope_row.add_child(_scope_preset_option)
+	_btn_scope_save_as = Button.new()
+	_btn_scope_save_as.text = "Save as…"
+	_btn_scope_save_as.tooltip_text = "Save current scope settings as a named preset."
+	_btn_scope_save_as.pressed.connect(_on_scope_save_as_pressed)
+	_scope_row.add_child(_btn_scope_save_as)
+	_btn_scope_manage = Button.new()
+	_btn_scope_manage.text = "Manage…"
+	_btn_scope_manage.tooltip_text = "Delete saved scope presets."
+	_btn_scope_manage.pressed.connect(_on_scope_manage_pressed)
+	_scope_row.add_child(_btn_scope_manage)
+	_btn_pin_node = Button.new()
+	_btn_pin_node.text = "Pin node"
+	_btn_pin_node.tooltip_text = "Pin the selected graph node id to the active preset (requires a named preset)."
+	_btn_pin_node.pressed.connect(_on_pin_node_pressed)
+	_scope_row.add_child(_btn_pin_node)
+
+	_scope_save_name_dialog = AcceptDialog.new()
+	_scope_save_name_dialog.title = "Save scope preset"
+	_scope_save_name_dialog.ok_button_text = "Save"
+	var svb := VBoxContainer.new()
+	_scope_save_name_edit = LineEdit.new()
+	_scope_save_name_edit.placeholder_text = "Preset name (not “Default”)"
+	_scope_save_name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	svb.add_child(_scope_save_name_edit)
+	_scope_save_name_dialog.add_child(svb)
+	_scope_save_name_dialog.confirmed.connect(_on_scope_save_name_confirmed)
+	add_child(_scope_save_name_dialog)
+
+	_scope_manage_dialog = AcceptDialog.new()
+	_scope_manage_dialog.title = "Manage scope presets"
+	_scope_manage_dialog.ok_button_text = "Close"
+	var mvb := VBoxContainer.new()
+	_scope_manage_list = ItemList.new()
+	_scope_manage_list.custom_minimum_size = Vector2(0, 120)
+	_scope_manage_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mvb.add_child(_scope_manage_list)
+	var del_btn := Button.new()
+	del_btn.text = "Delete selected"
+	del_btn.pressed.connect(_on_scope_manage_delete_pressed)
+	mvb.add_child(del_btn)
+	_scope_manage_dialog.add_child(mvb)
+	add_child(_scope_manage_dialog)
 
 	_visual_host = VBoxContainer.new()
 	_visual_host.size_flags_vertical = Control.SIZE_EXPAND_FILL

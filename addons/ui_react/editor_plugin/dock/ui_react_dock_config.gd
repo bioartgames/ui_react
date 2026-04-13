@@ -17,6 +17,8 @@ const KEY_AUTO_REFRESH := "ui_react/plugin_auto_refresh"
 const KEY_STATE_OUTPUT_PATH := "ui_react/plugin_state_output_path"
 const KEY_GROUP_MODE := "ui_react/plugin_group_mode"
 const KEY_IGNORED_UNUSED_STATE_PATHS := "ui_react/plugin_ignored_unused_state_paths"
+const KEY_GRAPH_SCOPE_PRESETS := "ui_react/plugin_graph_scope_presets_json"
+const KEY_GRAPH_ACTIVE_SCOPE_PRESET := "ui_react/plugin_graph_active_scope_preset_name"
 
 const DEF_SHOW_ERRORS := true
 const DEF_SHOW_WARNINGS := true
@@ -56,6 +58,12 @@ static func register_default_project_settings() -> void:
 		added_defaults = true
 	if not ProjectSettings.has_setting(KEY_IGNORED_UNUSED_STATE_PATHS):
 		ProjectSettings.set_setting(KEY_IGNORED_UNUSED_STATE_PATHS, PackedStringArray())
+		added_defaults = true
+	if not ProjectSettings.has_setting(KEY_GRAPH_SCOPE_PRESETS):
+		ProjectSettings.set_setting(KEY_GRAPH_SCOPE_PRESETS, "[]")
+		added_defaults = true
+	if not ProjectSettings.has_setting(KEY_GRAPH_ACTIVE_SCOPE_PRESET):
+		ProjectSettings.set_setting(KEY_GRAPH_ACTIVE_SCOPE_PRESET, "")
 		added_defaults = true
 	if added_defaults:
 		var err := ProjectSettings.save()
@@ -112,6 +120,83 @@ static func load_ignored_unused_state_paths_dict() -> Dictionary:
 				out[s] = true
 		return out
 	return {}
+
+
+static func load_graph_scope_presets_raw() -> Array:
+	var raw := String(ProjectSettings.get_setting(KEY_GRAPH_SCOPE_PRESETS, "[]"))
+	var j := JSON.new()
+	var err := j.parse(raw)
+	if err != OK:
+		return []
+	var root: Variant = j.data
+	if root is Array:
+		return root as Array
+	return []
+
+
+static func save_graph_scope_presets_raw(arr: Array) -> void:
+	var serial: Array = []
+	for it: Variant in arr:
+		if it is not Dictionary:
+			continue
+		var d: Dictionary = it as Dictionary
+		var nm := String(d.get("name", d.get(&"name", ""))).strip_edges()
+		if nm.is_empty() or nm.to_lower() == "default":
+			continue
+		var pin_arr: Array = []
+		var pins: Variant = d.get("pinned", d.get(&"pinned", []))
+		if pins is PackedStringArray:
+			for p in pins as PackedStringArray:
+				pin_arr.append(String(p))
+		elif pins is Array:
+			for p in pins as Array:
+				var ps := String(p).strip_edges()
+				if ps.is_empty():
+					continue
+				if not pin_arr.has(ps):
+					pin_arr.append(ps)
+		var pin_dedup: Array = []
+		var pin_seen: Dictionary = {}
+		for p2 in pin_arr:
+			var pk := String(p2).strip_edges()
+			if pk.is_empty() or pin_seen.has(pk):
+				continue
+			pin_seen[pk] = true
+			pin_dedup.append(pk)
+		serial.append(
+			{
+				"name": nm,
+				"max_nodes": int(d.get("max_nodes", d.get(&"max_nodes", 200))),
+				"max_edges": int(d.get("max_edges", d.get(&"max_edges", 400))),
+				"show_binding": bool(d.get("show_binding", d.get(&"show_binding", true))),
+				"show_computed": bool(d.get("show_computed", d.get(&"show_computed", true))),
+				"show_wire": bool(d.get("show_wire", d.get(&"show_wire", true))),
+				"show_all_edge_labels": bool(
+					d.get("show_all_edge_labels", d.get(&"show_all_edge_labels", false))
+				),
+				"full_lists": bool(d.get("full_lists", d.get(&"full_lists", false))),
+				"pinned": pin_dedup,
+			}
+		)
+	serial.sort_custom(
+		func(a: Variant, b: Variant) -> bool:
+			return String((a as Dictionary).get("name", "")) < String((b as Dictionary).get("name", ""))
+	)
+	ProjectSettings.set_setting(KEY_GRAPH_SCOPE_PRESETS, JSON.stringify(serial))
+	var err := ProjectSettings.save()
+	if err != OK:
+		push_warning("UiReactDockConfig: could not save graph scope presets")
+
+
+static func get_active_graph_scope_preset_name() -> String:
+	return String(ProjectSettings.get_setting(KEY_GRAPH_ACTIVE_SCOPE_PRESET, ""))
+
+
+static func set_active_graph_scope_preset_name(preset_name: String) -> void:
+	ProjectSettings.set_setting(KEY_GRAPH_ACTIVE_SCOPE_PRESET, preset_name.strip_edges())
+	var err := ProjectSettings.save()
+	if err != OK:
+		push_warning("UiReactDockConfig: could not save active graph scope preset")
 
 
 static func save_ignored_unused_state_paths_dict(paths: Dictionary) -> void:
