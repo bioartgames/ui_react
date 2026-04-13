@@ -2242,14 +2242,14 @@ func _narrative_upstream_heading_bb_plain(anchor_kind: int) -> PackedStringArray
 	if anchor_kind == _SnapScript.NodeKind.CONTROL:
 		return PackedStringArray(
 			[
-				"\n[b]Upstream[/b] (in this snapshot — state/computed feeding this control’s bindings):\n",
-				"\nUpstream (in this snapshot — state/computed feeding this control's bindings):\n",
+				"[b]Upstream[/b] (in this snapshot — state/computed feeding this control’s bindings):\n",
+				"Upstream (in this snapshot — state/computed feeding this control's bindings):\n",
 			]
 		)
 	return PackedStringArray(
 		[
-			"\n[b]Upstream[/b] (in this snapshot — declarative reach toward this resource):\n",
-			"\nUpstream (in this snapshot — declarative reach toward this resource):\n",
+			"[b]Upstream[/b] (in this snapshot — declarative reach toward this resource):\n",
+			"Upstream (in this snapshot — declarative reach toward this resource):\n",
 		]
 	)
 
@@ -2258,14 +2258,14 @@ func _narrative_downstream_heading_bb_plain(anchor_kind: int) -> PackedStringArr
 	if anchor_kind == _SnapScript.NodeKind.CONTROL:
 		return PackedStringArray(
 			[
-				"\n[b]Downstream[/b] (in this snapshot — states/computed or controls reached via this control’s bindings):\n",
-				"\nDownstream (in this snapshot — states/computed or controls reached via this control's bindings):\n",
+				"[b]Downstream[/b] (in this snapshot — states/computed or controls reached via this control’s bindings):\n",
+				"Downstream (in this snapshot — states/computed or controls reached via this control's bindings):\n",
 			]
 		)
 	return PackedStringArray(
 		[
-			"\n[b]Downstream[/b] (in this snapshot — states/computed or controls this resource feeds):\n",
-			"\nDownstream (in this snapshot — states/computed or controls this resource feeds):\n",
+			"[b]Downstream[/b] (in this snapshot — states/computed or controls this resource feeds):\n",
+			"Downstream (in this snapshot — states/computed or controls this resource feeds):\n",
 		]
 	)
 
@@ -2454,6 +2454,12 @@ func _optional_binding_dock_hint_bb_plain(ed: Dictionary, bp: StringName) -> Pac
 		return PackedStringArray(["", ""])
 	var msg := "[i]Optional export — [b]Clear optional binding[/b] is available in the dock action row (undoable).[/i]\n"
 	return PackedStringArray([msg, _plain_from_bbcode_line(msg)])
+
+
+func _edge_missing_control_path_bb_plain() -> PackedStringArray:
+	var bb_part := "[i]No control path on this edge in the snapshot—use [b]Focus in Inspector[/b] or refresh the graph.[/i]\n\n"
+	var plain_part := "No control path on this edge in the snapshot—use Focus in Inspector or refresh the graph.\n\n"
+	return PackedStringArray([bb_part, plain_part])
 
 
 func _other_edges_at_anchor_bb_plain(
@@ -2928,8 +2934,9 @@ func _edge_details_summary_bb_plain(
 			bb += "[b]Where to edit[/b]\n"
 			plain += "Where to edit\n"
 			if hp.is_empty():
-				bb += "[i]No control path on this edge in the snapshot—use [b]Focus in Inspector[/b] or refresh the graph.[/i]\n\n"
-				plain += "No control path on this edge in the snapshot—use Focus in Inspector or refresh the graph.\n\n"
+				var miss_b := _edge_missing_control_path_bb_plain()
+				bb += miss_b[0]
+				plain += miss_b[1]
 			else:
 				bb += "Inspector on control [code]%s[/code], export [code]%s[/code].\n\n" % [hp, bp]
 				plain += "Inspector on control %s, export %s.\n\n" % [hp, bp]
@@ -2962,16 +2969,19 @@ func _edge_details_summary_bb_plain(
 		var wh := str(ed.get(&"wire_host_path", ""))
 		var wi := int(ed.get(&"wire_rule_index", -1))
 		bb += "[b]Where to edit[/b]\n"
-		var plain_w2 := "Where to edit\n"
-		if not wh.is_empty():
+		plain += "Where to edit\n"
+		if wh.is_empty():
+			var miss_w := _edge_missing_control_path_bb_plain()
+			bb += miss_w[0]
+			plain += miss_w[1]
+		else:
 			bb += "Control [code]%s[/code], [code]wire_rules[/code]" % wh
-			plain_w2 += "Control %s, wire_rules" % wh
+			plain += "Control %s, wire_rules" % wh
 			if wi >= 0:
 				bb += " row [code]%d[/code]" % wi
-				plain_w2 += " row %d" % wi
+				plain += " row %d" % wi
 			bb += ".\n\n"
-			plain_w2 += ".\n\n"
-			plain += plain_w2
+			plain += ".\n\n"
 		var win := str(ed.get(&"wire_in_property", ""))
 		var wout := str(ed.get(&"wire_out_property", ""))
 		if not win.is_empty() and not wout.is_empty():
@@ -3008,15 +3018,15 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 		var reach := _append_reachability_from_narrative(narr)
 		bb += reach[0]
 		plain += reach[1]
-		var disc2 := _details_declarative_footer_bb_plain()
-		bb += disc2[0]
-		plain += disc2[1]
 		var cyc := _append_cycle_section_bb_plain(anchor_id)
 		bb += cyc[0]
 		plain += cyc[1]
 		var mm := _mismatch_banner_bb_plain(narr)
 		bb += mm[0]
 		plain += mm[1]
+		var disc2 := _details_declarative_footer_bb_plain()
+		bb += disc2[0]
+		plain += disc2[1]
 
 	bb += "[b]Technical[/b]\nKind token: [code]%s[/code]\nFrom id: [code]%s[/code]\nTo id: [code]%s[/code]\n" % [token, from_id, to_id]
 	plain += "Technical\nKind token: %s\nFrom id: %s\nTo id: %s\n" % [token, from_id, to_id]
