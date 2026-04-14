@@ -324,16 +324,6 @@ func _draw() -> void:
 			)
 
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	var gs: Variant = _layout.get(&"graph_stats", null)
-	if gs is Dictionary:
-		var gsd: Dictionary = gs as Dictionary
-		var nc := int(gsd.get(&"node_count", 0))
-		var ec := int(gsd.get(&"edge_count", 0))
-		var tr := bool(gsd.get(&"truncated", false))
-		var line := "Nodes: %d  Edges: %d" % [nc, ec]
-		if tr:
-			line += "  (truncated)"
-		draw_string(ThemeDB.fallback_font, Vector2(VIEW_PAD + 4, size.y - 6), line, HORIZONTAL_ALIGNMENT_LEFT, int(size.x - 16), 10, Color(0.78, 0.8, 0.88, 0.95))
 
 
 func _draw_centered_node_label(center: Vector2, text: String, modulate: Color) -> void:

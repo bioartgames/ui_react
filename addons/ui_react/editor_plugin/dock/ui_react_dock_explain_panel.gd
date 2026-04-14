@@ -43,6 +43,7 @@ const _SCOPE_MAX_EDGES := 4000
 
 const _LEGEND_WRAP_THRESHOLD_PX := 520
 const _LEGEND_GROUP_FONT_COLOR := Color(0.72, 0.74, 0.8, 0.92)
+const _LEGEND_STATUS_FONT_COLOR := Color(0.68, 0.7, 0.76, 0.9)
 ## Subtle outline so non-focus node swatches separate from the dock bar (focus chip keeps [member UiReactExplainGraphView.GRAPH_LEGEND_FOCUS_BORDER] at 2px).
 const _LEGEND_NODE_CHIP_BORDER := Color(1, 1, 1, 0.42)
 ## Raised chip behind edge color strips so binding/computed/wire reads on dark UI.
@@ -107,6 +108,8 @@ var _legend_edges_row: HBoxContainer
 var _legend_mid_spacer: Control
 var _legend_group_nodes_label: Label
 var _legend_group_edges_label: Label
+var _legend_scope_spacer: Control
+var _legend_scope_label: Label
 var _cb_bind: CheckBox
 var _cb_computed: CheckBox
 var _cb_wire: CheckBox
@@ -309,6 +312,7 @@ func _apply_visual_from_snap_safe(snap: Variant, focus_id: String) -> void:
 		_pinned_node_ids,
 	)
 	_last_layout = layout
+	_set_legend_scope_from_layout(layout)
 	var centers: Dictionary = layout.get(&"node_centers", {}) as Dictionary
 	if centers.is_empty():
 		_graph_view.clear_graph()
@@ -3491,21 +3495,42 @@ func _apply_legend_font_sizes() -> void:
 		return
 	var item_fs := _editor_richtext_normal_font_size()
 	var grp_fs := maxi(_editor_label_font_size() - 1, 10)
+	var status_fs := maxi(item_fs - 1, 10)
 	if _legend_group_nodes_label != null:
 		_legend_group_nodes_label.add_theme_font_size_override(&"font_size", grp_fs)
 		_legend_group_nodes_label.add_theme_color_override(&"font_color", _LEGEND_GROUP_FONT_COLOR)
 	if _legend_group_edges_label != null:
 		_legend_group_edges_label.add_theme_font_size_override(&"font_size", grp_fs)
 		_legend_group_edges_label.add_theme_color_override(&"font_color", _LEGEND_GROUP_FONT_COLOR)
+	if _legend_scope_label != null:
+		_legend_scope_label.add_theme_font_size_override(&"font_size", status_fs)
+		_legend_scope_label.add_theme_color_override(&"font_color", _LEGEND_STATUS_FONT_COLOR)
 	_apply_legend_item_label_font_sizes_recursive(_legend_host, item_fs)
 
 
 func _apply_legend_item_label_font_sizes_recursive(root: Node, item_fs: int) -> void:
 	for ch: Node in root.get_children():
 		if ch is Label:
-			if ch != _legend_group_nodes_label and ch != _legend_group_edges_label:
+			if ch != _legend_group_nodes_label and ch != _legend_group_edges_label and ch != _legend_scope_label:
 				(ch as Label).add_theme_font_size_override(&"font_size", item_fs)
 		_apply_legend_item_label_font_sizes_recursive(ch, item_fs)
+
+
+func _set_legend_scope_from_layout(layout: Dictionary) -> void:
+	if _legend_scope_label == null:
+		return
+	if layout.is_empty():
+		_legend_scope_label.text = "Scope: --"
+		return
+	var stats: Dictionary = layout.get(&"graph_stats", {}) as Dictionary
+	var nodes := int(stats.get(&"node_count", 0))
+	var edges := int(stats.get(&"edge_count", 0))
+	var tr := bool(stats.get(&"truncated", false))
+	_legend_scope_label.text = "Scope: %d nodes · %d edges%s" % [
+		nodes,
+		edges,
+		" (truncated)" if tr else "",
+	]
 
 
 func _apply_wire_payload_label_font_sizes() -> void:
@@ -4307,6 +4332,15 @@ func _build_ui() -> void:
 		"Wire",
 		"wire_rules row: input state(s) drive output state(s)."
 	)
+	_legend_scope_spacer = Control.new()
+	_legend_scope_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_legend_edges_row.add_child(_legend_scope_spacer)
+	_legend_scope_label = Label.new()
+	_legend_scope_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_legend_scope_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_legend_scope_label.text = "Scope: --"
+	_legend_scope_label.tooltip_text = "Graph layout scope summary (rendered nodes/edges)."
+	_legend_edges_row.add_child(_legend_scope_label)
 
 	_legend_host.add_child(_legend_nodes_row)
 	_legend_host.add_child(_legend_edges_row)
@@ -4477,6 +4511,7 @@ func _clear_stale_snapshot() -> void:
 	_sync_wire_rules_section()
 	if _graph_view:
 		_graph_view.clear_graph()
+	_set_legend_scope_from_layout({})
 	_set_details_placeholder()
 
 
