@@ -2123,16 +2123,17 @@ func _set_details_empty() -> void:
 	)
 
 
-func _collapse_double_newlines(s: String) -> String:
+## Collapse3+ consecutive newlines to exactly two (one blank line); preserves intentional `\n\n` between sections.
+func _normalize_details_newlines(s: String) -> String:
 	var t := s
-	while t.contains("\n\n"):
-		t = t.replace("\n\n", "\n")
+	while t.contains("\n\n\n"):
+		t = t.replace("\n\n\n", "\n\n")
 	return t
 
 
 func _set_details_both(bb: String, plain: String) -> void:
-	bb = _collapse_double_newlines(bb)
-	plain = _collapse_double_newlines(plain)
+	bb = _normalize_details_newlines(bb)
+	plain = _normalize_details_newlines(plain)
 	if _details:
 		_details.text = bb
 	_last_details_plain = plain
@@ -2156,6 +2157,17 @@ func _details_run_in_bb_plain(title: String, body_bb: String, body_plain: String
 ## Details pane — block section: title line only; caller appends bullets or wrapped lines.
 func _details_block_head_bb_plain(title: String) -> PackedStringArray:
 	return PackedStringArray(["[b]%s[/b]\n" % title, "%s\n" % title])
+
+
+## Join major details sections with exactly one blank line between non-empty chunks.
+func _details_append_major(bb: String, plain: String, chunk_bb: String, chunk_plain: String) -> PackedStringArray:
+	if chunk_bb.is_empty() and chunk_plain.is_empty():
+		return PackedStringArray([bb, plain])
+	var cbb := chunk_bb.lstrip("\n")
+	var cpp := chunk_plain.lstrip("\n")
+	if bb.is_empty() and plain.is_empty():
+		return PackedStringArray([cbb, cpp])
+	return PackedStringArray([bb.rstrip("\n") + "\n\n" + cbb, plain.rstrip("\n") + "\n\n" + cpp])
 
 
 func _get_narrative_cached(anchor_id: String) -> Variant:
@@ -2343,8 +2355,8 @@ func _append_reachability_from_narrative(narr: Object) -> PackedStringArray:
 
 
 func _details_declarative_footer_bb_plain() -> PackedStringArray:
-	var bb := "\n" + _DETAILS_DECLARATIVE_ONE_LINER_BB
-	var plain := "\n" + _plain_from_bbcode_line(_DETAILS_DECLARATIVE_ONE_LINER_BB)
+	var bb := _DETAILS_DECLARATIVE_ONE_LINER_BB
+	var plain := _plain_from_bbcode_line(_DETAILS_DECLARATIVE_ONE_LINER_BB)
 	return PackedStringArray([bb, plain])
 
 
@@ -2372,8 +2384,8 @@ func _append_cycle_section_bb_plain(anchor_id: String) -> PackedStringArray:
 		"static, state/computed edges only",
 		"static, state/computed edges only",
 	)
-	var bb := "\n" + cyc_h[0]
-	var plain := "\n" + cyc_h[1]
+	var bb := cyc_h[0]
+	var plain := cyc_h[1]
 	var n_show := mini(matching.size(), cap)
 	for i in n_show:
 		var sm := str(matching[i].get(&"summary", "?"))
@@ -2526,8 +2538,8 @@ func _other_edges_at_anchor_bb_plain(
 			return str(a.get(&"to_id", "")) < str(b.get(&"to_id", ""))
 	)
 	var oe_h := _details_block_head_bb_plain("Other edges at this anchor")
-	var bb := "\n" + oe_h[0]
-	var plain := "\n" + oe_h[1]
+	var bb := oe_h[0]
+	var plain := oe_h[1]
 	var cap := _OTHER_EDGES_AT_ANCHOR_CAP
 	var n_show := mini(others.size(), cap)
 	for j: int in n_show:
@@ -2558,8 +2570,8 @@ func _connections_section_bb_plain(node_id: String, d: Dictionary, edges: Array)
 	if int(d.get(&"kind", -1)) != _SnapScript.NodeKind.CONTROL or not node_id.begins_with("ctrl:"):
 		return PackedStringArray(["", ""])
 	var cx_h := _details_block_head_bb_plain("Connections")
-	var bb := "\n" + cx_h[0]
-	var plain := "\n" + cx_h[1]
+	var bb := cx_h[0]
+	var plain := cx_h[1]
 	var host := _resolve_control_host_from_node(node_id, d)
 	var incident: Array[Dictionary] = []
 	for e: Variant in edges:
@@ -2652,8 +2664,8 @@ func _wire_rules_summary_bb_plain(host: Control) -> PackedStringArray:
 	if arr.is_empty():
 		return PackedStringArray(["", ""])
 	var wr_h := _details_block_head_bb_plain("Wire rules")
-	var bb := "\n" + wr_h[0]
-	var plain := "\n" + wr_h[1]
+	var bb := wr_h[0]
+	var plain := wr_h[1]
 	for i in arr.size():
 		var rule_var: Variant = arr[i]
 		if rule_var == null or not (rule_var is UiReactWireRule):
@@ -2776,49 +2788,61 @@ func _fill_node_details(node_id: String) -> void:
 	var node_layer: Dictionary = _last_layout.get(&"node_layer", {}) as Dictionary
 	var nk := int(d.get(&"kind", -1))
 
-	var bb := ""
-	var plain := ""
+	var head_bb := ""
+	var head_plain := ""
 	if narr != null and nk == _SnapScript.NodeKind.CONTROL:
 		for line0: String in (narr as UiReactExplainGraphNarrative).bound_state_lines:
-			bb += line0
-			plain += _plain_from_bbcode_line(line0)
+			head_bb += line0
+			head_plain += _plain_from_bbcode_line(line0)
+
+	var bb := ""
+	var plain := ""
+	var j := _details_append_major(bb, plain, head_bb, head_plain)
+	bb = j[0]
+	plain = j[1]
 
 	var conn := _connections_section_bb_plain(node_id, d, edges)
-	bb += conn[0]
-	plain += conn[1]
+	j = _details_append_major(bb, plain, conn[0], conn[1])
+	bb = j[0]
+	plain = j[1]
 
 	if nk == _SnapScript.NodeKind.CONTROL:
 		var wh := _resolve_control_host_from_node(node_id, d)
 		if wh != null:
 			var wrs := _wire_rules_summary_bb_plain(wh)
-			bb += wrs[0]
-			plain += wrs[1]
+			j = _details_append_major(bb, plain, wrs[0], wrs[1])
+			bb = j[0]
+			plain = j[1]
 
 	if narr != null:
 		var gc_h := _details_block_head_bb_plain("Graph context")
-		bb += "\n" + gc_h[0]
-		plain += "\n" + gc_h[1]
+		var graph_bb := gc_h[0]
+		var graph_plain := gc_h[1]
 		var reach := _append_reachability_from_narrative(narr)
-		bb += reach[0]
-		plain += reach[1]
+		graph_bb += reach[0]
+		graph_plain += reach[1]
 		var cyc := _append_cycle_section_bb_plain(node_id)
-		bb += cyc[0]
-		plain += cyc[1]
+		graph_bb += cyc[0]
+		graph_plain += cyc[1]
 		var mm := _mismatch_banner_bb_plain(narr)
-		bb += mm[0]
-		plain += mm[1]
+		graph_bb += mm[0]
+		graph_plain += mm[1]
 		var disc := _details_declarative_footer_bb_plain()
-		bb += disc[0]
-		plain += disc[1]
+		graph_bb += disc[0]
+		graph_plain += disc[1]
+		j = _details_append_major(bb, plain, graph_bb, graph_plain)
+		bb = j[0]
+		plain = j[1]
 
 	var skip_on_canvas := node_id == layout_focus and nk == _SnapScript.NodeKind.CONTROL
 	if not skip_on_canvas:
 		var oc_h := _details_block_head_bb_plain("On canvas")
-		bb += oc_h[0]
-		plain += oc_h[1]
 		var hl := _node_headline_bb_plain(node_id, d, layout_focus)
-		bb += hl[0]
-		plain += hl[1]
+		var canvas_bb := oc_h[0] + hl[0]
+		var canvas_plain := oc_h[1] + hl[1]
+		j = _details_append_major(bb, plain, canvas_bb, canvas_plain)
+		bb = j[0]
+		plain = j[1]
 
 	var incident: Array[Dictionary] = []
 	for e: Variant in edges:
@@ -2842,52 +2866,60 @@ func _fill_node_details(node_id: String) -> void:
 
 	if nk != _SnapScript.NodeKind.CONTROL:
 		var ie_h := _details_block_head_bb_plain("Incident edges")
-		bb += ie_h[0]
-		plain += ie_h[1]
+		var inc_bb := ie_h[0]
+		var inc_plain := ie_h[1]
 		if incident.is_empty():
-			bb += "No edges touch this node in the scoped graph (or it is isolated after filters).\n"
-			plain += "No edges touch this node in the scoped graph (or it is isolated after filters).\n"
+			inc_bb += "No edges touch this node in the scoped graph (or it is isolated after filters).\n"
+			inc_plain += "No edges touch this node in the scoped graph (or it is isolated after filters).\n"
 		else:
 			var n_show := mini(incident.size(), _INCIDENT_EDGE_CAP)
 			for i in n_show:
 				var pair := _format_incident_edge_bb_plain(incident[i])
-				bb += pair[0] + "\n"
-				plain += pair[1] + "\n"
+				inc_bb += pair[0] + "\n"
+				inc_plain += pair[1] + "\n"
 			var overflow := incident.size() - n_show
 			if overflow > 0:
-				bb += "[i]+%d more in this graph[/i]\n" % overflow
-				plain += "+%d more in this graph\n" % overflow
+				inc_bb += "[i]+%d more in this graph[/i]\n" % overflow
+				inc_plain += "+%d more in this graph\n" % overflow
+		j = _details_append_major(bb, plain, inc_bb, inc_plain)
+		bb = j[0]
+		plain = j[1]
 
 	if node_id != layout_focus:
 		var rel := _focus_relation_blurb_bb_plain(node_id, layout_focus, node_layer)
-		bb += rel[0]
-		plain += rel[1]
+		j = _details_append_major(bb, plain, rel[0], rel[1])
+		bb = j[0]
+		plain = j[1]
 
 	var tech_h := _details_block_head_bb_plain("Technical")
-	bb += tech_h[0]
-	plain += tech_h[1]
+	var tech_bb := tech_h[0]
+	var tech_plain := tech_h[1]
 	var full_l := str(d.get(&"label", ""))
 	if nk == _SnapScript.NodeKind.CONTROL:
 		var cp := str(d.get(&"control_path", ""))
 		if not cp.is_empty():
-			bb += "Scene path: [code]%s[/code]\n" % cp
-			plain += "Scene path: %s\n" % cp
+			tech_bb += "Scene path: [code]%s[/code]\n" % cp
+			tech_plain += "Scene path: %s\n" % cp
 	elif nk == _SnapScript.NodeKind.UI_STATE or nk == _SnapScript.NodeKind.UI_COMPUTED:
 		var fp := str(d.get(&"state_file_path", ""))
 		if not fp.is_empty():
-			bb += "Resource: [code]%s[/code]\n" % fp
-			plain += "Resource: %s\n" % fp
+			tech_bb += "Resource: [code]%s[/code]\n" % fp
+			tech_plain += "Resource: %s\n" % fp
 		else:
 			var eh := str(d.get(&"embedded_host_path", ""))
 			var ec := str(d.get(&"embedded_context", ""))
 			if not eh.is_empty():
-				bb += "Embedded — host: [code]%s[/code] context: [code]%s[/code]\n" % [eh, ec]
-				plain += "Embedded — host: %s context: %s\n" % [eh, ec]
+				tech_bb += "Embedded — host: [code]%s[/code] context: [code]%s[/code]\n" % [eh, ec]
+				tech_plain += "Embedded — host: %s context: %s\n" % [eh, ec]
 	if not full_l.is_empty():
-		bb += "Full label: %s\n" % full_l
-		plain += "Full label: %s\n" % full_l
-	bb += "Technical id: [code]%s[/code]\n" % node_id
-	plain += "Technical id: %s\n" % node_id
+		tech_bb += "Full label: %s\n" % full_l
+		tech_plain += "Full label: %s\n" % full_l
+	tech_bb += "Technical id: [code]%s[/code]\n" % node_id
+	tech_plain += "Technical id: %s\n" % node_id
+
+	j = _details_append_major(bb, plain, tech_bb, tech_plain)
+	bb = j[0]
+	plain = j[1]
 
 	_set_details_both(bb, plain)
 
@@ -3065,30 +3097,41 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 	var bb := summ[0]
 	var plain := summ[1]
 	var sib := _other_edges_at_anchor_bb_plain(anchor_id, edge_index)
-	bb += sib[0]
-	plain += sib[1]
+	var j2 := _details_append_major(bb, plain, sib[0], sib[1])
+	bb = j2[0]
+	plain = j2[1]
 	if narr != null:
 		var gc_h := _details_block_head_bb_plain("Graph context")
-		bb += "\n" + gc_h[0]
-		plain += "\n" + gc_h[1]
-		var reach := _append_reachability_from_narrative(narr)
-		bb += reach[0]
-		plain += reach[1]
-		var cyc := _append_cycle_section_bb_plain(anchor_id)
-		bb += cyc[0]
-		plain += cyc[1]
-		var mm := _mismatch_banner_bb_plain(narr)
-		bb += mm[0]
-		plain += mm[1]
+		var graph_bb2 := gc_h[0]
+		var graph_plain2 := gc_h[1]
+		var reach2 := _append_reachability_from_narrative(narr)
+		graph_bb2 += reach2[0]
+		graph_plain2 += reach2[1]
+		var cyc2 := _append_cycle_section_bb_plain(anchor_id)
+		graph_bb2 += cyc2[0]
+		graph_plain2 += cyc2[1]
+		var mm2 := _mismatch_banner_bb_plain(narr)
+		graph_bb2 += mm2[0]
+		graph_plain2 += mm2[1]
 		var disc2 := _details_declarative_footer_bb_plain()
-		bb += disc2[0]
-		plain += disc2[1]
+		graph_bb2 += disc2[0]
+		graph_plain2 += disc2[1]
+		j2 = _details_append_major(bb, plain, graph_bb2, graph_plain2)
+		bb = j2[0]
+		plain = j2[1]
 
 	var tech_e := _details_block_head_bb_plain("Technical")
-	bb += tech_e[0]
-	plain += tech_e[1]
-	bb += "Kind token: [code]%s[/code]\nFrom id: [code]%s[/code]\nTo id: [code]%s[/code]\n" % [token, from_id, to_id]
-	plain += "Kind token: %s\nFrom id: %s\nTo id: %s\n" % [token, from_id, to_id]
+	var tech_bb2 := tech_e[0]
+	var tech_plain2 := tech_e[1]
+	tech_bb2 += "Kind token: [code]%s[/code]\nFrom id: [code]%s[/code]\nTo id: [code]%s[/code]\n" % [
+		token,
+		from_id,
+		to_id,
+	]
+	tech_plain2 += "Kind token: %s\nFrom id: %s\nTo id: %s\n" % [token, from_id, to_id]
+	j2 = _details_append_major(bb, plain, tech_bb2, tech_plain2)
+	bb = j2[0]
+	plain = j2[1]
 
 	_set_details_both(bb, plain)
 	_sync_wire_rule_id_row()
