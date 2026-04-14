@@ -653,16 +653,19 @@ static func compute_narrative(
 				var n: Node = root.get_node(np)
 				if n is Control and UiReactScannerService.is_react_node(n as Control):
 					var ctl := n as Control
-					var focus_path := _host_path_from_root(root, ctl)
-					var comp := UiReactScannerService.get_component_name_from_script(ctl.get_script() as Script)
+					var sc := ctl.get_script() as Script
+					var type_disp := UiReactScannerService.get_component_name_from_script(sc)
+					if type_disp.is_empty() and sc != null:
+						type_disp = String(sc.get_global_name())
+					if type_disp.is_empty():
+						type_disp = ctl.get_class()
 					out.bound_state_lines.append(
 						(
 							"[b]Focus control[/b]\n"
-							+ "Display name: [code]%s[/code]\n"
-							+ "Scene path: [code]%s[/code]\n"
-							+ "Component: [code]%s[/code]\n\n"
+							+ "Name: [code]%s[/code]\n"
+							+ "Type: [code]%s[/code]\n"
 						)
-						% [ctl.name, str(focus_path), comp]
+						% [ctl.name, type_disp]
 					)
 				else:
 					out.bound_state_lines.append("[i]Control anchor is not a UiReact* host in this scene.[/i]\n")
