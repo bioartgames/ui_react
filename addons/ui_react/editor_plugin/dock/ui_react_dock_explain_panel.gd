@@ -61,6 +61,8 @@ const _SEL_ACT_MOVE_SRC_UP := 1120
 const _SEL_ACT_MOVE_SRC_DOWN := 1121
 const _SEL_ACT_REMOVE_SRC_SLOT := 1122
 const _SEL_ACT_CREATE_ASSIGN_BINDING := 1130
+const _SEL_ACT_SCOPE_PIN := 1170
+const _SEL_ACT_CREATE_BIND_BASE := 1240
 ## Wire rules + Focus — [method _fill_selection_actions_popup] / [method _on_selection_action_id].
 const _SEL_ACT_FOCUS_INSPECTOR := 1180
 const _SEL_ACT_WIRE_ADD_BASE := 1210
@@ -83,6 +85,9 @@ const _CV_PRESET_NAMED_BASE := 3310
 const _CV_SCOPE_SAVE := 3500
 const _CV_SCOPE_MANAGE := 3501
 const _CV_SCOPE_PIN := 3502
+const _CV_SUB_CREATE_ROOT := 3601
+const _CV_SUB_VIEW_ROOT := 3602
+const _CV_SUB_SCOPE_ROOT := 3603
 
 var _plugin: EditorPlugin
 var _actions: UiReactActionController
@@ -113,7 +118,13 @@ var _details: RichTextLabel
 var _wire_rules_section: Variant = null
 var _selection_actions_context_popup: PopupMenu
 var _canvas_view_context_popup: PopupMenu
+var _selection_create_bind_submenu_popup: PopupMenu
+var _canvas_create_submenu_popup: PopupMenu
+var _canvas_view_submenu_popup: PopupMenu
+var _canvas_scope_submenu_popup: PopupMenu
 var _canvas_view_preset_names: PackedStringArray
+var _canvas_create_state_names: PackedStringArray
+var _selection_create_bind_actions: Array[Dictionary] = []
 
 var _wire_payload_box: VBoxContainer
 var _wire_rule_id_row: HBoxContainer
@@ -466,10 +477,26 @@ func _fill_selection_actions_popup(popup: PopupMenu) -> void:
 	const TT_FOCUS := "Open the related scene node or resource in the Inspector when possible."
 	const TT_WIRE_REFRESH := "Reload wire list after external edits or Undo."
 	const TT_WIRE_COPY_REP := "Copy selected rule report."
+	const TT_SCOPE_PIN := (
+		"Pin the selection to the active preset; Default prompts to save a named preset first."
+	)
 
 	if _selection_kind != _SEL_NONE:
 		popup.add_item("Focus in Inspector", _SEL_ACT_FOCUS_INSPECTOR)
 		popup.set_item_tooltip(popup.item_count - 1, TT_FOCUS)
+	if _selection_kind == _SEL_NODE:
+		if popup.item_count > 0:
+			popup.add_separator()
+		popup.add_item("Pin node", _SEL_ACT_SCOPE_PIN)
+		popup.set_item_tooltip(popup.item_count - 1, TT_SCOPE_PIN)
+		var pin_idx := popup.get_item_index(_SEL_ACT_SCOPE_PIN)
+		if pin_idx >= 0:
+			popup.set_item_disabled(pin_idx, not _can_pin_node_from_canvas_menu())
+		if _selection_create_bind_submenu_popup != null and _can_create_and_bind_from_selected_node():
+			_fill_selection_create_bind_submenu(_selection_create_bind_submenu_popup)
+			popup.add_submenu_item(
+				"Create state & bind…", _selection_create_bind_submenu_popup.name
+			)
 
 	var wire_host := _resolve_wire_rules_host_control()
 	if wire_host != null:
@@ -619,6 +646,8 @@ func _on_selection_action_id(id: int) -> void:
 			_on_remove_computed_source_slot_pressed()
 		_SEL_ACT_CREATE_ASSIGN_BINDING:
 			_on_create_assign_binding_pressed()
+		_SEL_ACT_SCOPE_PIN:
+			_on_pin_node_pressed()
 		_SEL_ACT_COPY_DETAILS:
 			_on_copy_details_pressed()
 		_:
@@ -667,18 +696,45 @@ func _apply_scope_preset_by_name(preset_name: String) -> void:
 
 func _fill_canvas_view_popup(popup: PopupMenu) -> void:
 	popup.clear()
-	_canvas_view_preset_names.clear()
 	popup.add_item("Refresh", _CV_REFRESH)
 	popup.set_item_tooltip(popup.item_count - 1, "Rebuild graph from current selection and scene.")
 	popup.add_item("Fit view", _CV_FIT)
 	popup.set_item_tooltip(popup.item_count - 1, "Reset pan/zoom on the graph.")
 	popup.add_separator()
+	if _canvas_create_submenu_popup != null:
+		_fill_canvas_create_submenu(_canvas_create_submenu_popup)
+		popup.add_submenu_item("Create", _canvas_create_submenu_popup.name, _CV_SUB_CREATE_ROOT)
+	if _canvas_view_submenu_popup != null:
+		_fill_canvas_view_submenu(_canvas_view_submenu_popup)
+		popup.add_submenu_item("View", _canvas_view_submenu_popup.name, _CV_SUB_VIEW_ROOT)
+	if _canvas_scope_submenu_popup != null:
+		_fill_canvas_scope_submenu(_canvas_scope_submenu_popup)
+		popup.add_submenu_item("Scope", _canvas_scope_submenu_popup.name, _CV_SUB_SCOPE_ROOT)
+
+
+func _on_canvas_view_menu_id(id: int) -> void:
+	if _canvas_view_context_popup == null:
+		return
+	if id == _CV_REFRESH:
+		refresh()
+		return
+	if id == _CV_FIT:
+		_on_fit_pressed()
+		return
+
+
+func _fill_canvas_create_submenu(popup: PopupMenu) -> void:
+	popup.clear()
+	_canvas_create_state_names.clear()
 	var cnames: PackedStringArray = _GraphFactoryScript.factory_state_class_names()
 	for ci in range(cnames.size()):
 		var csn := String(cnames[ci])
 		popup.add_item("New %s…" % csn, _CV_CREATE_STATE_BASE + ci)
-	popup.add_separator()
+		_canvas_create_state_names.append(csn)
 
+
+func _fill_canvas_view_submenu(popup: PopupMenu) -> void:
+	popup.clear()
 	popup.add_item("Full lists", _CV_TOGGLE_FULL_LISTS)
 	popup.set_item_tooltip(popup.item_count - 1, "Uncap upstream/downstream lines in the details pane.")
 	popup.set_item_as_checkable(popup.item_count - 1, true)
@@ -696,16 +752,18 @@ func _fill_canvas_view_popup(popup: PopupMenu) -> void:
 	popup.set_item_as_checkable(popup.item_count - 1, true)
 	popup.set_item_checked(popup.item_count - 1, _cb_wire != null and _cb_wire.button_pressed)
 	popup.add_item("All edge labels", _CV_TOGGLE_EDGE_LABELS)
-	popup.set_item_tooltip(
-		popup.item_count - 1, "Short labels on every edge; selection still expands below."
-	)
+	popup.set_item_tooltip(popup.item_count - 1, "Short labels on every edge; selection still expands below.")
 	popup.set_item_as_checkable(popup.item_count - 1, true)
 	popup.set_item_checked(popup.item_count - 1, _cb_edge_labels != null and _cb_edge_labels.button_pressed)
 	popup.add_item("Show legend", _CV_TOGGLE_LEGEND)
 	popup.set_item_tooltip(popup.item_count - 1, "Show the node/edge color key above the graph.")
 	popup.set_item_as_checkable(popup.item_count - 1, true)
 	popup.set_item_checked(popup.item_count - 1, _legend_host != null and _legend_host.visible)
-	popup.add_separator()
+
+
+func _fill_canvas_scope_submenu(popup: PopupMenu) -> void:
+	popup.clear()
+	_canvas_view_preset_names.clear()
 	popup.add_item("Preset: Default", _CV_PRESET_DEFAULT)
 	popup.set_item_tooltip(popup.item_count - 1, "Built-in scope (not a saved preset).")
 	var names: Array[String] = []
@@ -734,19 +792,13 @@ func _fill_canvas_view_popup(popup: PopupMenu) -> void:
 		popup.set_item_disabled(pin_idx, not _can_pin_node_from_canvas_menu())
 
 
-func _on_canvas_view_menu_id(id: int) -> void:
-	if _canvas_view_context_popup == null:
-		return
-	var n_create := _GraphFactoryScript.factory_state_class_names().size()
-	if id == _CV_REFRESH:
-		refresh()
-		return
-	if id == _CV_FIT:
-		_on_fit_pressed()
-		return
-	if id >= _CV_CREATE_STATE_BASE and id < _CV_CREATE_STATE_BASE + n_create:
-		_on_create_state_menu_id(id - _CV_CREATE_STATE_BASE)
-		return
+func _on_canvas_create_submenu_id(id: int) -> void:
+	var ci := id - _CV_CREATE_STATE_BASE
+	if ci >= 0 and ci < _canvas_create_state_names.size():
+		_on_create_state_menu_id(ci)
+
+
+func _on_canvas_view_submenu_id(id: int) -> void:
 	if id == _CV_TOGGLE_FULL_LISTS:
 		if _cb_full_lists != null:
 			var on := not _cb_full_lists.button_pressed
@@ -784,6 +836,9 @@ func _on_canvas_view_menu_id(id: int) -> void:
 				UiReactDockConfig.KEY_GRAPH_LEGEND_VISIBLE, _legend_host.visible
 			)
 		return
+
+
+func _on_canvas_scope_submenu_id(id: int) -> void:
 	if id == _CV_PRESET_DEFAULT:
 		_apply_scope_preset_by_name("")
 		return
@@ -801,6 +856,99 @@ func _on_canvas_view_menu_id(id: int) -> void:
 	if id == _CV_SCOPE_PIN:
 		_on_pin_node_pressed()
 		return
+
+
+func _resolve_selected_node_bind_targets() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if _plugin == null:
+		return out
+	if _selection_kind != _SEL_NODE or _graph_selected_node_id.is_empty():
+		return out
+	var host := _resolve_control_host_from_node(_graph_selected_node_id, {})
+	if host == null:
+		return out
+	var comp := UiReactScannerService.get_component_name_from_script(host.get_script() as Script)
+	if comp.is_empty():
+		return out
+	var bindings: Array = UiReactComponentRegistry.BINDINGS_BY_COMPONENT.get(comp, [])
+	for b: Variant in bindings:
+		if b is not Dictionary:
+			continue
+		var bd := b as Dictionary
+		var prop_sn := StringName(bd.get("property", &""))
+		if prop_sn == &"":
+			continue
+		if not UiReactGraphNewBindingService.binding_export_is_optional(comp, prop_sn):
+			continue
+		if host.get(prop_sn) != null:
+			continue
+		var kind := str(bd.get("kind", ""))
+		var expected := String(
+			UiReactBindingValidator._expected_binding_state_class(comp, prop_sn, kind, host)
+		)
+		if expected.is_empty() or not _GraphFactoryScript.is_factory_supported_class(expected):
+			continue
+		out.append(
+			{
+				"host_path": str(host.get_path()),
+				"component": comp,
+				"property": prop_sn,
+				"expected_class": StringName(expected),
+				"label": "%s (%s)" % [String(prop_sn), expected],
+			}
+		)
+	return out
+
+
+func _can_create_and_bind_from_selected_node() -> bool:
+	return _resolve_selected_node_bind_targets().size() > 0
+
+
+func _fill_selection_create_bind_submenu(popup: PopupMenu) -> void:
+	popup.clear()
+	_selection_create_bind_actions.clear()
+	var targets := _resolve_selected_node_bind_targets()
+	var classes: PackedStringArray = _GraphFactoryScript.factory_state_class_names()
+	for ti in range(targets.size()):
+		var tgt: Dictionary = targets[ti]
+		var tgt_label := String(tgt.get("label", "binding"))
+		var expected := String(tgt.get("expected_class", ""))
+		for ci in range(classes.size()):
+			var cls := String(classes[ci])
+			var item_text := "New %s…" % cls
+			if targets.size() > 1:
+				item_text = "%s: New %s…" % [tgt_label, cls]
+			var menu_id := _SEL_ACT_CREATE_BIND_BASE + _selection_create_bind_actions.size()
+			popup.add_item(item_text, menu_id)
+			var item_idx := popup.item_count - 1
+			popup.set_item_tooltip(
+				item_idx, "Create %s and assign to %s." % [cls, String(tgt.get("property", ""))]
+			)
+			if cls != expected:
+				popup.set_item_disabled(item_idx, true)
+				popup.set_item_tooltip(
+					item_idx, "Expected %s for %s." % [expected, String(tgt.get("property", ""))]
+				)
+			var payload: Dictionary = tgt.duplicate(true)
+			payload["class_name"] = cls
+			_selection_create_bind_actions.append(payload)
+
+
+func _on_selection_create_bind_submenu_id(id: int) -> void:
+	var ai := id - _SEL_ACT_CREATE_BIND_BASE
+	if ai < 0 or ai >= _selection_create_bind_actions.size():
+		return
+	var payload: Dictionary = _selection_create_bind_actions[ai]
+	var cls := String(payload.get("class_name", ""))
+	if cls.is_empty():
+		return
+	_create_assign_host_path = str(payload.get("host_path", ""))
+	_create_assign_prop = StringName(payload.get("property", &""))
+	_create_assign_component = String(payload.get("component", ""))
+	_create_assign_expected_class = StringName(payload.get("expected_class", &""))
+	_create_state_class_pending = cls
+	_create_and_assign_mode = true
+	_popup_create_state_save_dialog(true)
 
 
 func _on_canvas_view_menu_requested(at_local: Vector2) -> void:
@@ -4280,11 +4428,29 @@ func _build_ui() -> void:
 
 	var base_ctl := _plugin.get_editor_interface().get_base_control()
 	_selection_actions_context_popup = PopupMenu.new()
+	_selection_actions_context_popup.name = "SelectionActionsContextPopup"
 	base_ctl.add_child(_selection_actions_context_popup)
 	_selection_actions_context_popup.id_pressed.connect(_on_selection_action_id)
+	_selection_create_bind_submenu_popup = PopupMenu.new()
+	_selection_create_bind_submenu_popup.name = "SelectionCreateBindSubmenu"
+	_selection_actions_context_popup.add_child(_selection_create_bind_submenu_popup)
+	_selection_create_bind_submenu_popup.id_pressed.connect(_on_selection_create_bind_submenu_id)
 	_canvas_view_context_popup = PopupMenu.new()
+	_canvas_view_context_popup.name = "CanvasViewContextPopup"
 	base_ctl.add_child(_canvas_view_context_popup)
 	_canvas_view_context_popup.id_pressed.connect(_on_canvas_view_menu_id)
+	_canvas_create_submenu_popup = PopupMenu.new()
+	_canvas_create_submenu_popup.name = "CanvasCreateSubmenu"
+	_canvas_view_context_popup.add_child(_canvas_create_submenu_popup)
+	_canvas_create_submenu_popup.id_pressed.connect(_on_canvas_create_submenu_id)
+	_canvas_view_submenu_popup = PopupMenu.new()
+	_canvas_view_submenu_popup.name = "CanvasViewSubmenu"
+	_canvas_view_context_popup.add_child(_canvas_view_submenu_popup)
+	_canvas_view_submenu_popup.id_pressed.connect(_on_canvas_view_submenu_id)
+	_canvas_scope_submenu_popup = PopupMenu.new()
+	_canvas_scope_submenu_popup.name = "CanvasScopeSubmenu"
+	_canvas_view_context_popup.add_child(_canvas_scope_submenu_popup)
+	_canvas_scope_submenu_popup.id_pressed.connect(_on_canvas_scope_submenu_id)
 
 
 func _set_hint_visible(on: bool) -> void:
