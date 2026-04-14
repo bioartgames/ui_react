@@ -2434,6 +2434,8 @@ const _INCIDENT_EDGE_CAP := 8
 const _OTHER_EDGES_AT_ANCHOR_CAP := 6
 const _ORPHAN_LAYER := -512
 const _CYCLE_SUMMARY_CAP := 2
+## Indented line under a registry binding row: matching BINDING edge in this graph (box-drawing reads as “continuation” in RichTextLabel).
+const _CONNECTIONS_BINDING_EDGE_CONTINUATION := "  └ "
 ## Declarative-scope one-liner appended after human reachability in the details pane.
 const _DETAILS_DECLARATIVE_ONE_LINER_BB := (
 	"[i]Declarative snapshot only (not a runtime trace); cycle summaries are static candidates.[/i]\n"
@@ -2633,11 +2635,11 @@ func _connections_section_bb_plain(node_id: String, d: Dictionary, edges: Array)
 					var subb := pair1[0].strip_edges()
 					if subb.begins_with("• "):
 						subb = subb.substr(2)
-					bb += "  " + subb + "\n"
+					bb += _CONNECTIONS_BINDING_EDGE_CONTINUATION + subb + "\n"
 					var subp := pair1[1].strip_edges()
 					if subp.begins_with("• "):
 						subp = subp.substr(2)
-					plain += "  " + subp + "\n"
+					plain += _CONNECTIONS_BINDING_EDGE_CONTINUATION + subp + "\n"
 	var others: Array[Dictionary] = []
 	for ed2: Dictionary in incident:
 		if consumed.has(_incident_edge_sig(ed2)):
@@ -2948,16 +2950,14 @@ func _edge_details_summary_bb_plain(
 			bb = bind_ri[0]
 			plain = bind_ri[1]
 		_SnapScript.EdgeKind.COMPUTED_SOURCE:
-			var cs_h := _details_block_head_bb_plain("Computed source")
-			bb = cs_h[0]
-			plain = cs_h[1]
-			bb += "[code]%s[/code] → [code]%s[/code]\n" % [from_short, to_short]
-			plain += "%s → %s\n" % [from_short, to_short]
-			bb += "[code]%s[/code] feeds an entry in the computed resource [code]%s[/code]'s [code]sources[/code] array.\n" % [
-				from_short,
-				to_short,
-			]
-			plain += "%s feeds an entry in the computed resource %s's sources array.\n" % [from_short, to_short]
+			var si0 := int(ed.get(&"computed_source_index", -1))
+			var slot0 := _computed_source_slot_phrase_bb_plain(si0)
+			var ep0 := _edge_endpoint_pair_for_summary_bb_plain(from_id, to_id)
+			var body_cs_bb := "%s → %s, %s" % [ep0[0], ep0[2], slot0[0]]
+			var body_cs_plain := "%s → %s, %s" % [ep0[1], ep0[3], slot0[1]]
+			var cs_ri := _details_run_in_bb_plain("Computed source", body_cs_bb, body_cs_plain)
+			bb = cs_ri[0]
+			plain = cs_ri[1]
 		_SnapScript.EdgeKind.WIRE_FLOW:
 			var wf_h := _details_block_head_bb_plain("Wire flow")
 			bb = wf_h[0]
@@ -3018,33 +3018,42 @@ func _edge_details_summary_bb_plain(
 	elif kind == _SnapScript.EdgeKind.COMPUTED_SOURCE:
 		var hp2 := str(ed.get(&"host_path", ""))
 		var si := int(ed.get(&"computed_source_index", -1))
+		var slot_sp := _computed_source_slot_phrase_bb_plain(si)
+		var ep := _edge_endpoint_pair_for_summary_bb_plain(from_id, to_id)
 		var wte_c := _details_block_head_bb_plain("Where to edit")
 		bb += wte_c[0]
 		plain += wte_c[1]
-		bb += "Computed [code]sources[/code]"
-		var plain_w := "Computed sources"
-		if si >= 0:
-			bb += " (index [code]%d[/code])" % si
-			plain_w += " (index %d)" % si
-		bb += " on the owning control"
-		plain_w += " on the owning control"
-		if not hp2.is_empty():
-			bb += " [code]%s[/code]" % hp2
-			plain_w += " %s" % hp2
-		bb += ".\n"
-		plain += plain_w + ".\n"
+		if hp2.is_empty():
+			var miss_c := _edge_missing_control_path_bb_plain()
+			bb += miss_c[0]
+			plain += miss_c[1]
+		else:
+			bb += (
+				"Inspector — select owning control [code]%s[/code], then edit %s on the computed resource.\n"
+				% [hp2, slot_sp[0]]
+			)
+			plain += (
+				"Inspector — select owning control %s, then edit %s on the computed resource.\n"
+				% [hp2, slot_sp[1]]
+			)
 		var cc := str(ed.get(&"computed_context", ""))
-		if not cc.is_empty():
+		if not to_id.is_empty():
 			var own_ri := _details_run_in_bb_plain(
 				"Computed owner",
 				(
-					"[code]%s[/code], [code]sources[%d][/code] — target for [b]Rebind computed source…[/b] or [b]Remove computed dependency[/b]."
-					% [cc, si]
+					"%s, %s — target for [b]Rebind computed source…[/b] or [b]Remove computed dependency[/b]."
+					% [ep[2], slot_sp[0]]
 				),
-				"%s, sources[%d] — target for Rebind computed source… or Remove computed dependency." % [cc, si],
+				(
+					"%s, %s — target for Rebind computed source… or Remove computed dependency."
+					% [ep[3], slot_sp[1]]
+				),
 			)
 			bb += own_ri[0]
 			plain += own_ri[1]
+		if not cc.is_empty():
+			bb += "[i]Resolver path[/i] — [code]%s[/code]\n" % cc
+			plain += "Resolver path — %s\n" % cc
 	elif kind == _SnapScript.EdgeKind.WIRE_FLOW:
 		var wh := str(ed.get(&"wire_host_path", ""))
 		var wi := int(ed.get(&"wire_rule_index", -1))
@@ -3172,6 +3181,51 @@ func _short_label_for_node_id(node_id: String) -> String:
 	if d.is_empty():
 		return node_id
 	return str(d.get(&"short_label", d.get(&"label", node_id)))
+
+
+func _endpoint_discriminating_plain(node_id: String, peer_id: String) -> String:
+	var short := _short_label_for_node_id(node_id)
+	var peer_short := _short_label_for_node_id(peer_id)
+	if short != peer_short:
+		return short
+	var nb: Dictionary = _last_layout.get(&"node_by_id", {}) as Dictionary
+	var d: Dictionary = nb.get(node_id, {}) as Dictionary
+	var full := str(d.get(&"label", "")).strip_edges()
+	if not full.is_empty() and full != short:
+		return full
+	if node_id.contains("::"):
+		var segs := node_id.split("::")
+		if segs.size() > 0:
+			return String(segs[segs.size() - 1])
+	if node_id.begins_with("state:emb:"):
+		return short
+	return short
+
+
+## Returns [from_bb, from_plain, to_bb, to_plain]; *_bb fragments are wrapped in [code] for embedding.
+func _edge_endpoint_pair_for_summary_bb_plain(from_id: String, to_id: String) -> PackedStringArray:
+	var fs := _short_label_for_node_id(from_id)
+	var ts := _short_label_for_node_id(to_id)
+	if fs != ts:
+		return PackedStringArray(
+			["[code]%s[/code]" % fs, fs, "[code]%s[/code]" % ts, ts]
+		)
+	var fp := _endpoint_discriminating_plain(from_id, to_id)
+	var tp := _endpoint_discriminating_plain(to_id, from_id)
+	var from_plain := fp
+	var to_plain := tp
+	if fp == tp:
+		from_plain = "%s (from)" % fp
+		to_plain = "%s (to)" % tp
+	return PackedStringArray(
+		["[code]%s[/code]" % from_plain, from_plain, "[code]%s[/code]" % to_plain, to_plain]
+	)
+
+
+func _computed_source_slot_phrase_bb_plain(si: int) -> PackedStringArray:
+	if si >= 0:
+		return PackedStringArray(["[code]sources[%d][/code]" % si, "sources[%d]" % si])
+	return PackedStringArray(["[code]sources[?][/code]", "sources[?]"])
 
 
 func _on_focus_inspector_pressed() -> void:
