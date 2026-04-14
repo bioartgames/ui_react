@@ -155,12 +155,14 @@ func _build_ui() -> void:
 	var mode_row := HBoxContainer.new()
 	vbox.add_child(mode_row)
 	mode_row.add_child(Label.new())
-	mode_row.get_child(0).text = "Scan:"
+	mode_row.get_child(0).text = "Scan mode:"
 	_mode_option = OptionButton.new()
 	_mode_option.add_item("Selection", UiReactDockConfig.SCAN_MODE_SELECTION)
 	_mode_option.add_item("Entire scene", UiReactDockConfig.SCAN_MODE_SCENE)
 	_mode_option.item_selected.connect(_on_scan_mode_selected)
-	_mode_option.tooltip_text = "Selection: selected subtrees. Entire scene: all UiReact* nodes in the open scene."
+	_mode_option.tooltip_text = (
+		"Scan mode selector: Selection scans selected subtrees; Entire scene scans all UiReact* nodes."
+	)
 	mode_row.add_child(_mode_option)
 
 	_auto_refresh = CheckBox.new()
@@ -173,13 +175,13 @@ func _build_ui() -> void:
 	var group_row := HBoxContainer.new()
 	vbox.add_child(group_row)
 	group_row.add_child(Label.new())
-	group_row.get_child(0).text = "Group:"
+	group_row.get_child(0).text = "Group by:"
 	_group_option = OptionButton.new()
 	_group_option.add_item("Flat list", UiReactDockConfig.GROUP_FLAT)
 	_group_option.add_item("By node", UiReactDockConfig.GROUP_BY_NODE)
 	_group_option.add_item("By severity", UiReactDockConfig.GROUP_BY_SEVERITY)
 	_group_option.item_selected.connect(_on_group_mode_selected)
-	_group_option.tooltip_text = "Flat list, by node, or by severity."
+	_group_option.tooltip_text = "Grouping selector: Flat list, by node, or by severity."
 	group_row.add_child(_group_option)
 
 	var filt_row := HBoxContainer.new()

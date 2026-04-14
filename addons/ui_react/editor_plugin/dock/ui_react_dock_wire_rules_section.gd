@@ -298,14 +298,17 @@ func _on_rule_row_gui_input(ev: InputEvent, row_ctl: Control, index: int, arr_si
 func _fill_row_context_menu(index: int, arr_size: int, item: Variant) -> void:
 	var pop := _row_context_popup
 	pop.clear()
+	pop.add_item("Duplicate", _ROW_MENU_DUPLICATE)
+	pop.set_item_disabled(pop.item_count - 1, item == null or not (item is Resource))
+	pop.add_separator()
 	pop.add_item("Move up", _ROW_MENU_MOVE_UP)
 	pop.set_item_disabled(pop.item_count - 1, index <= 0)
 	pop.add_item("Move down", _ROW_MENU_MOVE_DOWN)
 	pop.set_item_disabled(pop.item_count - 1, index >= arr_size - 1)
-	pop.add_item("Duplicate", _ROW_MENU_DUPLICATE)
-	pop.set_item_disabled(pop.item_count - 1, item == null or not (item is Resource))
+	pop.add_separator()
 	pop.add_item("Remove", _ROW_MENU_REMOVE)
-	pop.add_item("Copy report", _ROW_MENU_COPY_REPORT)
+	pop.add_separator()
+	pop.add_item("Copy rule details", _ROW_MENU_COPY_REPORT)
 	pop.add_item("Inspect rule", _ROW_MENU_INSPECT)
 	pop.set_item_disabled(pop.item_count - 1, item == null or not (item is Resource))
 

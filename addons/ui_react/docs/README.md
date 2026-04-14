@@ -15,6 +15,7 @@ Quick index for **solo maintenance** and **AI agents**. Authoring narrative and 
 | [**ROADMAP.md**](ROADMAP.md) | Charter, phases, **Inspector surface matrix (CB-052)**, Appendix backlog (**CB-***), glossary | author, maintainer |
 | [**WIRING_LAYER.md**](WIRING_LAYER.md) | Normative **P5** wiring contract (`UiReactWireRuleHelper`, `wire_rules`, …) | maintainer, agent |
 | [**ACTION_LAYER.md**](ACTION_LAYER.md) | Normative **P6.1** action contract (`action_targets`, `UiReactActionKind`, …) | maintainer, agent |
+| [**MENU_GUIDELINES.md**](MENU_GUIDELINES.md) | Normative menu IA rules for context menus, chooser popups, and selectors | maintainer, agent |
 | [**P5_CURRENT_STATE_AUDIT.md**](P5_CURRENT_STATE_AUDIT.md) | Stock-take checklist for wiring readiness (**P5.1.b** / **CB-041**) | maintainer |
 | [**DECISIONS.md**](DECISIONS.md) | Lightweight ADR log (context → decision → consequences) | author, agent |
 
@@ -29,6 +30,7 @@ Quick index for **solo maintenance** and **AI agents**. Authoring narrative and 
 | Add a **new `UiReact*`** control or **export** | [ROADMAP.md](ROADMAP.md) Charter; `editor_plugin/ui_react_component_registry.gd` (**BINDINGS_BY_COMPONENT**, **ANIM_TRIGGERS_BY_COMPONENT**); `editor_plugin/services/ui_react_binding_validator.gd` |
 | **Dock diagnostics** (anim, actions, wiring, tree, computed) | `editor_plugin/services/ui_react_validator_service.gd` façade → `ui_react_*_validator.gd` |
 | **Dock Wiring** tab — graph + embedded **`wire_rules`** UI (**CB-035** / **CB-058**) | `editor_plugin/dock/ui_react_dock_wiring_panel.gd` ( **`ui_react_dock_explain_panel.gd`**, **`ui_react_dock_wire_rules_section.gd`**, layout/view services) |
+| Change menu grouping, naming, or placement | [MENU_GUIDELINES.md](MENU_GUIDELINES.md); then menu builders/handlers in dock panel and wire rules section |
 | **Animation triggers** vs host control | `editor_plugin/ui_react_component_registry.gd` (**ANIM_TRIGGERS_BY_COMPONENT**); [README animation triggers table](../README.md) (search “supported triggers per host”) |
 | **Phased capability** / backlog / CB IDs | [ROADMAP.md](ROADMAP.md) Appendix |
 | **North star** — Dependency Graph as designer workbench (**CB-058**) | [ROADMAP.md](ROADMAP.md) Part I **North star** + **Visual wiring graph**; [DECISIONS.md](DECISIONS.md) **2026-04-09** |
