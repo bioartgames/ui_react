@@ -64,6 +64,9 @@ const _SEL_ACT_REMOVE_SRC_SLOT := 1122
 const _SEL_ACT_CREATE_ASSIGN_BINDING := 1130
 const _SEL_ACT_SCOPE_PIN := 1170
 const _SEL_ACT_CREATE_BIND_BASE := 1240
+const _SEL_SUB_NODE_ROOT := 1260
+const _SEL_SUB_WIRE_ROOT := 1261
+const _SEL_SUB_EDGE_EDIT_ROOT := 1262
 ## Wire rules + Focus — [method _fill_selection_actions_popup] / [method _on_selection_action_id].
 const _SEL_ACT_FOCUS_INSPECTOR := 1180
 const _SEL_ACT_WIRE_ADD_BASE := 1210
@@ -122,6 +125,9 @@ var _wire_rules_section: Variant = null
 var _selection_actions_context_popup: PopupMenu
 var _canvas_view_context_popup: PopupMenu
 var _selection_create_bind_submenu_popup: PopupMenu
+var _selection_node_submenu_popup: PopupMenu
+var _selection_wire_submenu_popup: PopupMenu
+var _selection_edge_edit_submenu_popup: PopupMenu
 var _canvas_create_submenu_popup: PopupMenu
 var _canvas_view_submenu_popup: PopupMenu
 var _canvas_scope_submenu_popup: PopupMenu
@@ -458,6 +464,88 @@ func _after_wire_rules_section_commit() -> void:
 ## Graph RMB context menu — same builder as former Actions… MenuButton.
 func _fill_selection_actions_popup(popup: PopupMenu) -> void:
 	popup.clear()
+	const TT_COPY := "Copy plain-text details to the clipboard."
+	const TT_FOCUS := "Open the related scene node or resource in the Inspector when possible."
+
+	if _selection_kind != _SEL_NONE:
+		popup.add_item("Focus in Inspector", _SEL_ACT_FOCUS_INSPECTOR)
+		popup.set_item_tooltip(popup.item_count - 1, TT_FOCUS)
+	var any_edge_item_will := (
+		_can_rebind_binding_edge()
+		or _can_rebind_wire_endpoint(true)
+		or _can_rebind_wire_endpoint(false)
+		or _can_rebind_computed_source()
+		or _can_disconnect_binding_edge()
+		or _can_disconnect_computed_source()
+		or _can_disconnect_wire_edge()
+		or _can_move_computed_source_up()
+		or _can_move_computed_source_down()
+		or _can_remove_computed_source_slot()
+		or _can_create_and_assign_binding_edge()
+	)
+	var wire_host := _resolve_wire_rules_host_control()
+	var added_any_sub := false
+	if _selection_kind == _SEL_NODE and _selection_node_submenu_popup != null:
+		_fill_selection_node_submenu(_selection_node_submenu_popup)
+		if _selection_node_submenu_popup.item_count > 0:
+			popup.add_submenu_item("Node", _selection_node_submenu_popup.name, _SEL_SUB_NODE_ROOT)
+			added_any_sub = true
+	if wire_host != null and _selection_wire_submenu_popup != null:
+		_fill_selection_wire_submenu(_selection_wire_submenu_popup)
+		if _selection_wire_submenu_popup.item_count > 0:
+			popup.add_submenu_item("Wire", _selection_wire_submenu_popup.name, _SEL_SUB_WIRE_ROOT)
+			added_any_sub = true
+	if any_edge_item_will and _selection_edge_edit_submenu_popup != null:
+		_fill_selection_edge_edit_submenu(_selection_edge_edit_submenu_popup)
+		if _selection_edge_edit_submenu_popup.item_count > 0:
+			popup.add_submenu_item(
+				"Edge edit", _selection_edge_edit_submenu_popup.name, _SEL_SUB_EDGE_EDIT_ROOT
+			)
+			added_any_sub = true
+	if popup.item_count > 0 or added_any_sub:
+		popup.add_separator()
+	popup.add_item("Copy details", _SEL_ACT_COPY_DETAILS)
+	popup.set_item_tooltip(popup.item_count - 1, TT_COPY)
+
+
+func _fill_selection_node_submenu(popup: PopupMenu) -> void:
+	popup.clear()
+	const TT_SCOPE_PIN := (
+		"Pin the selection to the active preset; Default prompts to save a named preset first."
+	)
+	popup.add_item("Pin node", _SEL_ACT_SCOPE_PIN)
+	popup.set_item_tooltip(popup.item_count - 1, TT_SCOPE_PIN)
+	var pin_idx := popup.get_item_index(_SEL_ACT_SCOPE_PIN)
+	if pin_idx >= 0:
+		popup.set_item_disabled(pin_idx, not _can_pin_node_from_canvas_menu())
+	if _selection_create_bind_submenu_popup != null and _can_create_and_bind_from_selected_node():
+		popup.add_submenu_item("Create state & bind…", _selection_create_bind_submenu_popup.name)
+		_fill_selection_create_bind_submenu(_selection_create_bind_submenu_popup)
+
+
+func _fill_selection_wire_submenu(popup: PopupMenu) -> void:
+	popup.clear()
+	const TT_WIRE_REFRESH := "Reload wire list after external edits or Undo."
+	const TT_WIRE_COPY_REP := "Copy selected rule report."
+	var wentries := _WireRuleCatalogScript.rule_script_entries()
+	for j: int in range(wentries.size()):
+		popup.add_item(
+			"Add wire: %s" % String(wentries[j][&"label"]),
+			_SEL_ACT_WIRE_ADD_BASE + j,
+		)
+	popup.add_item("Refresh wire list", _SEL_ACT_WIRE_REFRESH_LIST)
+	popup.set_item_tooltip(popup.item_count - 1, TT_WIRE_REFRESH)
+	popup.add_item("Copy rule report", _SEL_ACT_WIRE_COPY_RULE_REPORT)
+	popup.set_item_tooltip(popup.item_count - 1, TT_WIRE_COPY_REP)
+	var cr_i := popup.get_item_index(_SEL_ACT_WIRE_COPY_RULE_REPORT)
+	if cr_i >= 0:
+		var sec2: Object = _wire_rules_section as Object
+		var sel_ix: int = int(sec2.call(&"get_selected_rule_index"))
+		popup.set_item_disabled(cr_i, sel_ix < 0)
+
+
+func _fill_selection_edge_edit_submenu(popup: PopupMenu) -> void:
+	popup.clear()
 	const TT_REBIND_BINDING := (
 		"Choose another .tres for this binding (undoable). Wire flows: use Rebind wire in/out."
 	)
@@ -477,67 +565,6 @@ func _fill_selection_actions_popup(popup: PopupMenu) -> void:
 	const TT_MOVE_DOWN := "Swap with next sources[] entry (undoable)."
 	const TT_REMOVE_SLOT := "Remove index and compact sources[] (undoable)."
 	const TT_CREATE_ASSIGN := "New matching .tres on an empty optional binding (undoable)."
-	const TT_COPY := "Copy plain-text details to the clipboard."
-	const TT_FOCUS := "Open the related scene node or resource in the Inspector when possible."
-	const TT_WIRE_REFRESH := "Reload wire list after external edits or Undo."
-	const TT_WIRE_COPY_REP := "Copy selected rule report."
-	const TT_SCOPE_PIN := (
-		"Pin the selection to the active preset; Default prompts to save a named preset first."
-	)
-
-	if _selection_kind != _SEL_NONE:
-		popup.add_item("Focus in Inspector", _SEL_ACT_FOCUS_INSPECTOR)
-		popup.set_item_tooltip(popup.item_count - 1, TT_FOCUS)
-	if _selection_kind == _SEL_NODE:
-		if popup.item_count > 0:
-			popup.add_separator()
-		popup.add_item("Pin node", _SEL_ACT_SCOPE_PIN)
-		popup.set_item_tooltip(popup.item_count - 1, TT_SCOPE_PIN)
-		var pin_idx := popup.get_item_index(_SEL_ACT_SCOPE_PIN)
-		if pin_idx >= 0:
-			popup.set_item_disabled(pin_idx, not _can_pin_node_from_canvas_menu())
-		if _selection_create_bind_submenu_popup != null and _can_create_and_bind_from_selected_node():
-			_fill_selection_create_bind_submenu(_selection_create_bind_submenu_popup)
-			popup.add_submenu_item(
-				"Create state & bind…", _selection_create_bind_submenu_popup.name
-			)
-
-	var wire_host := _resolve_wire_rules_host_control()
-	if wire_host != null:
-		if popup.item_count > 0:
-			popup.add_separator()
-		var wentries := _WireRuleCatalogScript.rule_script_entries()
-		for j: int in range(wentries.size()):
-			popup.add_item(
-				"Add wire: %s" % String(wentries[j][&"label"]),
-				_SEL_ACT_WIRE_ADD_BASE + j,
-			)
-		popup.add_item("Refresh wire list", _SEL_ACT_WIRE_REFRESH_LIST)
-		popup.set_item_tooltip(popup.item_count - 1, TT_WIRE_REFRESH)
-		popup.add_item("Copy rule report", _SEL_ACT_WIRE_COPY_RULE_REPORT)
-		popup.set_item_tooltip(popup.item_count - 1, TT_WIRE_COPY_REP)
-		var cr_i := popup.get_item_index(_SEL_ACT_WIRE_COPY_RULE_REPORT)
-		if cr_i >= 0:
-			var sec2: Object = _wire_rules_section as Object
-			var sel_ix: int = int(sec2.call(&"get_selected_rule_index"))
-			popup.set_item_disabled(cr_i, sel_ix < 0)
-
-	var n_before_edge := popup.item_count
-	var any_edge_item_will := (
-		_can_rebind_binding_edge()
-		or _can_rebind_wire_endpoint(true)
-		or _can_rebind_wire_endpoint(false)
-		or _can_rebind_computed_source()
-		or _can_disconnect_binding_edge()
-		or _can_disconnect_computed_source()
-		or _can_disconnect_wire_edge()
-		or _can_move_computed_source_up()
-		or _can_move_computed_source_down()
-		or _can_remove_computed_source_slot()
-		or _can_create_and_assign_binding_edge()
-	)
-	if n_before_edge > 0 and any_edge_item_will:
-		popup.add_separator()
 
 	var rebind_added := false
 	if _can_rebind_binding_edge():
@@ -604,16 +631,25 @@ func _fill_selection_actions_popup(popup: PopupMenu) -> void:
 		popup.add_item("Create & assign…", _SEL_ACT_CREATE_ASSIGN_BINDING)
 		popup.set_item_tooltip(popup.item_count - 1, TT_CREATE_ASSIGN)
 
-	popup.add_separator()
-	popup.add_item("Copy details", _SEL_ACT_COPY_DETAILS)
-	popup.set_item_tooltip(popup.item_count - 1, TT_COPY)
-
 
 func _on_selection_action_id(id: int) -> void:
-	var nw := _WireRuleCatalogScript.rule_script_entries().size()
 	if id == _SEL_ACT_FOCUS_INSPECTOR:
 		_on_focus_inspector_pressed()
 		return
+	match id:
+		_SEL_ACT_COPY_DETAILS:
+			_on_copy_details_pressed()
+		_:
+			pass
+
+
+func _on_selection_node_submenu_id(id: int) -> void:
+	if id == _SEL_ACT_SCOPE_PIN:
+		_on_pin_node_pressed()
+
+
+func _on_selection_wire_submenu_id(id: int) -> void:
+	var nw := _WireRuleCatalogScript.rule_script_entries().size()
 	if id == _SEL_ACT_WIRE_REFRESH_LIST:
 		if _wire_rules_section != null:
 			(_wire_rules_section as Object).call(&"refresh_from_host")
@@ -626,7 +662,9 @@ func _on_selection_action_id(id: int) -> void:
 		var cidx := id - _SEL_ACT_WIRE_ADD_BASE
 		if _wire_rules_section != null:
 			(_wire_rules_section as Object).call(&"append_rule_from_catalog_index", cidx)
-		return
+
+
+func _on_selection_edge_edit_submenu_id(id: int) -> void:
 	match id:
 		_SEL_ACT_REBIND_BINDING:
 			_on_rebind_binding_pressed()
@@ -650,10 +688,6 @@ func _on_selection_action_id(id: int) -> void:
 			_on_remove_computed_source_slot_pressed()
 		_SEL_ACT_CREATE_ASSIGN_BINDING:
 			_on_create_assign_binding_pressed()
-		_SEL_ACT_SCOPE_PIN:
-			_on_pin_node_pressed()
-		_SEL_ACT_COPY_DETAILS:
-			_on_copy_details_pressed()
 		_:
 			pass
 
@@ -4465,6 +4499,18 @@ func _build_ui() -> void:
 	_selection_actions_context_popup.name = "SelectionActionsContextPopup"
 	base_ctl.add_child(_selection_actions_context_popup)
 	_selection_actions_context_popup.id_pressed.connect(_on_selection_action_id)
+	_selection_node_submenu_popup = PopupMenu.new()
+	_selection_node_submenu_popup.name = "SelectionNodeSubmenu"
+	_selection_actions_context_popup.add_child(_selection_node_submenu_popup)
+	_selection_node_submenu_popup.id_pressed.connect(_on_selection_node_submenu_id)
+	_selection_wire_submenu_popup = PopupMenu.new()
+	_selection_wire_submenu_popup.name = "SelectionWireSubmenu"
+	_selection_actions_context_popup.add_child(_selection_wire_submenu_popup)
+	_selection_wire_submenu_popup.id_pressed.connect(_on_selection_wire_submenu_id)
+	_selection_edge_edit_submenu_popup = PopupMenu.new()
+	_selection_edge_edit_submenu_popup.name = "SelectionEdgeEditSubmenu"
+	_selection_actions_context_popup.add_child(_selection_edge_edit_submenu_popup)
+	_selection_edge_edit_submenu_popup.id_pressed.connect(_on_selection_edge_edit_submenu_id)
 	_selection_create_bind_submenu_popup = PopupMenu.new()
 	_selection_create_bind_submenu_popup.name = "SelectionCreateBindSubmenu"
 	_selection_actions_context_popup.add_child(_selection_create_bind_submenu_popup)
