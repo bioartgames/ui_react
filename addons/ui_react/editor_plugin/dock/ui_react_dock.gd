@@ -464,6 +464,8 @@ func _select_issue_at_index(idx: int) -> void:
 		_set_details_idle()
 	else:
 		_update_details_pane(issue)
+		if not issue.node_path.is_empty():
+			_on_row_focus(idx)
 	_issue_list.rebuild()
 
 

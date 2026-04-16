@@ -113,6 +113,7 @@ func on_row_fix(flat_index: int) -> void:
 	_dock.request_refresh(&"after_row_fix")
 
 
+## Also used when selecting an issue row in the dock ([method UiReactDock._select_issue_at_index]); keep [method EditorInterface.edit_node] here only.
 func on_row_focus(flat_index: int) -> void:
 	if flat_index < 0 or flat_index >= _dock._issues_shown.size():
 		return

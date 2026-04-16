@@ -57,6 +57,7 @@ func set_target_host(host: Control, root: Node) -> void:
 	_emit_rule_selection_changed()
 
 
+# Graph-driven list sync only; do not open the Inspector (avoids stealing focus from graph work).
 func focus_rule_index(idx: int) -> void:
 	if _target == null:
 		return
@@ -197,7 +198,7 @@ func _make_rule_row(index: int, item: Variant, arr_size: int) -> Control:
 	sel_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sel_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	sel_btn.pressed.connect(func() -> void: _select_rule(fi))
-	sel_btn.tooltip_text = "Select this rule."
+	sel_btn.tooltip_text = "Select this rule and open it in the Inspector."
 	if index == _selected_rule_index:
 		var sel_style := StyleBoxFlat.new()
 		sel_style.bg_color = Color(0.25, 0.45, 0.75, 0.28)
@@ -268,13 +269,6 @@ func _make_rule_row(index: int, item: Variant, arr_size: int) -> Control:
 	copy_btn.pressed.connect(func() -> void: _copy_details_at(fi))
 	row.add_child(copy_btn)
 
-	var focus_btn := Button.new()
-	focus_btn.text = "Focus"
-	focus_btn.tooltip_text = "Focus this rule resource in the Inspector."
-	focus_btn.disabled = item == null or not (item is Resource)
-	focus_btn.pressed.connect(func() -> void: _inspect_at(fi))
-	row.add_child(focus_btn)
-
 	return row
 
 
@@ -286,6 +280,7 @@ func _select_rule(index: int) -> void:
 	var arr: Array = wr as Array if wr is Array else []
 	_rebuild_rule_rows(arr)
 	_emit_rule_selection_changed()
+	_inspect_at(index)
 
 
 func _format_rule_line(index: int, item: Variant) -> String:

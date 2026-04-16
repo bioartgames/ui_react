@@ -149,7 +149,9 @@ func _make_issue_row(issue: UiReactDiagnosticModel.DiagnosticIssue, flat_index: 
 	sel_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	var fi := flat_index
 	sel_btn.pressed.connect(func(): _dock._select_issue_at_index(fi))
-	sel_btn.tooltip_text = "Open this issue in the report below."
+	sel_btn.tooltip_text = (
+		"Show details below. If this issue references a scene node, also focus that node in the editor (Inspector)."
+	)
 	if flat_index == _dock._selected_flat_index:
 		var sel_style := StyleBoxFlat.new()
 		sel_style.bg_color = Color(0.25, 0.45, 0.75, 0.28)
@@ -187,13 +189,6 @@ func _make_issue_row(issue: UiReactDiagnosticModel.DiagnosticIssue, flat_index: 
 		btn_fix.pressed.connect(func(): _dock._on_row_fix(fi))
 		btn_fix.tooltip_text = "Create or assign suggested state; may confirm when replacing on errors."
 		row.add_child(btn_fix)
-
-		var btn_focus := Button.new()
-		btn_focus.text = "Focus"
-		btn_focus.disabled = issue.node_path.is_empty()
-		btn_focus.pressed.connect(func(): _dock._on_row_focus(fi))
-		btn_focus.tooltip_text = "Focus the scene node referenced by this issue."
-		row.add_child(btn_focus)
 
 		var btn_ignore := Button.new()
 		btn_ignore.text = "Ignore"
