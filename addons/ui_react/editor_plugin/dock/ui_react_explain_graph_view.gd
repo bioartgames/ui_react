@@ -43,6 +43,9 @@ const GRAPH_EDGE_COLOR_WIRE := Color(0.85, 0.45, 0.35, 1.0)
 const GRAPH_EDGE_WIDTH_BINDING := 1.5
 const GRAPH_EDGE_WIDTH_COMPUTED := 1.8
 const GRAPH_EDGE_WIDTH_WIRE := 2.2
+## WIRE_FLOW when [code]wire_rule_enabled[/code] is false on the edge dict ([code]UiReactExplainGraphBuilder[/code]).
+const GRAPH_EDGE_WIRE_DISABLED_ALPHA_MULT := 0.38
+const GRAPH_EDGE_WIRE_DISABLED_WIDTH_MULT := 0.78
 const GRAPH_LEGEND_FOCUS_BORDER := Color(0.35, 0.85, 0.45, 0.95)
 
 var _sb_fill: StyleBoxFlat
@@ -220,15 +223,22 @@ func _draw() -> void:
 		var col := GRAPH_EDGE_COLOR_BINDING
 		var width := GRAPH_EDGE_WIDTH_BINDING
 		var k := int(ed.get(&"kind", -1))
+		var wire_flow_disabled := false
 		if k == ek.WIRE_FLOW:
 			col = GRAPH_EDGE_COLOR_WIRE
 			width = GRAPH_EDGE_WIDTH_WIRE
+			wire_flow_disabled = not bool(ed.get(&"wire_rule_enabled", true))
+			if wire_flow_disabled:
+				col = col.lerp(Color(0.55, 0.55, 0.62, col.a), 0.55)
+				width *= GRAPH_EDGE_WIRE_DISABLED_WIDTH_MULT
 		elif k == ek.COMPUTED_SOURCE:
 			col = GRAPH_EDGE_COLOR_COMPUTED
 			width = GRAPH_EDGE_WIDTH_COMPUTED
 		if focus_active and not _edge_is_focused(ei):
 			col.a = 0.16
 			width *= 0.85
+		if wire_flow_disabled:
+			col.a *= GRAPH_EDGE_WIRE_DISABLED_ALPHA_MULT
 		var pts: Variant = ed.get(&"route_points", null)
 		if pts is PackedVector2Array and (pts as PackedVector2Array).size() >= 2:
 			_draw_polyline(pts as PackedVector2Array, col, width)
@@ -490,6 +500,25 @@ func _hit_test_node_id(screen_local: Vector2) -> String:
 	return best_id
 
 
+func _closest_distance_edge_to_point(g: Vector2, ed: Dictionary, centers: Dictionary) -> float:
+	var fa := str(ed.get(&"from_id", ""))
+	var ta := str(ed.get(&"to_id", ""))
+	var pts_var: Variant = ed.get(&"route_points", null)
+	if pts_var is PackedVector2Array and (pts_var as PackedVector2Array).size() >= 2:
+		return sqrt(_dist_point_to_polyline_sq(g, pts_var as PackedVector2Array))
+	var pa: Vector2 = centers[fa] as Vector2
+	var pb: Vector2 = centers[ta] as Vector2
+	return Geometry2D.get_closest_point_to_segment(g, pa, pb).distance_to(g)
+
+
+func _edge_max_pick_distance(ed: Dictionary, base_slop_px: float) -> float:
+	var max_pick := base_slop_px / _zoom
+	var k_hit := int(ed.get(&"kind", -1))
+	if k_hit == _Snap.EdgeKind.WIRE_FLOW and not bool(ed.get(&"wire_rule_enabled", true)):
+		max_pick = maxf(max_pick, (base_slop_px + 6.0) / _zoom)
+	return max_pick
+
+
 ## Closest visible edge index under [param screen_local], or [code]-1[/code]. Matches [method _pick] edge priority (after nodes).
 func _hit_test_edge_index(screen_local: Vector2) -> int:
 	if _layout.is_empty():
@@ -500,7 +529,7 @@ func _hit_test_edge_index(screen_local: Vector2) -> int:
 	var centers: Dictionary = _layout.get(&"node_centers", {}) as Dictionary
 	var edges: Array = _layout.get(&"draw_edges", []) as Array
 	var best_i := -1
-	var best_dist := 12.0 / _zoom
+	var best_dist := 1e12
 	var idx := 0
 	for e: Variant in edges:
 		if e is not Dictionary:
@@ -515,15 +544,9 @@ func _hit_test_edge_index(screen_local: Vector2) -> int:
 		if not centers.has(fa) or not centers.has(ta):
 			idx += 1
 			continue
-		var d2: float
-		var pts_var: Variant = ed.get(&"route_points", null)
-		if pts_var is PackedVector2Array and (pts_var as PackedVector2Array).size() >= 2:
-			d2 = sqrt(_dist_point_to_polyline_sq(g, pts_var as PackedVector2Array))
-		else:
-			var pa: Vector2 = centers[fa] as Vector2
-			var pb: Vector2 = centers[ta] as Vector2
-			d2 = Geometry2D.get_closest_point_to_segment(g, pa, pb).distance_to(g)
-		if d2 < best_dist:
+		var d2 := _closest_distance_edge_to_point(g, ed, centers)
+		var max_pick := _edge_max_pick_distance(ed, 12.0)
+		if d2 < max_pick and d2 < best_dist:
 			best_dist = d2
 			best_i = idx
 		idx += 1
@@ -762,7 +785,7 @@ func _pick_hover(screen_local: Vector2) -> void:
 		_hover_node_id = ""
 		var edges: Array = _layout.get(&"draw_edges", []) as Array
 		var best_i := -1
-		var best_dist := 11.0 / _zoom
+		var best_dist := 1e12
 		var idx := 0
 		for e: Variant in edges:
 			if e is not Dictionary:
@@ -777,15 +800,9 @@ func _pick_hover(screen_local: Vector2) -> void:
 			if not centers.has(fa) or not centers.has(ta):
 				idx += 1
 				continue
-			var d2: float
-			var pts_var: Variant = ed.get(&"route_points", null)
-			if pts_var is PackedVector2Array and (pts_var as PackedVector2Array).size() >= 2:
-				d2 = sqrt(_dist_point_to_polyline_sq(g, pts_var as PackedVector2Array))
-			else:
-				var pa: Vector2 = centers[fa] as Vector2
-				var pb: Vector2 = centers[ta] as Vector2
-				d2 = Geometry2D.get_closest_point_to_segment(g, pa, pb).distance_to(g)
-			if d2 < best_dist:
+			var d2 := _closest_distance_edge_to_point(g, ed, centers)
+			var max_pick := _edge_max_pick_distance(ed, 11.0)
+			if d2 < max_pick and d2 < best_dist:
 				best_dist = d2
 				best_i = idx
 			idx += 1

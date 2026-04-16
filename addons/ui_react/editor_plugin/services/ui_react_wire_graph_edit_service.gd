@@ -70,7 +70,10 @@ static func try_mutate_wire_rule_at_index(
 	if old_rule == null or not (old_rule is UiReactWireRule):
 		push_warning("Ui React: wire_rules[%d] is not a UiReactWireRule." % rule_index)
 		return false
-	var dup_res: Resource = (old_rule as Resource).duplicate(true)
+	# Undo needs a distinct rule instance in the array, but deep duplicate(true) clones nested
+	# UiState sub-resources and breaks Dependency Graph ids (embedded states use instance_id in
+	# UiReactExplainGraphBuilder._state_id), dropping WIRE_FLOW from layout scope and clearing the dock list.
+	var dup_res: Resource = (old_rule as Resource).duplicate(false)
 	if dup_res == null or not (dup_res is UiReactWireRule):
 		push_warning("Ui React: could not duplicate wire rule at index %d." % rule_index)
 		return false

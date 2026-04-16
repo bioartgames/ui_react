@@ -259,6 +259,7 @@ class _BuildContext extends RefCounted:
 			&"type": type_name,
 			&"ins": ins,
 			&"outs": outs,
+			&"enabled": rule.enabled,
 		})
 
 	func _finalize_wire_product_edges() -> void:
@@ -305,6 +306,7 @@ class _BuildContext extends RefCounted:
 							&"wire_rule_index": ri,
 							&"wire_in_property": str(in_prop),
 							&"wire_out_property": str(out_prop),
+							&"wire_rule_enabled": bool(pack.get(&"enabled", true)),
 						}
 					)
 

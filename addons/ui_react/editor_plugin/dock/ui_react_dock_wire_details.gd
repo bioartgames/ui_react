@@ -38,6 +38,7 @@ static func _report_rows(
 ) -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []
 	rows.append({&"label": &"Rule", &"value": _val_rule(rule, rule_index)})
+	rows.append({&"label": &"Order", &"value": _val_order(rule_index, host)})
 	rows.append({&"label": &"Enabled", &"value": _val_enabled(rule)})
 	rows.append({&"label": &"Trigger", &"value": _val_trigger(rule)})
 	if host == null:
@@ -52,6 +53,18 @@ static func _report_rows(
 	rows.append({&"label": &"Runtime notes", &"value": _val_runtime(rule, host)})
 	rows.append({&"label": &"Validation warnings", &"value": _val_validation(rule)})
 	return rows
+
+
+static func _val_order(rule_index: int, host: Node) -> String:
+	if rule_index < 0:
+		return "—"
+	if host == null or not (&"wire_rules" in host):
+		return "%d" % (rule_index + 1)
+	var wr: Variant = host.get(&"wire_rules")
+	var arr: Array = wr as Array if wr is Array else []
+	if arr.is_empty():
+		return "%d" % (rule_index + 1)
+	return "%d of %d" % [rule_index + 1, arr.size()]
 
 
 static func _val_rule(rule: Variant, rule_index: int) -> String:
