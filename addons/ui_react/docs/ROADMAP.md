@@ -23,7 +23,18 @@ Additional **stock** **`UiComputedStringState` / `UiComputedBoolState`** subclas
 
 ### Tracked follow-ups (product parity — 2026)
 
-**Done:** **CB-049**, **CB-050** (**2.17.0**); **CB-052**, **CB-054**, **CB-055** (**2.18.0** surface); **CB-056** (**2.19.0** / **2.19.1**); **CB-057** (**2.20.0**); **CB-051** (**2.21.0**); **CB-035** (**2.22.0** — dock **`wire_rules`** editor). **Remaining:** **CB-053** (broader plugin UX after parity — e.g. bulk anim helpers; non-blocking). **North star (designer tooling):** **CB-058** — **Wiring** workbench (**Dependency Graph** + list) as the **blessed editor** surface for wiring (see below).
+**Done:** **CB-049**, **CB-050** (**2.17.0**); **CB-052**, **CB-054**, **CB-055** (**2.18.0** surface); **CB-056** (**2.19.0** / **2.19.1**); **CB-057** (**2.20.0**); **CB-051** (**2.21.0**); **CB-035** (**2.22.0** — dock **`wire_rules`** editor). **Promoted from deferred to planned (2026-04-17):** **CB-053** (plugin/designer UX tranches), **CB-007** (first-class commands), **CB-018** runtime overlay slice, **CB-059** (rich grid/slot framework), **CB-060** (declarative breadth for Slider/SpinBox/ProgressBar). **North star (designer tooling):** **CB-058** — **Wiring** workbench (**Dependency Graph** + list) as the **blessed editor** surface for wiring (see below).
+
+### Promotion policy (2026-04-17)
+
+The promoted rows above are a **committed direction**, not a release-date promise. Until shipped, API shape remains provisional and must keep Charter + SemVer guardrails.
+
+**Evidence bar for promoted rows (required before `Done`):**
+
+1. Appendix row status/notes updated with explicit scope and phase.
+2. At least one **official example** exercises the promoted surface.
+3. Scanner/validator parity for newly exposed authoring surfaces.
+4. `CHANGELOG.md` + cross-doc links (`README`, normative doc where applicable).
 
 ### North star — designer wiring workbench (ideology)
 
@@ -79,7 +90,9 @@ The **Wiring** dock tab (**CB-018A**–**CB-018A.5** + **CB-035** list) is the *
 | **P4** | Selective new react controls | e.g. `UiReactTextureButton` / slot pattern, `UiReactTree`—historically when the **Charter** bar for **new** controls (two official examples) was met; each new control updates **`UiReactComponentRegistry`** (stem + binding slots) and keeps **`UiReactBindingValidator`** / dock parity. **`UiReactScannerService`** remains the node walk + `kind_to_suggested_class` helper. **Delivery complete** (historical). |
 | **P5** | Wiring layer | **`UiReactWireRuleHelper`**, **`UiReactWireRule`** family, **`wire_rules`** on P5.1 control set, diagnostics, example migration per [`WIRING_LAYER.md`](WIRING_LAYER.md). Sub-milestones: **P5.1** (core), **P5.2** (dock wire editor, **CB-035**). |
 | **P6.1** | Declarative Actions | **`action_targets`**, **`UiReactActionTarget`**, **`UiReactActionTargetHelper`** on **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** hosts **and** **`UiReactButton`** / **`UiReactTextureButton`** ([`ACTION_LAYER.md`](ACTION_LAYER.md) §4); validator/scanner; runnable example merged into **`inventory_screen_demo.tscn`**. **Normative** [`ACTION_LAYER.md`](ACTION_LAYER.md). Ships **after** P5.1 wiring core. |
-| **P6+** | Deferred parking | Virtualization, runtime state overlay (**CB-018** remainder), major dock modularization, first-class command resource, deep undo stacks—**not sequenced** until promoted from the Appendix; see **CB-005**, **CB-007**, **CB-010**, **CB-018** / **CB-018A**, **CB-019**, and other rows with Target phase **P6+**. |
+| **P6.2** | Promoted breadth (planned) | Scoped parity and tooling tranches promoted from backlog: **Slider/SpinBox/ProgressBar declarative breadth** (**CB-060**) and **CB-053** tranche 1/2 (bulk helpers + graph/dock action authoring ergonomics). |
+| **P6.3** | Promoted architecture (planned) | First-class command resource (**CB-007**), runtime graph/live overlay observer slice (**CB-018** remainder), and rich grid/slot framework baseline (**CB-059**) with staged, example-first delivery. |
+| **P6+** | Deferred parking | Virtualization, deep undo stacks, and additional non-sequenced backlog not yet promoted; see **CB-005**, **CB-010**, **CB-019**, and Appendix rows that remain `Deferred`. |
 
 ```mermaid
 flowchart LR
@@ -90,13 +103,15 @@ flowchart LR
   P4[P4_NewControls]
   P5[P5_WiringLayer]
   P61[P6.1_Actions]
-  P6[P6_Deferred]
+  P62[P6.2_PromotedBreadth]
+  P63[P6.3_PromotedArchitecture]
+  P6[P6plus_Deferred]
   P0 --> P1 --> P2 --> P3
   P2 --> P4
   P3 --> P4
   P4 --> P5
   P5 --> P61
-  P61 --> P6
+  P61 --> P62 --> P63 --> P6
 ```
 
 ### Screen coverage matrix (honest)
@@ -197,9 +212,9 @@ Normative **parity** reference for **`animation_targets`**, **`action_targets`**
 | `UiReactItemList` | ● | ● | ● | §5 host. |
 | `UiReactTree` | ● | ● | ● | §5 host. |
 | `UiReactTransactionalActions` | — | ● | ● | **Deprecated** — prefer **`UiReactButton`** **`transactional_host`**. State-driven **`action_targets`** only ([`ACTION_LAYER.md`](ACTION_LAYER.md) §3.1.1); **`wire_rules`** for orchestration. |
-| `UiReactSlider` | ● | — | — | Value-centric control; **Actions** / **Wiring** widen via **†** + Appendix only after **Charter** **evidence bar** (matrix **plus** official example). |
-| `UiReactSpinBox` | ● | — | — | Same as **Slider**. |
-| `UiReactProgressBar` | ● | — | — | Same; **`COMPLETED`** trigger for anims. |
+| `UiReactSlider` | ● | † | † | Value-centric control; promotion planned under **CB-060** (P6.2) with strict validator constraints and example evidence before closure. |
+| `UiReactSpinBox` | ● | † | † | Same as **Slider** (P6.2 planned via **CB-060**). |
+| `UiReactProgressBar` | ● | † | † | Same; **`COMPLETED`** trigger for anims. Declarative breadth promotion planned via **CB-060**. |
 | `UiReactLabel` | ● | — | — | **Display sink** (**`text_state`**); not a **`UiReactWireRule`** trigger host. **`action_targets`** out of scope (use parent **`Control`** / §5 hosts). |
 | `UiReactRichTextLabel` | ● | — | — | Same as **Label**. |
 | `UiReactOptionButton` | ● | ● | ● | §5 + **ACTION** §4; **`options_transactional_demo.tscn`** (**CB-054**). |
@@ -221,7 +236,7 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-004 | Explicit dependency / recalc rules (documented) | Same as CB-003 | P2 | Done | Same release as CB-003; cap **32** **`sources`**, no solver (README **Computed state**). |
 | CB-005 | Undo stack / nested transactions | Advanced options | P6+ | Deferred | Not v1.0 scope; promote if needed. |
 | CB-006 | Command pattern **as docs + example** (not mandatory core API) | Shop buy/sell, equip confirm | P1–P2 | Done | README **Imperative actions**; **`shop_computed_demo.tscn`** (**`action_targets`** buy). **2.3.0** + later **SUBTRACT_PRODUCT_FROM_FLOAT**. No **`UiCommand`** in core. |
-| CB-007 | First-class command resource (e.g. `UiCommand`) | Same | P6+ | Deferred | Only after doc pattern proves shape. |
+| CB-007 | First-class command resource (e.g. `UiCommand`) | Shop buy/sell, equip confirm, modal submit flows | P6.3 | Planned | Promoted **2026-04-17**. Scope: typed command resources and validator-visible schemas (no raw `call`/`emit_signal` strings as primary API). Complements **Action** layer; does not collapse layer boundaries. |
 | CB-008 | Richer `ItemList` / icons | Inventory, shop list | P3 | Done | **`UiReactItemList`** dictionary rows **`label`/`text`** + optional **`icon`**; **`inventory_screen_demo.tscn`** uses **`res://icon.svg`** on a sample row. **2.3.0**. |
 | CB-009 | Row template / static body pattern (docs + example) | Inventory, shop, loot | P3 | Done | README **List patterns (P3)** + **`inventory_screen_demo.tscn`**. **2.2.1**. |
 | CB-010 | Virtualization / paging | Huge inventories | P6+ | Deferred | Measure need first. |
@@ -232,7 +247,7 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-015 | `ItemList` `disabled_state` no-op — documented workaround | Any list that needs gating | P3 | Done | README **List patterns (P3)** + **`inventory_screen_demo.tscn`** overlay + **`action_targets`** **`SET_MOUSE_FILTER`**. **2.2.1**. |
 | CB-016 | Screen transition presets (documentation / thin helper) | Main menu, pause | P2–P3 | Done | README **Screen transitions**; **`UiAnimUtils.Preset`**. **2.3.0**. |
 | CB-017 | Modal / focus-trap recipe | Confirm dialogs, popups | P3 | Done | README **Modals, popups, and focus** + Godot doc links. **2.3.0**. |
-| CB-018 | State graph / debug overlay (editor or runtime) | Development | P6+ | Deferred | **Editor MVP** shipped as **CB-018A** (**Dependency Graph** dock tab). Runtime / live overlay still deferred. |
+| CB-018 | State graph / debug overlay (editor or runtime) | Development | P6.3 | Planned | Promoted **2026-04-17** for runtime observer slice. **Editor MVP** shipped as **CB-018A**; planned runtime scope is read-only live overlay (state/rule/action traces) before any runtime editing. |
 | CB-018A | Explain graph (editor): bindings + wiring + computeds + static cycle hints | Development | P6+ | Done | **`UiReactDockExplainPanel`**, **`UiReactExplainGraphBuilder`**, **`UiReactWireRuleIntrospection`** (shared with **`UiReactStateReferenceCollector`**). No new control exports. |
 | CB-018A.1 | Explain visual graph (editor): scoped graph + details pane | Development | P6+ | Done | **`UiReactExplainGraphLayout`**, **`UiReactExplainGraphView`**; **Text** / **Visual** modes; read-only; caps + pan/zoom. |
 | CB-018A.2 | Explain visual graph readability (editor): orthogonal routes, short labels, bottom details, filters | Development | P6+ | Done | **CB-018A.1** surfaces only; **Manhattan** routing + **lanes**, **adaptive** gaps, **framed** canvas, **hover/selection** focus, **breadcrumb**, edge-kind toggles. |
@@ -273,13 +288,15 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-050 | **`action_targets`** on **`UiReactTextureButton`** | Inventory, hotbar, icon buttons | P6+ | Done | **2.17.0:** export + **`apply_validated_actions_and_merge_triggers`**, **`sync_initial_state`**, **`run_actions`**; **[`ACTION_LAYER.md`](ACTION_LAYER.md)** / **[`WIRING_LAYER.md`](WIRING_LAYER.md)** / README updated. |
 | CB-051 | **Action layer:** expand **`UiReactActionKind`** + **`UiReactStateOpService`** (whitelisted math beyond **`SUBTRACT_PRODUCT_FROM_FLOAT`**) | Shop, crafting, any “add / transfer / int” UI | P6+ | Done | **`ADD_PRODUCT_TO_FLOAT`**, **`TRANSFER_FLOAT_PRODUCT_CLAMPED`**, **`ADD_PRODUCT_TO_INT`**, **`TRANSFER_INT_PRODUCT_CLAMPED`** + service helpers; **normative [`ACTION_LAYER.md`](ACTION_LAYER.md)**; dock validator; **`shop_computed_demo.tscn`**. **2.21.0**. |
 | CB-052 | **`UiReact*`** baseline surface parity | All inspector-driven screens | P6+ | Done | **Inspector surface matrix (CB-052)** closed: **Label**/**RichText** **`action_targets`** → **—**; **OptionButton** / **TabContainer** via **CB-054** / **CB-055** + **`options_transactional_demo.tscn`**. |
-| CB-053 | **Plugin / designer UX (post-parity)** | Editor | P6+ | Deferred | **Non-blocking** until core parity settled: e.g. richer dock (**CB-035**), graph-style views (**see CB-058**), bulk **`UiAnimTarget`** row generation from list/tree row counts, designer-friendly hooks into gameplay—promote rows when scoped. |
+| CB-053 | **Plugin / designer UX (post-parity)** | Editor | P6.2 | Planned | Promoted **2026-04-17**. Tranche plan: (1) bulk **`UiAnimTarget`** row helpers; (2) graph/dock ergonomics for action authoring; (3) typed designer-friendly gameplay hook UX coordinated with **CB-007**. |
 | CB-054 | **`wire_rules`** + **`action_targets`** on **`UiReactOptionButton`** | Options, settings | P6+ | Done | **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5**, **[`ACTION_LAYER.md`](ACTION_LAYER.md) §4**, **`ui_react_wire_rule_helper.gd`**; **`options_transactional_demo.tscn`**. Subsumes matrix **†** for this host. |
 | CB-055 | **`wire_rules`** + **`action_targets`** on **`UiReactTabContainer`** | Tabbed settings | P6+ | Done | Same as **CB-054** for **`UiReactTabContainer`**; **`options_transactional_demo.tscn`**. |
 | CB-056 | **`SET_VISIBLE`** branches on **`state_watch`** (`visible_when_true` / `visible_when_false`) | Presentation | P6.1 | Done | **[`ACTION_LAYER.md`](ACTION_LAYER.md)** §3; **`ui_react_action_target.gd`** / **`ui_react_action_target_helper.gd`**; **`options_transactional_demo.tscn`** (**CB056DemoToggle**). **2.19.0**; **`state_watch`** dispatch fix **`_install_state_watch_bindings`** (**2.19.1**). |
 | CB-057 | Transactional Apply/Cancel on **`UiReactButton`** + **`UiReactTransactionalSession`** | Options | P1 | Done | **`UiTransactionalScreenConfig`**, cohort refcount, dock **`validate_transactional_under_root`**; **`UiReactTransactionalActions`** deprecated; **`options_transactional_demo.tscn`** migrated off coordinator node. **2.20.0**. |
 | CB-058 | **Wiring** workbench (visual orchestration; **no** parallel format) | Editor | P6+ | Planned | **CB-018A** snapshot + canvas authoring (reconnect, new link, rebinds, undo refresh). **Shipped:** **Wiring** tab (**Dependency Graph** + **`wire_rules`** list), in-tab **rule_id** / **enabled** / **trigger** on wire edges. **Target:** more in-tab payloads, resource factories, scope polish. **Runtime** graph: **CB-018**. Normative narrative: Part I **North star** + **Visual wiring graph**. |
+| CB-059 | Rich grid/slot framework baseline | Equipment, inventory slots, hotbar-like layouts | P6.3 | Planned | Promoted **2026-04-17**. Phase-1 scope: documented slot-grid primitives + one canonical official example; virtualization and massive datasets stay under **CB-010**. |
+| CB-060 | Declarative breadth on `UiReactSlider` / `UiReactSpinBox` / `UiReactProgressBar` | Options, HUD meters, shop quantity/value panels | P6.2 | Planned | Promoted **2026-04-17**. Planned widening to **`wire_rules`** and selective **`action_targets`** with strict trigger/validator constraints and official-example evidence before matrix cells move from **†** to **●**. |
 
 ---
 
-*Last updated: 2026-04-09 — **North star:** **Wiring** tab (**Dependency Graph** + **`wire_rules`** list) as **blessed designer workbench** (Inspector remains full parity). **CB-058:** shipped reconnect, **2b** new link, rebinds, disconnects, **version_changed** refresh, **Wiring** tab merge, **enabled**/**trigger** on wire edges. **Next:** more in-tab payloads, factories, scope polish. **CB-018A.5**–**CB-018A** graph lineage unchanged. **CB-053** deferred. Quarterly review: **Review process** → **Last quarterly review**. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Examples remain **four** scenes.*
+*Last updated: 2026-04-17 — **North star:** **Wiring** tab (**Dependency Graph** + **`wire_rules`** list) as **blessed designer workbench** (Inspector remains full parity). **CB-058:** shipped reconnect, **2b** new link, rebinds, disconnects, **version_changed** refresh, **Wiring** tab merge, **enabled**/**trigger** on wire edges. **Promotion slate:** **CB-053**, **CB-007**, **CB-018** runtime slice, **CB-059**, **CB-060** moved from deferred to planned (P6.2/P6.3 sequencing; committed direction, non-release-committal). Quarterly review: **Review process** → **Last quarterly review**. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Examples remain **four** scenes.*

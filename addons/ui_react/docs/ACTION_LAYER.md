@@ -105,7 +105,8 @@ Fields:
 9. **`TRANSFER_INT_PRODUCT_CLAMPED`** — **`state_watch` must be null**. On **`trigger`**, **`UiReactStateOpService.transfer_int_product_clamped(int_from, int_to, int_factor_a, int_factor_b)`** — same clamped transfer semantics as (7) for **`UiIntState`** pools, with overflow-safe math.
 10. **`SET_FLOAT_LITERAL`** — **`state_watch` must be null**. On **`trigger`**, **`UiReactStateOpService.set_float_literal(float_literal_target, float_literal_value)`**.
 
-**Out of scope (non-goals):** presets invoking `UiAnimTarget.apply`, `UiAnimUtils`, parallel row groups, `emit_signal` / `call` by name/string, `UiReactActionRunner`, action hub, dock graph editor, watching **non-bool** state as dispatch sources for **numeric** mutators—defer **P6.2+**. (**`state_watch: UiBoolState`** **is** in v1 for the four **presentation** presets.)
+**Out of scope (non-goals):** presets invoking `UiAnimTarget.apply`, `UiAnimUtils`, parallel row groups, `emit_signal` / `call` by name/string, `UiReactActionRunner`, action hub, dock graph editor, watching **non-bool** state as dispatch sources for **numeric** mutators—defer **P6.2+**. (**`state_watch: UiBoolState`** **is** in v1 for the four **presentation** presets.)  
+**Promotion note (2026-04-17):** planned **first-class commands** (**ROADMAP CB-007**) are a **complementary layer** for domain/imperative flows; they do **not** widen `action_targets` into arbitrary script dispatch. The §2 layer boundary remains normative unless superseded by a later revision.
 
 ### 3.3 No separate “chain” or step subclass types (v1)
 
