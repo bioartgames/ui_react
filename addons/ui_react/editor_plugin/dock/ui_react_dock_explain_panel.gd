@@ -178,6 +178,9 @@ var _last_snap: Variant = null
 var _last_focus_id: String = ""
 ## Scene-relative path for the graph scope host ([method refresh] selection); for wire list focus guard.
 var _last_focus_host_path: String = ""
+## Last successful [method refresh] wiring scope for [method capture_wiring_session_for_persist] (cleared in [method _clear_stale_snapshot]).
+var _session_scene_path: String = ""
+var _session_scope_node_path: String = ""
 var _last_layout: Dictionary = {}
 var _narrative_cache: Dictionary = {}
 var _show_full_lists: bool = false
@@ -292,6 +295,63 @@ func refresh() -> void:
 	_last_focus_host_path = str(hp)
 
 	_apply_visual_from_snap_safe(snap, _last_focus_id)
+
+	_session_scene_path = String(root.scene_file_path)
+	_session_scope_node_path = str(hp)
+
+
+func capture_wiring_session_for_persist() -> void:
+	if _session_scope_node_path.is_empty():
+		UiReactDockConfig.save_wiring_restore_state("", "", "")
+		return
+	var graph_id := ""
+	if _selection_kind == _SEL_NODE and not _graph_selected_node_id.is_empty():
+		graph_id = _graph_selected_node_id
+	UiReactDockConfig.save_wiring_restore_state(_session_scene_path, _session_scope_node_path, graph_id)
+
+
+## Returns [code]true[/code] if this method ran [method refresh] (session restore path). [code]false[/code] if it exited early so the dock may call [method UiReactDockWiringPanel.refresh] as fallback.
+func restore_wiring_session_from_project_settings() -> bool:
+	if _plugin == null or _graph_view == null:
+		return false
+	var ei := _plugin.get_editor_interface()
+	var root := ei.get_edited_scene_root()
+	if root == null:
+		return false
+	var stored_scene := String(
+		ProjectSettings.get_setting(UiReactDockConfig.KEY_WIRING_LAST_SCENE_PATH, "")
+	)
+	var stored_scope_node_path := String(
+		ProjectSettings.get_setting(UiReactDockConfig.KEY_WIRING_LAST_SCOPE_NODE_PATH, "")
+	)
+	var stored_graph_node_id := String(
+		ProjectSettings.get_setting(UiReactDockConfig.KEY_WIRING_LAST_GRAPH_NODE_ID, "")
+	)
+	var cur_scene := String(root.scene_file_path)
+	if stored_scene != cur_scene:
+		return false
+	if stored_scope_node_path.is_empty():
+		return false
+	if not root.has_node(NodePath(stored_scope_node_path)):
+		return false
+	var scope_node: Node = root.get_node(NodePath(stored_scope_node_path))
+	if not (scope_node is Control):
+		return false
+	if not UiReactScannerService.is_react_node(scope_node):
+		return false
+	if not (scope_node == root or root.is_ancestor_of(scope_node)):
+		return false
+	ei.get_selection().clear()
+	ei.get_selection().add_node(scope_node)
+	refresh()
+	if stored_graph_node_id.is_empty():
+		return true
+	var nb: Dictionary = _last_layout.get(&"node_by_id", {}) as Dictionary
+	if not nb.has(stored_graph_node_id):
+		return true
+	if _graph_view.has_method(&"select_node_by_id"):
+		_graph_view.call(&"select_node_by_id", stored_graph_node_id)
+	return true
 
 
 func _on_editor_selection_changed() -> void:
@@ -4732,6 +4792,8 @@ func _clear_stale_snapshot() -> void:
 	_last_snap = null
 	_last_layout.clear()
 	_last_focus_id = ""
+	_session_scene_path = ""
+	_session_scope_node_path = ""
 	_narrative_cache.clear()
 	_graph_selected_node_id = ""
 	_graph_selected_edge_index = -1

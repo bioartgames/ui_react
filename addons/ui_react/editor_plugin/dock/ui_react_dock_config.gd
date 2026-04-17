@@ -23,6 +23,16 @@ const KEY_GRAPH_ACTIVE_SCOPE_PRESET := "ui_react/plugin_graph_active_scope_prese
 const KEY_GRAPH_BODY_VSPLIT_OFFSET := "ui_react/plugin_graph_body_vsplit_offset"
 ## Whether the graph color key row is visible by default (toggle persists).
 const KEY_GRAPH_LEGEND_VISIBLE := "ui_react/plugin_graph_legend_visible"
+## Last dock tab: [code]0[/code] Diagnostics, [code]1[/code] Wiring.
+const KEY_DOCK_LAST_TAB := "ui_react/plugin_dock_last_tab"
+## Last edited scene [code]scene_file_path[/code] when Wiring session was captured.
+const KEY_WIRING_LAST_SCENE_PATH := "ui_react/plugin_wiring_last_scene_path"
+## Scene-root-relative [code]NodePath[/code] string for Wiring scope [code]Control[/code].
+const KEY_WIRING_LAST_SCOPE_NODE_PATH := "ui_react/plugin_wiring_last_scope_node_path"
+## Last graph node id ([code]ctrl:[/code]… / [code]state:[/code]…) when selection was a node; empty otherwise.
+const KEY_WIRING_LAST_GRAPH_NODE_ID := "ui_react/plugin_wiring_last_graph_node_id"
+
+const DEF_DOCK_LAST_TAB := 0
 
 const DEF_SHOW_ERRORS := true
 const DEF_SHOW_WARNINGS := true
@@ -35,6 +45,15 @@ static func save_ui_preference(key: String, value: Variant) -> void:
 	var err := ProjectSettings.save()
 	if err != OK:
 		push_warning("UiReactDockConfig: could not save project settings (%s)" % key)
+
+
+static func save_wiring_restore_state(scene_path: String, scope_node_path: String, graph_node_id: String) -> void:
+	ProjectSettings.set_setting(KEY_WIRING_LAST_SCENE_PATH, scene_path)
+	ProjectSettings.set_setting(KEY_WIRING_LAST_SCOPE_NODE_PATH, scope_node_path)
+	ProjectSettings.set_setting(KEY_WIRING_LAST_GRAPH_NODE_ID, graph_node_id)
+	var err := ProjectSettings.save()
+	if err != OK:
+		push_warning("UiReactDockConfig: could not save wiring restore state")
 
 
 static func register_default_project_settings() -> void:
@@ -74,6 +93,18 @@ static func register_default_project_settings() -> void:
 		added_defaults = true
 	if not ProjectSettings.has_setting(KEY_GRAPH_LEGEND_VISIBLE):
 		ProjectSettings.set_setting(KEY_GRAPH_LEGEND_VISIBLE, true)
+		added_defaults = true
+	if not ProjectSettings.has_setting(KEY_DOCK_LAST_TAB):
+		ProjectSettings.set_setting(KEY_DOCK_LAST_TAB, DEF_DOCK_LAST_TAB)
+		added_defaults = true
+	if not ProjectSettings.has_setting(KEY_WIRING_LAST_SCENE_PATH):
+		ProjectSettings.set_setting(KEY_WIRING_LAST_SCENE_PATH, "")
+		added_defaults = true
+	if not ProjectSettings.has_setting(KEY_WIRING_LAST_SCOPE_NODE_PATH):
+		ProjectSettings.set_setting(KEY_WIRING_LAST_SCOPE_NODE_PATH, "")
+		added_defaults = true
+	if not ProjectSettings.has_setting(KEY_WIRING_LAST_GRAPH_NODE_ID):
+		ProjectSettings.set_setting(KEY_WIRING_LAST_GRAPH_NODE_ID, "")
 		added_defaults = true
 	if added_defaults:
 		var err := ProjectSettings.save()
@@ -116,6 +147,14 @@ static func load_into(dock: UiReactDock) -> void:
 		dock._auto_refresh.button_pressed = bool(ProjectSettings.get_setting(KEY_AUTO_REFRESH, DEF_AUTO_REFRESH))
 	if dock._path_edit:
 		dock._path_edit.text = UiReactStateFactoryService.default_output_dir()
+
+	var tab_raw: Variant = ProjectSettings.get_setting(KEY_DOCK_LAST_TAB, DEF_DOCK_LAST_TAB)
+	var tab_id: int = int(tab_raw) if typeof(tab_raw) in [TYPE_INT, TYPE_FLOAT] else DEF_DOCK_LAST_TAB
+	if tab_id != 0 and tab_id != 1:
+		tab_id = DEF_DOCK_LAST_TAB
+	if dock._tabs:
+		dock._tabs.current_tab = tab_id
+		dock._last_tab_for_persist = tab_id
 
 	dock._suppress_pref_save = false
 

@@ -30,3 +30,14 @@ func setup(plugin: EditorPlugin, actions: UiReactActionController, request_dock_
 func refresh() -> void:
 	if _explain != null and _explain.has_method(&"refresh"):
 		_explain.call(&"refresh")
+
+
+func capture_session_for_persist() -> void:
+	if _explain != null and _explain.has_method(&"capture_wiring_session_for_persist"):
+		_explain.call(&"capture_wiring_session_for_persist")
+
+
+func restore_session_from_settings() -> bool:
+	if _explain != null and _explain.has_method(&"restore_wiring_session_from_project_settings"):
+		return _explain.call(&"restore_wiring_session_from_project_settings") as bool
+	return false

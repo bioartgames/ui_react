@@ -34,3 +34,7 @@ plugin_graph_active_scope_preset_name="Pinned scope"
 plugin_graph_body_vsplit_offset=160
 plugin_graph_legend_visible=true
 plugin_graph_body_hsplit_offset=-1
+plugin_dock_last_tab=1
+plugin_wiring_last_scene_path=""
+plugin_wiring_last_scope_node_path=""
+plugin_wiring_last_graph_node_id=""

@@ -4,6 +4,10 @@ class_name UiReactDock
 
 const _WiringPanelScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_wiring_panel.gd")
 
+const TAB_DIAGNOSTICS := 0
+const TAB_WIRING := 1
+const _DIAG_TAB_BASE := "Diagnostics"
+
 const _EMPTY_ISSUES_NO_DIAGNOSTICS := "No issues reported for the current scan."
 const _EMPTY_ISSUES_FILTERED := "No issues match the current filters or search."
 
@@ -57,6 +61,10 @@ var _replace_confirm_dialog: ConfirmationDialog
 var _tabs: TabContainer
 ## [UiReactDockWiringPanel] — graph + wire rules workbench (**CB-058** tab merge).
 var _wiring_panel: Variant = null
+## Tracks previous tab for persist-on-leave-Wiring; aligned with [member TabContainer.current_tab] after loads.
+var _last_tab_for_persist: int = TAB_DIAGNOSTICS
+## Last value applied to the Diagnostics tab title; avoids redundant [method TabContainer.set_tab_title] calls.
+var _last_diagnostics_title_count: int = -1
 
 ## group_key -> expanded (for grouped view)
 var _group_expanded: Dictionary = {}
@@ -73,6 +81,7 @@ func setup(plugin: EditorPlugin) -> void:
 	_ignored_unused_state_paths = UiReactDockConfig.load_ignored_unused_state_paths_dict()
 	_connect_editor_signals()
 	call_deferred(&"_run_startup_refresh")
+	call_deferred(&"_deferred_wiring_tab_activate")
 
 
 func request_refresh(_reason: StringName = &"manual") -> void:
@@ -98,6 +107,8 @@ func _on_undo_redo_version_changed() -> void:
 
 func _flush_undo_redo_graph_refresh() -> void:
 	_undo_redo_graph_refresh_pending = false
+	if _tabs == null or _tabs.current_tab != TAB_WIRING:
+		return
 	if _wiring_panel != null and _wiring_panel.has_method(&"refresh"):
 		_wiring_panel.call(&"refresh")
 
@@ -109,8 +120,8 @@ func _run_startup_refresh() -> void:
 
 ## Called from [EditorPlugin] when the edited scene tab changes (open/switch/empty).
 func notify_edited_scene_changed() -> void:
-	if _wiring_panel != null and _wiring_panel.has_method(&"refresh"):
-		_wiring_panel.call(&"refresh")
+	if _tabs != null and _tabs.current_tab == TAB_WIRING:
+		call_deferred(&"_deferred_wiring_tab_activate")
 	request_refresh(&"scene_changed")
 
 
@@ -141,7 +152,7 @@ func _build_ui() -> void:
 	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.clip_contents = true
 	_tabs.add_child(vbox)
-	_tabs.set_tab_title(0, "Diagnostics")
+	_update_diagnostics_tab_title()
 
 	var wiring = _WiringPanelScript.new()
 	wiring.setup(_plugin, _actions, func(): request_refresh(&"dependency_graph_edit"))
@@ -393,8 +404,36 @@ func _on_selection_changed() -> void:
 
 
 func _on_tabs_tab_selected(tab_idx: int) -> void:
-	if _wiring_panel != null and tab_idx == 1 and _wiring_panel.has_method(&"refresh"):
+	var prev := _last_tab_for_persist
+	if not _suppress_pref_save:
+		if prev == TAB_WIRING and tab_idx != TAB_WIRING:
+			if _wiring_panel != null and _wiring_panel.has_method(&"capture_session_for_persist"):
+				_wiring_panel.call(&"capture_session_for_persist")
+		UiReactDockConfig.save_ui_preference(UiReactDockConfig.KEY_DOCK_LAST_TAB, tab_idx)
+	_last_tab_for_persist = tab_idx
+	if tab_idx == TAB_WIRING and not _suppress_pref_save:
+		call_deferred(&"_deferred_wiring_tab_activate")
+
+
+func _deferred_wiring_tab_activate() -> void:
+	if _tabs == null or _tabs.current_tab != TAB_WIRING:
+		return
+	if _wiring_panel != null and _wiring_panel.has_method(&"restore_session_from_settings"):
+		var restored: Variant = _wiring_panel.call(&"restore_session_from_settings")
+		if restored is bool and (restored as bool):
+			return
+	if _wiring_panel != null and _wiring_panel.has_method(&"refresh"):
 		_wiring_panel.call(&"refresh")
+
+
+func _update_diagnostics_tab_title() -> void:
+	if _tabs == null:
+		return
+	var n := _issues_shown.size()
+	if n == _last_diagnostics_title_count:
+		return
+	_last_diagnostics_title_count = n
+	_tabs.set_tab_title(TAB_DIAGNOSTICS, "%s (%d)" % [_DIAG_TAB_BASE, n])
 
 
 func _on_editor_filesystem_changed() -> void:
@@ -625,6 +664,7 @@ func _apply_filters() -> void:
 
 	_update_bottom_action_buttons()
 	_issue_list.rebuild()
+	_update_diagnostics_tab_title()
 
 
 func _on_row_fix(flat_index: int) -> void:
