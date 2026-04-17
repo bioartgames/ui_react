@@ -15,6 +15,7 @@ const NODE_RADIUS_CONTROL := 6
 const NODE_RADIUS_COMPUTED := 2
 
 const LANE_SEP := 14.0
+const PINNED_ISLAND_GAP_PX := 100.0
 
 
 ## Corner radius for dependency graph node fills (canvas + legend); pill radius derives from [member NODE_HALF_H].
@@ -91,25 +92,117 @@ static func layout_snapshot(
 			edges_capped = true
 			break
 
+	var pin_set := _to_id_set(extra_scope_ids)
+	var comp_info := _compute_components(node_by_id, scoped_edges)
+	var comp_of: Dictionary = comp_info.get(&"comp_of", {}) as Dictionary
+	var nodes_by_comp: Dictionary = comp_info.get(&"nodes_by_comp", {}) as Dictionary
+	var focus_comp: int = int(comp_of.get(focus_control_id, 0))
+
+	var merged_node_ids: Dictionary = {}
+	for id0: Variant in node_by_id:
+		var ids0 := String(id0)
+		var cid := int(comp_of.get(ids0, focus_comp))
+		if cid == focus_comp or _component_has_pin(nodes_by_comp, cid, pin_set):
+			merged_node_ids[ids0] = true
+
 	var nodes_capped := false
-	if node_by_id.size() > max_nodes:
-		var kept: Dictionary = {}
-		kept[focus_control_id] = node_by_id[focus_control_id]
-		var rest: Array[String] = []
-		for k: Variant in node_by_id:
-			var ks := String(k)
-			if ks == focus_control_id:
-				continue
-			rest.append(ks)
-		rest.sort()
-		for i in range(mini(rest.size(), max_nodes - 1)):
-			kept[rest[i]] = node_by_id[rest[i]]
-		node_by_id = kept
+	var n_final := _truncate_merged_ids(merged_node_ids, pin_set, focus_control_id, max_nodes)
+	if n_final.size() < merged_node_ids.size():
 		nodes_capped = true
 
+	var merged_edges := _filter_edges_to_nodes(scoped_edges, n_final)
+	var comp_final := _compute_components(_subset_nodes(node_by_id, n_final), merged_edges)
+	var comp_of_final: Dictionary = comp_final.get(&"comp_of", {}) as Dictionary
+	var nodes_by_comp_final: Dictionary = comp_final.get(&"nodes_by_comp", {}) as Dictionary
+	var focus_comp_final: int = int(comp_of_final.get(focus_control_id, 0))
+
+	var focus_ids: Dictionary = {}
+	var island_ids_by_root: Dictionary = {}
+	for id1: Variant in n_final:
+		var ids1 := String(id1)
+		var cid1 := int(comp_of_final.get(ids1, focus_comp_final))
+		if cid1 == focus_comp_final:
+			focus_ids[ids1] = true
+			continue
+		if not _component_has_pin(nodes_by_comp_final, cid1, pin_set):
+			continue
+		var root_id := _component_root_id(nodes_by_comp_final, cid1, pin_set)
+		if root_id.is_empty():
+			continue
+		if not island_ids_by_root.has(root_id):
+			island_ids_by_root[root_id] = {} as Dictionary
+		var island_set: Dictionary = island_ids_by_root[root_id] as Dictionary
+		island_set[ids1] = true
+		island_ids_by_root[root_id] = island_set
+
+	var focus_nodes := _subset_nodes(node_by_id, focus_ids)
+	var focus_edges := _filter_edges_to_nodes(merged_edges, focus_ids)
+	var focus_pack := _layout_directed_spine_block(focus_nodes, focus_edges, focus_control_id)
+
+	var merged_centers: Dictionary = focus_pack.get(&"node_centers", {}) as Dictionary
+	var merged_node_by_id: Dictionary = focus_pack.get(&"node_by_id", {}) as Dictionary
+	var merged_draw_edges: Array[Dictionary] = focus_pack.get(&"draw_edges", []) as Array[Dictionary]
+	var node_layer_out: Dictionary = {}
+	var focus_layer: Dictionary = focus_pack.get(&"layer", {}) as Dictionary
+	for lk: Variant in focus_layer:
+		node_layer_out[String(lk)] = int(focus_layer[lk])
+
+	var focus_bbox := _axis_aligned_bbox_from_centers(merged_centers)
+	var cursor_x := focus_bbox.position.x + focus_bbox.size.x + PINNED_ISLAND_GAP_PX
+	var roots: Array[String] = []
+	for rk: Variant in island_ids_by_root:
+		roots.append(String(rk))
+	roots.sort()
+	for root: String in roots:
+		var island_ids: Dictionary = island_ids_by_root[root] as Dictionary
+		var island_nodes := _subset_nodes(node_by_id, island_ids)
+		var island_edges := _filter_edges_to_nodes(merged_edges, island_ids)
+		var island_pack := _layout_directed_spine_block(island_nodes, island_edges, root)
+		var island_centers: Dictionary = island_pack.get(&"node_centers", {}) as Dictionary
+		var island_bbox := _axis_aligned_bbox_from_centers(island_centers)
+		var dy_align := focus_bbox.get_center().y - island_bbox.get_center().y
+		var shift := Vector2(cursor_x - island_bbox.position.x, dy_align)
+		_translate_centers(island_centers, shift)
+		var island_draw_edges: Array[Dictionary] = island_pack.get(&"draw_edges", []) as Array[Dictionary]
+		_translate_edges(island_draw_edges, shift)
+		var island_node_by_id: Dictionary = island_pack.get(&"node_by_id", {}) as Dictionary
+		for nk: Variant in island_centers:
+			merged_centers[String(nk)] = island_centers[nk]
+		for nk2: Variant in island_node_by_id:
+			merged_node_by_id[String(nk2)] = island_node_by_id[nk2]
+		merged_draw_edges.append_array(island_draw_edges)
+		var moved_bbox := _axis_aligned_bbox_from_centers(island_centers)
+		cursor_x = moved_bbox.position.x + moved_bbox.size.x + PINNED_ISLAND_GAP_PX
+
+	var n_scoped := merged_node_by_id.size()
+	var gaps: Vector2 = _adaptive_gaps(n_scoped)
+	var layer_gap: float = gaps.x
+	var row_gap: float = gaps.y
+	var truncated := nodes_capped or edges_capped
+	var n_draw_edges := merged_draw_edges.size()
+
+	return {
+		&"node_centers": merged_centers,
+		&"node_by_id": merged_node_by_id,
+		&"draw_edges": merged_draw_edges,
+		&"truncated": truncated,
+		&"note": "",
+		&"focus_id": focus_control_id,
+		&"layer_gap": layer_gap,
+		&"row_gap": row_gap,
+		&"node_layer": node_layer_out,
+		&"graph_stats": {
+			&"node_count": merged_node_by_id.size(),
+			&"edge_count": n_draw_edges,
+			&"truncated": truncated,
+		},
+	}
+
+
+static func _layout_directed_spine_block(nodes: Dictionary, edges: Array[Dictionary], layer_focus_id: String) -> Dictionary:
 	var pred: Dictionary = {}
 	var succ: Dictionary = {}
-	for ed: Dictionary in scoped_edges:
+	for ed: Dictionary in edges:
 		var fr := str(ed.get(&"from_id", ""))
 		var to := str(ed.get(&"to_id", ""))
 		if not pred.has(to):
@@ -119,14 +212,14 @@ static func layout_snapshot(
 			succ[fr] = [] as Array[String]
 		(succ[fr] as Array[String]).append(to)
 
-	var back_dist := _bfs_backward_from(focus_control_id, pred, node_by_id)
-	var seeds := _binding_sources_to_focus(scoped_edges, focus_control_id)
-	var seed_fwd := _bfs_forward_multisource(seeds, succ, node_by_id)
-	var focus_fwd := _bfs_forward_from(focus_control_id, succ, node_by_id)
+	var back_dist := _bfs_backward_from(layer_focus_id, pred, nodes)
+	var seeds := _binding_sources_to_focus(edges, layer_focus_id)
+	var seed_fwd := _bfs_forward_multisource(seeds, succ, nodes)
+	var focus_fwd := _bfs_forward_from(layer_focus_id, succ, nodes)
 	var fwd_combined := _min_dist_merge(seed_fwd, focus_fwd)
 
 	var layer: Dictionary = {}
-	for nid: Variant in node_by_id:
+	for nid: Variant in nodes:
 		var id := String(nid)
 		var bd: int = 999999
 		var fd: int = 999999
@@ -135,7 +228,7 @@ static func layout_snapshot(
 		if fwd_combined.has(id):
 			fd = int(fwd_combined[id])
 		var L := 0
-		if id == focus_control_id:
+		if id == layer_focus_id:
 			L = 0
 		elif bd < 999999 and fd < 999999:
 			L = -bd if bd <= fd else fd
@@ -145,23 +238,22 @@ static func layout_snapshot(
 			L = fd
 		else:
 			L = -512
+		if L == -512:
+			L = 0
 		layer[id] = L
 
-	var n_scoped := node_by_id.size()
-	var gaps: Vector2 = _adaptive_gaps(n_scoped)
+	var gaps: Vector2 = _adaptive_gaps(nodes.size())
 	var layer_gap: float = gaps.x
 	var row_gap: float = gaps.y
-
 	var by_layer: Dictionary = {}
-	for id: Variant in layer:
-		var L2: int = int(layer[id])
+	for id2: Variant in layer:
+		var L2: int = int(layer[id2])
 		if not by_layer.has(L2):
 			by_layer[L2] = [] as Array[String]
-		(by_layer[L2] as Array[String]).append(String(id))
-
+		(by_layer[L2] as Array[String]).append(String(id2))
 	for L3: Variant in by_layer:
 		var arr: Array[String] = by_layer[L3] as Array[String]
-		arr.sort_custom(func(a: String, b: String) -> bool: return _sort_key(node_by_id, a) < _sort_key(node_by_id, b))
+		arr.sort_custom(func(a: String, b: String) -> bool: return _sort_key(nodes, a) < _sort_key(nodes, b))
 
 	var layers_sorted: Array[int] = []
 	for L4: Variant in by_layer:
@@ -191,49 +283,225 @@ static func layout_snapshot(
 	for k2: Variant in node_centers:
 		node_centers[k2] = (node_centers[k2] as Vector2) + offset
 
-	for nid3: Variant in node_by_id:
+	var out_nodes: Dictionary = {}
+	for nid3: Variant in nodes:
 		var ids := String(nid3)
-		var d0: Dictionary = node_by_id[ids] as Dictionary
+		var d0: Dictionary = (nodes[ids] as Dictionary).duplicate(true)
 		var full_lab := str(d0.get(&"label", ids))
 		var kind0 := int(d0.get(&"kind", 0))
 		d0[&"short_label"] = _short_node_label(ids, kind0, full_lab)
-		node_by_id[ids] = d0
+		out_nodes[ids] = d0
 
 	var draw_edges: Array[Dictionary] = []
-	for ed2: Dictionary in scoped_edges:
+	for ed2: Dictionary in edges:
 		var fa := str(ed2.get(&"from_id", ""))
 		var ta := str(ed2.get(&"to_id", ""))
 		if not node_centers.has(fa) or not node_centers.has(ta):
 			continue
-		var k := int(ed2.get(&"kind", -1))
-		ed2[&"short_label"] = _short_edge_token(k)
-		draw_edges.append(ed2)
-
+		var copy := ed2.duplicate(true)
+		var k := int(copy.get(&"kind", -1))
+		copy[&"short_label"] = _short_edge_token(k)
+		draw_edges.append(copy)
 	_assign_routes(draw_edges, node_centers, layer)
-
-	var truncated := nodes_capped or edges_capped
-	var n_draw_edges := draw_edges.size()
-
-	var node_layer_out: Dictionary = {}
-	for lk: Variant in layer:
-		node_layer_out[String(lk)] = int(layer[lk])
 
 	return {
 		&"node_centers": node_centers,
-		&"node_by_id": node_by_id,
+		&"node_by_id": out_nodes,
 		&"draw_edges": draw_edges,
-		&"truncated": truncated,
-		&"note": "",
-		&"focus_id": focus_control_id,
-		&"layer_gap": layer_gap,
-		&"row_gap": row_gap,
-		&"node_layer": node_layer_out,
-		&"graph_stats": {
-			&"node_count": node_by_id.size(),
-			&"edge_count": n_draw_edges,
-			&"truncated": truncated,
-		},
+		&"layer": layer,
 	}
+
+
+static func _to_id_set(ids: PackedStringArray) -> Dictionary:
+	var out: Dictionary = {}
+	for i in range(ids.size()):
+		var id := String(ids[i]).strip_edges()
+		if id.is_empty():
+			continue
+		out[id] = true
+	return out
+
+
+static func _compute_components(nodes: Dictionary, edges: Array[Dictionary]) -> Dictionary:
+	var weak_adj: Dictionary = {}
+	for id: Variant in nodes:
+		weak_adj[String(id)] = {} as Dictionary
+	for ed: Dictionary in edges:
+		var fa := str(ed.get(&"from_id", ""))
+		var ta := str(ed.get(&"to_id", ""))
+		if not weak_adj.has(fa) or not weak_adj.has(ta):
+			continue
+		var a: Dictionary = weak_adj[fa] as Dictionary
+		a[ta] = true
+		weak_adj[fa] = a
+		var b: Dictionary = weak_adj[ta] as Dictionary
+		b[fa] = true
+		weak_adj[ta] = b
+
+	var sorted_ids: Array[String] = []
+	for id2: Variant in nodes:
+		sorted_ids.append(String(id2))
+	sorted_ids.sort()
+	var comp_of: Dictionary = {}
+	var nodes_by_comp: Dictionary = {}
+	var comp_index := 0
+	for id3: String in sorted_ids:
+		if comp_of.has(id3):
+			continue
+		var queue: Array[String] = [id3]
+		comp_of[id3] = comp_index
+		var members: Array[String] = []
+		while not queue.is_empty():
+			var cur: String = queue.pop_front() as String
+			members.append(cur)
+			var nbrs: Dictionary = weak_adj.get(cur, {}) as Dictionary
+			for nb: Variant in nbrs:
+				var nbs := String(nb)
+				if comp_of.has(nbs):
+					continue
+				comp_of[nbs] = comp_index
+				queue.append(nbs)
+		members.sort()
+		nodes_by_comp[comp_index] = members
+		comp_index += 1
+	return {
+		&"comp_of": comp_of,
+		&"nodes_by_comp": nodes_by_comp,
+	}
+
+
+static func _component_has_pin(nodes_by_comp: Dictionary, comp_id: int, pin_set: Dictionary) -> bool:
+	var members: Array[String] = []
+	var raw: Variant = nodes_by_comp.get(comp_id, [])
+	if raw is Array:
+		for item: Variant in raw:
+			members.append(String(item))
+	for id: String in members:
+		if pin_set.has(id):
+			return true
+	return false
+
+
+static func _component_root_id(nodes_by_comp: Dictionary, comp_id: int, pin_set: Dictionary) -> String:
+	var members: Array[String] = []
+	var raw: Variant = nodes_by_comp.get(comp_id, [])
+	if raw is Array:
+		for item: Variant in raw:
+			members.append(String(item))
+	if members.is_empty():
+		return ""
+	var pins: Array[String] = []
+	for id: String in members:
+		if pin_set.has(id):
+			pins.append(id)
+	if not pins.is_empty():
+		pins.sort()
+		return pins[0]
+	var copy := members.duplicate()
+	copy.sort()
+	return copy[0]
+
+
+static func _truncate_merged_ids(
+	merged_ids: Dictionary,
+	pin_set: Dictionary,
+	focus_id: String,
+	max_nodes: int,
+) -> Dictionary:
+	if merged_ids.size() <= max_nodes:
+		return merged_ids.duplicate(true)
+	var must: Dictionary = {}
+	must[focus_id] = true
+	for id: Variant in merged_ids:
+		var ids := String(id)
+		if pin_set.has(ids):
+			must[ids] = true
+	var keep: Dictionary = {}
+	keep[focus_id] = true
+	if must.size() > max_nodes:
+		var pin_ids: Array[String] = []
+		for id2: Variant in must:
+			var s2 := String(id2)
+			if s2 == focus_id:
+				continue
+			pin_ids.append(s2)
+		pin_ids.sort()
+		for i in range(mini(pin_ids.size(), maxi(0, max_nodes - 1))):
+			keep[pin_ids[i]] = true
+		return keep
+	for id3: Variant in must:
+		keep[String(id3)] = true
+	var rest: Array[String] = []
+	for id4: Variant in merged_ids:
+		var s4 := String(id4)
+		if keep.has(s4):
+			continue
+		rest.append(s4)
+	rest.sort()
+	var room := maxi(0, max_nodes - keep.size())
+	for i2 in range(mini(rest.size(), room)):
+		keep[rest[i2]] = true
+	return keep
+
+
+static func _subset_nodes(nodes: Dictionary, include_ids: Dictionary) -> Dictionary:
+	var out: Dictionary = {}
+	for id: Variant in include_ids:
+		var ids := String(id)
+		if nodes.has(ids):
+			out[ids] = (nodes[ids] as Dictionary).duplicate(true)
+	return out
+
+
+static func _filter_edges_to_nodes(edges: Array[Dictionary], include_ids: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for ed: Dictionary in edges:
+		var fa := str(ed.get(&"from_id", ""))
+		var ta := str(ed.get(&"to_id", ""))
+		if not include_ids.has(fa) or not include_ids.has(ta):
+			continue
+		out.append(ed.duplicate(true))
+	return out
+
+
+static func _axis_aligned_bbox_from_centers(node_centers: Dictionary) -> Rect2:
+	if node_centers.is_empty():
+		return Rect2(-NODE_HALF_W, -NODE_HALF_H, NODE_HALF_W * 2.0, NODE_HALF_H * 2.0)
+	var first := true
+	var min_x := 0.0
+	var max_x := 0.0
+	var min_y := 0.0
+	var max_y := 0.0
+	for v: Variant in node_centers.values():
+		var p := v as Vector2
+		if first:
+			min_x = p.x - NODE_HALF_W
+			max_x = p.x + NODE_HALF_W
+			min_y = p.y - NODE_HALF_H
+			max_y = p.y + NODE_HALF_H
+			first = false
+			continue
+		min_x = minf(min_x, p.x - NODE_HALF_W)
+		max_x = maxf(max_x, p.x + NODE_HALF_W)
+		min_y = minf(min_y, p.y - NODE_HALF_H)
+		max_y = maxf(max_y, p.y + NODE_HALF_H)
+	return Rect2(Vector2(min_x, min_y), Vector2(max_x - min_x, max_y - min_y))
+
+
+static func _translate_centers(node_centers: Dictionary, shift: Vector2) -> void:
+	for id: Variant in node_centers:
+		node_centers[id] = (node_centers[id] as Vector2) + shift
+
+
+static func _translate_edges(edges: Array[Dictionary], shift: Vector2) -> void:
+	for i in range(edges.size()):
+		var ed: Dictionary = edges[i]
+		var pts := ed.get(&"route_points", PackedVector2Array()) as PackedVector2Array
+		var moved := PackedVector2Array()
+		for p: Vector2 in pts:
+			moved.append(p + shift)
+		ed[&"route_points"] = moved
+		edges[i] = ed
 
 
 static func _adaptive_gaps(node_count: int) -> Vector2:
