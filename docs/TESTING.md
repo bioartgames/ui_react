@@ -1,0 +1,179 @@
+# Ui React — automated testing rollout (GUT)
+
+This document is the **ordered backlog** for **foundation** (pure logic) tests using [GUT](https://gut.readthedocs.io/) (Godot Unit Test, 9.x) in this project. **GUT “Run All” and CI** are the source of truth for what is actually covered; update the **Status** column here when layers land or scope changes.
+
+**Convention:** tests live under `addons/ui_react/tests/` (or subfolders), scripts extend `GutTest`, methods use the `test_` prefix. Configure dirs in `res://.gutconfig.json` when you add the suite.
+
+---
+
+## How to use this doc
+
+| Rule | Detail |
+|------|--------|
+| **Granularity** | Check off **layers** or **modules** when done—not every single assertion (avoid stale checklists). |
+| **Order** | Implement in the **Rollout order** below unless a dependency forces a small skip-then-return. |
+| **Truth** | If this file disagrees with a failing/passing GUT run, fix the tests or the code—not the prose alone. |
+
+---
+
+## Rollout order (recommended)
+
+Implement in this sequence so early layers need **no scene tree** (or only thin `TabContainer` setup at the end). Each step builds fixtures (`UiFloatState`, wire rules, action rows) reused later.
+
+| Step | Layer | Primary paths |
+|------|--------|----------------|
+| 1 | Typed `UiState` primitives | `addons/ui_react/scripts/api/models/ui_*_state.gd` |
+| 2 | `UiReactStateOpService` | `addons/ui_react/scripts/internal/react/ui_react_state_op_service.gd` |
+| 3 | `UiReactWireTemplate` | `addons/ui_react/scripts/internal/react/ui_react_wire_template.gd` |
+| 4 | `UiComputed*` | `addons/ui_react/scripts/api/models/ui_computed_*.gd` |
+| 5 | `UiTransactionalState` | `addons/ui_react/scripts/api/models/ui_transactional_state.gd` |
+| 6 | Wire rule `apply` / `apply_from_pulse` | `addons/ui_react/scripts/api/models/ui_react_wire_*.gd` |
+| 7 | `UiReactActionTargetHelper.validate_action_targets` (+ `collect_control_trigger_map`) | `addons/ui_react/scripts/internal/react/ui_react_action_target_helper.gd` |
+| 8 | `UiReactStateBindingHelper` | `addons/ui_react/scripts/internal/react/ui_react_state_binding_helper.gd` |
+| 9 | `UiReactValidatorCommon` | `addons/ui_react/editor_plugin/services/ui_react_validator_common.gd` |
+| 10 | Tab helpers **(thin UI)** | `ui_tab_selection_binding.gd`, `ui_tab_collection_sync.gd` |
+
+---
+
+## Layer 0 — Typed `UiState` primitives
+
+**Implemented:** GUT scripts under `addons/ui_react/tests/unit/state/` (see `test_ui_*_state.gd`, `test_gut_environment_smoke.gd`). **CLI** loads [`res://.gutconfig.json`](../.gutconfig.json) by default. The **GUT dock** may use its own saved config under `user://`; if Run All finds no tests, set the test directory to `res://addons/ui_react/tests` (include subfolders) or load the project `.gutconfig.json` from the GUT panel if available.
+
+| Status | Test focus | Why |
+|--------|------------|-----|
+| [x] | **`UiFloatState`**: `set_value` no-op when `is_equal_approx`; `null` → `0.0`; `set_silent` | Avoid spurious `value_changed` / missed updates when refactoring float/null handling. |
+| [x] | **`UiBoolState`**: equality short-circuit; `set_silent` | Same for toggles and bindings. |
+| [x] | **`UiIntState`**: reject `float` / invalid types in `set_value` (warning + no-op); `null` → `0` | Prevents silent truncation when UI passes wrong `Variant`. |
+| [x] | **`UiArrayState`**: duplicate on assign; reject non-array; packed arrays coerced; equality short-circuit | Tab lists, catalog lines, wiring depend on copy semantics. |
+| [x] | **`UiStringState`**: `set_value` / normalization if non-trivial | Same contract class as other states. |
+
+---
+
+## Layer 1 — `UiReactStateOpService`
+
+| Status | Test focus | Why |
+|--------|------------|-----|
+| [ ] | **`float_from_state` / `int_from_state`**: null → 0 | Null-safe reads are easy to regress. |
+| [ ] | **`afford_floats`**: gold ≥ price×qty; null behaves like 0 | Core afford / buy-disable contract. |
+| [ ] | **`subtract_product_from_accumulator`**: no-op when unaffordable; correct remainder when affordable | Prevents double-charge or negative totals. |
+| [ ] | **`add_product_to_accumulator`**: null short-circuit; unbounded add | Additive presets must stay null-safe. |
+| [ ] | **`transfer_float_product_clamped`**: clamp; zero product; null refs | Transfer edge cases hide silent bugs. |
+| [ ] | **`add_product_to_int_clamped` / `transfer_int_product_clamped`**: overflow no-op; negative product rules | Integer overflow paths must stay guarded. |
+
+---
+
+## Layer 2 — `UiReactWireTemplate`
+
+| Status | Test focus | Why |
+|--------|------------|-----|
+| [ ] | **`selection_detail_base`**: no selection text; dict with `name`/`kind`; dict with `label`/`text`; non-dict row | User-visible detail strings; formatting regressions are common. |
+| [ ] | **`selected_row_dict`**: out of range → `{}`; non-dict → `{}` | Defensive behavior for pulse / “Use” flows. |
+| [ ] | **`row_display_name`**: strips `name` | Template edge cases for empty names. |
+| [ ] | **`substitute_row_placeholders`**: `{name}` / `{kind}` / `{qty}`; missing keys | Broken action strings when row shape evolves. |
+
+---
+
+## Layer 3 — `UiComputed*`
+
+| Status | Test focus | Why |
+|--------|------------|-----|
+| [ ] | **`UiComputedBoolInvert`**: empty sources → `true`; null first source → `true`; else `not bool(source)` | Default-safe invert semantics. |
+| [ ] | **`UiComputedFloatGeProductBool`**: matches afford; wrong-typed `sources` entries | Keeps computed layer aligned with `UiReactStateOpService`. |
+| [ ] | **`UiComputedOrderSummaryThreeFloatString`**: totals, gold line, afford verdict (substring or stable fragments) | BBCode summary is string-sensitive. |
+| [ ] | **`UiComputedTransactionalStatusString`**: null txn sources; pending when either dirty | Options-screen status line; multi-resource pending logic. |
+| [ ] | *(Smoke)* **`UiComputedBoolState` / `UiComputedStringState`**: `recompute` delegates to `set_value` | Belt-and-suspenders on abstract base wiring. |
+
+---
+
+## Layer 4 — `UiTransactionalState`
+
+| Status | Test focus | Why |
+|--------|------------|-----|
+| [ ] | **Cloning**: arrays/dictionaries copied on `set_value` / `begin_edit` (not shared mutation) | Prevents “editing committed value” bugs. |
+| [ ] | **`_variants_equal` semantics** (via public API): int/float tolerance; float `is_equal_approx` | False pending / duplicate emissions. |
+| [ ] | **`has_pending_changes`**, `apply_draft`, `cancel_draft` / `reset_to_committed` | Whole draft/commit UX contract. |
+| [ ] | **`matches_expected_binding_class`** for each documented `StringName` | Validator / binding slot alignment. |
+
+---
+
+## Layer 5 — `UiReactWire*` `apply` / `apply_from_pulse`
+
+Use real `Ui*State` + rule resources; `_source` may be `null` where unused.
+
+| Status | Test focus | Why |
+|--------|------------|-----|
+| [ ] | **`UiReactWireMapIntToString`**: int key match; stringified int keys; optional `hint_state` | Category + hint wiring; dict key typing is fragile. |
+| [ ] | **`UiReactWireRefreshItemsFromCatalog`**: kind filter; name/kind needle; `selected_state` clamped to `-1`; first-row icon branch | Catalog → list payload without running demos. |
+| [ ] | **`UiReactWireCopySelectionDetail`**: index + items + suffix; null `items_state` | Aligns with `UiReactWireTemplate`. |
+| [ ] | **`UiReactWireSetStringOnBoolPulse.apply_from_pulse`**: rising edge; non-rising; `template_no_selection`; substitution | Order-sensitive pulse → string. |
+| [ ] | **`UiReactWireSyncBoolStateDebugLine`**: null bool vs set; `line_prefix` | Debug readout wiring. |
+| [ ] | **`UiReactWireSortArrayByKey`**: empty key no-op; empty array; dict sort by key; non-dict `str` sort; descending reverses | Pure sort contract for wiring. |
+
+---
+
+## Layer 6 — `UiReactActionTargetHelper`
+
+| Status | Test focus | Why |
+|--------|------------|-----|
+| [ ] | **Disabled rows** preserved in output | Inspector round-trips must not drop disabled config. |
+| [ ] | **`UiReactTransactionalActions`**: control-triggered row dropped + warning path | ACTION_LAYER transactional-only rule. |
+| [ ] | **`state_watch` + trigger ≠ `PRESSED`**: dropped / warned | Half-wired rows that never run at runtime. |
+| [ ] | **`SET_UI_BOOL_FLAG`**: missing `bool_flag_state`; `bool_flag_state == state_watch` rejected | Loop / misconfiguration prevention. |
+| [ ] | **`GRAB_FOCUS` / `SET_VISIBLE` / `SET_MOUSE_FILTER`**: empty `target` unless allowlist trigger | Path validation for focus/visibility. |
+| [ ] | **`collect_control_trigger_map`**: ignores `state_watch` rows; trigger keys merged | Host trigger merging contract. |
+
+---
+
+## Layer 7 — `UiReactStateBindingHelper`
+
+| Status | Test focus | Why |
+|--------|------------|-----|
+| [ ] | **`coerce_bool` / `coerce_float`** (incl. `null` default) | Variant coercion refactors. |
+| [ ] | **`approx_equal_float`**: negative epsilon → `is_equal_approx`; positive window | Float binding stability. |
+| [ ] | **`as_text_flat` / `as_text_recursive`** (nested `UiState`, arrays) | Label / debug text assembly. |
+| [ ] | **`expect_array_state`**: pass array; non-array → `null` | Tab/list setup guardrail. |
+| [ ] | **`initial_sync`**: callable receives `(v, v)` | First-frame correctness. |
+
+*(Optional later: `warn_setup`, `deferred_finish_initialization` with harnesses.)*
+
+---
+
+## Layer 8 — `UiReactValidatorCommon`
+
+| Status | Test focus | Why |
+|--------|------------|-----|
+| [ ] | **`variant_type_name`** (`Object` vs primitives) | Stable validator messaging. |
+| [ ] | **`get_allowed_anim_triggers` / `is_anim_trigger_allowed`**: known component; unknown → allowed | Registry edits must not forbid valid triggers. |
+| [ ] | **`format_anim_trigger_name` / `format_allowed_anim_triggers_hint`** | Dock hint strings. |
+
+---
+
+## Layer 9 — Tab helpers **(thin UI)**
+
+Requires a `TabContainer` in the scene tree (minimal test scene or programmatic add to `SceneTree`).
+
+| Status | Test focus | Why |
+|--------|------------|-----|
+| [ ] | **`UiTabSelectionBinding.resolve_tab_index`**: int passthrough; string title match; missing → `-1` | External `Variant` → tab index. |
+| [ ] | **`UiTabCollectionSync.apply_tabs_from_array`**: shrink removes children; grow adds tabs; dict vs string titles; `tab_content_states` resize; `current_tab` clamp | Dynamic tab list correctness. |
+
+---
+
+## Deferred (not foundation — document for phase 2)
+
+| Area | Reason to defer |
+|------|------------------|
+| **`UiReactComputedService`** | Static registries, `Engine.is_editor_hint()`; needs reset strategy or doubles. |
+| **`UiReactWireRuleHelper.attach` / signals** | Integration-level; build after wire `apply` tests. |
+| **Animation statics** (`UiAnim*`, tweens) | Frame/timing; use focused scenes or harnesses. |
+| **Full dock validators** on real scenes | Heavy; extract pure checks first where possible. |
+
+---
+
+## Related paths
+
+| Topic | Location |
+|-------|----------|
+| Addon contracts | `addons/ui_react/docs/WIRING_LAYER.md`, `addons/ui_react/docs/ACTION_LAYER.md` |
+| Maintainer map | `addons/ui_react/docs/README.md`, `addons/ui_react/AGENTS.md` |
+| GUT addon | `addons/gut/` |

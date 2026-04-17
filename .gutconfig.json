@@ -1,0 +1,4 @@
+{
+  "dirs": ["res://addons/ui_react/tests"],
+  "include_subdirs": true
+}

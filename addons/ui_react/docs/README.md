@@ -18,6 +18,7 @@ Quick index for **solo maintenance** and **AI agents**. Authoring narrative and 
 | [**MENU_GUIDELINES.md**](MENU_GUIDELINES.md) | Normative menu IA rules for context menus, chooser popups, and selectors | maintainer, agent |
 | [**P5_CURRENT_STATE_AUDIT.md**](P5_CURRENT_STATE_AUDIT.md) | Stock-take checklist for wiring readiness (**P5.1.b** / **CB-041**) | maintainer |
 | [**DECISIONS.md**](DECISIONS.md) | Lightweight ADR log (context → decision → consequences) | author, agent |
+| [**Testing rollout (GUT)**](../../../docs/TESTING.md) | Ordered foundation test backlog (pure logic → thin UI); status tracking for GUT | maintainer, agent |
 
 ---
 
