@@ -173,6 +173,7 @@ static func save_graph_scope_presets_raw(arr: Array) -> void:
 				continue
 			pin_seen[pk] = true
 			pin_dedup.append(pk)
+		var about_s := String(d.get("about", d.get(&"about", ""))).strip_edges()
 		serial.append(
 			{
 				"name": nm,
@@ -186,6 +187,7 @@ static func save_graph_scope_presets_raw(arr: Array) -> void:
 				),
 				"full_lists": bool(d.get("full_lists", d.get(&"full_lists", false))),
 				"pinned": pin_dedup,
+				"about": about_s,
 			}
 		)
 	serial.sort_custom(

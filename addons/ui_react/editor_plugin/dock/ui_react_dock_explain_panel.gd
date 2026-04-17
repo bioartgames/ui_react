@@ -63,11 +63,12 @@ const _SEL_ACT_MOVE_SRC_UP := 1120
 const _SEL_ACT_MOVE_SRC_DOWN := 1121
 const _SEL_ACT_REMOVE_SRC_SLOT := 1122
 const _SEL_ACT_CREATE_ASSIGN_BINDING := 1130
-const _SEL_ACT_SCOPE_PIN := 1170
 const _SEL_ACT_CREATE_BIND_BASE := 1240
 const _SEL_SUB_NODE_ROOT := 1260
 const _SEL_SUB_WIRE_ROOT := 1261
 const _SEL_SUB_EDGE_EDIT_ROOT := 1262
+const _SEL_SUB_SCOPE_ROOT := 1263
+const _SEL_SUB_CREATE_BIND_ROOT := 1264
 ## Wire rules + Focus — [method _fill_selection_actions_popup] / [method _on_selection_action_id].
 const _SEL_ACT_FOCUS_INSPECTOR := 1180
 const _SEL_ACT_WIRE_ADD_BASE := 1210
@@ -90,9 +91,11 @@ const _CV_PRESET_NAMED_BASE := 3310
 const _CV_SCOPE_SAVE := 3500
 const _CV_SCOPE_MANAGE := 3501
 const _CV_SCOPE_PIN := 3502
+const _CV_SCOPE_UPDATE := 3503
 const _CV_SUB_CREATE_ROOT := 3601
 const _CV_SUB_VIEW_ROOT := 3602
 const _CV_SUB_SCOPE_ROOT := 3603
+const _CV_SUB_PRESETS_LIST := 3604
 
 var _plugin: EditorPlugin
 var _actions: UiReactActionController
@@ -132,7 +135,12 @@ var _selection_edge_edit_submenu_popup: PopupMenu
 var _canvas_create_submenu_popup: PopupMenu
 var _canvas_view_submenu_popup: PopupMenu
 var _canvas_scope_submenu_popup: PopupMenu
-var _canvas_view_preset_names: PackedStringArray
+var _canvas_scope_presets_popup: PopupMenu
+var _selection_scope_submenu_popup: PopupMenu
+var _selection_scope_presets_popup: PopupMenu
+## Indices align with menu ids [code]_CV_PRESET_NAMED_BASE + i[/code] when preset list is filled.
+var _scope_preset_pick_names: PackedStringArray = PackedStringArray()
+var _scope_preset_pick_abouts: PackedStringArray = PackedStringArray()
 var _canvas_create_state_names: PackedStringArray
 var _selection_create_bind_actions: Array[Dictionary] = []
 
@@ -194,6 +202,7 @@ var _create_assign_expected_class: StringName = &""
 var _scope_preset_option: OptionButton
 var _scope_save_name_dialog: AcceptDialog
 var _scope_save_name_edit: LineEdit
+var _scope_save_about_edit: TextEdit
 var _scope_manage_dialog: AcceptDialog
 var _scope_manage_list: ItemList
 var _layout_max_nodes: int = 200
@@ -201,8 +210,9 @@ var _layout_max_edges: int = 400
 var _pinned_node_ids: PackedStringArray = PackedStringArray()
 var _scope_presets_cache: Array = []
 var _scope_preset_block_select: bool = false
-## When true, next [AcceptDialog] confirm from Save scope preset also pins [member _graph_selected_node_id].
+## When true, next [AcceptDialog] confirm from Save scope preset also pins [member _pin_target_id_pending_after_save].
 var _pin_pending_after_save: bool = false
+var _pin_target_id_pending_after_save: String = ""
 
 
 func setup(
@@ -373,8 +383,275 @@ func _update_focus_button_state() -> void:
 	pass
 
 
-func _can_pin_node_from_canvas_menu() -> bool:
-	return _selection_kind == _SEL_NODE and not _graph_selected_node_id.is_empty()
+func _find_raw_preset_variant_by_name(preset_name: String) -> Variant:
+	var want := preset_name.strip_edges()
+	if want.is_empty():
+		return null
+	for it: Variant in UiReactDockConfig.load_graph_scope_presets_raw():
+		if it is Dictionary:
+			var nm := String((it as Dictionary).get("name", "")).strip_edges()
+			if nm == want:
+				return it
+	return null
+
+
+func _stored_about_for_preset_name(preset_name: String) -> String:
+	var v := _find_raw_preset_variant_by_name(preset_name)
+	if v == null or v is not Dictionary:
+		return ""
+	return String((v as Dictionary).get("about", (v as Dictionary).get(&"about", ""))).strip_edges()
+
+
+func _scope_pins_sorted_copy(pins: PackedStringArray) -> PackedStringArray:
+	var arr: Array[String] = []
+	for i in range(pins.size()):
+		var s := String(pins[i]).strip_edges()
+		if not s.is_empty():
+			arr.append(s)
+	arr.sort()
+	var out: PackedStringArray = PackedStringArray()
+	for s2 in arr:
+		out.append(s2)
+	return out
+
+
+func _scope_dict_matches_for_update(saved: Dictionary, current: Dictionary) -> bool:
+	if int(saved.get("max_nodes", -1)) != int(current.get("max_nodes", -2)):
+		return false
+	if int(saved.get("max_edges", -1)) != int(current.get("max_edges", -2)):
+		return false
+	if bool(saved.get("show_binding", true)) != bool(current.get("show_binding", false)):
+		return false
+	if bool(saved.get("show_computed", true)) != bool(current.get("show_computed", false)):
+		return false
+	if bool(saved.get("show_wire", true)) != bool(current.get("show_wire", false)):
+		return false
+	if bool(saved.get("show_all_edge_labels", false)) != bool(current.get("show_all_edge_labels", true)):
+		return false
+	if bool(saved.get("full_lists", false)) != bool(current.get("full_lists", true)):
+		return false
+	var pv_s: Variant = saved.get(&"pinned", PackedStringArray())
+	var sa: PackedStringArray = pv_s as PackedStringArray if pv_s is PackedStringArray else PackedStringArray()
+	var pv_c: Variant = current.get(&"pinned", PackedStringArray())
+	var ca: PackedStringArray = pv_c as PackedStringArray if pv_c is PackedStringArray else PackedStringArray()
+	var s1 := _scope_pins_sorted_copy(sa)
+	var s2 := _scope_pins_sorted_copy(ca)
+	if s1.size() != s2.size():
+		return false
+	for i in range(s1.size()):
+		if s1[i] != s2[i]:
+			return false
+	var ab1 := String(saved.get(&"about", "")).strip_edges()
+	var ab2 := String(current.get(&"about", "")).strip_edges()
+	return ab1 == ab2
+
+
+func _scope_current_matches_saved_named_preset(active_name: String) -> bool:
+	var n := active_name.strip_edges()
+	if n.is_empty() or n.to_lower() == "default":
+		return false
+	var raw := _find_raw_preset_variant_by_name(n)
+	if raw == null:
+		return false
+	var saved := _preset_from_variant(raw)
+	var cur := _capture_current_scope_settings(n)
+	cur[&"about"] = _stored_about_for_preset_name(n)
+	return _scope_dict_matches_for_update(saved, cur)
+
+
+func _resolve_pin_target_graph_node_id() -> String:
+	if _selection_kind == _SEL_NODE:
+		return String(_graph_selected_node_id).strip_edges()
+	if _selection_kind != _SEL_EDGE or _graph_selected_edge_index < 0:
+		return ""
+	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
+	var idx := _graph_selected_edge_index
+	if idx < 0 or idx >= edges.size():
+		return ""
+	var ev: Variant = edges[idx]
+	if ev is not Dictionary:
+		return ""
+	var ed: Dictionary = ev as Dictionary
+	var kind := int(ed.get(&"kind", -1))
+	if kind == _SnapScript.EdgeKind.BINDING:
+		var hp := str(ed.get(&"host_path", "")).strip_edges()
+		if hp.is_empty():
+			return ""
+		return "ctrl:%s" % hp
+	if kind == _SnapScript.EdgeKind.WIRE_FLOW:
+		var wh := str(ed.get(&"wire_host_path", "")).strip_edges()
+		if wh.is_empty():
+			return ""
+		return "ctrl:%s" % wh
+	if kind == _SnapScript.EdgeKind.COMPUTED_SOURCE:
+		return str(ed.get(&"to_id", "")).strip_edges()
+	return ""
+
+
+func _pin_graph_node_to_active_preset(node_id: String) -> void:
+	var pid := String(node_id).strip_edges()
+	if pid.is_empty():
+		push_warning("Ui React: nothing to pin for current selection.")
+		return
+	var active: String = String(UiReactDockConfig.get_active_graph_scope_preset_name()).strip_edges()
+	if active.is_empty() or active.to_lower() == "default":
+		_pin_pending_after_save = true
+		_pin_target_id_pending_after_save = pid
+		if _scope_save_name_dialog != null and _scope_save_name_edit != null:
+			_scope_save_name_dialog.title = "Save scope preset and pin node"
+			_scope_save_name_dialog.dialog_text = (
+				"Creates a named preset from the current scope settings and adds the selected graph node to its pin list."
+			)
+			_scope_save_name_edit.text = "Pinned scope"
+			if _scope_save_about_edit != null:
+				_scope_save_about_edit.text = ""
+			_scope_save_name_dialog.popup_centered()
+		return
+	for i in range(_pinned_node_ids.size()):
+		if _pinned_node_ids[i] == pid:
+			return
+	_pinned_node_ids.append(pid)
+	var arr: Array = UiReactDockConfig.load_graph_scope_presets_raw()
+	var out: Array = []
+	var updated := false
+	for it: Variant in arr:
+		if it is Dictionary:
+			var pd: Dictionary = _preset_from_variant(it)
+			if String(pd.get("name", "")) == active:
+				pd[&"pinned"] = _pinned_node_ids.duplicate()
+				updated = true
+			out.append(pd)
+	if not updated:
+		var cap := _capture_current_scope_settings(active)
+		cap[&"about"] = _stored_about_for_preset_name(active)
+		out.append(cap)
+	_persist_presets_array(out)
+	refresh()
+
+
+func _fill_scope_presets_list(presets_popup: PopupMenu) -> void:
+	presets_popup.clear()
+	_scope_preset_pick_names.clear()
+	_scope_preset_pick_abouts.clear()
+	presets_popup.add_item("Default", _CV_PRESET_DEFAULT)
+	presets_popup.set_item_tooltip(
+		presets_popup.item_count - 1, "Built-in scope (not a saved preset)."
+	)
+	var names: Array[String] = []
+	var about_by_name: Dictionary = {}
+	for it: Variant in UiReactDockConfig.load_graph_scope_presets_raw():
+		if it is not Dictionary:
+			continue
+		var d: Dictionary = it as Dictionary
+		var nm := String(d.get("name", "")).strip_edges()
+		if nm.is_empty() or nm.to_lower() == "default":
+			continue
+		names.append(nm)
+		about_by_name[nm] = String(d.get("about", d.get(&"about", ""))).strip_edges()
+	names.sort()
+	for i in range(names.size()):
+		var nm2: String = names[i]
+		presets_popup.add_item(nm2, _CV_PRESET_NAMED_BASE + i)
+		_scope_preset_pick_names.append(nm2)
+		var abt: String = String(about_by_name.get(nm2, "")).strip_edges()
+		_scope_preset_pick_abouts.append(abt)
+		var tip_i := presets_popup.item_count - 1
+		if abt.is_empty():
+			presets_popup.set_item_tooltip(tip_i, "No description.")
+		else:
+			presets_popup.set_item_tooltip(tip_i, abt)
+
+
+func _fill_scope_submenu(scope_popup: PopupMenu, presets_popup: PopupMenu) -> void:
+	scope_popup.clear()
+	_fill_scope_presets_list(presets_popup)
+	scope_popup.add_submenu_node_item("Presets", presets_popup, _CV_SUB_PRESETS_LIST)
+	scope_popup.add_item("Save scope preset as…", _CV_SCOPE_SAVE)
+	scope_popup.set_item_tooltip(
+		scope_popup.item_count - 1, "Save current scope settings as a named preset."
+	)
+	var active: String = String(UiReactDockConfig.get_active_graph_scope_preset_name()).strip_edges()
+	if not active.is_empty() and active.to_lower() != "default":
+		scope_popup.add_item('Update "%s"' % active, _CV_SCOPE_UPDATE)
+		scope_popup.set_item_tooltip(
+			scope_popup.item_count - 1,
+			"Overwrite the active preset with current scope settings (caps, filters, pins, description).",
+		)
+		var uidx := scope_popup.get_item_index(_CV_SCOPE_UPDATE)
+		if uidx >= 0:
+			var missing := _find_raw_preset_variant_by_name(active) == null
+			scope_popup.set_item_disabled(uidx, missing or _scope_current_matches_saved_named_preset(active))
+			if missing:
+				scope_popup.set_item_tooltip(uidx, "Preset missing from disk.")
+	scope_popup.add_item("Manage scope presets…", _CV_SCOPE_MANAGE)
+	scope_popup.set_item_tooltip(scope_popup.item_count - 1, "Delete saved scope presets.")
+	var pin_id := _resolve_pin_target_graph_node_id()
+	if not pin_id.is_empty():
+		scope_popup.add_item("Pin node", _CV_SCOPE_PIN)
+		scope_popup.set_item_tooltip(
+			scope_popup.item_count - 1,
+			"Pins the graph node used as the anchor for this selection (same as Focus in Inspector for edges).",
+		)
+
+
+func _on_scope_presets_list_id(id: int) -> void:
+	if id == _CV_PRESET_DEFAULT:
+		_apply_scope_preset_by_name("")
+		return
+	if id >= _CV_PRESET_NAMED_BASE:
+		var pi := id - _CV_PRESET_NAMED_BASE
+		if pi >= 0 and pi < _scope_preset_pick_names.size():
+			_apply_scope_preset_by_name(_scope_preset_pick_names[pi])
+		return
+
+
+func _on_scope_actions_submenu_id(id: int) -> void:
+	if id == _CV_SCOPE_SAVE:
+		_on_scope_save_as_pressed()
+		return
+	if id == _CV_SCOPE_MANAGE:
+		_on_scope_manage_pressed()
+		return
+	if id == _CV_SCOPE_UPDATE:
+		_on_scope_update_current_preset_pressed()
+		return
+	if id == _CV_SCOPE_PIN:
+		var pid := _resolve_pin_target_graph_node_id()
+		if not pid.is_empty():
+			_pin_graph_node_to_active_preset(pid)
+		return
+
+
+func _on_scope_update_current_preset_pressed() -> void:
+	var n := String(UiReactDockConfig.get_active_graph_scope_preset_name()).strip_edges()
+	if n.is_empty() or n.to_lower() == "default":
+		return
+	if _scope_current_matches_saved_named_preset(n):
+		return
+	var raw := _find_raw_preset_variant_by_name(n)
+	if raw == null:
+		push_warning("Ui React: active preset not found on disk.")
+		return
+	var rec := _capture_current_scope_settings(n)
+	rec[&"about"] = _stored_about_for_preset_name(n)
+	var arr: Array = UiReactDockConfig.load_graph_scope_presets_raw()
+	var out: Array = []
+	var found := false
+	for it: Variant in arr:
+		if it is Dictionary:
+			var old: Dictionary = _preset_from_variant(it)
+			if String(old.get("name", "")) == n:
+				out.append(rec)
+				found = true
+			else:
+				out.append(old)
+	if not found:
+		push_warning("Ui React: could not update preset (missing entry).")
+		return
+	_persist_presets_array(out)
+	UiReactDockConfig.set_active_graph_scope_preset_name(n)
+	_sync_active_scope_preset_from_settings(true)
+	refresh()
 
 
 func _resolve_wire_rules_host_control() -> Control:
@@ -470,13 +747,17 @@ func _fill_selection_actions_popup(popup: PopupMenu) -> void:
 	popup.clear()
 	const TT_COPY := "Copy plain-text details to the clipboard."
 	const TT_FOCUS := "Open the related scene node or resource in the Inspector when possible."
-	const TT_SCOPE_PIN := (
-		"Pin the selection to the active preset; Default prompts to save a named preset first."
-	)
 
 	if _selection_kind != _SEL_NONE:
 		popup.add_item("Focus in Inspector", _SEL_ACT_FOCUS_INSPECTOR)
 		popup.set_item_tooltip(popup.item_count - 1, TT_FOCUS)
+	if (
+		(_selection_kind == _SEL_NODE or _selection_kind == _SEL_EDGE)
+		and _selection_scope_submenu_popup != null
+		and _selection_scope_presets_popup != null
+	):
+		_fill_scope_submenu(_selection_scope_submenu_popup, _selection_scope_presets_popup)
+		popup.add_submenu_node_item("Scope", _selection_scope_submenu_popup, _SEL_SUB_SCOPE_ROOT)
 	var any_edge_item_will := (
 		_can_rebind_binding_edge()
 		or _can_rebind_wire_endpoint(true)
@@ -498,24 +779,18 @@ func _fill_selection_actions_popup(popup: PopupMenu) -> void:
 		)
 		if show_bind_create:
 			_fill_selection_node_submenu(_selection_node_submenu_popup)
-			popup.add_submenu_item("Node", _selection_node_submenu_popup.name, _SEL_SUB_NODE_ROOT)
-		else:
-			popup.add_item("Pin node", _SEL_ACT_SCOPE_PIN)
-			popup.set_item_tooltip(popup.item_count - 1, TT_SCOPE_PIN)
-			var pin_idx := popup.get_item_index(_SEL_ACT_SCOPE_PIN)
-			if pin_idx >= 0:
-				popup.set_item_disabled(pin_idx, not _can_pin_node_from_canvas_menu())
+			popup.add_submenu_node_item("Node", _selection_node_submenu_popup, _SEL_SUB_NODE_ROOT)
 	if wire_host != null and _selection_wire_submenu_popup != null:
 		_fill_selection_wire_submenu(_selection_wire_submenu_popup)
 		if _selection_wire_submenu_popup.item_count > 0:
-			popup.add_submenu_item("Wire", _selection_wire_submenu_popup.name, _SEL_SUB_WIRE_ROOT)
+			popup.add_submenu_node_item("Wire", _selection_wire_submenu_popup, _SEL_SUB_WIRE_ROOT)
 	if any_edge_item_will and _selection_edge_edit_submenu_popup != null:
 		if edge_edit_action_count <= 1:
 			_append_single_edge_edit_action_to_menu(popup)
 		else:
 			_fill_selection_edge_edit_submenu(_selection_edge_edit_submenu_popup)
-			popup.add_submenu_item(
-				"Edge edit", _selection_edge_edit_submenu_popup.name, _SEL_SUB_EDGE_EDIT_ROOT
+			popup.add_submenu_node_item(
+				"Edge edit", _selection_edge_edit_submenu_popup, _SEL_SUB_EDGE_EDIT_ROOT
 			)
 	if popup.item_count > 0:
 		popup.add_separator()
@@ -525,17 +800,11 @@ func _fill_selection_actions_popup(popup: PopupMenu) -> void:
 
 func _fill_selection_node_submenu(popup: PopupMenu) -> void:
 	popup.clear()
-	const TT_SCOPE_PIN := (
-		"Pin the selection to the active preset; Default prompts to save a named preset first."
-	)
-	popup.add_item("Pin node", _SEL_ACT_SCOPE_PIN)
-	popup.set_item_tooltip(popup.item_count - 1, TT_SCOPE_PIN)
-	var pin_idx := popup.get_item_index(_SEL_ACT_SCOPE_PIN)
-	if pin_idx >= 0:
-		popup.set_item_disabled(pin_idx, not _can_pin_node_from_canvas_menu())
 	if _selection_create_bind_submenu_popup != null and _can_create_and_bind_from_selected_node():
-		popup.add_submenu_item("Create state & bind…", _selection_create_bind_submenu_popup.name)
 		_fill_selection_create_bind_submenu(_selection_create_bind_submenu_popup)
+		popup.add_submenu_node_item(
+			"Create state & bind…", _selection_create_bind_submenu_popup, _SEL_SUB_CREATE_BIND_ROOT
+		)
 
 
 func _fill_selection_wire_submenu(popup: PopupMenu) -> void:
@@ -651,9 +920,6 @@ func _on_selection_action_id(id: int) -> void:
 	if id == _SEL_ACT_FOCUS_INSPECTOR:
 		_on_focus_inspector_pressed()
 		return
-	if id == _SEL_ACT_SCOPE_PIN:
-		_on_pin_node_pressed()
-		return
 	match id:
 		_SEL_ACT_COPY_DETAILS:
 			_on_copy_details_pressed()
@@ -661,9 +927,8 @@ func _on_selection_action_id(id: int) -> void:
 			pass
 
 
-func _on_selection_node_submenu_id(id: int) -> void:
-	if id == _SEL_ACT_SCOPE_PIN:
-		_on_pin_node_pressed()
+func _on_selection_node_submenu_id(_id: int) -> void:
+	pass
 
 
 func _on_selection_wire_submenu_id(id: int) -> void:
@@ -852,13 +1117,13 @@ func _fill_canvas_view_popup(popup: PopupMenu) -> void:
 	popup.add_separator()
 	if _canvas_create_submenu_popup != null:
 		_fill_canvas_create_submenu(_canvas_create_submenu_popup)
-		popup.add_submenu_item("Create", _canvas_create_submenu_popup.name, _CV_SUB_CREATE_ROOT)
+		popup.add_submenu_node_item("Create", _canvas_create_submenu_popup, _CV_SUB_CREATE_ROOT)
 	if _canvas_view_submenu_popup != null:
 		_fill_canvas_view_submenu(_canvas_view_submenu_popup)
-		popup.add_submenu_item("View", _canvas_view_submenu_popup.name, _CV_SUB_VIEW_ROOT)
-	if _canvas_scope_submenu_popup != null:
-		_fill_canvas_scope_submenu(_canvas_scope_submenu_popup)
-		popup.add_submenu_item("Scope", _canvas_scope_submenu_popup.name, _CV_SUB_SCOPE_ROOT)
+		popup.add_submenu_node_item("View", _canvas_view_submenu_popup, _CV_SUB_VIEW_ROOT)
+	if _canvas_scope_submenu_popup != null and _canvas_scope_presets_popup != null:
+		_fill_scope_submenu(_canvas_scope_submenu_popup, _canvas_scope_presets_popup)
+		popup.add_submenu_node_item("Scope", _canvas_scope_submenu_popup, _CV_SUB_SCOPE_ROOT)
 
 
 func _on_canvas_view_menu_id(id: int) -> void:
@@ -910,37 +1175,6 @@ func _fill_canvas_view_submenu(popup: PopupMenu) -> void:
 	popup.set_item_checked(popup.item_count - 1, _legend_host != null and _legend_host.visible)
 
 
-func _fill_canvas_scope_submenu(popup: PopupMenu) -> void:
-	popup.clear()
-	_canvas_view_preset_names.clear()
-	popup.add_item("Preset: Default", _CV_PRESET_DEFAULT)
-	popup.set_item_tooltip(popup.item_count - 1, "Built-in scope (not a saved preset).")
-	var names: Array[String] = []
-	for it: Variant in UiReactDockConfig.load_graph_scope_presets_raw():
-		if it is Dictionary:
-			var nm := String((it as Dictionary).get("name", "")).strip_edges()
-			if not nm.is_empty() and nm.to_lower() != "default":
-				names.append(nm)
-	names.sort()
-	for i in range(names.size()):
-		var nm2: String = names[i]
-		popup.add_item("Preset: %s" % nm2, _CV_PRESET_NAMED_BASE + i)
-		_canvas_view_preset_names.append(nm2)
-	popup.add_separator()
-	popup.add_item("Save scope preset as…", _CV_SCOPE_SAVE)
-	popup.set_item_tooltip(popup.item_count - 1, "Save current scope settings as a named preset.")
-	popup.add_item("Manage scope presets…", _CV_SCOPE_MANAGE)
-	popup.set_item_tooltip(popup.item_count - 1, "Delete saved scope presets.")
-	popup.add_item("Pin node", _CV_SCOPE_PIN)
-	popup.set_item_tooltip(
-		popup.item_count - 1,
-		"Pin the selection to the active preset; Default prompts to save a named preset first.",
-	)
-	var pin_idx := popup.get_item_index(_CV_SCOPE_PIN)
-	if pin_idx >= 0:
-		popup.set_item_disabled(pin_idx, not _can_pin_node_from_canvas_menu())
-
-
 func _on_canvas_create_submenu_id(id: int) -> void:
 	var ci := id - _CV_CREATE_STATE_BASE
 	if ci >= 0 and ci < _canvas_create_state_names.size():
@@ -984,26 +1218,6 @@ func _on_canvas_view_submenu_id(id: int) -> void:
 			UiReactDockConfig.save_ui_preference(
 				UiReactDockConfig.KEY_GRAPH_LEGEND_VISIBLE, _legend_host.visible
 			)
-		return
-
-
-func _on_canvas_scope_submenu_id(id: int) -> void:
-	if id == _CV_PRESET_DEFAULT:
-		_apply_scope_preset_by_name("")
-		return
-	if id >= _CV_PRESET_NAMED_BASE:
-		var pi := id - _CV_PRESET_NAMED_BASE
-		if pi >= 0 and pi < _canvas_view_preset_names.size():
-			_apply_scope_preset_by_name(_canvas_view_preset_names[pi])
-		return
-	if id == _CV_SCOPE_SAVE:
-		_on_scope_save_as_pressed()
-		return
-	if id == _CV_SCOPE_MANAGE:
-		_on_scope_manage_pressed()
-		return
-	if id == _CV_SCOPE_PIN:
-		_on_pin_node_pressed()
 		return
 
 
@@ -3735,6 +3949,7 @@ func _default_scope_dict() -> Dictionary:
 		&"show_all_edge_labels": false,
 		&"full_lists": false,
 		&"pinned": PackedStringArray(),
+		&"about": "",
 	}
 
 
@@ -3752,6 +3967,7 @@ func _preset_from_variant(v: Variant) -> Dictionary:
 	d[&"show_wire"] = bool(src.get("show_wire", true))
 	d[&"show_all_edge_labels"] = bool(src.get("show_all_edge_labels", false))
 	d[&"full_lists"] = bool(src.get("full_lists", false))
+	d[&"about"] = String(src.get("about", src.get(&"about", ""))).strip_edges()
 	var pins: Variant = src.get("pinned", PackedStringArray())
 	var ps: PackedStringArray = PackedStringArray()
 	if pins is Array:
@@ -3787,6 +4003,7 @@ func _capture_current_scope_settings(preset_name: String) -> Dictionary:
 		&"show_all_edge_labels": _cb_edge_labels != null and _cb_edge_labels.button_pressed,
 		&"full_lists": _show_full_lists,
 		&"pinned": pins_copy,
+		&"about": "",
 	}
 
 
@@ -3883,9 +4100,12 @@ func _on_scope_save_as_pressed() -> void:
 	if _scope_save_name_dialog == null or _scope_save_name_edit == null:
 		return
 	_pin_pending_after_save = false
+	_pin_target_id_pending_after_save = ""
 	_scope_save_name_dialog.title = "Save scope preset"
 	_scope_save_name_dialog.dialog_text = ""
 	_scope_save_name_edit.text = ""
+	if _scope_save_about_edit != null:
+		_scope_save_about_edit.text = ""
 	_scope_save_name_dialog.popup_centered()
 
 
@@ -3915,6 +4135,9 @@ func _commit_upsert_preset_activate(rec: Dictionary) -> void:
 
 func _on_scope_save_name_canceled() -> void:
 	_pin_pending_after_save = false
+	_pin_target_id_pending_after_save = ""
+	if _scope_save_about_edit != null:
+		_scope_save_about_edit.text = ""
 	if _scope_save_name_dialog:
 		_scope_save_name_dialog.title = "Save scope preset"
 		_scope_save_name_dialog.dialog_text = ""
@@ -3926,9 +4149,15 @@ func _on_scope_save_name_confirmed() -> void:
 		push_warning("Ui React: choose a non-empty preset name other than “Default”.")
 		return
 	var rec := _capture_current_scope_settings(raw_name)
+	if _scope_save_about_edit != null:
+		rec[&"about"] = String(_scope_save_about_edit.text).strip_edges()
 	if _pin_pending_after_save:
 		_pin_pending_after_save = false
-		if _selection_kind == _SEL_NODE and not _graph_selected_node_id.is_empty():
+		var sid := String(_pin_target_id_pending_after_save).strip_edges()
+		if sid.is_empty():
+			sid = _resolve_pin_target_graph_node_id()
+		_pin_target_id_pending_after_save = ""
+		if not sid.is_empty():
 			var pins: PackedStringArray = PackedStringArray()
 			var pins_v: Variant = rec.get(&"pinned", PackedStringArray())
 			if pins_v is PackedStringArray:
@@ -3938,7 +4167,6 @@ func _on_scope_save_name_confirmed() -> void:
 					var ps := String(it).strip_edges()
 					if not ps.is_empty():
 						pins.append(ps)
-			var sid := _graph_selected_node_id
 			var seen: Dictionary = {}
 			for i in range(pins.size()):
 				seen[pins[i]] = true
@@ -3948,6 +4176,8 @@ func _on_scope_save_name_confirmed() -> void:
 	if _scope_save_name_dialog:
 		_scope_save_name_dialog.title = "Save scope preset"
 		_scope_save_name_dialog.dialog_text = ""
+	if _scope_save_about_edit != null:
+		_scope_save_about_edit.text = ""
 	_commit_upsert_preset_activate(rec)
 
 
@@ -3956,10 +4186,19 @@ func _on_scope_manage_pressed() -> void:
 		return
 	_scope_manage_list.clear()
 	for it: Variant in UiReactDockConfig.load_graph_scope_presets_raw():
-		if it is Dictionary:
-			var nm := String((it as Dictionary).get("name", "")).strip_edges()
-			if not nm.is_empty():
-				_scope_manage_list.add_item(nm)
+		if it is not Dictionary:
+			continue
+		var d: Dictionary = it as Dictionary
+		var nm := String(d.get("name", "")).strip_edges()
+		if nm.is_empty():
+			continue
+		_scope_manage_list.add_item(nm)
+		var li := _scope_manage_list.item_count - 1
+		var abt := String(d.get("about", d.get(&"about", ""))).strip_edges()
+		if abt.is_empty():
+			_scope_manage_list.set_item_tooltip(li, "No description.")
+		else:
+			_scope_manage_list.set_item_tooltip(li, abt)
 	_scope_manage_dialog.popup_centered()
 
 
@@ -3982,42 +4221,6 @@ func _on_scope_manage_delete_pressed() -> void:
 		UiReactDockConfig.set_active_graph_scope_preset_name("")
 	_sync_active_scope_preset_from_settings(true)
 	_on_scope_manage_pressed()
-	refresh()
-
-
-func _on_pin_node_pressed() -> void:
-	if _selection_kind != _SEL_NODE or _graph_selected_node_id.is_empty():
-		push_warning("Ui React: select a graph node to pin.")
-		return
-	var active: String = String(UiReactDockConfig.get_active_graph_scope_preset_name()).strip_edges()
-	if active.is_empty() or active.to_lower() == "default":
-		_pin_pending_after_save = true
-		if _scope_save_name_dialog != null and _scope_save_name_edit != null:
-			_scope_save_name_dialog.title = "Save scope preset and pin node"
-			_scope_save_name_dialog.dialog_text = (
-				"Creates a named preset from the current scope settings and adds the selected graph node to its pin list."
-			)
-			_scope_save_name_edit.text = "Pinned scope"
-			_scope_save_name_dialog.popup_centered()
-		return
-	var pid := _graph_selected_node_id
-	for i in range(_pinned_node_ids.size()):
-		if _pinned_node_ids[i] == pid:
-			return
-	_pinned_node_ids.append(pid)
-	var arr: Array = UiReactDockConfig.load_graph_scope_presets_raw()
-	var out: Array = []
-	var updated := false
-	for it: Variant in arr:
-		if it is Dictionary:
-			var pd: Dictionary = _preset_from_variant(it)
-			if String(pd.get("name", "")) == active:
-				pd[&"pinned"] = _pinned_node_ids.duplicate()
-				updated = true
-			out.append(pd)
-	if not updated:
-		out.append(_capture_current_scope_settings(active))
-	_persist_presets_array(out)
 	refresh()
 
 
@@ -4274,6 +4477,15 @@ func _build_ui() -> void:
 	_scope_save_name_edit.placeholder_text = "Preset name (not “Default”)"
 	_scope_save_name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	svb.add_child(_scope_save_name_edit)
+	var about_lab := Label.new()
+	about_lab.text = "Description (optional)"
+	svb.add_child(about_lab)
+	_scope_save_about_edit = TextEdit.new()
+	_scope_save_about_edit.placeholder_text = "Shown as tooltip when hovering this preset in menus."
+	_scope_save_about_edit.custom_minimum_size = Vector2(0, 72)
+	_scope_save_about_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_scope_save_about_edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	svb.add_child(_scope_save_about_edit)
 	_scope_save_name_dialog.add_child(svb)
 	_scope_save_name_dialog.confirmed.connect(_on_scope_save_name_confirmed)
 	_scope_save_name_dialog.canceled.connect(_on_scope_save_name_canceled)
@@ -4494,7 +4706,19 @@ func _build_ui() -> void:
 	_canvas_scope_submenu_popup = PopupMenu.new()
 	_canvas_scope_submenu_popup.name = "CanvasScopeSubmenu"
 	_canvas_view_context_popup.add_child(_canvas_scope_submenu_popup)
-	_canvas_scope_submenu_popup.id_pressed.connect(_on_canvas_scope_submenu_id)
+	_canvas_scope_presets_popup = PopupMenu.new()
+	_canvas_scope_presets_popup.name = "CanvasScopePresetsList"
+	_canvas_scope_submenu_popup.add_child(_canvas_scope_presets_popup)
+	_canvas_scope_presets_popup.id_pressed.connect(_on_scope_presets_list_id)
+	_canvas_scope_submenu_popup.id_pressed.connect(_on_scope_actions_submenu_id)
+	_selection_scope_submenu_popup = PopupMenu.new()
+	_selection_scope_submenu_popup.name = "SelectionScopeSubmenu"
+	_selection_actions_context_popup.add_child(_selection_scope_submenu_popup)
+	_selection_scope_presets_popup = PopupMenu.new()
+	_selection_scope_presets_popup.name = "SelectionScopePresetsList"
+	_selection_scope_submenu_popup.add_child(_selection_scope_presets_popup)
+	_selection_scope_presets_popup.id_pressed.connect(_on_scope_presets_list_id)
+	_selection_scope_submenu_popup.id_pressed.connect(_on_scope_actions_submenu_id)
 
 
 func _set_hint_visible(on: bool) -> void:
