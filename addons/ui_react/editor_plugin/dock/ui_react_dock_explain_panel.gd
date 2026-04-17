@@ -651,6 +651,9 @@ func _on_selection_action_id(id: int) -> void:
 	if id == _SEL_ACT_FOCUS_INSPECTOR:
 		_on_focus_inspector_pressed()
 		return
+	if id == _SEL_ACT_SCOPE_PIN:
+		_on_pin_node_pressed()
+		return
 	match id:
 		_SEL_ACT_COPY_DETAILS:
 			_on_copy_details_pressed()
