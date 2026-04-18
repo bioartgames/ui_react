@@ -169,12 +169,14 @@ Use real `Ui*State` + rule resources; `_source` may be `null` where unused.
 
 ## Layer 9 — Tab helpers **(thin UI)**
 
+**Implemented:** [`addons/ui_react/tests/unit/tab/test_ui_tab_helpers.gd`](addons/ui_react/tests/unit/tab/test_ui_tab_helpers.gd) — [`UiTabSelectionBinding`](../addons/ui_react/scripts/internal/react/ui_tab_selection_binding.gd) and [`UiTabCollectionSync`](../addons/ui_react/scripts/internal/react/ui_tab_collection_sync.gd) (programmatic `TabContainer` under `GutTest`).
+
 Requires a `TabContainer` in the scene tree (minimal test scene or programmatic add to `SceneTree`).
 
 | Status | Test focus | Why |
 |--------|------------|-----|
-| [ ] | **`UiTabSelectionBinding.resolve_tab_index`**: int passthrough; string title match; missing → `-1` | External `Variant` → tab index. |
-| [ ] | **`UiTabCollectionSync.apply_tabs_from_array`**: shrink removes children; grow adds tabs; dict vs string titles; `tab_content_states` resize; `current_tab` clamp | Dynamic tab list correctness. |
+| [x] | **`UiTabSelectionBinding.resolve_tab_index`**: int passthrough; string title match; missing → `-1` | External `Variant` → tab index. |
+| [x] | **`UiTabCollectionSync.apply_tabs_from_array`**: shrink removes children; grow adds tabs; dict vs string titles; `tab_content_states` resize; `current_tab` clamp | Dynamic tab list correctness. |
 
 ---
 
