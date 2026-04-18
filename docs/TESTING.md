@@ -96,12 +96,14 @@ Implement in this sequence so early layers need **no scene tree** (or only thin 
 
 ## Layer 4 — `UiTransactionalState`
 
+**Implemented:** [`addons/ui_react/tests/unit/state/test_ui_transactional_state.gd`](addons/ui_react/tests/unit/state/test_ui_transactional_state.gd) — public API on [`ui_transactional_state.gd`](../addons/ui_react/scripts/api/models/ui_transactional_state.gd).
+
 | Status | Test focus | Why |
 |--------|------------|-----|
-| [ ] | **Cloning**: arrays/dictionaries copied on `set_value` / `begin_edit` (not shared mutation) | Prevents “editing committed value” bugs. |
-| [ ] | **`_variants_equal` semantics** (via public API): int/float tolerance; float `is_equal_approx` | False pending / duplicate emissions. |
-| [ ] | **`has_pending_changes`**, `apply_draft`, `cancel_draft` / `reset_to_committed` | Whole draft/commit UX contract. |
-| [ ] | **`matches_expected_binding_class`** for each documented `StringName` | Validator / binding slot alignment. |
+| [x] | **Cloning**: arrays/dictionaries copied on `set_value` / `begin_edit` (not shared mutation) | Prevents “editing committed value” bugs. |
+| [x] | **`_variants_equal` semantics** (via public API): int/float tolerance; float `is_equal_approx` | False pending / duplicate emissions. |
+| [x] | **`has_pending_changes`**, `apply_draft`, `cancel_draft` / `reset_to_committed` | Whole draft/commit UX contract. |
+| [x] | **`matches_expected_binding_class`** for each documented `StringName` | Validator / binding slot alignment. |
 
 ---
 
