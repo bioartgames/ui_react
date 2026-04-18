@@ -69,12 +69,14 @@ Implement in this sequence so early layers need **no scene tree** (or only thin 
 
 ## Layer 2 — `UiReactWireTemplate`
 
+**Implemented:** [`addons/ui_react/tests/unit/react/test_ui_react_wire_template.gd`](addons/ui_react/tests/unit/react/test_ui_react_wire_template.gd) — full public static API on [`ui_react_wire_template.gd`](../addons/ui_react/scripts/internal/react/ui_react_wire_template.gd).
+
 | Status | Test focus | Why |
 |--------|------------|-----|
-| [ ] | **`selection_detail_base`**: no selection text; dict with `name`/`kind`; dict with `label`/`text`; non-dict row | User-visible detail strings; formatting regressions are common. |
-| [ ] | **`selected_row_dict`**: out of range → `{}`; non-dict → `{}` | Defensive behavior for pulse / “Use” flows. |
-| [ ] | **`row_display_name`**: strips `name` | Template edge cases for empty names. |
-| [ ] | **`substitute_row_placeholders`**: `{name}` / `{kind}` / `{qty}`; missing keys | Broken action strings when row shape evolves. |
+| [x] | **`selection_detail_base`**: no selection text; dict with `name`/`kind`; dict with `label`/`text`; non-dict row | User-visible detail strings; formatting regressions are common. |
+| [x] | **`selected_row_dict`**: out of range → `{}`; non-dict → `{}` | Defensive behavior for pulse / “Use” flows. |
+| [x] | **`row_display_name`**: strips `name` | Template edge cases for empty names. |
+| [x] | **`substitute_row_placeholders`**: `{name}` / `{kind}` / `{qty}`; missing keys | Broken action strings when row shape evolves. |
 
 ---
 
