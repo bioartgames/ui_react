@@ -51,14 +51,19 @@ Implement in this sequence so early layers need **no scene tree** (or only thin 
 
 ## Layer 1 — `UiReactStateOpService`
 
+**Implemented:** [`addons/ui_react/tests/unit/react/test_ui_react_state_op_service.gd`](addons/ui_react/tests/unit/react/test_ui_react_state_op_service.gd) — full public static API on [`ui_react_state_op_service.gd`](../addons/ui_react/scripts/internal/react/ui_react_state_op_service.gd).
+
 | Status | Test focus | Why |
 |--------|------------|-----|
-| [ ] | **`float_from_state` / `int_from_state`**: null → 0 | Null-safe reads are easy to regress. |
-| [ ] | **`afford_floats`**: gold ≥ price×qty; null behaves like 0 | Core afford / buy-disable contract. |
-| [ ] | **`subtract_product_from_accumulator`**: no-op when unaffordable; correct remainder when affordable | Prevents double-charge or negative totals. |
-| [ ] | **`add_product_to_accumulator`**: null short-circuit; unbounded add | Additive presets must stay null-safe. |
-| [ ] | **`transfer_float_product_clamped`**: clamp; zero product; null refs | Transfer edge cases hide silent bugs. |
-| [ ] | **`add_product_to_int_clamped` / `transfer_int_product_clamped`**: overflow no-op; negative product rules | Integer overflow paths must stay guarded. |
+| [x] | **`float_from_state`**: null → `0.0`; else reads float | Null-safe reads for computeds / actions. |
+| [x] | **`int_from_state`**: null → `0`; else reads int | Same for discrete indices / counts. |
+| [x] | **`set_float_literal`**: null accum no-op; else `set_value` | One-way literal write for action presets. |
+| [x] | **`afford_floats`**: `gold >= price×qty`; null slots behave as 0 | Core afford / buy-disable contract. |
+| [x] | **`subtract_product_from_accumulator`**: null / unaffordable no-op; else subtract total | Shop-style spend without negative gold. |
+| [x] | **`add_product_to_accumulator`**: any null no-op; unbounded `cur + fa×fb` | Additive presets; null-safe. |
+| [x] | **`transfer_float_product_clamped`**: null / `p<=0` / `actual<=0` no-op; else clamped transfer | Float transfer edge cases. |
+| [x] | **`add_product_to_int_clamped`**: null; mul/sum overflow; `p<0`; else add | Signed i64 safety for int accum. |
+| [x] | **`transfer_int_product_clamped`**: null; mul overflow; `p<=0`; `actual<=0`; add overflow; else transfer | Int transfer + overflow guards. |
 
 ---
 
