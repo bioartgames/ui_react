@@ -16,6 +16,18 @@ This document is the **ordered backlog** for **foundation** (pure logic) tests u
 
 ---
 
+## Test tiers (A / B / C) and resilience
+
+Tests are grouped by how brittle they are when product copy or formatting changes.
+
+- **Tier A — State, math, and invariants:** Prefer exact checks on primitives, booleans, and structured data (dictionary keys, array sizes, `str(row.get("kind"))`). Avoid asserting full multi-line user-facing strings unless the string is an intentional, low-churn contract (for example short template grammar).
+
+- **Tier B — Public API, apply outcomes, and diagnostics:** Assert observable behavior after `apply` / `recompute`, and treat expected `push_warning` / `push_error` as **count-based** GUT assertions: call `assert_engine_error(1)` or `assert_push_error(1)` **after** the line that triggers the diagnostic, with **no message substring** so tests do not break when log copy is edited. GUT marks those errors as handled; **Godot may still print yellow warnings in the editor console**—that is normal.
+
+- **Tier C — Presentation, registry text, and wiring hints:** Do not duplicate production BBCode or sentence templates in tests. Prefer `String.contains` anchors, numeric substrings, or `String.count` when that is enough to distinguish scenarios. When you intentionally change copy or registry strings, update the matching Tier C tests **in the same change** so the suite stays honest.
+
+---
+
 ## Rollout order (recommended)
 
 Implement in this sequence so early layers need **no scene tree** (or only thin `TabContainer` setup at the end). Each step builds fixtures (`UiFloatState`, wire rules, action rows) reused later.

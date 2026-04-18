@@ -80,7 +80,7 @@ func test_validate_transactional_drops_control_only_row() -> void:
 	var row := _row_grab("Child")
 	var action_targets: Array[UiReactActionTarget] = [row]
 	var out := UiReactActionTargetHelper.validate_action_targets(owner, CMP, action_targets, [])
-	assert_engine_error("control-triggered row not supported")
+	assert_engine_error(1)
 	assert_true(out.is_empty())
 
 
@@ -103,7 +103,7 @@ func test_validate_state_watch_non_pressed_still_outputs_when_otherwise_valid() 
 	row.trigger = UiAnimTarget.Trigger.TEXT_CHANGED
 	var action_targets: Array[UiReactActionTarget] = [row]
 	var out := UiReactActionTargetHelper.validate_action_targets(owner, CMP, action_targets, [])
-	assert_engine_error("state_watch set but trigger is not PRESSED")
+	assert_engine_error(1)
 	assert_eq(out.size(), 1)
 	assert_same(out[0], row)
 
@@ -113,7 +113,7 @@ func test_validate_bool_flag_missing_dropped() -> void:
 	var row := _row_bool_flag(null, null)
 	var action_targets: Array[UiReactActionTarget] = [row]
 	var out := UiReactActionTargetHelper.validate_action_targets(owner, CMP, action_targets, [])
-	assert_engine_error("SET_UI_BOOL_FLAG needs bool_flag_state")
+	assert_engine_error(1)
 	assert_true(out.is_empty())
 
 
@@ -123,7 +123,7 @@ func test_validate_bool_flag_same_as_state_watch_dropped() -> void:
 	var row := _row_bool_flag(sw, sw)
 	var action_targets: Array[UiReactActionTarget] = [row]
 	var out := UiReactActionTargetHelper.validate_action_targets(owner, CMP, action_targets, [])
-	assert_push_error("loop risk")
+	assert_push_error(1)
 	assert_true(out.is_empty())
 
 
@@ -133,7 +133,7 @@ func test_validate_grab_focus_empty_target_dropped() -> void:
 	row.trigger = UiAnimTarget.Trigger.PRESSED
 	var action_targets: Array[UiReactActionTarget] = [row]
 	var out := UiReactActionTargetHelper.validate_action_targets(owner, CMP, action_targets, [])
-	assert_engine_error("non-empty target NodePath")
+	assert_engine_error(1)
 	assert_true(out.is_empty())
 
 
@@ -153,7 +153,7 @@ func test_validate_set_visible_empty_target_dropped() -> void:
 	row.trigger = UiAnimTarget.Trigger.PRESSED
 	var action_targets: Array[UiReactActionTarget] = [row]
 	var out := UiReactActionTargetHelper.validate_action_targets(owner, CMP, action_targets, [])
-	assert_engine_error("non-empty target NodePath")
+	assert_engine_error(1)
 	assert_true(out.is_empty())
 
 

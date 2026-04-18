@@ -30,7 +30,7 @@ func test_set_value_rejects_non_array() -> void:
 	var s := UiArrayState.new([1])
 	watch_signals(s)
 	s.set_value(99)
-	assert_engine_error("UiArrayState.set_value() expects an Array")
+	assert_engine_error(1)
 	assert_eq(s.get_array_value(), [1])
 	assert_signal_not_emitted(s, "value_changed")
 

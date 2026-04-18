@@ -18,7 +18,7 @@ func test_warn_setup_emits_engine_warning() -> void:
 	var owner: Control = autoqfree(Control.new())
 	owner.name = "Probe"
 	UiReactStateBindingHelper.warn_setup(CMP, owner, "something wrong", "fix it")
-	assert_engine_error("something wrong")
+	assert_engine_error(1)
 
 
 # --- initial_sync ---
@@ -153,13 +153,13 @@ func test_expect_array_state_empty_array() -> void:
 
 func test_expect_array_state_dictionary_returns_null() -> void:
 	var out := UiReactStateBindingHelper.expect_array_state(CMP, OWNER, FIELD, {})
-	assert_engine_error("must be an Array")
+	assert_engine_error(1)
 	assert_same(out, null)
 
 
 func test_expect_array_state_int_returns_null() -> void:
 	var out := UiReactStateBindingHelper.expect_array_state(CMP, OWNER, FIELD, 7)
-	assert_engine_error("must be an Array")
+	assert_engine_error(1)
 	assert_same(out, null)
 
 
@@ -167,7 +167,7 @@ func test_expect_array_state_packed_string_array_returns_null() -> void:
 	var packed := PackedStringArray()
 	packed.append("p")
 	var out := UiReactStateBindingHelper.expect_array_state(CMP, OWNER, FIELD, packed)
-	assert_engine_error("must be an Array")
+	assert_engine_error(1)
 	assert_same(out, null)
 
 

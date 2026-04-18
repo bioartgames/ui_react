@@ -108,7 +108,9 @@ func test_map_int_hint_sets_category_line() -> void:
 	rule.index_to_string = {1: "weapon"}
 	rule.hint_labels_by_index = {1: "Weapons"}
 	_apply(rule)
-	assert_eq(hint.get_string_value(), "Category: Weapons (tree index 1).")
+	var h := hint.get_string_value()
+	assert_true(h.contains("Weapons"))
+	assert_true(h.contains("tree index 1"))
 
 
 func test_map_int_hint_default_label() -> void:
@@ -122,7 +124,9 @@ func test_map_int_hint_default_label() -> void:
 	rule.index_to_string = {3: "x"}
 	rule.hint_labels_by_index = {}
 	_apply(rule)
-	assert_eq(hint.get_string_value(), "Category: (pick a row) (tree index 3).")
+	var h := hint.get_string_value()
+	assert_true(h.contains("(pick a row)"))
+	assert_true(h.contains("tree index 3"))
 
 
 # --- UiReactWireRefreshItemsFromCatalog ---
@@ -170,7 +174,9 @@ func test_refresh_builds_lines_no_filters() -> void:
 	var lines: Array = items.get_array_value()
 	assert_eq(lines.size(), 2)
 	var label0: String = str(lines[0].get("label", ""))
-	assert_eq(label0, "Alpha (weapon) × 1")
+	assert_true(label0.contains("Alpha"))
+	assert_true(label0.contains("weapon"))
+	assert_true(label0.contains("×"))
 
 
 func test_refresh_kind_filter_excludes() -> void:
