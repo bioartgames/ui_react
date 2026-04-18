@@ -126,14 +126,18 @@ Use real `Ui*State` + rule resources; `_source` may be `null` where unused.
 
 ## Layer 6 — `UiReactActionTargetHelper`
 
+**Implemented:** [`addons/ui_react/tests/unit/react/test_ui_react_action_target_helper.gd`](addons/ui_react/tests/unit/react/test_ui_react_action_target_helper.gd) — `validate_action_targets` and `collect_control_trigger_map` on [`ui_react_action_target_helper.gd`](../addons/ui_react/scripts/internal/react/ui_react_action_target_helper.gd).
+
 | Status | Test focus | Why |
 |--------|------------|-----|
-| [ ] | **Disabled rows** preserved in output | Inspector round-trips must not drop disabled config. |
-| [ ] | **`UiReactTransactionalActions`**: control-triggered row dropped + warning path | ACTION_LAYER transactional-only rule. |
-| [ ] | **`state_watch` + trigger ≠ `PRESSED`**: dropped / warned | Half-wired rows that never run at runtime. |
-| [ ] | **`SET_UI_BOOL_FLAG`**: missing `bool_flag_state`; `bool_flag_state == state_watch` rejected | Loop / misconfiguration prevention. |
-| [ ] | **`GRAB_FOCUS` / `SET_VISIBLE` / `SET_MOUSE_FILTER`**: empty `target` unless allowlist trigger | Path validation for focus/visibility. |
-| [ ] | **`collect_control_trigger_map`**: ignores `state_watch` rows; trigger keys merged | Host trigger merging contract. |
+| [x] | **Disabled rows** preserved in output | Inspector round-trips must not drop disabled config. |
+| [x] | **`UiReactTransactionalActions`**: control-triggered row dropped + warning path | ACTION_LAYER transactional-only rule. |
+| [x] | **`state_watch` + trigger ≠ `PRESSED`**: dropped / warned | Half-wired rows that never run at runtime. |
+| [x] | **`SET_UI_BOOL_FLAG`**: missing `bool_flag_state`; `bool_flag_state == state_watch` rejected | Loop / misconfiguration prevention. |
+| [x] | **`GRAB_FOCUS` / `SET_VISIBLE` / `SET_MOUSE_FILTER`**: empty `target` unless allowlist trigger | Path validation for focus/visibility. |
+| [x] | **`collect_control_trigger_map`**: ignores `state_watch` rows; trigger keys merged | Host trigger merging contract. |
+
+*Implementation note:* `validate_action_targets` **warns** when `state_watch` is set and `trigger` is not `PRESSED`, but still **keeps** the row in the returned array if no later branch drops it (see tests and `ui_react_action_target_helper.gd`).
 
 ---
 
