@@ -157,11 +157,13 @@ Use real `Ui*State` + rule resources; `_source` may be `null` where unused.
 
 ## Layer 8 — `UiReactValidatorCommon`
 
+**Implemented:** [`addons/ui_react/tests/unit/validator/test_ui_react_validator_common.gd`](addons/ui_react/tests/unit/validator/test_ui_react_validator_common.gd) — public static API on [`ui_react_validator_common.gd`](../addons/ui_react/editor_plugin/services/ui_react_validator_common.gd) (registry via [`ui_react_component_registry.gd`](../addons/ui_react/editor_plugin/ui_react_component_registry.gd) `ANIM_TRIGGERS_BY_COMPONENT`).
+
 | Status | Test focus | Why |
 |--------|------------|-----|
-| [ ] | **`variant_type_name`** (`Object` vs primitives) | Stable validator messaging. |
-| [ ] | **`get_allowed_anim_triggers` / `is_anim_trigger_allowed`**: known component; unknown → allowed | Registry edits must not forbid valid triggers. |
-| [ ] | **`format_anim_trigger_name` / `format_allowed_anim_triggers_hint`** | Dock hint strings. |
+| [x] | **`variant_type_name`** (`Object` vs primitives) | Stable validator messaging. |
+| [x] | **`get_allowed_anim_triggers` / `is_anim_trigger_allowed`**: known component; unknown → allowed | Registry edits must not forbid valid triggers. |
+| [x] | **`format_anim_trigger_name` / `format_allowed_anim_triggers_hint`** | Dock hint strings. |
 
 ---
 
