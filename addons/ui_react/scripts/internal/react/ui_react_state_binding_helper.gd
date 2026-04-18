@@ -17,9 +17,23 @@ static func initial_sync(state: UiState, sync_fn: Callable) -> void:
 static func deferred_finish_initialization(controller: Node, method: StringName = &"_finish_initialization") -> void:
 	controller.call_deferred(method)
 
-## Coerces a [Variant] to [code]bool[/code] (same semantics as [code]bool()[/code]).
+## Coerces a [Variant] to [code]bool[/code] (binding-friendly: [code]null[/code] → [code]false[/code]; strings non-empty → [code]true[/code]; numeric non-zero; [code]bool[/code] passthrough).
 static func coerce_bool(value: Variant) -> bool:
-	return bool(value)
+	match typeof(value):
+		TYPE_NIL:
+			return false
+		TYPE_BOOL:
+			return value
+		TYPE_INT:
+			return (value as int) != 0
+		TYPE_FLOAT:
+			return not is_zero_approx(value as float)
+		TYPE_STRING, TYPE_STRING_NAME:
+			return not str(value).is_empty()
+		_:
+			if value is Object:
+				return value != null
+			return false
 
 ## Coerces to [code]float[/code]; [code]null[/code] maps to [param default_if_null].
 static func coerce_float(value: Variant, default_if_null: float = 0.0) -> float:

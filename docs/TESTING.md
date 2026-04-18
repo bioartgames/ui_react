@@ -143,15 +143,17 @@ Use real `Ui*State` + rule resources; `_source` may be `null` where unused.
 
 ## Layer 7 — `UiReactStateBindingHelper`
 
+**Implemented:** [`addons/ui_react/tests/unit/react/test_ui_react_state_binding_helper.gd`](addons/ui_react/tests/unit/react/test_ui_react_state_binding_helper.gd) — public static API on [`ui_react_state_binding_helper.gd`](../addons/ui_react/scripts/internal/react/ui_react_state_binding_helper.gd).
+
 | Status | Test focus | Why |
 |--------|------------|-----|
-| [ ] | **`coerce_bool` / `coerce_float`** (incl. `null` default) | Variant coercion refactors. |
-| [ ] | **`approx_equal_float`**: negative epsilon → `is_equal_approx`; positive window | Float binding stability. |
-| [ ] | **`as_text_flat` / `as_text_recursive`** (nested `UiState`, arrays) | Label / debug text assembly. |
-| [ ] | **`expect_array_state`**: pass array; non-array → `null` | Tab/list setup guardrail. |
-| [ ] | **`initial_sync`**: callable receives `(v, v)` | First-frame correctness. |
+| [x] | **`coerce_bool` / `coerce_float`** (incl. `null` default) | Variant coercion refactors. |
+| [x] | **`approx_equal_float`**: negative epsilon → `is_equal_approx`; positive window | Float binding stability. |
+| [x] | **`as_text_flat` / `as_text_recursive`** (nested `UiState`, arrays) | Label / debug text assembly. |
+| [x] | **`expect_array_state`**: pass array; non-array → `null` | Tab/list setup guardrail. |
+| [x] | **`initial_sync`**: callable receives `(v, v)` | First-frame correctness. |
 
-*(Optional later: `warn_setup`, `deferred_finish_initialization` with harnesses.)*
+`warn_setup` and `deferred_finish_initialization` are covered in the same test file.
 
 ---
 
