@@ -82,13 +82,15 @@ Implement in this sequence so early layers need **no scene tree** (or only thin 
 
 ## Layer 3 — `UiComputed*`
 
+**Implemented:** [`addons/ui_react/tests/unit/computed/test_ui_computed.gd`](addons/ui_react/tests/unit/computed/test_ui_computed.gd) — concrete `UiComputed*` subclasses (`ui_computed_*.gd`) under [`addons/ui_react/scripts/api/models/`](../addons/ui_react/scripts/api/models/).
+
 | Status | Test focus | Why |
 |--------|------------|-----|
-| [ ] | **`UiComputedBoolInvert`**: empty sources → `true`; null first source → `true`; else `not bool(source)` | Default-safe invert semantics. |
-| [ ] | **`UiComputedFloatGeProductBool`**: matches afford; wrong-typed `sources` entries | Keeps computed layer aligned with `UiReactStateOpService`. |
-| [ ] | **`UiComputedOrderSummaryThreeFloatString`**: totals, gold line, afford verdict (substring or stable fragments) | BBCode summary is string-sensitive. |
-| [ ] | **`UiComputedTransactionalStatusString`**: null txn sources; pending when either dirty | Options-screen status line; multi-resource pending logic. |
-| [ ] | *(Smoke)* **`UiComputedBoolState` / `UiComputedStringState`**: `recompute` delegates to `set_value` | Belt-and-suspenders on abstract base wiring. |
+| [x] | **`UiComputedBoolInvert`**: empty sources → `true`; null first source → `true`; else `not bool(source)` | Default-safe invert semantics. |
+| [x] | **`UiComputedFloatGeProductBool`**: matches afford; wrong-typed `sources` entries | Keeps computed layer aligned with `UiReactStateOpService`. |
+| [x] | **`UiComputedOrderSummaryThreeFloatString`**: totals, gold line, afford verdict (substring or stable fragments) | BBCode summary is string-sensitive. |
+| [x] | **`UiComputedTransactionalStatusString`**: null txn sources; pending when either dirty | Options-screen status line; multi-resource pending logic. |
+| [x] | *(Smoke)* **`UiComputedBoolState` / `UiComputedStringState`**: `recompute` delegates to `set_value` | Belt-and-suspenders on abstract base wiring. |
 
 ---
 
