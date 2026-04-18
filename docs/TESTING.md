@@ -111,14 +111,16 @@ Implement in this sequence so early layers need **no scene tree** (or only thin 
 
 Use real `Ui*State` + rule resources; `_source` may be `null` where unused.
 
+**Implemented:** [`addons/ui_react/tests/unit/wire/test_ui_react_wire_rules.gd`](addons/ui_react/tests/unit/wire/test_ui_react_wire_rules.gd) — concrete `UiReactWire*` rules (`ui_react_wire_*.gd`) under [`addons/ui_react/scripts/api/models/`](../addons/ui_react/scripts/api/models/).
+
 | Status | Test focus | Why |
 |--------|------------|-----|
-| [ ] | **`UiReactWireMapIntToString`**: int key match; stringified int keys; optional `hint_state` | Category + hint wiring; dict key typing is fragile. |
-| [ ] | **`UiReactWireRefreshItemsFromCatalog`**: kind filter; name/kind needle; `selected_state` clamped to `-1`; first-row icon branch | Catalog → list payload without running demos. |
-| [ ] | **`UiReactWireCopySelectionDetail`**: index + items + suffix; null `items_state` | Aligns with `UiReactWireTemplate`. |
-| [ ] | **`UiReactWireSetStringOnBoolPulse.apply_from_pulse`**: rising edge; non-rising; `template_no_selection`; substitution | Order-sensitive pulse → string. |
-| [ ] | **`UiReactWireSyncBoolStateDebugLine`**: null bool vs set; `line_prefix` | Debug readout wiring. |
-| [ ] | **`UiReactWireSortArrayByKey`**: empty key no-op; empty array; dict sort by key; non-dict `str` sort; descending reverses | Pure sort contract for wiring. |
+| [x] | **`UiReactWireMapIntToString`**: int key match; stringified int keys; optional `hint_state` | Category + hint wiring; dict key typing is fragile. |
+| [x] | **`UiReactWireRefreshItemsFromCatalog`**: kind filter; name/kind needle; `selected_state` clamped to `-1`; first-row icon branch | Catalog → list payload without running demos. |
+| [x] | **`UiReactWireCopySelectionDetail`**: index + items + suffix; null `items_state` | Aligns with `UiReactWireTemplate`. |
+| [x] | **`UiReactWireSetStringOnBoolPulse.apply_from_pulse`**: rising edge; non-rising; `template_no_selection`; substitution | Order-sensitive pulse → string. |
+| [x] | **`UiReactWireSyncBoolStateDebugLine`**: null bool vs set; `line_prefix` | Debug readout wiring. |
+| [x] | **`UiReactWireSortArrayByKey`**: empty key no-op; empty array; dict sort by key; non-dict `str` sort; descending reverses | Pure sort contract for wiring. |
 
 ---
 
