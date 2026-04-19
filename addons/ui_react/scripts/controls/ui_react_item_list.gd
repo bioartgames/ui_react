@@ -65,19 +65,17 @@ func _ready() -> void:
 
 
 func _disconnect_all_states() -> void:
-	if _items_state != null and _items_state.value_changed.is_connected(_on_items_state_changed):
-		_items_state.value_changed.disconnect(_on_items_state_changed)
-	if _selected_state != null and _selected_state.value_changed.is_connected(_on_selected_state_changed):
-		_selected_state.value_changed.disconnect(_on_selected_state_changed)
+	if _items_state != null:
+		UiReactControlStateWire.unbind_value_changed(self, _items_state, &"items_state", _on_items_state_changed, false)
+	if _selected_state != null:
+		UiReactControlStateWire.unbind_value_changed(self, _selected_state, &"selected_state", _on_selected_state_changed, false)
 
 
 func _connect_all_states() -> void:
 	if _items_state != null:
-		_items_state.value_changed.connect(_on_items_state_changed)
-		_on_items_state_changed(_items_state.get_value(), _items_state.get_value())
+		UiReactControlStateWire.bind_value_changed(self, _items_state, &"items_state", _on_items_state_changed, false)
 	if _selected_state != null:
-		_selected_state.value_changed.connect(_on_selected_state_changed)
-		_on_selected_state_changed(_selected_state.get_value(), _selected_state.get_value())
+		UiReactControlStateWire.bind_value_changed(self, _selected_state, &"selected_state", _on_selected_state_changed, false)
 
 
 ## Validates animation targets and filters out invalid ones.

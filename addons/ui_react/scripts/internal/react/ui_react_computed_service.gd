@@ -31,6 +31,23 @@ static func hook_unbind(state: UiState, consumer: Node, binding: StringName) -> 
 	release_wired(state, consumer, binding)
 
 
+## Test-only: tears down all static wiring tables and listeners. Call between GUT cases or tooling runs; **not** for production scenes.
+static func reset_internal_state_for_tests() -> void:
+	while not _wired.is_empty():
+		var k: Variant = _wired.keys()[0]
+		var entry: WiredEntry = _wired[k] as WiredEntry
+		if entry != null and entry.computed != null:
+			_unwire_computed(entry.computed)
+		else:
+			_wired.erase(k)
+	_site_keys.clear()
+	_refcount_by_computed.clear()
+	_wired.clear()
+	_dirty_computed_ids.clear()
+	_flush_scheduled = false
+	_reenter_depth.clear()
+
+
 static func ensure_wired(computed: UiState, consumer: Node, binding: StringName) -> void:
 	if Engine.is_editor_hint():
 		return

@@ -63,19 +63,17 @@ func _ready() -> void:
 
 
 func _disconnect_all_states() -> void:
-	if _tree_items_state != null and _tree_items_state.value_changed.is_connected(_on_tree_items_state_changed):
-		_tree_items_state.value_changed.disconnect(_on_tree_items_state_changed)
-	if _selected_state != null and _selected_state.value_changed.is_connected(_on_selected_state_changed):
-		_selected_state.value_changed.disconnect(_on_selected_state_changed)
+	if _tree_items_state != null:
+		UiReactControlStateWire.unbind_value_changed(self, _tree_items_state, &"tree_items_state", _on_tree_items_state_changed, false)
+	if _selected_state != null:
+		UiReactControlStateWire.unbind_value_changed(self, _selected_state, &"selected_state", _on_selected_state_changed, false)
 
 
 func _connect_all_states() -> void:
 	if _tree_items_state != null:
-		_tree_items_state.value_changed.connect(_on_tree_items_state_changed)
-		_on_tree_items_state_changed(_tree_items_state.get_value(), _tree_items_state.get_value())
+		UiReactControlStateWire.bind_value_changed(self, _tree_items_state, &"tree_items_state", _on_tree_items_state_changed, false)
 	if _selected_state != null:
-		_selected_state.value_changed.connect(_on_selected_state_changed)
-		_on_selected_state_changed(_selected_state.get_value(), _selected_state.get_value())
+		UiReactControlStateWire.bind_value_changed(self, _selected_state, &"selected_state", _on_selected_state_changed, false)
 
 
 func _on_tree_items_state_changed(new_value: Variant, _old_value: Variant) -> void:

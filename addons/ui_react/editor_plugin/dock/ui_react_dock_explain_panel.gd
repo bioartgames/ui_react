@@ -250,7 +250,6 @@ func setup(
 func refresh() -> void:
 	if _graph_view == null:
 		return
-	_set_idle()
 	if _plugin == null:
 		_set_hint_visible(true)
 		_set_hint("Plugin not ready.")
@@ -412,7 +411,6 @@ func _on_graph_node(id: String) -> void:
 	_graph_selected_node_id = id
 	_graph_selected_edge_index = -1
 	_selection_kind = _SEL_NODE
-	_update_focus_button_state()
 	_sync_wire_rules_section()
 	_fill_node_details(id)
 
@@ -425,7 +423,6 @@ func _on_graph_edge(from_id: String, to_id: String, kind: int, label: String, ed
 	_last_edge_kind = kind
 	_last_edge_label = label
 	_selection_kind = _SEL_EDGE
-	_update_focus_button_state()
 	_sync_wire_rules_section()
 	_fill_edge_details(from_id, to_id, kind, label, edge_index)
 
@@ -434,32 +431,8 @@ func _on_graph_cleared() -> void:
 	_graph_selected_node_id = ""
 	_graph_selected_edge_index = -1
 	_selection_kind = _SEL_NONE
-	_update_focus_button_state()
 	_set_details_placeholder()
 	_sync_wire_rules_section()
-
-
-func _update_focus_button_state() -> void:
-	pass
-
-
-func _find_raw_preset_variant_by_name(preset_name: String) -> Variant:
-	var want := preset_name.strip_edges()
-	if want.is_empty():
-		return null
-	for it: Variant in UiReactDockConfig.load_graph_scope_presets_raw():
-		if it is Dictionary:
-			var nm := String((it as Dictionary).get("name", "")).strip_edges()
-			if nm == want:
-				return it
-	return null
-
-
-func _stored_about_for_preset_name(preset_name: String) -> String:
-	var v := _find_raw_preset_variant_by_name(preset_name)
-	if v == null or v is not Dictionary:
-		return ""
-	return String((v as Dictionary).get("about", (v as Dictionary).get(&"about", ""))).strip_edges()
 
 
 func _scope_pins_sorted_copy(pins: PackedStringArray) -> PackedStringArray:
@@ -510,12 +483,12 @@ func _scope_current_matches_saved_named_preset(active_name: String) -> bool:
 	var n := active_name.strip_edges()
 	if n.is_empty() or n.to_lower() == "default":
 		return false
-	var raw := _find_raw_preset_variant_by_name(n)
+	var raw := UiReactDockExplainScopePresets.find_raw_preset_variant_by_name(n)
 	if raw == null:
 		return false
 	var saved := _preset_from_variant(raw)
 	var cur := _capture_current_scope_settings(n)
-	cur[&"about"] = _stored_about_for_preset_name(n)
+	cur[&"about"] = UiReactDockExplainScopePresets.stored_about_for_preset_name(n)
 	return _scope_dict_matches_for_update(saved, cur)
 
 
@@ -583,7 +556,7 @@ func _pin_graph_node_to_active_preset(node_id: String) -> void:
 			out.append(pd)
 	if not updated:
 		var cap := _capture_current_scope_settings(active)
-		cap[&"about"] = _stored_about_for_preset_name(active)
+		cap[&"about"] = UiReactDockExplainScopePresets.stored_about_for_preset_name(active)
 		out.append(cap)
 	_persist_presets_array(out)
 	refresh()
@@ -639,7 +612,7 @@ func _fill_scope_submenu(scope_popup: PopupMenu, presets_popup: PopupMenu) -> vo
 		)
 		var uidx := scope_popup.get_item_index(_CV_SCOPE_UPDATE)
 		if uidx >= 0:
-			var missing := _find_raw_preset_variant_by_name(active) == null
+			var missing := UiReactDockExplainScopePresets.find_raw_preset_variant_by_name(active) == null
 			scope_popup.set_item_disabled(uidx, missing or _scope_current_matches_saved_named_preset(active))
 			if missing:
 				scope_popup.set_item_tooltip(uidx, "Preset missing from disk.")
@@ -688,12 +661,12 @@ func _on_scope_update_current_preset_pressed() -> void:
 		return
 	if _scope_current_matches_saved_named_preset(n):
 		return
-	var raw := _find_raw_preset_variant_by_name(n)
+	var raw := UiReactDockExplainScopePresets.find_raw_preset_variant_by_name(n)
 	if raw == null:
 		push_warning("Ui React: active preset not found on disk.")
 		return
 	var rec := _capture_current_scope_settings(n)
-	rec[&"about"] = _stored_about_for_preset_name(n)
+	rec[&"about"] = UiReactDockExplainScopePresets.stored_about_for_preset_name(n)
 	var arr: Array = UiReactDockConfig.load_graph_scope_presets_raw()
 	var out: Array = []
 	var found := false
@@ -724,9 +697,7 @@ func _resolve_wire_rules_host_control() -> Control:
 	if _selection_kind == _SEL_EDGE and _last_edge_kind == _SnapScript.EdgeKind.WIRE_FLOW:
 		var edges: Array = _last_layout.get(&"draw_edges", []) as Array
 		var idx := _graph_selected_edge_index
-		if idx < 0 or idx >= edges.size():
-			pass
-		else:
+		if idx >= 0 and idx < edges.size():
 			var ev: Variant = edges[idx]
 			if ev is Dictionary:
 				var wh := str((ev as Dictionary).get(&"wire_host_path", ""))
@@ -984,10 +955,12 @@ func _on_selection_action_id(id: int) -> void:
 		_SEL_ACT_COPY_DETAILS:
 			_on_copy_details_pressed()
 		_:
+			## Other root selection menu ids are handled by nested submenus (Node / Wire / Edge edit).
 			pass
 
 
 func _on_selection_node_submenu_id(_id: int) -> void:
+	## Node submenu only exposes nested "Create state & bind…"; flat item ids are not used here.
 	pass
 
 
@@ -1032,6 +1005,7 @@ func _on_selection_edge_edit_submenu_id(id: int) -> void:
 		_SEL_ACT_CREATE_ASSIGN_BINDING:
 			_on_create_assign_binding_pressed()
 		_:
+			## Unknown edge-edit submenu id (defensive; menus are built from known constants only).
 			pass
 
 
@@ -4803,7 +4777,6 @@ func _clear_stale_snapshot() -> void:
 	_last_edge_label = ""
 	_last_focus_host_path = ""
 	_selection_kind = _SEL_NONE
-	_update_focus_button_state()
 	_sync_wire_rules_section()
 	if _graph_view:
 		_graph_view.clear_graph()
@@ -4814,7 +4787,3 @@ func _clear_stale_snapshot() -> void:
 func _set_hint(t: String) -> void:
 	if _hint:
 		_hint.text = t
-
-
-func _set_idle() -> void:
-	pass

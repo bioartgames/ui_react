@@ -7,4 +7,5 @@ extends Resource
 
 ## Called by [UiReactWireRefreshItemsFromCatalog] before reading [member rows]. Override to lazy-load editor/runtime data.
 func ensure_rows_loaded() -> void:
+	## Override when [member rows] are loaded lazily from disk or services.
 	pass

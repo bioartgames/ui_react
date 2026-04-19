@@ -60,7 +60,7 @@ static func animate_fade_out(source_node: Node, target: Control, speed := UiAnim
 	else:
 		return animation_callable.call()
 
-static func animate_glow_pulse(source_node: Node, target: Control, duration: float = 1.5, repeat_count: int = -1, easing: int = Tween.EASE_OUT, glow_min_alpha: float = 0.7, auto_visible: bool = false) -> Signal:
+static func animate_glow_pulse(source_node: Node, target: Control, duration: float = UiAnimConstants.DEFAULT_GLOW_PULSE_DURATION, repeat_count: int = -1, easing: int = Tween.EASE_OUT, glow_min_alpha: float = UiAnimConstants.DEFAULT_GLOW_MIN_ALPHA, auto_visible: bool = false) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_glow_pulse"):
 		return Signal()
 	
@@ -83,7 +83,7 @@ static func animate_glow_pulse(source_node: Node, target: Control, duration: flo
 		return tween.finished
 	
 	return UiAnimLoopRunner.loop_animation(source_node, target, animation_callable, repeat_count)
-static func animate_color_flash(source_node: Node, target: Control, flash_color: Color = Color.YELLOW, duration: float = 0.2, flash_intensity: float = 1.5, auto_visible: bool = false, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_color_flash(source_node: Node, target: Control, flash_color: Color = Color.YELLOW, duration: float = UiAnimConstants.DEFAULT_COLOR_FLASH_DURATION, flash_intensity: float = UiAnimConstants.DEFAULT_COLOR_FLASH_INTENSITY, auto_visible: bool = false, easing: int = Tween.EASE_OUT) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_color_flash"):
 		return Signal()
 	

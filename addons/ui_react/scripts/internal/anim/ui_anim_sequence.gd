@@ -25,7 +25,8 @@ extends RefCounted
 
 var _animations: Array[Callable] = []
 
-func _init():
+func _init() -> void:
+	## Sequence starts empty; see [method add] / [method play].
 	pass
 
 ## Adds an animation to the sequence.

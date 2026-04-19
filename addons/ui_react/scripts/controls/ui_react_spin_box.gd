@@ -50,27 +50,19 @@ func _ready() -> void:
 
 func _disconnect_all_states() -> void:
 	if _value_state != null:
-		UiReactComputedService.hook_unbind(_value_state, self, &"value_state")
-	if _value_state != null and _value_state.value_changed.is_connected(_on_value_state_changed):
-		_value_state.value_changed.disconnect(_on_value_state_changed)
+		UiReactControlStateWire.unbind_value_changed(self, _value_state, &"value_state", _on_value_state_changed)
 	if _disabled_state != null:
-		UiReactComputedService.hook_unbind(_disabled_state, self, &"disabled_state")
-	if _disabled_state != null and _disabled_state.value_changed.is_connected(_on_disabled_state_changed):
-		_disabled_state.value_changed.disconnect(_on_disabled_state_changed)
+		UiReactControlStateWire.unbind_value_changed(self, _disabled_state, &"disabled_state", _on_disabled_state_changed)
 
 
 func _connect_all_states() -> void:
 	if _value_state != null:
-		_value_state.value_changed.connect(_on_value_state_changed)
-		_on_value_state_changed(_value_state.get_value(), _value_state.get_value())
+		UiReactControlStateWire.bind_value_changed(self, _value_state, &"value_state", _on_value_state_changed)
 		_last_value = UiReactStateBindingHelper.coerce_float(_value_state.get_value())
-		UiReactComputedService.hook_bind(_value_state, self, &"value_state")
 	else:
 		_last_value = value
 	if _disabled_state != null:
-		_disabled_state.value_changed.connect(_on_disabled_state_changed)
-		_on_disabled_state_changed(_disabled_state.get_value(), _disabled_state.get_value())
-		UiReactComputedService.hook_bind(_disabled_state, self, &"disabled_state")
+		UiReactControlStateWire.bind_value_changed(self, _disabled_state, &"disabled_state", _on_disabled_state_changed)
 
 
 ## Validates animation targets and filters out invalid ones.

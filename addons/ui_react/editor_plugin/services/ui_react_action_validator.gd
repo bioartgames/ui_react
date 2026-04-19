@@ -212,6 +212,7 @@ static func validate_action_targets(
 				)
 				continue
 			_:
+				## Non-numeric action kinds: no shared float/int field matrix in this validator branch.
 				pass
 
 		if row.state_watch != null and row.bool_flag_state != null:

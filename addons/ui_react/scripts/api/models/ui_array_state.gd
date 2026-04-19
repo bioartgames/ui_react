@@ -18,6 +18,7 @@ func get_value() -> Variant:
 func set_value(new_value: Variant) -> void:
 	var next: Array = []
 	if new_value == null:
+		## null clears to an empty array (see [code]next[/code] below).
 		pass
 	elif new_value is Array:
 		next = (new_value as Array).duplicate()

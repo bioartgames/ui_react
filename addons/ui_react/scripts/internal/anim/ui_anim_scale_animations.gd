@@ -450,7 +450,7 @@ static func animate_elastic_out(source_node: Node, target: Control, speed := UiA
 ## [param auto_visible]: If true, automatically sets visible=true before animation (default: false).
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
-static func animate_pop(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, overshoot: float = 1.2, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_pop(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, overshoot: float = UiAnimConstants.DEFAULT_POP_OVERSHOOT, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_pop"):
 		return Signal()
 	

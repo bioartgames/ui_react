@@ -35,7 +35,7 @@ static func stop_stagger_animations(source_node: Node, targets: Array[Control]) 
 			target.position = current_position
 
 ## Animates multiple controls with a stagger effect.
-static func animate_stagger(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_config: UiAnimTarget = null) -> Signal:
+static func animate_stagger(source_node: Node, targets: Array[Control], delay_between: float = UiAnimConstants.DEFAULT_STAGGER_DELAY, animation_config: UiAnimTarget = null) -> Signal:
 	if not source_node or targets.size() == 0:
 		push_warning("UiAnimStaggerRunner: Invalid source_node or empty targets. Fix: Pass a valid node and a non-empty Array of controls.")
 		return Signal()
@@ -63,7 +63,7 @@ static func animate_stagger(source_node: Node, targets: Array[Control], delay_be
 	return helper.all_finished
 
 ## Animates multiple controls with per-target configs.
-static func animate_stagger_multi(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_configs: Array[UiAnimTarget] = []) -> Signal:
+static func animate_stagger_multi(source_node: Node, targets: Array[Control], delay_between: float = UiAnimConstants.DEFAULT_STAGGER_DELAY, animation_configs: Array[UiAnimTarget] = []) -> Signal:
 	if not source_node or targets.size() == 0:
 		push_warning("UiAnimStaggerRunner: Invalid source_node or empty targets for animate_stagger_multi. Fix: Pass a valid node and a non-empty Array of controls.")
 		return Signal()

@@ -10,6 +10,7 @@ extends UiState
 func _init(initial_value: Variant = 0) -> void:
 	match typeof(initial_value):
 		TYPE_NIL:
+			## Default [code]value[/code] stays [code]0[/code].
 			pass
 		TYPE_INT:
 			value = initial_value

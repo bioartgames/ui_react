@@ -106,6 +106,7 @@ static func validate_action_targets(
 					)
 					continue
 			_:
+				## Other action kinds: no extra SET_UI_BOOL_FLAG field checks in this branch.
 				pass
 
 		if row.action in [

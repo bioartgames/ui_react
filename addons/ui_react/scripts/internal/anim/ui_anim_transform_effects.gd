@@ -2,7 +2,7 @@
 class_name UiAnimTransformEffects
 extends RefCounted
 
-static func animate_rotate_in(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, start_angle: float = -360.0, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_rotate_in(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, start_angle: float = UiAnimConstants.DEFAULT_ROTATE_IN_START_DEG, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_rotate_in"):
 		return Signal()
 	
@@ -41,7 +41,7 @@ static func animate_rotate_in(source_node: Node, target: Control, speed := UiAni
 ## [param auto_reset]: If true, automatically resets rotation_degrees=0.0 after animation completes (default: false).
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
-static func animate_rotate_out(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, end_angle: float = 360.0, auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_rotate_out(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SPEED, end_angle: float = UiAnimConstants.DEFAULT_ROTATE_OUT_END_DEG, auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_rotate_out"):
 		return Signal()
 	
@@ -81,7 +81,7 @@ static func animate_rotate_out(source_node: Node, target: Control, speed := UiAn
 ## [param auto_visible]: If true, automatically sets visible=true before animation (default: false).
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## [return]: Signal that emits when animation finishes.
-static func animate_pulse(source_node: Node, target: Control, speed := 0.5, pulse_amount: float = 1.1, pulse_count: int = 2, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_pulse(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_PULSE_SPEED, pulse_amount: float = UiAnimConstants.DEFAULT_PULSE_AMOUNT, pulse_count: int = UiAnimConstants.DEFAULT_PULSE_COUNT, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_pulse"):
 		return Signal()
 	
@@ -121,7 +121,7 @@ static func animate_pulse(source_node: Node, target: Control, speed := 0.5, puls
 ## [param repeat_count]: Number of repeats after the initial play (0 = play once, 1+ = play N+1 times total, -1 = infinite loop) (default: 0).
 ## Note: Position is automatically preserved using the unified baseline snapshot system.
 ## [return]: Signal that emits when animation finishes.
-static func animate_shake(source_node: Node, target: Control, speed := 0.5, intensity: float = 10.0, shake_count: int = 5, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_shake(source_node: Node, target: Control, speed := UiAnimConstants.DEFAULT_SHAKE_SPEED, intensity: float = UiAnimConstants.DEFAULT_SHAKE_INTENSITY, shake_count: int = UiAnimConstants.DEFAULT_SHAKE_COUNT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_shake"):
 		return Signal()
 
@@ -171,7 +171,7 @@ static func animate_shake(source_node: Node, target: Control, speed := 0.5, inte
 		, CONNECT_ONE_SHOT)
 
 	return result_signal
-static func animate_breathing(source_node: Node, target: Control, duration: float = 2.0, repeat_count: int = -1, easing: int = Tween.EASE_OUT, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false) -> Signal:
+static func animate_breathing(source_node: Node, target: Control, duration: float = UiAnimConstants.DEFAULT_BREATHING_DURATION, repeat_count: int = -1, easing: int = Tween.EASE_OUT, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_breathing"):
 		return Signal()
 	
@@ -208,7 +208,7 @@ static func animate_breathing(source_node: Node, target: Control, duration: floa
 ## [param pivot_offset]: Custom pivot offset for rotation (default: UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT uses center).
 ## [param auto_visible]: If true, automatically sets visible=true before animation (default: false).
 ## [return]: Signal that emits when animation finishes (or can be used to track infinite loops).
-static func animate_wobble(source_node: Node, target: Control, duration: float = 1.5, repeat_count: int = -1, easing: int = Tween.EASE_OUT, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false) -> Signal:
+static func animate_wobble(source_node: Node, target: Control, duration: float = UiAnimConstants.DEFAULT_WOBBLE_DURATION, repeat_count: int = -1, easing: int = Tween.EASE_OUT, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_wobble"):
 		return Signal()
 	
@@ -249,7 +249,7 @@ static func animate_wobble(source_node: Node, target: Control, duration: float =
 ## [param auto_visible]: If true, automatically sets visible=true before animation (default: false).
 ## Note: Position is automatically preserved using the unified baseline snapshot system.
 ## [return]: Signal that emits when animation finishes (or can be used to track infinite loops).
-static func animate_float(source_node: Node, target: Control, duration: float = 2.0, repeat_count: int = -1, easing: int = Tween.EASE_OUT, float_distance: float = UiAnimConstants.DEFAULT_FLOAT_DISTANCE_PX, auto_visible: bool = false) -> Signal:
+static func animate_float(source_node: Node, target: Control, duration: float = UiAnimConstants.DEFAULT_FLOAT_DURATION, repeat_count: int = -1, easing: int = Tween.EASE_OUT, float_distance: float = UiAnimConstants.DEFAULT_FLOAT_DISTANCE_PX, auto_visible: bool = false) -> Signal:
 	if not UiAnimTweenFactory.guard_anim_pair(source_node, target, "animate_float"):
 		return Signal()
 

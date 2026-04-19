@@ -136,23 +136,23 @@ static func animate_elastic_in(source_node: Node, target: Control, speed: float 
 static func animate_elastic_out(source_node: Node, target: Control, speed: float = UiAnimConstants.DEFAULT_SPEED, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	return UiAnimScaleAnimations.animate_elastic_out(source_node, target, speed, pivot_offset, auto_visible, auto_setup, auto_reset, repeat_count, easing)
 
-static func animate_rotate_in(source_node: Node, target: Control, speed: float = UiAnimConstants.DEFAULT_SPEED, start_angle: float = -360.0, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_rotate_in(source_node: Node, target: Control, speed: float = UiAnimConstants.DEFAULT_SPEED, start_angle: float = UiAnimConstants.DEFAULT_ROTATE_IN_START_DEG, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	return UiAnimTransformEffects.animate_rotate_in(source_node, target, speed, start_angle, pivot_offset, auto_visible, repeat_count, easing)
 
-static func animate_rotate_out(source_node: Node, target: Control, speed: float = UiAnimConstants.DEFAULT_SPEED, end_angle: float = 360.0, auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_rotate_out(source_node: Node, target: Control, speed: float = UiAnimConstants.DEFAULT_SPEED, end_angle: float = UiAnimConstants.DEFAULT_ROTATE_OUT_END_DEG, auto_visible: bool = false, auto_setup: bool = false, auto_reset: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	return UiAnimTransformEffects.animate_rotate_out(source_node, target, speed, end_angle, auto_visible, auto_setup, auto_reset, repeat_count, easing)
 
-static func animate_pop(source_node: Node, target: Control, speed: float = UiAnimConstants.DEFAULT_SPEED, overshoot: float = 1.2, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_pop(source_node: Node, target: Control, speed: float = UiAnimConstants.DEFAULT_SPEED, overshoot: float = UiAnimConstants.DEFAULT_POP_OVERSHOOT, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	return UiAnimScaleAnimations.animate_pop(source_node, target, speed, overshoot, pivot_offset, auto_visible, repeat_count, easing)
 
-static func animate_pulse(source_node: Node, target: Control, speed: float = 0.5, pulse_amount: float = 1.1, pulse_count: int = 2, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_pulse(source_node: Node, target: Control, speed: float = UiAnimConstants.DEFAULT_PULSE_SPEED, pulse_amount: float = UiAnimConstants.DEFAULT_PULSE_AMOUNT, pulse_count: int = UiAnimConstants.DEFAULT_PULSE_COUNT, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	return UiAnimTransformEffects.animate_pulse(source_node, target, speed, pulse_amount, pulse_count, pivot_offset, auto_visible, repeat_count, easing)
 
-static func animate_shake(source_node: Node, target: Control, speed: float = 0.5, intensity: float = 10.0, shake_count: int = 5, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_shake(source_node: Node, target: Control, speed: float = UiAnimConstants.DEFAULT_SHAKE_SPEED, intensity: float = UiAnimConstants.DEFAULT_SHAKE_INTENSITY, shake_count: int = UiAnimConstants.DEFAULT_SHAKE_COUNT, auto_visible: bool = false, repeat_count: int = 0, easing: int = Tween.EASE_OUT) -> Signal:
 	return UiAnimTransformEffects.animate_shake(source_node, target, speed, intensity, shake_count, auto_visible, repeat_count, easing)
 
 ## [param stop_before_reset]: When [code]true[/code], calls [method stop_all_animations] on [param target] before delegating to [UiAnimStateUtils.animate_reset_all] (stops infinite/finite loop helpers under the control).
-static func animate_reset_all(source_node: Node, target: Control, duration: float = 0.3, easing: int = Tween.EASE_OUT, clear_unified_after: bool = true, stop_before_reset: bool = false) -> Signal:
+static func animate_reset_all(source_node: Node, target: Control, duration: float = UiAnimConstants.DEFAULT_ANIMATE_RESET_DURATION, easing: int = Tween.EASE_OUT, clear_unified_after: bool = true, stop_before_reset: bool = false) -> Signal:
 	if stop_before_reset:
 		UiAnimRuntimeControl.stop_all_animations(source_node, target)
 	return UiAnimStateUtils.animate_reset_all(source_node, target, duration, easing, clear_unified_after)
@@ -160,28 +160,28 @@ static func animate_reset_all(source_node: Node, target: Control, duration: floa
 static func clear_unified_snapshot_for_target(target: Control) -> void:
 	UiAnimStateUtils.clear_unified_snapshot_for_target(target)
 
-static func animate_breathing(source_node: Node, target: Control, duration: float = 2.0, repeat_count: int = -1, easing: int = Tween.EASE_OUT, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false) -> Signal:
+static func animate_breathing(source_node: Node, target: Control, duration: float = UiAnimConstants.DEFAULT_BREATHING_DURATION, repeat_count: int = -1, easing: int = Tween.EASE_OUT, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false) -> Signal:
 	return UiAnimTransformEffects.animate_breathing(source_node, target, duration, repeat_count, easing, pivot_offset, auto_visible)
 
-static func animate_wobble(source_node: Node, target: Control, duration: float = 1.5, repeat_count: int = -1, easing: int = Tween.EASE_OUT, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false) -> Signal:
+static func animate_wobble(source_node: Node, target: Control, duration: float = UiAnimConstants.DEFAULT_WOBBLE_DURATION, repeat_count: int = -1, easing: int = Tween.EASE_OUT, pivot_offset: Vector2 = UiAnimConstants.PIVOT_USE_CONTROL_DEFAULT, auto_visible: bool = false) -> Signal:
 	return UiAnimTransformEffects.animate_wobble(source_node, target, duration, repeat_count, easing, pivot_offset, auto_visible)
 
-static func animate_float(source_node: Node, target: Control, duration: float = 2.0, repeat_count: int = -1, easing: int = Tween.EASE_OUT, float_distance: float = UiAnimConstants.DEFAULT_FLOAT_DISTANCE_PX, auto_visible: bool = false) -> Signal:
+static func animate_float(source_node: Node, target: Control, duration: float = UiAnimConstants.DEFAULT_FLOAT_DURATION, repeat_count: int = -1, easing: int = Tween.EASE_OUT, float_distance: float = UiAnimConstants.DEFAULT_FLOAT_DISTANCE_PX, auto_visible: bool = false) -> Signal:
 	return UiAnimTransformEffects.animate_float(source_node, target, duration, repeat_count, easing, float_distance, auto_visible)
 
-static func animate_glow_pulse(source_node: Node, target: Control, duration: float = 1.5, repeat_count: int = -1, easing: int = Tween.EASE_OUT, glow_min_alpha: float = 0.7, auto_visible: bool = false) -> Signal:
+static func animate_glow_pulse(source_node: Node, target: Control, duration: float = UiAnimConstants.DEFAULT_GLOW_PULSE_DURATION, repeat_count: int = -1, easing: int = Tween.EASE_OUT, glow_min_alpha: float = UiAnimConstants.DEFAULT_GLOW_MIN_ALPHA, auto_visible: bool = false) -> Signal:
 	return UiAnimOpacityColorAnimations.animate_glow_pulse(source_node, target, duration, repeat_count, easing, glow_min_alpha, auto_visible)
 
-static func animate_color_flash(source_node: Node, target: Control, flash_color: Color = Color.YELLOW, duration: float = 0.2, flash_intensity: float = 1.5, auto_visible: bool = false, easing: int = Tween.EASE_OUT) -> Signal:
+static func animate_color_flash(source_node: Node, target: Control, flash_color: Color = Color.YELLOW, duration: float = UiAnimConstants.DEFAULT_COLOR_FLASH_DURATION, flash_intensity: float = UiAnimConstants.DEFAULT_COLOR_FLASH_INTENSITY, auto_visible: bool = false, easing: int = Tween.EASE_OUT) -> Signal:
 	return UiAnimOpacityColorAnimations.animate_color_flash(source_node, target, flash_color, duration, flash_intensity, auto_visible, easing)
 
 static func stop_stagger_animations(source_node: Node, targets: Array[Control]) -> void:
 	UiAnimStaggerRunner.stop_stagger_animations(source_node, targets)
 
-static func animate_stagger(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_config: UiAnimTarget = null) -> Signal:
+static func animate_stagger(source_node: Node, targets: Array[Control], delay_between: float = UiAnimConstants.DEFAULT_STAGGER_DELAY, animation_config: UiAnimTarget = null) -> Signal:
 	return UiAnimStaggerRunner.animate_stagger(source_node, targets, delay_between, animation_config)
 
-static func animate_stagger_multi(source_node: Node, targets: Array[Control], delay_between: float = 0.1, animation_configs: Array[UiAnimTarget] = []) -> Signal:
+static func animate_stagger_multi(source_node: Node, targets: Array[Control], delay_between: float = UiAnimConstants.DEFAULT_STAGGER_DELAY, animation_configs: Array[UiAnimTarget] = []) -> Signal:
 	return UiAnimStaggerRunner.animate_stagger_multi(source_node, targets, delay_between, animation_configs)
 
 static func delay(source_node: Node, duration: float) -> Signal:

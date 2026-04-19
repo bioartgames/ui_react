@@ -15,6 +15,7 @@ extends UiReactWireRule
 
 
 func apply(_source: Node) -> void:
+	## Unused for this rule; wiring uses [method apply_from_pulse].
 	pass
 
 

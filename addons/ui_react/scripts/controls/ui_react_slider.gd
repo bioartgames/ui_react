@@ -36,17 +36,13 @@ func _ready() -> void:
 
 func _disconnect_all_states() -> void:
 	if _value_state != null:
-		UiReactComputedService.hook_unbind(_value_state, self, &"value_state")
-	if _value_state != null and _value_state.value_changed.is_connected(_on_value_state_changed):
-		_value_state.value_changed.disconnect(_on_value_state_changed)
+		UiReactControlStateWire.unbind_value_changed(self, _value_state, &"value_state", _on_value_state_changed)
 
 
 func _connect_all_states() -> void:
 	if _value_state != null:
-		_value_state.value_changed.connect(_on_value_state_changed)
-		_on_value_state_changed(_value_state.get_value(), _value_state.get_value())
+		UiReactControlStateWire.bind_value_changed(self, _value_state, &"value_state", _on_value_state_changed)
 		_last_value = UiReactStateBindingHelper.coerce_float(_value_state.get_value())
-		UiReactComputedService.hook_bind(_value_state, self, &"value_state")
 
 
 ## Handles GUI input to detect drag start/end.

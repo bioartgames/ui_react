@@ -13,4 +13,5 @@ enum TriggerKind { TEXT_CHANGED = 5, SELECTION_CHANGED = 6, TEXT_ENTERED = 13 }
 
 
 func apply(_source: Node) -> void:
+	## Abstract: concrete rules implement [method apply] or pulse-driven entry points.
 	pass

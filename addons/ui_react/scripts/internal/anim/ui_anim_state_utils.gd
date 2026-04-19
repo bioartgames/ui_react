@@ -28,7 +28,7 @@ static func clear_unified_snapshot_for_target(target: Control) -> void:
 	UiAnimSnapshotStore.clear_unified_snapshot(target)
 
 
-static func animate_reset_all(source_node: Node, target: Control, duration: float = 0.3, easing: int = Tween.EASE_OUT, clear_unified_after: bool = true) -> Signal:
+static func animate_reset_all(source_node: Node, target: Control, duration: float = UiAnimConstants.DEFAULT_ANIMATE_RESET_DURATION, easing: int = Tween.EASE_OUT, clear_unified_after: bool = true) -> Signal:
 	if not source_node or not target:
 		push_warning("UiAnimStateUtils: Invalid source_node or target for animate_reset_all")
 		return Signal()

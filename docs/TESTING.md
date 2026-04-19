@@ -144,7 +144,7 @@ Use real `Ui*State` + rule resources; `_source` may be `null` where unused.
 |--------|------------|-----|
 | [x] | **Disabled rows** preserved in output | Inspector round-trips must not drop disabled config. |
 | [x] | **`UiReactTransactionalActions`**: control-triggered row dropped + warning path | ACTION_LAYER transactional-only rule. |
-| [x] | **`state_watch` + trigger ≠ `PRESSED`**: dropped / warned | Half-wired rows that never run at runtime. |
+| [x] | **`state_watch` + trigger ≠ `PRESSED`**: warned; row retained unless another branch drops it | Mis-tuned rows: runtime warns; row stays unless a later validation branch drops it. |
 | [x] | **`SET_UI_BOOL_FLAG`**: missing `bool_flag_state`; `bool_flag_state == state_watch` rejected | Loop / misconfiguration prevention. |
 | [x] | **`GRAB_FOCUS` / `SET_VISIBLE` / `SET_MOUSE_FILTER`**: empty `target` unless allowlist trigger | Path validation for focus/visibility. |
 | [x] | **`collect_control_trigger_map`**: ignores `state_watch` rows; trigger keys merged | Host trigger merging contract. |

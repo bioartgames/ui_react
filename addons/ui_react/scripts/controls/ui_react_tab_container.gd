@@ -61,15 +61,14 @@ func _ready() -> void:
 
 
 func _disconnect_all_states() -> void:
-	if _selected_state != null and _selected_state.value_changed.is_connected(_on_selected_state_changed):
-		_selected_state.value_changed.disconnect(_on_selected_state_changed)
+	if _selected_state != null:
+		UiReactControlStateWire.unbind_value_changed(self, _selected_state, &"selected_state", _on_selected_state_changed, false)
 	_disconnect_tab_config_signals()
 
 
 func _connect_all_states() -> void:
 	if _selected_state != null:
-		_selected_state.value_changed.connect(_on_selected_state_changed)
-		_on_selected_state_changed(_selected_state.get_value(), _selected_state.get_value())
+		UiReactControlStateWire.bind_value_changed(self, _selected_state, &"selected_state", _on_selected_state_changed, false)
 	_connect_tab_config_signals()
 
 

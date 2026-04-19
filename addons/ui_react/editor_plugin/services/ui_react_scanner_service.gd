@@ -9,6 +9,9 @@ const _REACT_SCRIPT_SUFFIX := "/ui_react_"
 static func get_component_name_from_script(script: Script) -> String:
 	if script == null:
 		return ""
+	var gn := String(script.get_global_name())
+	if not gn.is_empty() and UiReactComponentRegistry.BINDINGS_BY_COMPONENT.has(gn):
+		return gn
 	var path := script.resource_path
 	if path.is_empty() or not path.contains(_REACT_SCRIPT_SUFFIX):
 		return ""
