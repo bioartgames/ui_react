@@ -1,4 +1,5 @@
-## Editor dock tab: declarative dependency graph ([code]CB-018A[/code]) + visual graph ([code]CB-018A.5[/code]: graph-only, per-anchor narrative in details).
+## Editor dock tab: declarative dependency snapshot ([code]CB-018A[/code]) plus visual graph layout ([code]CB-018A.5[/code]) for the Wiring workbench.
+## The graph and embedded wire-rules list also perform authoring edits (rebind, disconnect, new link, scope presets, create state) via [UiReactActionController] and graph edit services—not a read-only viewer.
 class_name UiReactDockExplainPanel
 extends MarginContainer
 
@@ -16,9 +17,6 @@ const _WireDetailsScript := preload("res://addons/ui_react/editor_plugin/dock/ui
 const _SnapScript := preload("res://addons/ui_react/editor_plugin/models/ui_react_explain_graph_snapshot.gd")
 const _GraphFactoryScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_graph_resource_factory.gd")
 const _DockThemeScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_theme.gd")
-const _SEL_NONE := 0
-const _SEL_NODE := 1
-const _SEL_EDGE := 2
 
 const _DETAILS_GRAPH_HELP_BB := (
 	"Pan: middle-drag · zoom: wheel · RMB: View or actions · double-click: Inspector (same as Focus).\n"
@@ -30,12 +28,6 @@ const _DETAILS_GRAPH_HELP_PLAIN := (
 	+ "Shift+drag on a selected edge: reconnect. Ctrl+Shift+drag: new link. Delete: clear edge when allowed.\n"
 	+ "Node outline shape encodes role (control / state / computed); see Key above."
 )
-
-const _REBIND_NONE := 0
-const _REBIND_BINDING := 1
-const _REBIND_WIRE_IN := 2
-const _REBIND_WIRE_OUT := 3
-const _REBIND_COMPUTED_SOURCE := 4
 
 const _SCOPE_MIN_NODES := 20
 const _SCOPE_MAX_NODES := 2000
@@ -50,52 +42,6 @@ const _LEGEND_NODE_CHIP_BORDER := Color(1, 1, 1, 0.42)
 ## Raised chip behind edge color strips so binding/computed/wire reads on dark UI.
 const _LEGEND_EDGE_SWATCH_BG := Color(0.11, 0.12, 0.14, 0.72)
 const _LEGEND_EDGE_SWATCH_BORDER := Color(1, 1, 1, 0.38)
-
-## Selection [PopupMenu] ids — [method _fill_selection_actions_popup] / [method _on_selection_action_id].
-const _SEL_ACT_REBIND_BINDING := 1101
-const _SEL_ACT_REBIND_WIRE_IN := 1102
-const _SEL_ACT_REBIND_WIRE_OUT := 1103
-const _SEL_ACT_REBIND_COMPUTED_SRC := 1104
-const _SEL_ACT_CLEAR_OPT_BINDING := 1110
-const _SEL_ACT_REMOVE_COMPUTED_DEP := 1111
-const _SEL_ACT_CLEAR_WIRE_LINK := 1112
-const _SEL_ACT_MOVE_SRC_UP := 1120
-const _SEL_ACT_MOVE_SRC_DOWN := 1121
-const _SEL_ACT_REMOVE_SRC_SLOT := 1122
-const _SEL_ACT_CREATE_ASSIGN_BINDING := 1130
-const _SEL_ACT_CREATE_BIND_BASE := 1240
-const _SEL_SUB_NODE_ROOT := 1260
-const _SEL_SUB_WIRE_ROOT := 1261
-const _SEL_SUB_EDGE_EDIT_ROOT := 1262
-const _SEL_SUB_SCOPE_ROOT := 1263
-const _SEL_SUB_CREATE_BIND_ROOT := 1264
-## Wire rules + Focus — [method _fill_selection_actions_popup] / [method _on_selection_action_id].
-const _SEL_ACT_FOCUS_INSPECTOR := 1180
-const _SEL_ACT_WIRE_ADD_BASE := 1210
-const _SEL_ACT_WIRE_REFRESH_LIST := 1220
-const _SEL_ACT_WIRE_COPY_RULE_REPORT := 1221
-const _SEL_ACT_COPY_DETAILS := 1199
-
-## Empty-canvas [PopupMenu] ids — [method _fill_canvas_view_popup] / [method _on_canvas_view_menu_id].
-const _CV_REFRESH := 3001
-const _CV_FIT := 3002
-const _CV_CREATE_STATE_BASE := 3100
-const _CV_TOGGLE_FULL_LISTS := 3201
-const _CV_TOGGLE_BINDING := 3202
-const _CV_TOGGLE_COMPUTED := 3203
-const _CV_TOGGLE_WIRE := 3204
-const _CV_TOGGLE_EDGE_LABELS := 3205
-const _CV_TOGGLE_LEGEND := 3206
-const _CV_PRESET_DEFAULT := 3300
-const _CV_PRESET_NAMED_BASE := 3310
-const _CV_SCOPE_SAVE := 3500
-const _CV_SCOPE_MANAGE := 3501
-const _CV_SCOPE_PIN := 3502
-const _CV_SCOPE_UPDATE := 3503
-const _CV_SUB_CREATE_ROOT := 3601
-const _CV_SUB_VIEW_ROOT := 3602
-const _CV_SUB_SCOPE_ROOT := 3603
-const _CV_SUB_PRESETS_LIST := 3604
 
 var _plugin: EditorPlugin
 var _actions: UiReactActionController
@@ -124,8 +70,7 @@ var _cb_edge_labels: CheckBox
 var _graph_view: Control
 var _details_scroll: ScrollContainer
 var _details: RichTextLabel
-## [UiReactDockWireRulesSection]
-var _wire_rules_section: Variant = null
+var _wire_rules_section: UiReactDockWireRulesSection = null
 var _selection_actions_context_popup: PopupMenu
 var _canvas_view_context_popup: PopupMenu
 var _selection_create_bind_submenu_popup: PopupMenu
@@ -138,14 +83,14 @@ var _canvas_scope_submenu_popup: PopupMenu
 var _canvas_scope_presets_popup: PopupMenu
 var _selection_scope_submenu_popup: PopupMenu
 var _selection_scope_presets_popup: PopupMenu
-## Indices align with menu ids [code]_CV_PRESET_NAMED_BASE + i[/code] when preset list is filled.
+## Indices align with menu ids [code]UiReactDockExplainMenuIds._CV_PRESET_NAMED_BASE + i[/code] when preset list is filled.
 var _scope_preset_pick_names: PackedStringArray = PackedStringArray()
 var _scope_preset_pick_abouts: PackedStringArray = PackedStringArray()
 var _canvas_create_state_names: PackedStringArray
 var _selection_create_bind_actions: Array[Dictionary] = []
 
 var _rebind_file_dialog: EditorFileDialog
-var _rebind_kind: int = _REBIND_NONE
+var _rebind_kind: int = UiReactDockExplainMenuIds._REBIND_NONE
 var _rebind_host_path: String = ""
 var _rebind_property: String = ""
 var _rebind_wire_host_path: String = ""
@@ -185,7 +130,7 @@ var _last_layout: Dictionary = {}
 var _narrative_cache: Dictionary = {}
 var _show_full_lists: bool = false
 
-var _selection_kind: int = _SEL_NONE
+var _selection_kind: int = UiReactDockExplainMenuIds._SEL_NONE
 var _graph_selected_node_id: String = ""
 var _graph_selected_edge_index: int = -1
 var _last_edge_from_id: String = ""
@@ -304,7 +249,7 @@ func capture_wiring_session_for_persist() -> void:
 		UiReactDockConfig.save_wiring_restore_state("", "", "")
 		return
 	var graph_id := ""
-	if _selection_kind == _SEL_NODE and not _graph_selected_node_id.is_empty():
+	if _selection_kind == UiReactDockExplainMenuIds._SEL_NODE and not _graph_selected_node_id.is_empty():
 		graph_id = _graph_selected_node_id
 	UiReactDockConfig.save_wiring_restore_state(_session_scene_path, _session_scope_node_path, graph_id)
 
@@ -410,7 +355,7 @@ func _on_fit_pressed() -> void:
 func _on_graph_node(id: String) -> void:
 	_graph_selected_node_id = id
 	_graph_selected_edge_index = -1
-	_selection_kind = _SEL_NODE
+	_selection_kind = UiReactDockExplainMenuIds._SEL_NODE
 	_sync_wire_rules_section()
 	_fill_node_details(id)
 
@@ -422,7 +367,7 @@ func _on_graph_edge(from_id: String, to_id: String, kind: int, label: String, ed
 	_last_edge_to_id = to_id
 	_last_edge_kind = kind
 	_last_edge_label = label
-	_selection_kind = _SEL_EDGE
+	_selection_kind = UiReactDockExplainMenuIds._SEL_EDGE
 	_sync_wire_rules_section()
 	_fill_edge_details(from_id, to_id, kind, label, edge_index)
 
@@ -430,53 +375,9 @@ func _on_graph_edge(from_id: String, to_id: String, kind: int, label: String, ed
 func _on_graph_cleared() -> void:
 	_graph_selected_node_id = ""
 	_graph_selected_edge_index = -1
-	_selection_kind = _SEL_NONE
+	_selection_kind = UiReactDockExplainMenuIds._SEL_NONE
 	_set_details_placeholder()
 	_sync_wire_rules_section()
-
-
-func _scope_pins_sorted_copy(pins: PackedStringArray) -> PackedStringArray:
-	var arr: Array[String] = []
-	for i in range(pins.size()):
-		var s := String(pins[i]).strip_edges()
-		if not s.is_empty():
-			arr.append(s)
-	arr.sort()
-	var out: PackedStringArray = PackedStringArray()
-	for s2 in arr:
-		out.append(s2)
-	return out
-
-
-func _scope_dict_matches_for_update(saved: Dictionary, current: Dictionary) -> bool:
-	if int(saved.get("max_nodes", -1)) != int(current.get("max_nodes", -2)):
-		return false
-	if int(saved.get("max_edges", -1)) != int(current.get("max_edges", -2)):
-		return false
-	if bool(saved.get("show_binding", true)) != bool(current.get("show_binding", false)):
-		return false
-	if bool(saved.get("show_computed", true)) != bool(current.get("show_computed", false)):
-		return false
-	if bool(saved.get("show_wire", true)) != bool(current.get("show_wire", false)):
-		return false
-	if bool(saved.get("show_all_edge_labels", false)) != bool(current.get("show_all_edge_labels", true)):
-		return false
-	if bool(saved.get("full_lists", false)) != bool(current.get("full_lists", true)):
-		return false
-	var pv_s: Variant = saved.get(&"pinned", PackedStringArray())
-	var sa: PackedStringArray = pv_s as PackedStringArray if pv_s is PackedStringArray else PackedStringArray()
-	var pv_c: Variant = current.get(&"pinned", PackedStringArray())
-	var ca: PackedStringArray = pv_c as PackedStringArray if pv_c is PackedStringArray else PackedStringArray()
-	var s1 := _scope_pins_sorted_copy(sa)
-	var s2 := _scope_pins_sorted_copy(ca)
-	if s1.size() != s2.size():
-		return false
-	for i in range(s1.size()):
-		if s1[i] != s2[i]:
-			return false
-	var ab1 := String(saved.get(&"about", "")).strip_edges()
-	var ab2 := String(current.get(&"about", "")).strip_edges()
-	return ab1 == ab2
 
 
 func _scope_current_matches_saved_named_preset(active_name: String) -> bool:
@@ -489,13 +390,13 @@ func _scope_current_matches_saved_named_preset(active_name: String) -> bool:
 	var saved := _preset_from_variant(raw)
 	var cur := _capture_current_scope_settings(n)
 	cur[&"about"] = UiReactDockExplainScopePresets.stored_about_for_preset_name(n)
-	return _scope_dict_matches_for_update(saved, cur)
+	return UiReactDockExplainScopeMenus.scope_dict_matches_for_update(saved, cur)
 
 
 func _resolve_pin_target_graph_node_id() -> String:
-	if _selection_kind == _SEL_NODE:
+	if _selection_kind == UiReactDockExplainMenuIds._SEL_NODE:
 		return String(_graph_selected_node_id).strip_edges()
-	if _selection_kind != _SEL_EDGE or _graph_selected_edge_index < 0:
+	if _selection_kind != UiReactDockExplainMenuIds._SEL_EDGE or _graph_selected_edge_index < 0:
 		return ""
 	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
 	var idx := _graph_selected_edge_index
@@ -566,7 +467,7 @@ func _fill_scope_presets_list(presets_popup: PopupMenu) -> void:
 	presets_popup.clear()
 	_scope_preset_pick_names.clear()
 	_scope_preset_pick_abouts.clear()
-	presets_popup.add_item("Default", _CV_PRESET_DEFAULT)
+	presets_popup.add_item("Default", UiReactDockExplainMenuIds._CV_PRESET_DEFAULT)
 	presets_popup.set_item_tooltip(
 		presets_popup.item_count - 1, "Built-in scope (not a saved preset)."
 	)
@@ -584,7 +485,7 @@ func _fill_scope_presets_list(presets_popup: PopupMenu) -> void:
 	names.sort()
 	for i in range(names.size()):
 		var nm2: String = names[i]
-		presets_popup.add_item(nm2, _CV_PRESET_NAMED_BASE + i)
+		presets_popup.add_item(nm2, UiReactDockExplainMenuIds._CV_PRESET_NAMED_BASE + i)
 		_scope_preset_pick_names.append(nm2)
 		var abt: String = String(about_by_name.get(nm2, "")).strip_edges()
 		_scope_preset_pick_abouts.append(abt)
@@ -598,29 +499,29 @@ func _fill_scope_presets_list(presets_popup: PopupMenu) -> void:
 func _fill_scope_submenu(scope_popup: PopupMenu, presets_popup: PopupMenu) -> void:
 	scope_popup.clear()
 	_fill_scope_presets_list(presets_popup)
-	scope_popup.add_submenu_node_item("Presets", presets_popup, _CV_SUB_PRESETS_LIST)
-	scope_popup.add_item("Save scope preset as…", _CV_SCOPE_SAVE)
+	scope_popup.add_submenu_node_item("Presets", presets_popup, UiReactDockExplainMenuIds._CV_SUB_PRESETS_LIST)
+	scope_popup.add_item("Save scope preset as…", UiReactDockExplainMenuIds._CV_SCOPE_SAVE)
 	scope_popup.set_item_tooltip(
 		scope_popup.item_count - 1, "Save current scope settings as a named preset."
 	)
 	var active: String = String(UiReactDockConfig.get_active_graph_scope_preset_name()).strip_edges()
 	if not active.is_empty() and active.to_lower() != "default":
-		scope_popup.add_item('Update "%s"' % active, _CV_SCOPE_UPDATE)
+		scope_popup.add_item('Update "%s"' % active, UiReactDockExplainMenuIds._CV_SCOPE_UPDATE)
 		scope_popup.set_item_tooltip(
 			scope_popup.item_count - 1,
 			"Overwrite the active preset with current scope settings (caps, filters, pins, description).",
 		)
-		var uidx := scope_popup.get_item_index(_CV_SCOPE_UPDATE)
+		var uidx := scope_popup.get_item_index(UiReactDockExplainMenuIds._CV_SCOPE_UPDATE)
 		if uidx >= 0:
 			var missing := UiReactDockExplainScopePresets.find_raw_preset_variant_by_name(active) == null
 			scope_popup.set_item_disabled(uidx, missing or _scope_current_matches_saved_named_preset(active))
 			if missing:
 				scope_popup.set_item_tooltip(uidx, "Preset missing from disk.")
-	scope_popup.add_item("Manage scope presets…", _CV_SCOPE_MANAGE)
+	scope_popup.add_item("Manage scope presets…", UiReactDockExplainMenuIds._CV_SCOPE_MANAGE)
 	scope_popup.set_item_tooltip(scope_popup.item_count - 1, "Delete saved scope presets.")
 	var pin_id := _resolve_pin_target_graph_node_id()
 	if not pin_id.is_empty():
-		scope_popup.add_item("Pin node", _CV_SCOPE_PIN)
+		scope_popup.add_item("Pin node", UiReactDockExplainMenuIds._CV_SCOPE_PIN)
 		scope_popup.set_item_tooltip(
 			scope_popup.item_count - 1,
 			"Pins the graph node used as the anchor for this selection (same as Focus in Inspector for edges).",
@@ -628,27 +529,27 @@ func _fill_scope_submenu(scope_popup: PopupMenu, presets_popup: PopupMenu) -> vo
 
 
 func _on_scope_presets_list_id(id: int) -> void:
-	if id == _CV_PRESET_DEFAULT:
+	if id == UiReactDockExplainMenuIds._CV_PRESET_DEFAULT:
 		_apply_scope_preset_by_name("")
 		return
-	if id >= _CV_PRESET_NAMED_BASE:
-		var pi := id - _CV_PRESET_NAMED_BASE
+	if id >= UiReactDockExplainMenuIds._CV_PRESET_NAMED_BASE:
+		var pi := id - UiReactDockExplainMenuIds._CV_PRESET_NAMED_BASE
 		if pi >= 0 and pi < _scope_preset_pick_names.size():
 			_apply_scope_preset_by_name(_scope_preset_pick_names[pi])
 		return
 
 
 func _on_scope_actions_submenu_id(id: int) -> void:
-	if id == _CV_SCOPE_SAVE:
+	if id == UiReactDockExplainMenuIds._CV_SCOPE_SAVE:
 		_on_scope_save_as_pressed()
 		return
-	if id == _CV_SCOPE_MANAGE:
+	if id == UiReactDockExplainMenuIds._CV_SCOPE_MANAGE:
 		_on_scope_manage_pressed()
 		return
-	if id == _CV_SCOPE_UPDATE:
+	if id == UiReactDockExplainMenuIds._CV_SCOPE_UPDATE:
 		_on_scope_update_current_preset_pressed()
 		return
-	if id == _CV_SCOPE_PIN:
+	if id == UiReactDockExplainMenuIds._CV_SCOPE_PIN:
 		var pid := _resolve_pin_target_graph_node_id()
 		if not pid.is_empty():
 			_pin_graph_node_to_active_preset(pid)
@@ -694,7 +595,7 @@ func _resolve_wire_rules_host_control() -> Control:
 	var root := ei.get_edited_scene_root()
 	if root == null:
 		return null
-	if _selection_kind == _SEL_EDGE and _last_edge_kind == _SnapScript.EdgeKind.WIRE_FLOW:
+	if _selection_kind == UiReactDockExplainMenuIds._SEL_EDGE and _last_edge_kind == _SnapScript.EdgeKind.WIRE_FLOW:
 		var edges: Array = _last_layout.get(&"draw_edges", []) as Array
 		var idx := _graph_selected_edge_index
 		if idx >= 0 and idx < edges.size():
@@ -705,7 +606,7 @@ func _resolve_wire_rules_host_control() -> Control:
 					var n: Node = root.get_node(NodePath(wh))
 					if n is Control and (&"wire_rules" in n):
 						return n as Control
-	if _selection_kind == _SEL_NODE and _graph_selected_node_id.begins_with("ctrl:"):
+	if _selection_kind == UiReactDockExplainMenuIds._SEL_NODE and _graph_selected_node_id.begins_with("ctrl:"):
 		var pstr := _graph_selected_node_id.substr(5)
 		if root.has_node(NodePath(pstr)):
 			var n2: Node = root.get_node(NodePath(pstr))
@@ -740,17 +641,16 @@ func _resolve_control_host_from_node(node_id: String, d: Dictionary) -> Control:
 func _sync_wire_rules_section() -> void:
 	if _wire_rules_section == null or _plugin == null:
 		return
-	var sec: Object = _wire_rules_section as Object
 	var ei := _plugin.get_editor_interface()
 	var root := ei.get_edited_scene_root()
 	if root == null:
-		sec.call(&"set_target_host", null, null)
+		_wire_rules_section.set_target_host(null, null)
 		return
 	var h := _resolve_wire_rules_host_control()
 	if h != null:
-		sec.call(&"set_target_host", h, root)
+		_wire_rules_section.set_target_host(h, root)
 	else:
-		sec.call(&"set_target_host", null, null)
+		_wire_rules_section.set_target_host(null, null)
 
 
 func _after_wire_rules_section_commit() -> void:
@@ -760,10 +660,10 @@ func _after_wire_rules_section_commit() -> void:
 
 
 func _on_wire_rule_list_selection_changed(_rule_index: int) -> void:
-	if _selection_kind == _SEL_NODE and not _graph_selected_node_id.is_empty():
+	if _selection_kind == UiReactDockExplainMenuIds._SEL_NODE and not _graph_selected_node_id.is_empty():
 		_fill_node_details(_graph_selected_node_id)
 		return
-	if _selection_kind == _SEL_EDGE and _graph_selected_edge_index >= 0:
+	if _selection_kind == UiReactDockExplainMenuIds._SEL_EDGE and _graph_selected_edge_index >= 0:
 		_fill_edge_details(
 			_last_edge_from_id,
 			_last_edge_to_id,
@@ -779,16 +679,16 @@ func _fill_selection_actions_popup(popup: PopupMenu) -> void:
 	const TT_COPY := "Copy plain-text details to the clipboard."
 	const TT_FOCUS := "Open the related scene node or resource in the Inspector when possible."
 
-	if _selection_kind != _SEL_NONE:
-		popup.add_item("Focus in Inspector", _SEL_ACT_FOCUS_INSPECTOR)
+	if _selection_kind != UiReactDockExplainMenuIds._SEL_NONE:
+		popup.add_item("Focus in Inspector", UiReactDockExplainMenuIds._SEL_ACT_FOCUS_INSPECTOR)
 		popup.set_item_tooltip(popup.item_count - 1, TT_FOCUS)
 	if (
-		(_selection_kind == _SEL_NODE or _selection_kind == _SEL_EDGE)
+		(_selection_kind == UiReactDockExplainMenuIds._SEL_NODE or _selection_kind == UiReactDockExplainMenuIds._SEL_EDGE)
 		and _selection_scope_submenu_popup != null
 		and _selection_scope_presets_popup != null
 	):
 		_fill_scope_submenu(_selection_scope_submenu_popup, _selection_scope_presets_popup)
-		popup.add_submenu_node_item("Scope", _selection_scope_submenu_popup, _SEL_SUB_SCOPE_ROOT)
+		popup.add_submenu_node_item("Scope", _selection_scope_submenu_popup, UiReactDockExplainMenuIds._SEL_SUB_SCOPE_ROOT)
 	var any_edge_item_will := (
 		_can_rebind_binding_edge()
 		or _can_rebind_wire_endpoint(true)
@@ -804,28 +704,28 @@ func _fill_selection_actions_popup(popup: PopupMenu) -> void:
 	)
 	var edge_edit_action_count := _selection_edge_edit_action_count()
 	var wire_host := _resolve_wire_rules_host_control()
-	if _selection_kind == _SEL_NODE and _selection_node_submenu_popup != null:
+	if _selection_kind == UiReactDockExplainMenuIds._SEL_NODE and _selection_node_submenu_popup != null:
 		var show_bind_create := (
 			_selection_create_bind_submenu_popup != null and _can_create_and_bind_from_selected_node()
 		)
 		if show_bind_create:
 			_fill_selection_node_submenu(_selection_node_submenu_popup)
-			popup.add_submenu_node_item("Node", _selection_node_submenu_popup, _SEL_SUB_NODE_ROOT)
+			popup.add_submenu_node_item("Node", _selection_node_submenu_popup, UiReactDockExplainMenuIds._SEL_SUB_NODE_ROOT)
 	if wire_host != null and _selection_wire_submenu_popup != null:
 		_fill_selection_wire_submenu(_selection_wire_submenu_popup)
 		if _selection_wire_submenu_popup.item_count > 0:
-			popup.add_submenu_node_item("Wire", _selection_wire_submenu_popup, _SEL_SUB_WIRE_ROOT)
+			popup.add_submenu_node_item("Wire", _selection_wire_submenu_popup, UiReactDockExplainMenuIds._SEL_SUB_WIRE_ROOT)
 	if any_edge_item_will and _selection_edge_edit_submenu_popup != null:
 		if edge_edit_action_count <= 1:
 			_append_single_edge_edit_action_to_menu(popup)
 		else:
 			_fill_selection_edge_edit_submenu(_selection_edge_edit_submenu_popup)
 			popup.add_submenu_node_item(
-				"Edge edit", _selection_edge_edit_submenu_popup, _SEL_SUB_EDGE_EDIT_ROOT
+				"Edge edit", _selection_edge_edit_submenu_popup, UiReactDockExplainMenuIds._SEL_SUB_EDGE_EDIT_ROOT
 			)
 	if popup.item_count > 0:
 		popup.add_separator()
-	popup.add_item("Copy details", _SEL_ACT_COPY_DETAILS)
+	popup.add_item("Copy details", UiReactDockExplainMenuIds._SEL_ACT_COPY_DETAILS)
 	popup.set_item_tooltip(popup.item_count - 1, TT_COPY)
 
 
@@ -834,7 +734,7 @@ func _fill_selection_node_submenu(popup: PopupMenu) -> void:
 	if _selection_create_bind_submenu_popup != null and _can_create_and_bind_from_selected_node():
 		_fill_selection_create_bind_submenu(_selection_create_bind_submenu_popup)
 		popup.add_submenu_node_item(
-			"Create state & bind…", _selection_create_bind_submenu_popup, _SEL_SUB_CREATE_BIND_ROOT
+			"Create state & bind…", _selection_create_bind_submenu_popup, UiReactDockExplainMenuIds._SEL_SUB_CREATE_BIND_ROOT
 		)
 
 
@@ -846,16 +746,15 @@ func _fill_selection_wire_submenu(popup: PopupMenu) -> void:
 	for j: int in range(wentries.size()):
 		popup.add_item(
 			"Add wire: %s" % String(wentries[j][&"label"]),
-			_SEL_ACT_WIRE_ADD_BASE + j,
+			UiReactDockExplainMenuIds._SEL_ACT_WIRE_ADD_BASE + j,
 		)
-	popup.add_item("Refresh wire list", _SEL_ACT_WIRE_REFRESH_LIST)
+	popup.add_item("Refresh wire list", UiReactDockExplainMenuIds._SEL_ACT_WIRE_REFRESH_LIST)
 	popup.set_item_tooltip(popup.item_count - 1, TT_WIRE_REFRESH)
-	popup.add_item("Copy rule details", _SEL_ACT_WIRE_COPY_RULE_REPORT)
+	popup.add_item("Copy rule details", UiReactDockExplainMenuIds._SEL_ACT_WIRE_COPY_RULE_REPORT)
 	popup.set_item_tooltip(popup.item_count - 1, TT_WIRE_COPY_REP)
-	var cr_i := popup.get_item_index(_SEL_ACT_WIRE_COPY_RULE_REPORT)
-	if cr_i >= 0:
-		var sec2: Object = _wire_rules_section as Object
-		var sel_ix: int = int(sec2.call(&"get_selected_rule_index"))
+	var cr_i := popup.get_item_index(UiReactDockExplainMenuIds._SEL_ACT_WIRE_COPY_RULE_REPORT)
+	if cr_i >= 0 and _wire_rules_section != null:
+		var sel_ix: int = _wire_rules_section.get_selected_rule_index()
 		popup.set_item_disabled(cr_i, sel_ix < 0)
 
 
@@ -883,19 +782,19 @@ func _fill_selection_edge_edit_submenu(popup: PopupMenu) -> void:
 
 	var rebind_added := false
 	if _can_rebind_binding_edge():
-		popup.add_item("Rebind to resource…", _SEL_ACT_REBIND_BINDING)
+		popup.add_item("Rebind to resource…", UiReactDockExplainMenuIds._SEL_ACT_REBIND_BINDING)
 		popup.set_item_tooltip(popup.item_count - 1, TT_REBIND_BINDING)
 		rebind_added = true
 	if _can_rebind_wire_endpoint(true):
-		popup.add_item("Rebind wire input…", _SEL_ACT_REBIND_WIRE_IN)
+		popup.add_item("Rebind wire input…", UiReactDockExplainMenuIds._SEL_ACT_REBIND_WIRE_IN)
 		popup.set_item_tooltip(popup.item_count - 1, TT_REBIND_WIRE_IN)
 		rebind_added = true
 	if _can_rebind_wire_endpoint(false):
-		popup.add_item("Rebind wire output…", _SEL_ACT_REBIND_WIRE_OUT)
+		popup.add_item("Rebind wire output…", UiReactDockExplainMenuIds._SEL_ACT_REBIND_WIRE_OUT)
 		popup.set_item_tooltip(popup.item_count - 1, TT_REBIND_WIRE_OUT)
 		rebind_added = true
 	if _can_rebind_computed_source():
-		popup.add_item("Rebind computed source…", _SEL_ACT_REBIND_COMPUTED_SRC)
+		popup.add_item("Rebind computed source…", UiReactDockExplainMenuIds._SEL_ACT_REBIND_COMPUTED_SRC)
 		popup.set_item_tooltip(popup.item_count - 1, TT_REBIND_COMPUTED)
 		rebind_added = true
 
@@ -915,15 +814,15 @@ func _fill_selection_edge_edit_submenu(popup: PopupMenu) -> void:
 
 	var disc_added := false
 	if _can_disconnect_binding_edge():
-		popup.add_item("Clear optional binding", _SEL_ACT_CLEAR_OPT_BINDING)
+		popup.add_item("Clear optional binding", UiReactDockExplainMenuIds._SEL_ACT_CLEAR_OPT_BINDING)
 		popup.set_item_tooltip(popup.item_count - 1, TT_CLEAR_BINDING)
 		disc_added = true
 	if _can_disconnect_computed_source():
-		popup.add_item("Remove computed dependency", _SEL_ACT_REMOVE_COMPUTED_DEP)
+		popup.add_item("Remove computed dependency", UiReactDockExplainMenuIds._SEL_ACT_REMOVE_COMPUTED_DEP)
 		popup.set_item_tooltip(popup.item_count - 1, TT_REMOVE_COMPUTED)
 		disc_added = true
 	if _can_disconnect_wire_edge():
-		popup.add_item("Clear wire link", _SEL_ACT_CLEAR_WIRE_LINK)
+		popup.add_item("Clear wire link", UiReactDockExplainMenuIds._SEL_ACT_CLEAR_WIRE_LINK)
 		popup.set_item_tooltip(popup.item_count - 1, TT_CLEAR_WIRE)
 		disc_added = true
 
@@ -931,28 +830,28 @@ func _fill_selection_edge_edit_submenu(popup: PopupMenu) -> void:
 		popup.add_separator()
 
 	if _can_move_computed_source_up():
-		popup.add_item("Move source up", _SEL_ACT_MOVE_SRC_UP)
+		popup.add_item("Move source up", UiReactDockExplainMenuIds._SEL_ACT_MOVE_SRC_UP)
 		popup.set_item_tooltip(popup.item_count - 1, TT_MOVE_UP)
 	if _can_move_computed_source_down():
-		popup.add_item("Move source down", _SEL_ACT_MOVE_SRC_DOWN)
+		popup.add_item("Move source down", UiReactDockExplainMenuIds._SEL_ACT_MOVE_SRC_DOWN)
 		popup.set_item_tooltip(popup.item_count - 1, TT_MOVE_DOWN)
 	if _can_remove_computed_source_slot():
-		popup.add_item("Remove source slot", _SEL_ACT_REMOVE_SRC_SLOT)
+		popup.add_item("Remove source slot", UiReactDockExplainMenuIds._SEL_ACT_REMOVE_SRC_SLOT)
 		popup.set_item_tooltip(popup.item_count - 1, TT_REMOVE_SLOT)
 
 	if ca_will:
 		if popup.item_count > 0:
 			popup.add_separator()
-		popup.add_item("Create & assign…", _SEL_ACT_CREATE_ASSIGN_BINDING)
+		popup.add_item("Create & assign…", UiReactDockExplainMenuIds._SEL_ACT_CREATE_ASSIGN_BINDING)
 		popup.set_item_tooltip(popup.item_count - 1, TT_CREATE_ASSIGN)
 
 
 func _on_selection_action_id(id: int) -> void:
-	if id == _SEL_ACT_FOCUS_INSPECTOR:
+	if id == UiReactDockExplainMenuIds._SEL_ACT_FOCUS_INSPECTOR:
 		_on_focus_inspector_pressed()
 		return
 	match id:
-		_SEL_ACT_COPY_DETAILS:
+		UiReactDockExplainMenuIds._SEL_ACT_COPY_DETAILS:
 			_on_copy_details_pressed()
 		_:
 			## Other root selection menu ids are handled by nested submenus (Node / Wire / Edge edit).
@@ -966,43 +865,43 @@ func _on_selection_node_submenu_id(_id: int) -> void:
 
 func _on_selection_wire_submenu_id(id: int) -> void:
 	var nw := _WireRuleCatalogScript.rule_script_entries().size()
-	if id == _SEL_ACT_WIRE_REFRESH_LIST:
+	if id == UiReactDockExplainMenuIds._SEL_ACT_WIRE_REFRESH_LIST:
 		if _wire_rules_section != null:
-			(_wire_rules_section as Object).call(&"refresh_from_host")
+			_wire_rules_section.refresh_from_host()
 		return
-	if id == _SEL_ACT_WIRE_COPY_RULE_REPORT:
+	if id == UiReactDockExplainMenuIds._SEL_ACT_WIRE_COPY_RULE_REPORT:
 		if _wire_rules_section != null:
-			(_wire_rules_section as Object).call(&"copy_selected_report_to_clipboard")
+			_wire_rules_section.copy_selected_report_to_clipboard()
 		return
-	if id >= _SEL_ACT_WIRE_ADD_BASE and id < _SEL_ACT_WIRE_ADD_BASE + nw:
-		var cidx := id - _SEL_ACT_WIRE_ADD_BASE
+	if id >= UiReactDockExplainMenuIds._SEL_ACT_WIRE_ADD_BASE and id < UiReactDockExplainMenuIds._SEL_ACT_WIRE_ADD_BASE + nw:
+		var cidx := id - UiReactDockExplainMenuIds._SEL_ACT_WIRE_ADD_BASE
 		if _wire_rules_section != null:
-			(_wire_rules_section as Object).call(&"append_rule_from_catalog_index", cidx)
+			_wire_rules_section.append_rule_from_catalog_index(cidx)
 
 
 func _on_selection_edge_edit_submenu_id(id: int) -> void:
 	match id:
-		_SEL_ACT_REBIND_BINDING:
+		UiReactDockExplainMenuIds._SEL_ACT_REBIND_BINDING:
 			_on_rebind_binding_pressed()
-		_SEL_ACT_REBIND_WIRE_IN:
+		UiReactDockExplainMenuIds._SEL_ACT_REBIND_WIRE_IN:
 			_on_rebind_wire_in_pressed()
-		_SEL_ACT_REBIND_WIRE_OUT:
+		UiReactDockExplainMenuIds._SEL_ACT_REBIND_WIRE_OUT:
 			_on_rebind_wire_out_pressed()
-		_SEL_ACT_REBIND_COMPUTED_SRC:
+		UiReactDockExplainMenuIds._SEL_ACT_REBIND_COMPUTED_SRC:
 			_on_rebind_computed_source_pressed()
-		_SEL_ACT_CLEAR_OPT_BINDING:
+		UiReactDockExplainMenuIds._SEL_ACT_CLEAR_OPT_BINDING:
 			_on_clear_optional_binding_pressed()
-		_SEL_ACT_REMOVE_COMPUTED_DEP:
+		UiReactDockExplainMenuIds._SEL_ACT_REMOVE_COMPUTED_DEP:
 			_on_remove_computed_dependency_pressed()
-		_SEL_ACT_CLEAR_WIRE_LINK:
+		UiReactDockExplainMenuIds._SEL_ACT_CLEAR_WIRE_LINK:
 			_on_clear_wire_link_pressed()
-		_SEL_ACT_MOVE_SRC_UP:
+		UiReactDockExplainMenuIds._SEL_ACT_MOVE_SRC_UP:
 			_on_move_computed_source_up_pressed()
-		_SEL_ACT_MOVE_SRC_DOWN:
+		UiReactDockExplainMenuIds._SEL_ACT_MOVE_SRC_DOWN:
 			_on_move_computed_source_down_pressed()
-		_SEL_ACT_REMOVE_SRC_SLOT:
+		UiReactDockExplainMenuIds._SEL_ACT_REMOVE_SRC_SLOT:
 			_on_remove_computed_source_slot_pressed()
-		_SEL_ACT_CREATE_ASSIGN_BINDING:
+		UiReactDockExplainMenuIds._SEL_ACT_CREATE_ASSIGN_BINDING:
 			_on_create_assign_binding_pressed()
 		_:
 			## Unknown edge-edit submenu id (defensive; menus are built from known constants only).
@@ -1058,47 +957,47 @@ func _append_single_edge_edit_action_to_menu(popup: PopupMenu) -> void:
 	const TT_CREATE_ASSIGN := "New matching .tres on an empty optional binding (undoable)."
 
 	if _can_rebind_binding_edge():
-		popup.add_item("Rebind to resource…", _SEL_ACT_REBIND_BINDING)
+		popup.add_item("Rebind to resource…", UiReactDockExplainMenuIds._SEL_ACT_REBIND_BINDING)
 		popup.set_item_tooltip(popup.item_count - 1, TT_REBIND_BINDING)
 		return
 	if _can_rebind_wire_endpoint(true):
-		popup.add_item("Rebind wire input…", _SEL_ACT_REBIND_WIRE_IN)
+		popup.add_item("Rebind wire input…", UiReactDockExplainMenuIds._SEL_ACT_REBIND_WIRE_IN)
 		popup.set_item_tooltip(popup.item_count - 1, TT_REBIND_WIRE_IN)
 		return
 	if _can_rebind_wire_endpoint(false):
-		popup.add_item("Rebind wire output…", _SEL_ACT_REBIND_WIRE_OUT)
+		popup.add_item("Rebind wire output…", UiReactDockExplainMenuIds._SEL_ACT_REBIND_WIRE_OUT)
 		popup.set_item_tooltip(popup.item_count - 1, TT_REBIND_WIRE_OUT)
 		return
 	if _can_rebind_computed_source():
-		popup.add_item("Rebind computed source…", _SEL_ACT_REBIND_COMPUTED_SRC)
+		popup.add_item("Rebind computed source…", UiReactDockExplainMenuIds._SEL_ACT_REBIND_COMPUTED_SRC)
 		popup.set_item_tooltip(popup.item_count - 1, TT_REBIND_COMPUTED)
 		return
 	if _can_disconnect_binding_edge():
-		popup.add_item("Clear optional binding", _SEL_ACT_CLEAR_OPT_BINDING)
+		popup.add_item("Clear optional binding", UiReactDockExplainMenuIds._SEL_ACT_CLEAR_OPT_BINDING)
 		popup.set_item_tooltip(popup.item_count - 1, TT_CLEAR_BINDING)
 		return
 	if _can_disconnect_computed_source():
-		popup.add_item("Remove computed dependency", _SEL_ACT_REMOVE_COMPUTED_DEP)
+		popup.add_item("Remove computed dependency", UiReactDockExplainMenuIds._SEL_ACT_REMOVE_COMPUTED_DEP)
 		popup.set_item_tooltip(popup.item_count - 1, TT_REMOVE_COMPUTED)
 		return
 	if _can_disconnect_wire_edge():
-		popup.add_item("Clear wire link", _SEL_ACT_CLEAR_WIRE_LINK)
+		popup.add_item("Clear wire link", UiReactDockExplainMenuIds._SEL_ACT_CLEAR_WIRE_LINK)
 		popup.set_item_tooltip(popup.item_count - 1, TT_CLEAR_WIRE)
 		return
 	if _can_move_computed_source_up():
-		popup.add_item("Move source up", _SEL_ACT_MOVE_SRC_UP)
+		popup.add_item("Move source up", UiReactDockExplainMenuIds._SEL_ACT_MOVE_SRC_UP)
 		popup.set_item_tooltip(popup.item_count - 1, TT_MOVE_UP)
 		return
 	if _can_move_computed_source_down():
-		popup.add_item("Move source down", _SEL_ACT_MOVE_SRC_DOWN)
+		popup.add_item("Move source down", UiReactDockExplainMenuIds._SEL_ACT_MOVE_SRC_DOWN)
 		popup.set_item_tooltip(popup.item_count - 1, TT_MOVE_DOWN)
 		return
 	if _can_remove_computed_source_slot():
-		popup.add_item("Remove source slot", _SEL_ACT_REMOVE_SRC_SLOT)
+		popup.add_item("Remove source slot", UiReactDockExplainMenuIds._SEL_ACT_REMOVE_SRC_SLOT)
 		popup.set_item_tooltip(popup.item_count - 1, TT_REMOVE_SLOT)
 		return
 	if _can_create_and_assign_binding_edge():
-		popup.add_item("Create & assign…", _SEL_ACT_CREATE_ASSIGN_BINDING)
+		popup.add_item("Create & assign…", UiReactDockExplainMenuIds._SEL_ACT_CREATE_ASSIGN_BINDING)
 		popup.set_item_tooltip(popup.item_count - 1, TT_CREATE_ASSIGN)
 
 
@@ -1144,29 +1043,29 @@ func _apply_scope_preset_by_name(preset_name: String) -> void:
 
 func _fill_canvas_view_popup(popup: PopupMenu) -> void:
 	popup.clear()
-	popup.add_item("Refresh", _CV_REFRESH)
+	popup.add_item("Refresh", UiReactDockExplainMenuIds._CV_REFRESH)
 	popup.set_item_tooltip(popup.item_count - 1, "Rebuild graph from current selection and scene.")
-	popup.add_item("Fit view", _CV_FIT)
+	popup.add_item("Fit view", UiReactDockExplainMenuIds._CV_FIT)
 	popup.set_item_tooltip(popup.item_count - 1, "Reset pan/zoom on the graph.")
 	popup.add_separator()
 	if _canvas_create_submenu_popup != null:
 		_fill_canvas_create_submenu(_canvas_create_submenu_popup)
-		popup.add_submenu_node_item("Create", _canvas_create_submenu_popup, _CV_SUB_CREATE_ROOT)
+		popup.add_submenu_node_item("Create", _canvas_create_submenu_popup, UiReactDockExplainMenuIds._CV_SUB_CREATE_ROOT)
 	if _canvas_view_submenu_popup != null:
 		_fill_canvas_view_submenu(_canvas_view_submenu_popup)
-		popup.add_submenu_node_item("View", _canvas_view_submenu_popup, _CV_SUB_VIEW_ROOT)
+		popup.add_submenu_node_item("View", _canvas_view_submenu_popup, UiReactDockExplainMenuIds._CV_SUB_VIEW_ROOT)
 	if _canvas_scope_submenu_popup != null and _canvas_scope_presets_popup != null:
 		_fill_scope_submenu(_canvas_scope_submenu_popup, _canvas_scope_presets_popup)
-		popup.add_submenu_node_item("Scope", _canvas_scope_submenu_popup, _CV_SUB_SCOPE_ROOT)
+		popup.add_submenu_node_item("Scope", _canvas_scope_submenu_popup, UiReactDockExplainMenuIds._CV_SUB_SCOPE_ROOT)
 
 
 func _on_canvas_view_menu_id(id: int) -> void:
 	if _canvas_view_context_popup == null:
 		return
-	if id == _CV_REFRESH:
+	if id == UiReactDockExplainMenuIds._CV_REFRESH:
 		refresh()
 		return
-	if id == _CV_FIT:
+	if id == UiReactDockExplainMenuIds._CV_FIT:
 		_on_fit_pressed()
 		return
 
@@ -1177,76 +1076,76 @@ func _fill_canvas_create_submenu(popup: PopupMenu) -> void:
 	var cnames: PackedStringArray = _GraphFactoryScript.factory_state_class_names()
 	for ci in range(cnames.size()):
 		var csn := String(cnames[ci])
-		popup.add_item("New %s…" % csn, _CV_CREATE_STATE_BASE + ci)
+		popup.add_item("New %s…" % csn, UiReactDockExplainMenuIds._CV_CREATE_STATE_BASE + ci)
 		_canvas_create_state_names.append(csn)
 
 
 func _fill_canvas_view_submenu(popup: PopupMenu) -> void:
 	popup.clear()
-	popup.add_item("Full lists", _CV_TOGGLE_FULL_LISTS)
+	popup.add_item("Full lists", UiReactDockExplainMenuIds._CV_TOGGLE_FULL_LISTS)
 	popup.set_item_tooltip(popup.item_count - 1, "Uncap upstream/downstream lines in the details pane.")
 	popup.set_item_as_checkable(popup.item_count - 1, true)
 	popup.set_item_checked(popup.item_count - 1, _cb_full_lists != null and _cb_full_lists.button_pressed)
-	popup.add_item("Show binding edges", _CV_TOGGLE_BINDING)
+	popup.add_item("Show binding edges", UiReactDockExplainMenuIds._CV_TOGGLE_BINDING)
 	popup.set_item_tooltip(popup.item_count - 1, "Toggle binding edges (state → control property).")
 	popup.set_item_as_checkable(popup.item_count - 1, true)
 	popup.set_item_checked(popup.item_count - 1, _cb_bind != null and _cb_bind.button_pressed)
-	popup.add_item("Show computed edges", _CV_TOGGLE_COMPUTED)
+	popup.add_item("Show computed edges", UiReactDockExplainMenuIds._CV_TOGGLE_COMPUTED)
 	popup.set_item_tooltip(popup.item_count - 1, "Toggle computed-source edges.")
 	popup.set_item_as_checkable(popup.item_count - 1, true)
 	popup.set_item_checked(popup.item_count - 1, _cb_computed != null and _cb_computed.button_pressed)
-	popup.add_item("Show wire edges", _CV_TOGGLE_WIRE)
+	popup.add_item("Show wire edges", UiReactDockExplainMenuIds._CV_TOGGLE_WIRE)
 	popup.set_item_tooltip(popup.item_count - 1, "Toggle wire-rule flow edges.")
 	popup.set_item_as_checkable(popup.item_count - 1, true)
 	popup.set_item_checked(popup.item_count - 1, _cb_wire != null and _cb_wire.button_pressed)
-	popup.add_item("All edge labels", _CV_TOGGLE_EDGE_LABELS)
+	popup.add_item("All edge labels", UiReactDockExplainMenuIds._CV_TOGGLE_EDGE_LABELS)
 	popup.set_item_tooltip(popup.item_count - 1, "Short labels on every edge; selection still expands below.")
 	popup.set_item_as_checkable(popup.item_count - 1, true)
 	popup.set_item_checked(popup.item_count - 1, _cb_edge_labels != null and _cb_edge_labels.button_pressed)
-	popup.add_item("Show legend", _CV_TOGGLE_LEGEND)
+	popup.add_item("Show legend", UiReactDockExplainMenuIds._CV_TOGGLE_LEGEND)
 	popup.set_item_tooltip(popup.item_count - 1, "Show the node/edge color key above the graph.")
 	popup.set_item_as_checkable(popup.item_count - 1, true)
 	popup.set_item_checked(popup.item_count - 1, _legend_host != null and _legend_host.visible)
 
 
 func _on_canvas_create_submenu_id(id: int) -> void:
-	var ci := id - _CV_CREATE_STATE_BASE
+	var ci := id - UiReactDockExplainMenuIds._CV_CREATE_STATE_BASE
 	if ci >= 0 and ci < _canvas_create_state_names.size():
 		_on_create_state_menu_id(ci)
 
 
 func _on_canvas_view_submenu_id(id: int) -> void:
-	if id == _CV_TOGGLE_FULL_LISTS:
+	if id == UiReactDockExplainMenuIds._CV_TOGGLE_FULL_LISTS:
 		if _cb_full_lists != null:
 			var on := not _cb_full_lists.button_pressed
 			_cb_full_lists.button_pressed = on
 			_on_full_lists_toggled(on)
 		return
-	if id == _CV_TOGGLE_BINDING:
+	if id == UiReactDockExplainMenuIds._CV_TOGGLE_BINDING:
 		if _cb_bind != null:
 			_cb_bind.button_pressed = not _cb_bind.button_pressed
 			_push_visual_filters()
 			refresh()
 		return
-	if id == _CV_TOGGLE_COMPUTED:
+	if id == UiReactDockExplainMenuIds._CV_TOGGLE_COMPUTED:
 		if _cb_computed != null:
 			_cb_computed.button_pressed = not _cb_computed.button_pressed
 			_push_visual_filters()
 			refresh()
 		return
-	if id == _CV_TOGGLE_WIRE:
+	if id == UiReactDockExplainMenuIds._CV_TOGGLE_WIRE:
 		if _cb_wire != null:
 			_cb_wire.button_pressed = not _cb_wire.button_pressed
 			_push_visual_filters()
 			refresh()
 		return
-	if id == _CV_TOGGLE_EDGE_LABELS:
+	if id == UiReactDockExplainMenuIds._CV_TOGGLE_EDGE_LABELS:
 		if _cb_edge_labels != null:
 			_cb_edge_labels.button_pressed = not _cb_edge_labels.button_pressed
 			_push_visual_filters()
 			refresh()
 		return
-	if id == _CV_TOGGLE_LEGEND:
+	if id == UiReactDockExplainMenuIds._CV_TOGGLE_LEGEND:
 		if _legend_host != null:
 			_legend_host.visible = not _legend_host.visible
 			UiReactDockConfig.save_ui_preference(
@@ -1259,7 +1158,7 @@ func _resolve_selected_node_bind_targets() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if _plugin == null:
 		return out
-	if _selection_kind != _SEL_NODE or _graph_selected_node_id.is_empty():
+	if _selection_kind != UiReactDockExplainMenuIds._SEL_NODE or _graph_selected_node_id.is_empty():
 		return out
 	var host := _resolve_control_host_from_node(_graph_selected_node_id, {})
 	if host == null:
@@ -1315,7 +1214,7 @@ func _fill_selection_create_bind_submenu(popup: PopupMenu) -> void:
 			var item_text := "New %s…" % cls
 			if targets.size() > 1:
 				item_text = "%s: New %s…" % [tgt_label, cls]
-			var menu_id := _SEL_ACT_CREATE_BIND_BASE + _selection_create_bind_actions.size()
+			var menu_id := UiReactDockExplainMenuIds._SEL_ACT_CREATE_BIND_BASE + _selection_create_bind_actions.size()
 			popup.add_item(item_text, menu_id)
 			var item_idx := popup.item_count - 1
 			popup.set_item_tooltip(
@@ -1332,7 +1231,7 @@ func _fill_selection_create_bind_submenu(popup: PopupMenu) -> void:
 
 
 func _on_selection_create_bind_submenu_id(id: int) -> void:
-	var ai := id - _SEL_ACT_CREATE_BIND_BASE
+	var ai := id - UiReactDockExplainMenuIds._SEL_ACT_CREATE_BIND_BASE
 	if ai < 0 or ai >= _selection_create_bind_actions.size():
 		return
 	var payload: Dictionary = _selection_create_bind_actions[ai]
@@ -1491,7 +1390,7 @@ func _can_remove_computed_source_slot() -> bool:
 
 
 func _computed_source_index_from_selection() -> int:
-	if _selection_kind != _SEL_EDGE or _graph_selected_edge_index < 0:
+	if _selection_kind != UiReactDockExplainMenuIds._SEL_EDGE or _graph_selected_edge_index < 0:
 		return -1
 	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
 	var idx := _graph_selected_edge_index
@@ -1504,7 +1403,7 @@ func _computed_source_index_from_selection() -> int:
 func _attempt_graph_edge_disconnect() -> void:
 	if _plugin == null or _actions == null:
 		return
-	if _selection_kind != _SEL_EDGE or _graph_selected_edge_index < 0:
+	if _selection_kind != UiReactDockExplainMenuIds._SEL_EDGE or _graph_selected_edge_index < 0:
 		return
 	var root := _plugin.get_editor_interface().get_edited_scene_root()
 	if root == null:
@@ -1568,19 +1467,19 @@ func _attempt_graph_edge_disconnect() -> void:
 
 
 func _on_clear_optional_binding_pressed() -> void:
-	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.BINDING:
+	if _selection_kind != UiReactDockExplainMenuIds._SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.BINDING:
 		return
 	_attempt_graph_edge_disconnect()
 
 
 func _on_remove_computed_dependency_pressed() -> void:
-	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.COMPUTED_SOURCE:
+	if _selection_kind != UiReactDockExplainMenuIds._SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.COMPUTED_SOURCE:
 		return
 	_attempt_graph_edge_disconnect()
 
 
 func _on_clear_wire_link_pressed() -> void:
-	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.WIRE_FLOW:
+	if _selection_kind != UiReactDockExplainMenuIds._SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.WIRE_FLOW:
 		return
 	_attempt_graph_edge_disconnect()
 
@@ -1737,7 +1636,7 @@ func _edge_allows_computed_rebind(ed: Dictionary, root: Node) -> bool:
 func _can_rebind_binding_edge() -> bool:
 	if _plugin == null or _actions == null:
 		return false
-	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.BINDING:
+	if _selection_kind != UiReactDockExplainMenuIds._SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.BINDING:
 		return false
 	var ei := _plugin.get_editor_interface()
 	var root := ei.get_edited_scene_root()
@@ -1756,7 +1655,7 @@ func _can_rebind_binding_edge() -> bool:
 func _can_rebind_wire_endpoint(for_input: bool) -> bool:
 	if _plugin == null or _actions == null:
 		return false
-	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.WIRE_FLOW:
+	if _selection_kind != UiReactDockExplainMenuIds._SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.WIRE_FLOW:
 		return false
 	var ei := _plugin.get_editor_interface()
 	var root := ei.get_edited_scene_root()
@@ -1775,7 +1674,7 @@ func _can_rebind_wire_endpoint(for_input: bool) -> bool:
 func _can_rebind_computed_source() -> bool:
 	if _plugin == null or _actions == null:
 		return false
-	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.COMPUTED_SOURCE:
+	if _selection_kind != UiReactDockExplainMenuIds._SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.COMPUTED_SOURCE:
 		return false
 	var ei := _plugin.get_editor_interface()
 	var root := ei.get_edited_scene_root()
@@ -2385,7 +2284,7 @@ func _on_rebind_binding_pressed() -> void:
 		return
 	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
 	var ed: Dictionary = edges[_graph_selected_edge_index] as Dictionary
-	_rebind_kind = _REBIND_BINDING
+	_rebind_kind = UiReactDockExplainMenuIds._REBIND_BINDING
 	_rebind_host_path = str(ed.get(&"host_path", ""))
 	_rebind_property = str(ed.get(&"binding_property", ""))
 	if _rebind_property.is_empty():
@@ -2400,7 +2299,7 @@ func _on_rebind_wire_in_pressed() -> void:
 		return
 	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
 	var ed: Dictionary = edges[_graph_selected_edge_index] as Dictionary
-	_rebind_kind = _REBIND_WIRE_IN
+	_rebind_kind = UiReactDockExplainMenuIds._REBIND_WIRE_IN
 	_rebind_wire_host_path = str(ed.get(&"wire_host_path", ""))
 	_rebind_wire_rule_index = int(ed.get(&"wire_rule_index", -1))
 	_rebind_wire_prop = StringName(str(ed.get(&"wire_in_property", "")))
@@ -2414,7 +2313,7 @@ func _on_rebind_wire_out_pressed() -> void:
 		return
 	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
 	var ed: Dictionary = edges[_graph_selected_edge_index] as Dictionary
-	_rebind_kind = _REBIND_WIRE_OUT
+	_rebind_kind = UiReactDockExplainMenuIds._REBIND_WIRE_OUT
 	_rebind_wire_host_path = str(ed.get(&"wire_host_path", ""))
 	_rebind_wire_rule_index = int(ed.get(&"wire_rule_index", -1))
 	_rebind_wire_prop = StringName(str(ed.get(&"wire_out_property", "")))
@@ -2428,7 +2327,7 @@ func _on_rebind_computed_source_pressed() -> void:
 		return
 	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
 	var ed: Dictionary = edges[_graph_selected_edge_index] as Dictionary
-	_rebind_kind = _REBIND_COMPUTED_SOURCE
+	_rebind_kind = UiReactDockExplainMenuIds._REBIND_COMPUTED_SOURCE
 	_rebind_host_path = str(ed.get(&"host_path", ""))
 	_rebind_computed_context = str(ed.get(&"computed_context", ""))
 	_rebind_computed_source_index = int(ed.get(&"computed_source_index", -1))
@@ -2468,7 +2367,7 @@ func _on_rebind_file_selected(path: String) -> void:
 	var ui_st := res as UiState
 	var committed := false
 	match _rebind_kind:
-		_REBIND_BINDING:
+		UiReactDockExplainMenuIds._REBIND_BINDING:
 			var edges_b: Array = _last_layout.get(&"draw_edges", []) as Array
 			var idx_b := _graph_selected_edge_index
 			if idx_b < 0 or idx_b >= edges_b.size():
@@ -2477,7 +2376,7 @@ func _on_rebind_file_selected(path: String) -> void:
 			if ed_b is not Dictionary:
 				return
 			committed = _try_commit_binding_rebind_from_edge(ed_b as Dictionary, ui_st, root)
-		_REBIND_WIRE_IN, _REBIND_WIRE_OUT:
+		UiReactDockExplainMenuIds._REBIND_WIRE_IN, UiReactDockExplainMenuIds._REBIND_WIRE_OUT:
 			var edges_w: Array = _last_layout.get(&"draw_edges", []) as Array
 			var idx_w := _graph_selected_edge_index
 			if idx_w < 0 or idx_w >= edges_w.size():
@@ -2485,9 +2384,9 @@ func _on_rebind_file_selected(path: String) -> void:
 			var ed_w: Variant = edges_w[idx_w]
 			if ed_w is not Dictionary:
 				return
-			var for_in := _rebind_kind == _REBIND_WIRE_IN
+			var for_in := _rebind_kind == UiReactDockExplainMenuIds._REBIND_WIRE_IN
 			committed = _try_commit_wire_rebind_from_edge(ed_w as Dictionary, for_in, ui_st, root)
-		_REBIND_COMPUTED_SOURCE:
+		UiReactDockExplainMenuIds._REBIND_COMPUTED_SOURCE:
 			var hp_c := _rebind_host_path
 			var ctx := _rebind_computed_context
 			var csi := _rebind_computed_source_index
@@ -2510,7 +2409,7 @@ func _on_rebind_file_selected(path: String) -> void:
 			return
 	if not committed:
 		return
-	_rebind_kind = _REBIND_NONE
+	_rebind_kind = UiReactDockExplainMenuIds._REBIND_NONE
 	if _request_dock_refresh.is_valid():
 		_request_dock_refresh.call()
 	refresh()
@@ -2530,51 +2429,12 @@ func _set_details_empty() -> void:
 	)
 
 
-## Collapse3+ consecutive newlines to exactly two (one blank line); preserves intentional `\n\n` between sections.
-func _normalize_details_newlines(s: String) -> String:
-	var t := s
-	while t.contains("\n\n\n"):
-		t = t.replace("\n\n\n", "\n\n")
-	return t
-
-
 func _set_details_both(bb: String, plain: String) -> void:
-	bb = _normalize_details_newlines(bb)
-	plain = _normalize_details_newlines(plain)
+	bb = UiReactDockExplainDetailsPresenter.normalize_details_newlines(bb)
+	plain = UiReactDockExplainDetailsPresenter.normalize_details_newlines(plain)
 	if _details:
 		_details.text = bb
 	_last_details_plain = plain
-
-
-func _plain_from_bbcode_line(line: String) -> String:
-	var t := line
-	t = t.replace("[b]", "").replace("[/b]", "")
-	t = t.replace("[i]", "").replace("[/i]", "")
-	t = t.replace("[code]", "").replace("[/code]", "")
-	return t
-
-
-## Details pane — single-line section: [b]Title[/b] — body (one sentence; body may include BBCode).
-func _details_run_in_bb_plain(title: String, body_bb: String, body_plain: String) -> PackedStringArray:
-	var bb := "[b]%s[/b] — %s\n" % [title, body_bb]
-	var plain := "%s — %s\n" % [title, body_plain]
-	return PackedStringArray([bb, plain])
-
-
-## Details pane — block section: title line only; caller appends bullets or wrapped lines.
-func _details_block_head_bb_plain(title: String) -> PackedStringArray:
-	return PackedStringArray(["[b]%s[/b]\n" % title, "%s\n" % title])
-
-
-## Join major details sections with exactly one blank line between non-empty chunks.
-func _details_append_major(bb: String, plain: String, chunk_bb: String, chunk_plain: String) -> PackedStringArray:
-	if chunk_bb.is_empty() and chunk_plain.is_empty():
-		return PackedStringArray([bb, plain])
-	var cbb := chunk_bb.lstrip("\n")
-	var cpp := chunk_plain.lstrip("\n")
-	if bb.is_empty() and plain.is_empty():
-		return PackedStringArray([cbb, cpp])
-	return PackedStringArray([bb.rstrip("\n") + "\n\n" + cbb, plain.rstrip("\n") + "\n\n" + cpp])
 
 
 func _get_narrative_cached(anchor_id: String) -> Variant:
@@ -2624,18 +2484,8 @@ func _get_narrative_cached_ex(
 	return narr
 
 
-func _snapshot_has_node_id(node_id: String) -> bool:
-	if _last_snap == null or node_id.is_empty():
-		return false
-	var snap: UiReactExplainGraphSnapshot = _last_snap as UiReactExplainGraphSnapshot
-	for nd: Variant in snap.nodes:
-		if nd is Dictionary and str((nd as Dictionary).get(&"id", "")) == node_id:
-			return true
-	return false
-
-
 func _edge_anchor_id(from_id: String, to_id: String) -> String:
-	if _snapshot_has_node_id(from_id):
+	if UiReactDockExplainGraphMutations.snapshot_has_node_id(_last_snap, from_id):
 		return from_id
 	return to_id
 
@@ -2656,9 +2506,9 @@ func _edge_graph_context_display_excludes(
 func _on_full_lists_toggled(pressed: bool) -> void:
 	_show_full_lists = pressed
 	_narrative_cache.clear()
-	if _selection_kind == _SEL_NODE and not _graph_selected_node_id.is_empty():
+	if _selection_kind == UiReactDockExplainMenuIds._SEL_NODE and not _graph_selected_node_id.is_empty():
 		_fill_node_details(_graph_selected_node_id)
-	elif _selection_kind == _SEL_EDGE:
+	elif _selection_kind == UiReactDockExplainMenuIds._SEL_EDGE:
 		_fill_edge_details(
 			_last_edge_from_id,
 			_last_edge_to_id,
@@ -2680,12 +2530,12 @@ func _narrative_anchor_kind(anchor_id: String) -> int:
 
 func _narrative_upstream_heading_bb_plain(anchor_kind: int) -> PackedStringArray:
 	if anchor_kind == _SnapScript.NodeKind.CONTROL:
-		return _details_run_in_bb_plain(
+		return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
 			"Upstream",
 			"in this snapshot — state/computed feeding this control’s bindings",
 			"in this snapshot — state/computed feeding this control's bindings",
 		)
-	return _details_run_in_bb_plain(
+	return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
 		"Upstream",
 		"in this snapshot — declarative reach toward this resource",
 		"in this snapshot — declarative reach toward this resource",
@@ -2694,12 +2544,12 @@ func _narrative_upstream_heading_bb_plain(anchor_kind: int) -> PackedStringArray
 
 func _narrative_downstream_heading_bb_plain(anchor_kind: int) -> PackedStringArray:
 	if anchor_kind == _SnapScript.NodeKind.CONTROL:
-		return _details_run_in_bb_plain(
+		return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
 			"Downstream",
 			"in this snapshot — states/computed or controls reached via this control’s bindings",
 			"in this snapshot — states/computed or controls reached via this control's bindings",
 		)
-	return _details_run_in_bb_plain(
+	return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
 		"Downstream",
 		"in this snapshot — states/computed or controls this resource feeds",
 		"in this snapshot — states/computed or controls this resource feeds",
@@ -2722,19 +2572,19 @@ func _append_reachability_from_narrative(narr: Object) -> PackedStringArray:
 		if ak == _SnapScript.NodeKind.CONTROL:
 			var msg := "[i]No upstream in this snapshot—only direct bindings feed this control.[/i]\n"
 			bb += msg
-			plain += _plain_from_bbcode_line(msg)
+			plain += UiReactDockExplainDetailsPresenter.plain_from_bbcode_line(msg)
 		elif ak == _SnapScript.NodeKind.UI_STATE or ak == _SnapScript.NodeKind.UI_COMPUTED:
 			var msg_r := "[i]No upstream in this snapshot—no declarative sources reach this resource.[/i]\n"
 			bb += msg_r
-			plain += _plain_from_bbcode_line(msg_r)
+			plain += UiReactDockExplainDetailsPresenter.plain_from_bbcode_line(msg_r)
 		else:
 			var msg2 := "[i]No upstream in this snapshot.[/i]\n"
 			bb += msg2
-			plain += _plain_from_bbcode_line(msg2)
+			plain += UiReactDockExplainDetailsPresenter.plain_from_bbcode_line(msg2)
 	else:
 		for line2: String in n_narr.upstream_display_lines:
 			bb += line2
-			plain += _plain_from_bbcode_line(line2)
+			plain += UiReactDockExplainDetailsPresenter.plain_from_bbcode_line(line2)
 	var down_h := _narrative_downstream_heading_bb_plain(ak)
 	bb += down_h[0]
 	plain += down_h[1]
@@ -2745,25 +2595,25 @@ func _append_reachability_from_narrative(narr: Object) -> PackedStringArray:
 		plain += "(none)\n"
 	else:
 		if not dsl.is_empty():
-			var st_h := _details_block_head_bb_plain("States / computed")
+			var st_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("States / computed")
 			bb += st_h[0]
 			plain += st_h[1]
 			for line3: String in dsl:
 				bb += line3
-				plain += _plain_from_bbcode_line(line3)
+				plain += UiReactDockExplainDetailsPresenter.plain_from_bbcode_line(line3)
 		if not dcl.is_empty():
-			var ct_h := _details_block_head_bb_plain("Controls")
+			var ct_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Controls")
 			bb += ct_h[0]
 			plain += ct_h[1]
 			for line4: String in dcl:
 				bb += line4
-				plain += _plain_from_bbcode_line(line4)
+				plain += UiReactDockExplainDetailsPresenter.plain_from_bbcode_line(line4)
 	return PackedStringArray([bb, plain])
 
 
 func _details_declarative_footer_bb_plain() -> PackedStringArray:
-	var bb := _DETAILS_DECLARATIVE_ONE_LINER_BB
-	var plain := _plain_from_bbcode_line(_DETAILS_DECLARATIVE_ONE_LINER_BB)
+	var bb := UiReactDockExplainContextMenus.DETAILS_DECLARATIVE_ONE_LINER_BB
+	var plain := UiReactDockExplainDetailsPresenter.plain_from_bbcode_line(UiReactDockExplainContextMenus.DETAILS_DECLARATIVE_ONE_LINER_BB)
 	return PackedStringArray([bb, plain])
 
 
@@ -2772,7 +2622,7 @@ func _append_cycle_section_bb_plain(anchor_id: String) -> PackedStringArray:
 		return PackedStringArray(["", ""])
 	var snap: UiReactExplainGraphSnapshot = _last_snap as UiReactExplainGraphSnapshot
 	var is_hub := anchor_id == _last_focus_id
-	var cap := 999999 if (is_hub or _show_full_lists) else _CYCLE_SUMMARY_CAP
+	var cap := 999999 if (is_hub or _show_full_lists) else UiReactDockExplainContextMenus.CYCLE_SUMMARY_CAP
 	var matching: Array[Dictionary] = []
 	for c: Variant in snap.cycle_candidates:
 		if c is not Dictionary:
@@ -2786,7 +2636,7 @@ func _append_cycle_section_bb_plain(anchor_id: String) -> PackedStringArray:
 				matching.append(cd)
 	if matching.is_empty():
 		return PackedStringArray(["", ""])
-	var cyc_h := _details_run_in_bb_plain(
+	var cyc_h := UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
 		"Cycle candidates",
 		"static, state/computed edges only",
 		"static, state/computed edges only",
@@ -2825,7 +2675,7 @@ func _mismatch_banner_bb_plain(narr: Object) -> PackedStringArray:
 	var truncated := bool(stats.get(&"truncated", false))
 	if not missing and not truncated:
 		return PackedStringArray(["", ""])
-	var cn_h := _details_block_head_bb_plain("Canvas note")
+	var cn_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Canvas note")
 	var bb := cn_h[0]
 	var plain := cn_h[1]
 	if missing:
@@ -2837,32 +2687,11 @@ func _mismatch_banner_bb_plain(narr: Object) -> PackedStringArray:
 	return PackedStringArray([bb, plain])
 
 
-const _INCIDENT_EDGE_CAP := 8
-const _OTHER_EDGES_AT_ANCHOR_CAP := 6
-const _ORPHAN_LAYER := -512
-const _CYCLE_SUMMARY_CAP := 2
-## Indented line under a registry binding row: matching BINDING edge in this graph (box-drawing reads as “continuation” in RichTextLabel).
-const _CONNECTIONS_BINDING_EDGE_CONTINUATION := "  └ "
-## Declarative-scope one-liner appended after human reachability in the details pane.
-const _DETAILS_DECLARATIVE_ONE_LINER_BB := (
-	"[i]Declarative snapshot only (not a runtime trace); cycle summaries are static candidates.[/i]\n"
-)
-
-
 func _id_in_packed(ids: PackedStringArray, needle: String) -> bool:
 	for i in ids.size():
 		if String(ids[i]) == needle:
 			return true
 	return false
-
-
-func _incident_edge_sig(ed: Dictionary) -> String:
-	return "%s|%s|%d|%s" % [
-		str(ed.get(&"from_id", "")),
-		str(ed.get(&"to_id", "")),
-		int(ed.get(&"kind", -1)),
-		str(ed.get(&"label", "")),
-	]
 
 
 ## When true, omit binding **Where to edit** (healthy path resolves to a Control in the edited scene).
@@ -2897,7 +2726,7 @@ func _optional_binding_dock_hint_bb_plain(ed: Dictionary, bp: StringName) -> Pac
 	if not UiReactGraphNewBindingService.binding_export_is_optional(comp2, bp):
 		return PackedStringArray(["", ""])
 	var msg := "[i]Optional export — [b]Clear optional binding[/b] is available in the dock action row (undoable).[/i]\n"
-	return PackedStringArray([msg, _plain_from_bbcode_line(msg)])
+	return PackedStringArray([msg, UiReactDockExplainDetailsPresenter.plain_from_bbcode_line(msg)])
 
 
 func _edge_missing_control_path_bb_plain() -> PackedStringArray:
@@ -2917,7 +2746,7 @@ func _other_edges_at_anchor_bb_plain(
 	var sel_ev: Variant = edges[selected_edge_index]
 	if sel_ev is not Dictionary:
 		return PackedStringArray(["", ""])
-	var sel_sig := _incident_edge_sig(sel_ev as Dictionary)
+	var sel_sig := UiReactDockExplainGraphMutations.incident_edge_sig(sel_ev as Dictionary)
 	var others: Array[Dictionary] = []
 	for i: int in range(edges.size()):
 		if i == selected_edge_index:
@@ -2926,7 +2755,7 @@ func _other_edges_at_anchor_bb_plain(
 		if ev2 is not Dictionary:
 			continue
 		var ed2: Dictionary = ev2 as Dictionary
-		if _incident_edge_sig(ed2) == sel_sig:
+		if UiReactDockExplainGraphMutations.incident_edge_sig(ed2) == sel_sig:
 			continue
 		var fid := str(ed2.get(&"from_id", ""))
 		var tid := str(ed2.get(&"to_id", ""))
@@ -2946,10 +2775,10 @@ func _other_edges_at_anchor_bb_plain(
 				return fa < fb
 			return str(a.get(&"to_id", "")) < str(b.get(&"to_id", ""))
 	)
-	var oe_h := _details_block_head_bb_plain("Other edges at this anchor")
+	var oe_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Other edges at this anchor")
 	var bb := oe_h[0]
 	var plain := oe_h[1]
-	var cap := _OTHER_EDGES_AT_ANCHOR_CAP
+	var cap := UiReactDockExplainContextMenus.OTHER_EDGES_AT_ANCHOR_CAP
 	var n_show := mini(others.size(), cap)
 	for j: int in n_show:
 		var pair := _format_incident_edge_bb_plain(others[j])
@@ -2978,7 +2807,7 @@ func _find_binding_edge_for_prop(incident: Array[Dictionary], node_id: String, p
 func _connections_section_bb_plain(node_id: String, d: Dictionary, edges: Array) -> PackedStringArray:
 	if int(d.get(&"kind", -1)) != _SnapScript.NodeKind.CONTROL or not node_id.begins_with("ctrl:"):
 		return PackedStringArray(["", ""])
-	var cx_h := _details_block_head_bb_plain("Connections")
+	var cx_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Connections")
 	var bb := cx_h[0]
 	var plain := cx_h[1]
 	var host := _resolve_control_host_from_node(node_id, d)
@@ -3016,7 +2845,7 @@ func _connections_section_bb_plain(node_id: String, d: Dictionary, edges: Array)
 			if str(ed1.get(&"to_id", "")) != node_id:
 				continue
 			any_bind = true
-			consumed[_incident_edge_sig(ed1)] = true
+			consumed[UiReactDockExplainGraphMutations.incident_edge_sig(ed1)] = true
 			var pair0 := _format_incident_edge_bb_plain(ed1)
 			bb += pair0[0] + "\n"
 			plain += pair0[1] + "\n"
@@ -3037,23 +2866,23 @@ func _connections_section_bb_plain(node_id: String, d: Dictionary, edges: Array)
 				plain += "• %s → %s\n" % [ps, vl]
 				var bed := _find_binding_edge_for_prop(incident, node_id, ps)
 				if not bed.is_empty():
-					consumed[_incident_edge_sig(bed)] = true
+					consumed[UiReactDockExplainGraphMutations.incident_edge_sig(bed)] = true
 					var pair1 := _format_incident_edge_bb_plain(bed)
 					var subb := pair1[0].strip_edges()
 					if subb.begins_with("• "):
 						subb = subb.substr(2)
-					bb += _CONNECTIONS_BINDING_EDGE_CONTINUATION + subb + "\n"
+					bb += UiReactDockExplainContextMenus.CONNECTIONS_BINDING_EDGE_CONTINUATION + subb + "\n"
 					var subp := pair1[1].strip_edges()
 					if subp.begins_with("• "):
 						subp = subp.substr(2)
-					plain += _CONNECTIONS_BINDING_EDGE_CONTINUATION + subp + "\n"
+					plain += UiReactDockExplainContextMenus.CONNECTIONS_BINDING_EDGE_CONTINUATION + subp + "\n"
 	var others: Array[Dictionary] = []
 	for ed2: Dictionary in incident:
-		if consumed.has(_incident_edge_sig(ed2)):
+		if consumed.has(UiReactDockExplainGraphMutations.incident_edge_sig(ed2)):
 			continue
 		others.append(ed2)
 	if not others.is_empty():
-		var oe2 := _details_block_head_bb_plain("Other edges")
+		var oe2 := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Other edges")
 		bb += "\n" + oe2[0]
 		plain += "\n" + oe2[1]
 		for ed3: Dictionary in others:
@@ -3072,7 +2901,7 @@ func _wire_rules_summary_bb_plain(host: Control) -> PackedStringArray:
 	var arr: Array = wr as Array
 	if arr.is_empty():
 		return PackedStringArray(["", ""])
-	var wr_h := _details_block_head_bb_plain("Wire rules")
+	var wr_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Wire rules")
 	var bb := wr_h[0]
 	var plain := wr_h[1]
 	for i in arr.size():
@@ -3137,17 +2966,17 @@ func _append_selected_wire_rule_report_bb_plain(bb: String, plain: String) -> Pa
 	var arr: Array = wr as Array if wr is Array else []
 	if arr.is_empty():
 		return PackedStringArray([bb, plain])
-	var sel_idx := int((_wire_rules_section as Object).call(&"get_selected_rule_index"))
+	var sel_idx := _wire_rules_section.get_selected_rule_index()
 	if sel_idx < 0 or sel_idx >= arr.size():
-		var pick_h := _details_block_head_bb_plain("Selected wire rule")
+		var pick_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Selected wire rule")
 		var pick_bb := pick_h[0] + "Select a rule in the list above to view full rule details.\n"
 		var pick_plain := pick_h[1] + "Select a rule in the list above to view full rule details.\n"
-		return _details_append_major(bb, plain, pick_bb, pick_plain)
+		return UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, pick_bb, pick_plain)
 	var item: Variant = arr[sel_idx]
-	var wr_h := _details_block_head_bb_plain("Selected wire rule")
+	var wr_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Selected wire rule")
 	var wr_bb := wr_h[0] + _WireDetailsScript.build_details_bbcode(item, sel_idx, host, root)
 	var wr_plain := wr_h[1] + _WireDetailsScript.build_details_plain_text(item, sel_idx, host, root) + "\n"
-	return _details_append_major(bb, plain, wr_bb, wr_plain)
+	return UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, wr_bb, wr_plain)
 
 
 func _format_incident_edge_bb_plain(ed: Dictionary) -> PackedStringArray:
@@ -3155,7 +2984,7 @@ func _format_incident_edge_bb_plain(ed: Dictionary) -> PackedStringArray:
 	var ta := str(ed.get(&"to_id", ""))
 	var k := int(ed.get(&"kind", -1))
 	var lab := str(ed.get(&"label", ""))
-	var tag := _edge_short_token(k)
+	var tag := UiReactDockExplainGraphMutations.edge_short_token(k)
 	var s_from := _short_label_for_node_id(fa)
 	var s_to := _short_label_for_node_id(ta)
 	var bb := "• [code][%s][/code] %s → %s" % [tag, s_from, s_to]
@@ -3167,7 +2996,7 @@ func _format_incident_edge_bb_plain(ed: Dictionary) -> PackedStringArray:
 
 
 func _focus_relation_blurb_bb_plain(node_id: String, layout_focus_id: String, node_layer: Dictionary) -> PackedStringArray:
-	var rel_h := _details_block_head_bb_plain("Relative to layout center")
+	var rel_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Relative to layout center")
 	var bb := rel_h[0]
 	var plain := rel_h[1]
 	if node_id == layout_focus_id:
@@ -3179,7 +3008,7 @@ func _focus_relation_blurb_bb_plain(node_id: String, layout_focus_id: String, no
 			plain += "Weakly connected in this layout — present in scope but not on the main upstream/downstream spine used for layering.\n"
 		else:
 			var L := int(node_layer[node_id])
-			if L == _ORPHAN_LAYER:
+			if L == UiReactExplainGraphLayout.LAYER_SENTINEL_UNREACHABLE:
 				bb += "Weakly connected in this layout — present in scope but not on the main upstream/downstream spine used for layering.\n"
 				plain += "Weakly connected in this layout — present in scope but not on the main upstream/downstream spine used for layering.\n"
 			elif L < 0:
@@ -3196,7 +3025,7 @@ func _focus_relation_blurb_bb_plain(node_id: String, layout_focus_id: String, no
 
 func _node_headline_bb_plain(node_id: String, d: Dictionary, focus_id: String) -> PackedStringArray:
 	if node_id == focus_id:
-		return _details_run_in_bb_plain(
+		return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
 			"Focus control",
 			"This is the [code]UiReact*[/code] control you selected when refreshing this graph.",
 			"This is the UiReact* control you selected when refreshing this graph.",
@@ -3206,25 +3035,25 @@ func _node_headline_bb_plain(node_id: String, d: Dictionary, focus_id: String) -
 	var label_disp := short_l if not short_l.is_empty() else node_id
 	match nk:
 		_SnapScript.NodeKind.CONTROL:
-			return _details_run_in_bb_plain(
+			return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
 				label_disp,
 				"[code]UiReact*[/code] control in this scoped graph.",
 				"UiReact* control in this scoped graph.",
 			)
 		_SnapScript.NodeKind.UI_STATE:
-			return _details_run_in_bb_plain(
+			return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
 				label_disp,
 				"[code]UiState[/code] resource node (bindings, wires, or computed inputs).",
 				"UiState resource node (bindings, wires, or computed inputs).",
 			)
 		_SnapScript.NodeKind.UI_COMPUTED:
-			return _details_run_in_bb_plain(
+			return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
 				label_disp,
 				"[code]UiComputed*[/code] resource node (aggregates [code]sources[/code]).",
 				"UiComputed* resource node (aggregates sources).",
 			)
 		_:
-			return _details_run_in_bb_plain(label_disp, "Node in this scoped graph.", "Node in this scoped graph.")
+			return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(label_disp, "Node in this scoped graph.", "Node in this scoped graph.")
 
 
 func _fill_node_details(node_id: String) -> void:
@@ -3243,16 +3072,16 @@ func _fill_node_details(node_id: String) -> void:
 	if narr != null and nk == _SnapScript.NodeKind.CONTROL:
 		for line0: String in (narr as UiReactExplainGraphNarrative).bound_state_lines:
 			head_bb += line0
-			head_plain += _plain_from_bbcode_line(line0)
+			head_plain += UiReactDockExplainDetailsPresenter.plain_from_bbcode_line(line0)
 
 	var bb := ""
 	var plain := ""
-	var j := _details_append_major(bb, plain, head_bb, head_plain)
+	var j := UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, head_bb, head_plain)
 	bb = j[0]
 	plain = j[1]
 
 	var conn := _connections_section_bb_plain(node_id, d, edges)
-	j = _details_append_major(bb, plain, conn[0], conn[1])
+	j = UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, conn[0], conn[1])
 	bb = j[0]
 	plain = j[1]
 
@@ -3261,12 +3090,12 @@ func _fill_node_details(node_id: String) -> void:
 		if wh != null:
 			if not _wire_rules_section_has_rows_for_host(wh):
 				var wrs := _wire_rules_summary_bb_plain(wh)
-				j = _details_append_major(bb, plain, wrs[0], wrs[1])
+				j = UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, wrs[0], wrs[1])
 				bb = j[0]
 				plain = j[1]
 
 	if narr != null:
-		var gc_h := _details_block_head_bb_plain("Graph context")
+		var gc_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Graph context")
 		var graph_bb := gc_h[0]
 		var graph_plain := gc_h[1]
 		var reach := _append_reachability_from_narrative(narr)
@@ -3281,17 +3110,17 @@ func _fill_node_details(node_id: String) -> void:
 		var disc := _details_declarative_footer_bb_plain()
 		graph_bb += disc[0]
 		graph_plain += disc[1]
-		j = _details_append_major(bb, plain, graph_bb, graph_plain)
+		j = UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, graph_bb, graph_plain)
 		bb = j[0]
 		plain = j[1]
 
 	var skip_on_canvas := node_id == layout_focus and nk == _SnapScript.NodeKind.CONTROL
 	if not skip_on_canvas:
-		var oc_h := _details_block_head_bb_plain("On canvas")
+		var oc_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("On canvas")
 		var hl := _node_headline_bb_plain(node_id, d, layout_focus)
 		var canvas_bb := oc_h[0] + hl[0]
 		var canvas_plain := oc_h[1] + hl[1]
-		j = _details_append_major(bb, plain, canvas_bb, canvas_plain)
+		j = UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, canvas_bb, canvas_plain)
 		bb = j[0]
 		plain = j[1]
 
@@ -3316,14 +3145,14 @@ func _fill_node_details(node_id: String) -> void:
 	)
 
 	if nk != _SnapScript.NodeKind.CONTROL:
-		var ie_h := _details_block_head_bb_plain("Incident edges")
+		var ie_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Incident edges")
 		var inc_bb := ie_h[0]
 		var inc_plain := ie_h[1]
 		if incident.is_empty():
 			inc_bb += "No edges touch this node in the scoped graph (or it is isolated after filters).\n"
 			inc_plain += "No edges touch this node in the scoped graph (or it is isolated after filters).\n"
 		else:
-			var n_show := mini(incident.size(), _INCIDENT_EDGE_CAP)
+			var n_show := mini(incident.size(), UiReactDockExplainContextMenus.INCIDENT_EDGE_CAP)
 			for i in n_show:
 				var pair := _format_incident_edge_bb_plain(incident[i])
 				inc_bb += pair[0] + "\n"
@@ -3332,17 +3161,17 @@ func _fill_node_details(node_id: String) -> void:
 			if overflow > 0:
 				inc_bb += "[i]+%d more in this graph[/i]\n" % overflow
 				inc_plain += "+%d more in this graph\n" % overflow
-		j = _details_append_major(bb, plain, inc_bb, inc_plain)
+		j = UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, inc_bb, inc_plain)
 		bb = j[0]
 		plain = j[1]
 
 	if node_id != layout_focus:
 		var rel := _focus_relation_blurb_bb_plain(node_id, layout_focus, node_layer)
-		j = _details_append_major(bb, plain, rel[0], rel[1])
+		j = UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, rel[0], rel[1])
 		bb = j[0]
 		plain = j[1]
 
-	var tech_h := _details_block_head_bb_plain("Technical")
+	var tech_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Technical")
 	var tech_bb := tech_h[0]
 	var tech_plain := tech_h[1]
 	var full_l := str(d.get(&"label", ""))
@@ -3368,7 +3197,7 @@ func _fill_node_details(node_id: String) -> void:
 	tech_bb += "Technical id: [code]%s[/code]\n" % node_id
 	tech_plain += "Technical id: %s\n" % node_id
 
-	j = _details_append_major(bb, plain, tech_bb, tech_plain)
+	j = UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, tech_bb, tech_plain)
 	bb = j[0]
 	plain = j[1]
 
@@ -3392,7 +3221,7 @@ func _edge_details_summary_bb_plain(
 	match kind:
 		_SnapScript.EdgeKind.BINDING:
 			var bp0 := str(ed.get(&"binding_property", label))
-			var bind_ri := _details_run_in_bb_plain(
+			var bind_ri := UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
 				"Property binding",
 				"[code]%s[/code] → [code]%s[/code], export [code]%s[/code]" % [from_short, to_short, bp0],
 				"%s → %s, export %s" % [from_short, to_short, bp0],
@@ -3405,11 +3234,11 @@ func _edge_details_summary_bb_plain(
 			var ep0 := _edge_endpoint_pair_for_summary_bb_plain(from_id, to_id)
 			var body_cs_bb := "%s → %s, %s" % [ep0[0], ep0[2], slot0[0]]
 			var body_cs_plain := "%s → %s, %s" % [ep0[1], ep0[3], slot0[1]]
-			var cs_ri := _details_run_in_bb_plain("Computed source", body_cs_bb, body_cs_plain)
+			var cs_ri := UiReactDockExplainDetailsPresenter.details_run_in_bb_plain("Computed source", body_cs_bb, body_cs_plain)
 			bb = cs_ri[0]
 			plain = cs_ri[1]
 		_SnapScript.EdgeKind.WIRE_FLOW:
-			var wf_h := _details_block_head_bb_plain("Wire flow")
+			var wf_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Wire flow")
 			bb = wf_h[0]
 			plain = wf_h[1]
 			bb += "[code]%s[/code] → [code]%s[/code]\n" % [from_short, to_short]
@@ -3423,7 +3252,7 @@ func _edge_details_summary_bb_plain(
 				to_short,
 			]
 		_:
-			var edge_ri := _details_run_in_bb_plain(
+			var edge_ri := UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
 				"Edge",
 				"Declarative dependency between two snapshot nodes.",
 				"Declarative dependency between two snapshot nodes.",
@@ -3437,7 +3266,7 @@ func _edge_details_summary_bb_plain(
 		or kind == _SnapScript.EdgeKind.WIRE_FLOW
 	)
 	if show_endpoints:
-		var ep_h := _details_block_head_bb_plain("Endpoints")
+		var ep_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Endpoints")
 		bb += ep_h[0]
 		plain += ep_h[1]
 		bb += "From: [code]%s[/code]  →  To: [code]%s[/code]\n" % [from_short, to_short]
@@ -3452,7 +3281,7 @@ func _edge_details_summary_bb_plain(
 		if bp.is_empty():
 			bp = str(ed.get(&"label", label))
 		if not _edge_binding_skip_inspector_blurb(ed):
-			var wte_b := _details_block_head_bb_plain("Where to edit")
+			var wte_b := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Where to edit")
 			bb += wte_b[0]
 			plain += wte_b[1]
 			if hp.is_empty():
@@ -3470,7 +3299,7 @@ func _edge_details_summary_bb_plain(
 		var si := int(ed.get(&"computed_source_index", -1))
 		var slot_sp := _computed_source_slot_phrase_bb_plain(si)
 		var ep := _edge_endpoint_pair_for_summary_bb_plain(from_id, to_id)
-		var wte_c := _details_block_head_bb_plain("Where to edit")
+		var wte_c := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Where to edit")
 		bb += wte_c[0]
 		plain += wte_c[1]
 		if hp2.is_empty():
@@ -3488,7 +3317,7 @@ func _edge_details_summary_bb_plain(
 			)
 		var cc := str(ed.get(&"computed_context", ""))
 		if not to_id.is_empty():
-			var own_ri := _details_run_in_bb_plain(
+			var own_ri := UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
 				"Computed owner",
 				(
 					"%s, %s — target for [b]Rebind computed source…[/b] or [b]Remove computed dependency[/b]."
@@ -3507,7 +3336,7 @@ func _edge_details_summary_bb_plain(
 	elif kind == _SnapScript.EdgeKind.WIRE_FLOW:
 		var wh := str(ed.get(&"wire_host_path", ""))
 		var wi := int(ed.get(&"wire_rule_index", -1))
-		var wte_w := _details_block_head_bb_plain("Where to edit")
+		var wte_w := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Where to edit")
 		bb += wte_w[0]
 		plain += wte_w[1]
 		if wh.is_empty():
@@ -3525,7 +3354,7 @@ func _edge_details_summary_bb_plain(
 		var win := str(ed.get(&"wire_in_property", ""))
 		var wout := str(ed.get(&"wire_out_property", ""))
 		if not win.is_empty() and not wout.is_empty():
-			var re_h := _details_block_head_bb_plain("Rule exports")
+			var re_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Rule exports")
 			bb += re_h[0]
 			plain += re_h[1]
 			bb += "Input export [code]%s[/code] → output export [code]%s[/code] (dock action row: rebind input/output).\n" % [
@@ -3535,7 +3364,7 @@ func _edge_details_summary_bb_plain(
 			plain += "Input export %s → output export %s (dock action row: rebind input/output).\n" % [win, wout]
 
 	if from_id == _last_focus_id or to_id == _last_focus_id:
-		var rtf := _details_run_in_bb_plain(
+		var rtf := UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
 			"Relation to focus",
 			"Touches the focus control directly.",
 			"Touches the focus control directly.",
@@ -3551,7 +3380,7 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 	var narr: Object = _get_narrative_cached_ex(
 		anchor_id, ex[0] as PackedStringArray, ex[1] as PackedStringArray
 	) as Object
-	var token := _edge_short_token(kind)
+	var token := UiReactDockExplainGraphMutations.edge_short_token(kind)
 	var summ := _edge_details_summary_bb_plain(from_id, to_id, kind, label, edge_index)
 	var bb := summ[0]
 	var plain := summ[1]
@@ -3563,11 +3392,11 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 				bb += "This wire rule is [i]disabled (paused)[/i]; it will not run until re-enabled.\n"
 				plain += "This wire rule is disabled (paused); it will not run until re-enabled.\n"
 	var sib := _other_edges_at_anchor_bb_plain(anchor_id, edge_index)
-	var j2 := _details_append_major(bb, plain, sib[0], sib[1])
+	var j2 := UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, sib[0], sib[1])
 	bb = j2[0]
 	plain = j2[1]
 	if narr != null:
-		var gc_h := _details_block_head_bb_plain("Graph context")
+		var gc_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Graph context")
 		var graph_bb2 := gc_h[0]
 		var graph_plain2 := gc_h[1]
 		var reach2 := _append_reachability_from_narrative(narr)
@@ -3582,11 +3411,11 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 		var disc2 := _details_declarative_footer_bb_plain()
 		graph_bb2 += disc2[0]
 		graph_plain2 += disc2[1]
-		j2 = _details_append_major(bb, plain, graph_bb2, graph_plain2)
+		j2 = UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, graph_bb2, graph_plain2)
 		bb = j2[0]
 		plain = j2[1]
 
-	var tech_e := _details_block_head_bb_plain("Technical")
+	var tech_e := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Technical")
 	var tech_bb2 := tech_e[0]
 	var tech_plain2 := tech_e[1]
 	tech_bb2 += "Kind token: [code]%s[/code]\nFrom id: [code]%s[/code]\nTo id: [code]%s[/code]\n" % [
@@ -3595,7 +3424,7 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 		to_id,
 	]
 	tech_plain2 += "Kind token: %s\nFrom id: %s\nTo id: %s\n" % [token, from_id, to_id]
-	j2 = _details_append_major(bb, plain, tech_bb2, tech_plain2)
+	j2 = UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, tech_bb2, tech_plain2)
 	bb = j2[0]
 	plain = j2[1]
 
@@ -3618,18 +3447,7 @@ func _try_focus_wire_rule_list_from_edge(kind: int, edge_index: int) -> void:
 	var edf: Dictionary = ev as Dictionary
 	var wi := int(edf.get(&"wire_rule_index", -1))
 	if wi >= 0:
-		(_wire_rules_section as Object).call(&"focus_rule_index", wi)
-
-
-func _edge_short_token(kind: int) -> String:
-	match kind:
-		_SnapScript.EdgeKind.BINDING:
-			return "bind"
-		_SnapScript.EdgeKind.COMPUTED_SOURCE:
-			return "computed"
-		_SnapScript.EdgeKind.WIRE_FLOW:
-			return "wire"
-	return "edge"
+		_wire_rules_section.focus_rule_index(wi)
 
 
 func _short_label_for_node_id(node_id: String) -> String:
@@ -3692,9 +3510,9 @@ func _on_focus_inspector_pressed() -> void:
 	var root := ei.get_edited_scene_root()
 	if root == null:
 		return
-	if _selection_kind == _SEL_NODE and not _graph_selected_node_id.is_empty():
+	if _selection_kind == UiReactDockExplainMenuIds._SEL_NODE and not _graph_selected_node_id.is_empty():
 		_focus_node_in_editor(_graph_selected_node_id, ei, root)
-	elif _selection_kind == _SEL_EDGE and _graph_selected_edge_index >= 0:
+	elif _selection_kind == UiReactDockExplainMenuIds._SEL_EDGE and _graph_selected_edge_index >= 0:
 		_focus_edge_in_editor(_graph_selected_edge_index, ei, root)
 
 
@@ -4381,7 +4199,7 @@ func _on_create_state_file_selected(path: String) -> void:
 func _can_create_and_assign_binding_edge() -> bool:
 	if _plugin == null or _actions == null:
 		return false
-	if _selection_kind != _SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.BINDING:
+	if _selection_kind != UiReactDockExplainMenuIds._SEL_EDGE or _last_edge_kind != _SnapScript.EdgeKind.BINDING:
 		return false
 	var ei := _plugin.get_editor_interface()
 	var root := ei.get_edited_scene_root()
@@ -4776,7 +4594,7 @@ func _clear_stale_snapshot() -> void:
 	_last_edge_kind = -1
 	_last_edge_label = ""
 	_last_focus_host_path = ""
-	_selection_kind = _SEL_NONE
+	_selection_kind = UiReactDockExplainMenuIds._SEL_NONE
 	_sync_wire_rules_section()
 	if _graph_view:
 		_graph_view.clear_graph()

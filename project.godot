@@ -22,12 +22,12 @@ enabled=PackedStringArray("res://addons/gut/plugin.cfg", "res://addons/ui_react/
 [ui_react]
 
 plugin_state_output_path="res://addons/ui_react/ui_resources/plugin_generated/"
-plugin_scan_mode=1
+plugin_scan_mode=0
 plugin_show_errors=true
 plugin_show_warnings=true
 plugin_show_info=true
 plugin_auto_refresh=true
-plugin_group_mode=1
+plugin_group_mode=0
 plugin_ignored_unused_state_paths=PackedStringArray()
 plugin_graph_scope_presets_json="[]"
 plugin_graph_active_scope_preset_name=""

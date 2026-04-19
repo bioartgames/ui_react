@@ -2,7 +2,7 @@
 ## Transactional [UiState] for draft / commit workflows (e.g. options screens).
 ## [member committed_value] is the last applied value; [method get_value] / [method set_value] read and write the **draft**.
 ## Open a sheet with [method begin_edit] (refresh draft from committed), then [method apply_draft] or [method cancel_draft] / [method reset_to_committed].
-## For several transactional resources on one screen, batch [method begin_edit], [method apply_draft], and [method cancel_draft] via [UiTransactionalGroup]; Apply/Cancel wiring uses [UiReactButton] / [UiReactTextureButton] with [UiReactTransactionalSession] or [UiReactTransactionalActions] (deprecated path-based).
+## For several transactional resources on one screen, batch [method begin_edit], [method apply_draft], and [method cancel_draft] via [UiTransactionalGroup]; Apply/Cancel wiring uses [UiReactButton] / [UiReactTextureButton] with [UiReactTransactionalSession].
 class_name UiTransactionalState
 extends UiState
 

@@ -12,26 +12,8 @@ static func validate_transactional_under_root(root: Node) -> Array[UiReactDiagno
 	_append_pressed_state_warnings(root, root, out)
 	for gid in cohorts.keys():
 		var bucket: Dictionary = cohorts[gid]
-		var coord: Array = bucket.get("coordinators", []) as Array
 		var apply_paths: Array = bucket.get("apply", []) as Array
 		var cancel_paths: Array = bucket.get("cancel", []) as Array
-		if coord.size() > 0 and (apply_paths.size() > 0 or cancel_paths.size() > 0):
-			var p: NodePath = coord[0] as NodePath
-			var nn: Node = root.get_node_or_null(p)
-			out.append(
-				UiReactDiagnosticModel.DiagnosticIssue.make_structured(
-					UiReactDiagnosticModel.Severity.ERROR,
-					"UiReactTransactionalActions",
-					str(nn.name) if nn else "",
-					"UiTransactionalGroup cohort: remove UiReactTransactionalActions or clear transactional_host.role on UiReactButton/UiReactTextureButton (same group).",
-					"Use either path-based coordinator or button-hosted transactional_host—not both for one group.",
-					p,
-					&"transactional_host",
-					&"",
-					UiReactDiagnosticModel.IssueKind.GENERIC,
-					"",
-				)
-			)
 		if apply_paths.size() > 1:
 			for i in range(1, apply_paths.size()):
 				var extra: NodePath = apply_paths[i] as NodePath
@@ -77,7 +59,7 @@ static func validate_transactional_under_root(root: Node) -> Array[UiReactDiagno
 					"UiReactTransactionalSession",
 					str(na.name) if na else "",
 					"UiTransactionalGroup has APPLY_ALL but no CANCEL_ALL in this scene.",
-					"Add a Cancel button with transactional_host.role CANCEL_ALL or use a coordinator with both paths.",
+					"Add a Cancel button with transactional_host.role CANCEL_ALL.",
 					ap,
 					&"transactional_host",
 					&"",
@@ -94,7 +76,7 @@ static func validate_transactional_under_root(root: Node) -> Array[UiReactDiagno
 					"UiReactTransactionalSession",
 					str(nc.name) if nc else "",
 					"UiTransactionalGroup has CANCEL_ALL but no APPLY_ALL in this scene.",
-					"Add an Apply button with transactional_host.role APPLY_ALL or use a coordinator with both paths.",
+					"Add an Apply button with transactional_host.role APPLY_ALL.",
 					cp,
 					&"transactional_host",
 					&"",
@@ -149,12 +131,6 @@ static func _walk_collect(n: Node, root: Node, cohorts: Dictionary) -> void:
 					(cohorts[gid] as Dictionary)["apply"].append(rel)
 				elif r == 2:
 					(cohorts[gid] as Dictionary)["cancel"].append(rel)
-	elif n is UiReactTransactionalActions:
-		var txn := n as UiReactTransactionalActions
-		if txn.group != null:
-			var gid2: int = txn.group.get_instance_id()
-			_ensure_bucket(cohorts, gid2)
-			(cohorts[gid2] as Dictionary)["coordinators"].append(root.get_path_to(n))
 	for c in n.get_children():
 		_walk_collect(c, root, cohorts)
 
@@ -162,4 +138,4 @@ static func _walk_collect(n: Node, root: Node, cohorts: Dictionary) -> void:
 static func _ensure_bucket(cohorts: Dictionary, gid: int) -> void:
 	if cohorts.has(gid):
 		return
-	cohorts[gid] = {"coordinators": [], "apply": [], "cancel": []}
+	cohorts[gid] = {"apply": [], "cancel": []}

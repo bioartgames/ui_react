@@ -2,7 +2,7 @@
 
 **Purpose:** Doc-driven pass/fail checklist for **P5.1** exit honesty and gate for **P5.2**. Authority: [`WIRING_LAYER.md`](WIRING_LAYER.md) → [`ROADMAP.md`](ROADMAP.md) → [`CHANGELOG.md`](../CHANGELOG.md).
 
-**Last run:** 2026-04-07 — **Quarterly doc/code reconcile** (Charter-path stock-take): matrix **CB-052** vs. `scripts/controls` exports; **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5–§6** vs. shipped rules; **[`ACTION_LAYER.md`](ACTION_LAYER.md)** vs. **`UiReactActionKind`**; Appendix **CB-031**–**CB-057** — **no drift**. **Prior technical baseline:** **`UiReactWireSortArrayByKey`**, transactional dock **`validate_transactional_under_root`**, **CB-057** mini-host vs deprecated **`UiReactTransactionalActions`** (**2.20.0**).
+**Last run:** 2026-04-07 — **Quarterly doc/code reconcile** (Charter-path stock-take): matrix **CB-052** vs. `scripts/controls` exports; **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5–§6** vs. shipped rules; **[`ACTION_LAYER.md`](ACTION_LAYER.md)** vs. **`UiReactActionKind`**; Appendix **CB-031**–**CB-057** — **no drift**. **Prior technical baseline:** **`UiReactWireSortArrayByKey`**, transactional dock **`validate_transactional_under_root`**, **CB-057** button-hosted Apply/Cancel (**2.20.0**).
 
 Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 
@@ -39,7 +39,7 @@ Scoring: **PASS** | **PARTIAL** | **FAIL** | **N/A**.
 |---|--------|-------|
 | C1 Cross-node duplicate rule | **PASS** | `validate_wiring_under_root`: WARN when the same `UiReactWireRule` instance appears on two different nodes. |
 | C2 Rule export validation | **PASS** | Dock validates concrete rule types (§6): required refs + expected `UiState` / `UiReactWireCatalogData` types (`UiReactWiringValidator.validate_wire_rules`, invoked from the **`UiReactValidatorService`** façade). |
-| C3 Scanner / unused-file parity | **PASS** | Stem map + **`BINDINGS_BY_COMPONENT`** live in **`UiReactComponentRegistry`**; **`UiReactScannerService`** resolves component names on nodes. **`UiReactTransactionalActions`** is listed in the registry like other **`UiReact*`** controls. **`UiReactStateReferenceCollector`** uses the same registry for binding paths and registers `UiState` refs from **`wire_rules`**. Future **NodePath**-on-rules (if any) remains follow-up. |
+| C3 Scanner / unused-file parity | **PASS** | Stem map + **`BINDINGS_BY_COMPONENT`** live in **`UiReactComponentRegistry`**; **`UiReactScannerService`** resolves component names on nodes. **`UiReactStateReferenceCollector`** uses the same registry for binding paths and registers `UiState` refs from **`wire_rules`**. Future **NodePath**-on-rules (if any) remains follow-up. |
 | C4 Runtime vs editor | **PASS** | Editor-first validation for duplicate rule refs; per-rule export issues. |
 
 **Interpretation:** **CB-034** (P5.1 editor scope) **Done**. **CB-041** (hub) **Wont** — superseded by per-host helper.

@@ -1,3 +1,5 @@
+## Runtime helpers for [member Control.action_targets] rows: validation, state-watch wiring, and trigger dispatch.
+## Reentry guards use per-owner meta dictionaries; see [method _with_reentry_guard].
 class_name UiReactActionTargetHelper
 extends RefCounted
 
@@ -41,6 +43,11 @@ static func _locks_for(owner: Node) -> Dictionary:
 	return created
 
 
+## Runs [param fn] under a per-[param owner] / per-[param key] lock to avoid recursive dispatch loops.
+## On the normal path the lock is cleared immediately after [method Callable.call]. GDScript in Godot 4.5.x
+## does not provide a [code]finally[/code]-style construct here, so if [param fn] aborts the script in an
+## exceptional way the lock could remain set until the node is freed—acceptable for typical UI callbacks;
+## revisit if the language gains reliable [code]try/finally[/code] or an equivalent.
 static func _with_reentry_guard(owner: Node, key: String, fn: Callable) -> void:
 	var locks := _locks_for(owner)
 	if locks.get(key, false):
@@ -61,8 +68,6 @@ static func validate_action_targets(
 	allow_empty_target: Array[int] = [],
 ) -> Array[UiReactActionTarget]:
 	var out: Array[UiReactActionTarget] = []
-	# UiReactButton hosts use normal control-triggered + state_watch rules; coordinator has no trigger dispatch.
-	var transactional_only_state: bool = owner is UiReactTransactionalActions
 
 	for i in range(action_targets.size()):
 		var row: UiReactActionTarget = action_targets[i]
@@ -70,15 +75,6 @@ static func validate_action_targets(
 			continue
 		if not row.enabled:
 			out.append(row)
-			continue
-
-		if transactional_only_state and row.state_watch == null:
-			UiReactStateBindingHelper.warn_setup(
-				component_name,
-				owner,
-				"action_targets[%d]: control-triggered row not supported on UiReactTransactionalActions." % i,
-				"Use state_watch-driven rows only, or move this row to a control that emits UiAnimTarget triggers."
-			)
 			continue
 
 		if row.state_watch != null and row.trigger != UiAnimTarget.Trigger.PRESSED:

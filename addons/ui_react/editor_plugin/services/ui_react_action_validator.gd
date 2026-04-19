@@ -13,9 +13,6 @@ static func validate_action_targets(
 	if not (arr is Array):
 		return out
 	var rows: Array = arr as Array
-	# Deprecated UiReactTransactionalActions only — not UiReactButton transactional exports.
-	var transactional: bool = owner is UiReactTransactionalActions
-
 	for i in range(rows.size()):
 		var row_var: Variant = rows[i]
 		if row_var == null:
@@ -40,23 +37,6 @@ static func validate_action_targets(
 		if not row.enabled:
 			continue
 
-		if transactional and row.state_watch == null:
-			out.append(
-				UiReactDiagnosticModel.DiagnosticIssue.make_structured(
-					UiReactDiagnosticModel.Severity.ERROR,
-					component,
-					str(owner.name),
-					"action_targets[%d]: control-triggered row is invalid on UiReactTransactionalActions." % i,
-					"Use state_watch-driven rows only.",
-					node_path,
-					&"action_targets",
-					&"",
-					UiReactDiagnosticModel.IssueKind.GENERIC,
-					"",
-				)
-			)
-			continue
-
 		if row.state_watch != null and row.trigger != UiAnimTarget.Trigger.PRESSED:
 			out.append(
 				UiReactDiagnosticModel.DiagnosticIssue.make_structured(
@@ -73,7 +53,7 @@ static func validate_action_targets(
 				)
 			)
 
-		if not transactional and row.state_watch == null:
+		if row.state_watch == null:
 			if not UiReactValidatorCommon.is_anim_trigger_allowed(component, row.trigger):
 				out.append(
 					UiReactDiagnosticModel.DiagnosticIssue.make_structured(

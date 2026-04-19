@@ -14,7 +14,7 @@ Self-contained building blocks for Godot 4.x: two-way **UiState** binding, optio
 |--------|------|-------------------|
 | **Wiring** | When X changes, update Y (filters, list refresh, selection detail, …) | **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)** — **`UiReactWireRuleHelper`**, **`UiReactWireRule`**, per-control **`wire_rules`**. |
 | **Computed** | Derive **`UiStringState` / `UiBoolState`** payloads from **`sources`** | **`UiComputedStringState`** / **`UiComputedBoolState`** subclasses, **`UiReactComputedService`** — see **Computed state** below. |
-| **Transactional** | Draft vs committed **Apply / Cancel** | **`UiTransactionalState`**, **`UiTransactionalGroup`**, **`UiTransactionalScreenConfig`**, **`UiReactButton`** / **`UiReactTextureButton`** **`transactional_host`** ([**`UiReactTransactionalHostBinding`**](scripts/api/models/ui_react_transactional_host_binding.gd)) + **`UiReactTransactionalSession`** (see **Transactional state**); **`UiReactTransactionalActions`** is **deprecated** (path-based only). |
+| **Transactional** | Draft vs committed **Apply / Cancel** | **`UiTransactionalState`**, **`UiTransactionalGroup`**, **`UiTransactionalScreenConfig`**, **`UiReactButton`** / **`UiReactTextureButton`** **`transactional_host`** ([**`UiReactTransactionalHostBinding`**](scripts/api/models/ui_react_transactional_host_binding.gd)) + **`UiReactTransactionalSession`** (see **Transactional state**). |
 | **Actions** | Non-motion UI steps + **bounded** float mutations | **[`docs/ACTION_LAYER.md`](docs/ACTION_LAYER.md)** — **`UiReactActionTarget`**, **`UiReactStateOpService`** (not a full command DSL). |
 
 **Layers (short):** **Wiring** = reactive data rules; **Computed** = derived **`UiComputed*`** state; **Actions** = focus / visibility / mouse filter / bool UI flags / whitelisted float ops; **`UiReactStateOpService`** = shared float helpers (**DRY**).
@@ -142,8 +142,6 @@ All plugin usage details are documented in this README.
 | **UiReactTabContainer** | `selected_state`, `tab_config`, `animation_targets`, **`action_targets`**, **`wire_rules`** | **`selected_state`**: **`UiIntState`**. **`tab_config`**: optional **`UiTabContainerCfg`** (use **`UiArrayState`** for tab/disabled/visibility arrays). **`wire_rules`**: [`WIRING_LAYER.md`](docs/WIRING_LAYER.md) §5. |
 | **UiReactTextureButton** | `pressed_state`, `disabled_state`, optional **`transactional_host`**, optional `action_targets` | Same as **`UiReactButton`** (including transactional Apply/Cancel). Assign **`texture_normal`** (and optional hover/pressed textures) in the Inspector. |
 | **UiReactTree** | `tree_items_state`, `selected_state`, optional `action_targets` | **`tree_items_state`**: **`UiArrayState`** — value is an **`Array` of `UiReactTreeNode`** (see below). **`selected_state`**: **`UiIntState`**. Wrapper forces **single selection** (`Tree.SELECT_SINGLE`). See **UiReactTree binding semantics** below. |
-| **`UiReactTransactionalActions`** (deprecated) | `group`, button paths, optional `action_targets` | Prefer **`UiReactButton`** transactional exports. **`action_targets`** must be **state-driven** only ([`ACTION_LAYER.md`](docs/ACTION_LAYER.md))—this host does not emit **`UiAnimTarget`** triggers. |
-
 ### UiReactTree binding semantics (P4)
 
 - **Row data:** Assign **`tree_items_state`** to a **`UiArrayState`** whose **`value`** is an **`Array` of `UiReactTreeNode`**. Each node has **`text`**, **`icon`** (**`Texture2D`**), and **`children`** (**`Array[UiReactTreeNode]`**; use an **empty** array for leaves). The control **clears and rebuilds** the **`Tree`** whenever that array changes. Top-level entries are created as children of the tree’s root item (with **`hide_root`** **`true`**, index **`0`** is the first top-level row).
@@ -218,7 +216,7 @@ Paths are under **`res://addons/ui_react/`**.
 | Inspector animation row | `UiAnimTarget` | `scripts/api/models/ui_anim_target.gd` |
 | Tab / container config | `UiTabContainerCfg` | `scripts/api/models/ui_tab_container_cfg.gd` |
 | Wiring (P5) | `UiReactWireRuleHelper`, `UiReactWireRule` + map / refresh / copy rules, `UiReactWireCatalogData` | `scripts/internal/react/ui_react_wire_rule_helper.gd`, `scripts/api/models/ui_react_wire_*.gd` |
-| Attachable controls | `UiReact*`, `UiReactTransactionalActions` | `scripts/controls/` |
+| Attachable controls | `UiReact*` | `scripts/controls/` |
 
 Prefer **`UiAnimUtils`** for tweens from code; prefer **`UiAnimTarget`** arrays on controls for no-code animation.
 
@@ -254,8 +252,6 @@ When one screen has **several** `UiTransactionalState` resources and a single **
 5. **Read-only summary line:** prefer **`UiComputedTransactionalStatusString`** (stock) or another **`UiComputedStringState`** subclass on the label’s **`text_state`** (see **Computed state**) so the label tracks draft / committed transactional values without scene glue. Alternatively, use a **`UiStringState`** and call **`set_value()`** from code. Do **not** assign **`Label.text`** directly if the label uses **`UiReactLabel`**, or **`RichTextLabel.text`** if it uses **`UiReactRichTextLabel`**.
 
 **API — `UiTransactionalGroup`:** `begin_edit_all()`, `apply_all()`, `cancel_all()`, `has_pending_changes()`.
-
-**Deprecated — `UiReactTransactionalActions`:** path-based Apply/Cancel only; do not combine with button **`transactional_host`** on the same group (dock **ERROR**).
 
 **API — `UiReactTransactionalSession`:** connects **`BaseButton.pressed`** to **`apply_all()`** / **`cancel_all()`**; cohort refcount per tree + group. No undo, no autoload.
 

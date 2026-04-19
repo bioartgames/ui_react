@@ -143,7 +143,7 @@ Use real `Ui*State` + rule resources; `_source` may be `null` where unused.
 | Status | Test focus | Why |
 |--------|------------|-----|
 | [x] | **Disabled rows** preserved in output | Inspector round-trips must not drop disabled config. |
-| [x] | **`UiReactTransactionalActions`**: control-triggered row dropped + warning path | ACTION_LAYER transactional-only rule. |
+| [x] | **`UiReactButton`** **`action_targets`**: control-triggered row kept when valid (GRAB_FOCUS + target + PRESSED) | Same validation path as other motion hosts after coordinator removal. |
 | [x] | **`state_watch` + trigger ≠ `PRESSED`**: warned; row retained unless another branch drops it | Mis-tuned rows: runtime warns; row stays unless a later validation branch drops it. |
 | [x] | **`SET_UI_BOOL_FLAG`**: missing `bool_flag_state`; `bool_flag_state == state_watch` rejected | Loop / misconfiguration prevention. |
 | [x] | **`GRAB_FOCUS` / `SET_VISIBLE` / `SET_MOUSE_FILTER`**: empty `target` unless allowlist trigger | Path validation for focus/visibility. |
@@ -194,11 +194,16 @@ Requires a `TabContainer` in the scene tree (minimal test scene or programmatic 
 
 ---
 
+## Foundation harness notes
+
+**`UiReactComputedService`:** GUT isolation uses `UiReactComputedService.reset_internal_state_for_tests()` (see [`addons/ui_react/tests/unit/react/test_ui_react_computed_service.gd`](../addons/ui_react/tests/unit/react/test_ui_react_computed_service.gd) and [`addons/ui_react/docs/CHANGELOG.md`](../addons/ui_react/docs/CHANGELOG.md)). Broader editor integration around the service remains out of scope for the unit suite.
+
+---
+
 ## Deferred (not foundation — document for phase 2)
 
 | Area | Reason to defer |
 |------|------------------|
-| **`UiReactComputedService`** | Static registries, `Engine.is_editor_hint()`; needs reset strategy or doubles. |
 | **`UiReactWireRuleHelper.attach` / signals** | Integration-level; build after wire `apply` tests. |
 | **Animation statics** (`UiAnim*`, tweens) | Frame/timing; use focused scenes or harnesses. |
 | **Full dock validators** on real scenes | Heavy; extract pure checks first where possible. |

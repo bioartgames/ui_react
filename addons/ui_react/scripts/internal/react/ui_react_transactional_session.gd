@@ -1,5 +1,5 @@
 ## Tree-scoped registration for [UiTransactionalGroup] **Apply** / **Cancel** via [BaseButton.pressed].
-## Used by [UiReactButton] / [UiReactTextureButton] and by [UiReactTransactionalActions] (delegation).
+## Used by [UiReactButton] / [UiReactTextureButton] for [UiTransactionalGroup] Apply/Cancel registration.
 ## Keyed by [code](SceneTree, UiTransactionalGroup)[/code] instance ids — separate open scenes do not share refcount.
 class_name UiReactTransactionalSession
 extends RefCounted

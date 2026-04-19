@@ -1,6 +1,8 @@
 extends CheckBox
 class_name UiReactCheckBox
 
+const _UiReactHostWireTree := preload("res://addons/ui_react/scripts/internal/react/ui_react_host_wire_tree.gd")
+
 var _bind := UiReactTwoWayBindingDriver.new()
 var _checked_state: UiState
 var _disabled_state: UiBoolState
@@ -37,16 +39,16 @@ var _disabled_state: UiBoolState
 ## **Optional** — Action layer presets ([code]docs/ACTION_LAYER.md[/code]).
 @export var action_targets: Array[UiReactActionTarget] = []
 
-## **Optional** — Wiring rules ([code]docs/WIRING_LAYER.md[/code] §5). Applied by [UiReactWireRuleHelper].
+## **Optional** — Wiring rules ([code]docs/WIRING_LAYER.md[/code] §5). Applied by [UiReactWireRuleHelper] via [UiReactHostWireTree].
 @export var wire_rules: Array[UiReactWireRule] = []
 
 
 func _enter_tree() -> void:
-	UiReactWireRuleHelper.schedule_attach(self)
+	_UiReactHostWireTree.on_enter(self)
 
 
 func _exit_tree() -> void:
-	UiReactWireRuleHelper.detach(self)
+	_UiReactHostWireTree.on_exit(self)
 
 
 func _ready() -> void:

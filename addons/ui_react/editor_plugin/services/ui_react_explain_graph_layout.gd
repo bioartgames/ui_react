@@ -17,6 +17,11 @@ const NODE_RADIUS_COMPUTED := 2
 const LANE_SEP := 14.0
 const PINNED_ISLAND_GAP_PX := 100.0
 
+## Sentinel: no finite BFS distance yet in [method _layout_directed_spine_block].
+const DIST_INF := 999999
+## Temporary layer key for nodes outside both backward/forward reach; collapsed to 0 immediately after.
+const LAYER_SENTINEL_UNREACHABLE := -512
+
 
 ## Corner radius for dependency graph node fills (canvas + legend); pill radius derives from [member NODE_HALF_H].
 static func fill_corner_radius_px(kind: int) -> int:
@@ -221,43 +226,43 @@ static func _layout_directed_spine_block(nodes: Dictionary, edges: Array[Diction
 	var layer: Dictionary = {}
 	for nid: Variant in nodes:
 		var id := String(nid)
-		var bd: int = 999999
-		var fd: int = 999999
+		var back_d: int = DIST_INF
+		var forward_d: int = DIST_INF
 		if back_dist.has(id):
-			bd = int(back_dist[id])
+			back_d = int(back_dist[id])
 		if fwd_combined.has(id):
-			fd = int(fwd_combined[id])
-		var L := 0
+			forward_d = int(fwd_combined[id])
+		var layer_key := 0
 		if id == layer_focus_id:
-			L = 0
-		elif bd < 999999 and fd < 999999:
-			L = -bd if bd <= fd else fd
-		elif bd < 999999:
-			L = -bd
-		elif fd < 999999:
-			L = fd
+			layer_key = 0
+		elif back_d < DIST_INF and forward_d < DIST_INF:
+			layer_key = -back_d if back_d <= forward_d else forward_d
+		elif back_d < DIST_INF:
+			layer_key = -back_d
+		elif forward_d < DIST_INF:
+			layer_key = forward_d
 		else:
-			L = -512
-		if L == -512:
-			L = 0
-		layer[id] = L
+			layer_key = LAYER_SENTINEL_UNREACHABLE
+		if layer_key == LAYER_SENTINEL_UNREACHABLE:
+			layer_key = 0
+		layer[id] = layer_key
 
 	var gaps: Vector2 = _adaptive_gaps(nodes.size())
 	var layer_gap: float = gaps.x
 	var row_gap: float = gaps.y
 	var by_layer: Dictionary = {}
 	for id2: Variant in layer:
-		var L2: int = int(layer[id2])
-		if not by_layer.has(L2):
-			by_layer[L2] = [] as Array[String]
-		(by_layer[L2] as Array[String]).append(String(id2))
-	for L3: Variant in by_layer:
-		var arr: Array[String] = by_layer[L3] as Array[String]
+		var layer_key_row: int = int(layer[id2])
+		if not by_layer.has(layer_key_row):
+			by_layer[layer_key_row] = [] as Array[String]
+		(by_layer[layer_key_row] as Array[String]).append(String(id2))
+	for layer_key_bucket: Variant in by_layer:
+		var arr: Array[String] = by_layer[layer_key_bucket] as Array[String]
 		arr.sort_custom(func(a: String, b: String) -> bool: return _sort_key(nodes, a) < _sort_key(nodes, b))
 
 	var layers_sorted: Array[int] = []
-	for L4: Variant in by_layer:
-		layers_sorted.append(int(L4))
+	for layer_key_sorted: Variant in by_layer:
+		layers_sorted.append(int(layer_key_sorted))
 	layers_sorted.sort()
 
 	var node_centers: Dictionary = {}
@@ -265,9 +270,9 @@ static func _layout_directed_spine_block(nodes: Dictionary, edges: Array[Diction
 	var max_x := 0.0
 	var min_y := 0.0
 	var max_y := 0.0
-	for L5: int in layers_sorted:
-		var row: Array[String] = by_layer[L5] as Array[String]
-		var xi := float(L5) * layer_gap
+	for layer_key_col: int in layers_sorted:
+		var row: Array[String] = by_layer[layer_key_col] as Array[String]
+		var xi := float(layer_key_col) * layer_gap
 		var ri := 0
 		for nid2: String in row:
 			var cy := float(ri) * row_gap

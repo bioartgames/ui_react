@@ -1,6 +1,8 @@
 extends ItemList
 class_name UiReactItemList
 
+const _UiReactHostWireTree := preload("res://addons/ui_react/scripts/internal/react/ui_react_host_wire_tree.gd")
+
 var _bind := UiReactTwoWayBindingDriver.new()
 var _selected_state: UiState
 var _items_state: UiArrayState
@@ -39,7 +41,7 @@ var _items_state: UiArrayState
 ## **Optional** — Action layer rows (focus, visibility, [code]mouse_filter[/code], UI bool flags). See [code]docs/ACTION_LAYER.md[/code].
 @export var action_targets: Array[UiReactActionTarget] = []
 
-## **Optional** — Wiring rules ([code]docs/WIRING_LAYER.md[/code] §5). Applied by [UiReactWireRuleHelper].
+## **Optional** — Wiring rules ([code]docs/WIRING_LAYER.md[/code] §5). Applied by [UiReactWireRuleHelper] via [UiReactHostWireTree].
 @export var wire_rules: Array[UiReactWireRule] = []
 
 var _row_play_in_progress: bool = false
@@ -48,11 +50,11 @@ const _WARN_SINGLE_SELECT_EXPECT_INT := "UiReactItemList: expected int for singl
 
 
 func _enter_tree() -> void:
-	UiReactWireRuleHelper.schedule_attach(self)
+	_UiReactHostWireTree.on_enter(self)
 
 
 func _exit_tree() -> void:
-	UiReactWireRuleHelper.detach(self)
+	_UiReactHostWireTree.on_exit(self)
 
 
 func _ready() -> void:

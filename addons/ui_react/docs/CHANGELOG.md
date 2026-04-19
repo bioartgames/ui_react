@@ -6,8 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Breaking
+
+- **`UiReactTransactionalActions` removed:** the path-based Apply/Cancel coordinator control is deleted. Use **`UiReactButton`** / **`UiReactTextureButton`** **`transactional_host`** + **`UiReactTransactionalSession`** only. Scenes that still instantiated the coordinator must switch to button-hosted transactional wiring.
+
 ### Added
 
+- **Controls:** `UiReactHostWireTree` (`scripts/internal/react/ui_react_host_wire_tree.gd`) centralizes `UiReactWireRuleHelper.schedule_attach` / `detach` for `wire_rules` hosts; named `WIRE_TRIGGER_*` storage codes on `UiReactWireRule` document stable on-disk trigger integers (see `WIRING_LAYER.md` §5).
 - **Testing / tooling:** `UiReactComputedService.reset_internal_state_for_tests()` clears all static wiring tables and listeners (GUT isolation).
 - **Scanner:** `UiReactScannerService.get_component_name_from_script` resolves **`class_name`** first when it matches `UiReactComponentRegistry.BINDINGS_BY_COMPONENT`, then falls back to the existing script-stem path heuristic.
 - **Controls:** `UiReactControlStateWire` centralizes `value_changed` + optional `UiReactComputedService` hook_bind/unbind; `UiReactBaseButtonReactive` shares `UiReactButton` / `UiReactTextureButton` wiring, animations, actions, and transactional host registration.

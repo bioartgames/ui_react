@@ -7,8 +7,8 @@ func _owner_control() -> Control:
 	return autoqfree(Control.new())
 
 
-func _owner_transactional() -> UiReactTransactionalActions:
-	return autoqfree(UiReactTransactionalActions.new())
+func _owner_button() -> UiReactButton:
+	return autoqfree(UiReactButton.new())
 
 
 func _allow_empty_pressed() -> Array[int]:
@@ -75,17 +75,18 @@ func test_validate_skips_null_entry() -> void:
 	assert_same(out_one[0], r)
 
 
-func test_validate_transactional_drops_control_only_row() -> void:
-	var owner := _owner_transactional()
+func test_validate_button_keeps_control_triggered_row() -> void:
+	var owner := _owner_button()
 	var row := _row_grab("Child")
+	row.trigger = UiAnimTarget.Trigger.PRESSED
 	var action_targets: Array[UiReactActionTarget] = [row]
 	var out := UiReactActionTargetHelper.validate_action_targets(owner, CMP, action_targets, [])
-	assert_engine_error(1)
-	assert_true(out.is_empty())
+	assert_eq(out.size(), 1)
+	assert_same(out[0], row)
 
 
-func test_validate_transactional_keeps_state_watch_row() -> void:
-	var owner := _owner_transactional()
+func test_validate_button_keeps_state_watch_row() -> void:
+	var owner := _owner_button()
 	var row := _row_grab("Child")
 	row.state_watch = UiBoolState.new()
 	row.trigger = UiAnimTarget.Trigger.PRESSED

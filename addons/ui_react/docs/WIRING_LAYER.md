@@ -43,7 +43,7 @@ flowchart TB
 ## 3. `UiReactWireRuleHelper` contract
 
 - **Kind:** `RefCounted` helper (`class_name UiReactWireRuleHelper`), **not** a scene node.
-- **Registration:** Each **`UiReact*`** host that exports **`wire_rules`** calls **`UiReactWireRuleHelper.schedule_attach(self)`** from **`_enter_tree`** and **`UiReactWireRuleHelper.detach(self)`** from **`_exit_tree`**. **`schedule_attach`** no-ops when there are no enabled rules; otherwise it defers **`attach`** to the next **`SceneTree.process_frame`** (same “after frame” intent as legacy deferred registration).
+- **Registration:** Each **`UiReact*`** host that exports **`wire_rules`** calls **`UiReactHostWireTree.on_enter(self)`** from **`_enter_tree`** and **`UiReactHostWireTree.on_exit(self)`** from **`_exit_tree`** ([`ui_react_host_wire_tree.gd`](../scripts/internal/react/ui_react_host_wire_tree.gd) — thin wrappers over **`UiReactWireRuleHelper.schedule_attach`** / **`detach`**). **`schedule_attach`** no-ops when there are no enabled rules; otherwise it defers **`attach`** to the next **`SceneTree.process_frame`** (same “after frame” intent as the prior deferred registration path).
 - **Per-host scope:** **`attach`** runs only the **`wire_rules`** array on **that** node. It **does not** walk the scene or merge other nodes’ rules.
 - **Ordering:** Within one host, rules run in **array index order**: **bind all** enabled rules, then **apply all** enabled rules. **Cross-host** synchronous order is **undefined**; correctness must follow **state / dataflow** (each rule reads canonical `UiState`), not reliance on which control’s rules run first.
 - **Subresource policy:** **One `UiReactWireRule` instance per host**—do not assign the **same** rule object to **`wire_rules`** on two different nodes (dock **warning** when the same instance appears on two hosts).
@@ -71,7 +71,11 @@ Each `UiReact*` that can **source** wires exposes **at most one** additional exp
 
 **P5.1 control set** (controls **without** `wire_rules` stay **Appendix-promoted**; see matrix in [`ROADMAP.md`](ROADMAP.md) Part I **Inspector surface matrix (CB-052)**):
 
-| Control | Allowed wire rule triggers ([`UiReactWireRule.TriggerKind`](../scripts/api/models/ui_react_wire_rule.gd); values match legacy `UiAnimTarget` ordinals for serialization) |
+### Wire rule trigger storage
+
+[`UiReactWireRule`](../scripts/api/models/ui_react_wire_rule.gd) stores [member UiReactWireRule.trigger] as an integer matching [enum UiReactWireRule.TriggerKind]. The numeric values (`WIRE_TRIGGER_*` constants in that file) are **stable on disk** for existing scenes and resources. They **overlap** with some [enum UiAnimTarget.Trigger] values for historical authoring convenience, but **`trigger` on other resource types** (for example [member UiReactActionTarget.trigger]) is **not** guaranteed to use the same numbering—treat wire triggers as **wire-layer storage**, not a universal trigger enum.
+
+| Control | Allowed wire rule triggers ([`UiReactWireRule.TriggerKind`](../scripts/api/models/ui_react_wire_rule.gd); storage codes `WIRE_TRIGGER_*` in the same file) |
 |---------|-------------------------------------------------------------------------------|
 | `UiReactItemList` | `SELECTION_CHANGED` (`6`) for §5 rules that bind list selection (`HOVER_*` remain animation-only on the control). |
 | `UiReactTree` | `SELECTION_CHANGED` (`6`) for tree-sourced rules. |
@@ -79,7 +83,6 @@ Each `UiReact*` that can **source** wires exposes **at most one** additional exp
 | `UiReactCheckBox` | Checkbox/toggle as implemented for wiring (see control script). |
 | `UiReactOptionButton` | `SELECTION_CHANGED` (`6`) via `item_selected` (`HOVER_*` remain animation-only unless promoted later). **`UiReactWireCopySelectionDetail`** / **`SetStringOnBoolPulse`** use **`UiIntState`** `selected_state` on the rule when row lookup is by index; host’s **`selected_state`** export is **`UiStringState`**—use a **separate** **`UiIntState`** for those rules if needed. |
 | `UiReactTabContainer` | `SELECTION_CHANGED` (`6`) via `tab_selected`. Authors may assign the **same** **`UiIntState`** instance as the tab **`selected_state`** export to **`CopySelectionDetail.selected_state`**. Rules run on user **`tab_selected`**; programmatic `current_tab` changes do **not** re-fire `tab_selected`—rely on **`selected_state.changed`** on rules that subscribe to it, or a follow-up if a screen needs parity (**YAGNI**). |
-| `UiReactTransactionalActions` | As implemented on that control. |
 
 ---
 
@@ -122,7 +125,7 @@ Official **`inventory_screen_demo`** uses only **`wire_rules`** on **`UiReact*`*
 
 **Unused `UiState` `.tres` diagnostics:** `UiState` resources referenced **only** inside `wire_rules` subresources are counted as used (`UiReactStateReferenceCollector`).
 
-**`UiReactTransactionalActions`** is registered in `UiReactScannerService` so §5 hosts participate in the same dock passes as other `UiReact*` controls. **Apply/Cancel** wiring for **`UiTransactionalGroup`** is preferred on **`UiReactButton`** / **`UiReactTextureButton`** (**`transactional_*`** exports + **`UiReactTransactionalSession`**); footer-only **`wire_rules`** without a §5 host stay on **`UiReactTabContainer`**, **`UiReactOptionButton`**, or other §5 controls—the **`Button`** matrix row does not ship **`wire_rules`**. The dock runs **`validate_transactional_under_root`** (conflict if coordinator + button **`transactional_*`** share a group).
+**Apply/Cancel** wiring for **`UiTransactionalGroup`** uses **`UiReactButton`** / **`UiReactTextureButton`** (**`transactional_*`** exports + **`UiReactTransactionalSession`**). Footer-only **`wire_rules`** without a motion host stay on **`UiReactTabContainer`**, **`UiReactOptionButton`**, or other §5 controls—the **`Button`** matrix row does not ship **`wire_rules`**. The dock runs **`validate_transactional_under_root`** for duplicate Apply/Cancel roles and related cohort checks.
 
 **Follow-up** (optional backlog): invalid `NodePath` targets when future rules use paths. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md).
 

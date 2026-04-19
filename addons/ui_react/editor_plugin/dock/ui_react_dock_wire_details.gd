@@ -306,11 +306,11 @@ static func _rule_class_name(r: UiReactWireRule) -> String:
 static func _trigger_label(t: int) -> String:
 	match t:
 		UiReactWireRule.TriggerKind.TEXT_CHANGED:
-			return "TEXT_CHANGED (5)"
+			return "TEXT_CHANGED — storage %d" % int(UiReactWireRule.TriggerKind.TEXT_CHANGED)
 		UiReactWireRule.TriggerKind.SELECTION_CHANGED:
-			return "SELECTION_CHANGED (6)"
+			return "SELECTION_CHANGED — storage %d" % int(UiReactWireRule.TriggerKind.SELECTION_CHANGED)
 		UiReactWireRule.TriggerKind.TEXT_ENTERED:
-			return "TEXT_ENTERED (13)"
+			return "TEXT_ENTERED — storage %d" % int(UiReactWireRule.TriggerKind.TEXT_ENTERED)
 		_:
 			return str(t)
 

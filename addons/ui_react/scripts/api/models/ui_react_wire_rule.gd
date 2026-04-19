@@ -3,7 +3,12 @@
 class_name UiReactWireRule
 extends Resource
 
-## Integer values match legacy [enum UiAnimTarget.Trigger] ordinals so existing `.tres` / `.tscn` data stays valid.
+## Stable storage codes for [member trigger] in `.tres` / `.tscn`. They match wire serialization and historically align with [enum UiAnimTarget.Trigger] for the three text/selection events only; other resources may use different [code]trigger[/code] export numbering—do not assume a single global ordinal map.
+const WIRE_TRIGGER_TEXT_CHANGED := 5
+const WIRE_TRIGGER_SELECTION_CHANGED := 6
+const WIRE_TRIGGER_TEXT_ENTERED := 13
+
+## Same integer values as [code]WIRE_TRIGGER_*[/code] above (enum initializers cannot reference those consts in GDScript).
 enum TriggerKind { TEXT_CHANGED = 5, SELECTION_CHANGED = 6, TEXT_ENTERED = 13 }
 
 @export var rule_id: String = ""

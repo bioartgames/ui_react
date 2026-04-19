@@ -83,7 +83,7 @@ Fields:
 - **Warning:** **`state_watch`** non-null **and** **`trigger`** is not **`PRESSED`** (authors should leave the default when state-driven; the editor **may** hide **`trigger`** when **`state_watch`** is set).
 - **`SET_MOUSE_FILTER`:** For the two-branch path, the bool **must** come **only** from **`state_watch.get_value()`**, not from other preset fields.
 - **`SET_VISIBLE`:** For the two-branch path, the bool **must** come **only** from **`state_watch.get_value()`**, not from **`visible_value`**.
-- **`UiReactTransactionalActions`** (deprecated coordinator): **Control-triggered** action rows (`state_watch` null) **are not supported**; only **state-driven** rows are valid on this host (validator **error**). **`UiReactButton`** / **`UiReactTextureButton`** with **`transactional_host`** use the normal per-host trigger set for **`action_targets`** (including control-triggered rows).
+- **`UiReactButton`** / **`UiReactTextureButton`** (including **`transactional_host`**): use the same **`action_targets`** rules as other motion hosts—**control-triggered** and **state-driven** rows are both valid per §3.1.
 - **Numeric presets** (`**SUBTRACT_PRODUCT_FROM_FLOAT**` through **`TRANSFER_INT_PRODUCT_CLAMPED**`, and **`SET_FLOAT_LITERAL`**): **`state_watch` must be null** (validator **error** otherwise)—numeric mutators are **control-triggered only** in v1.
 
 ### 3.2 MVP enum: `UiReactActionKind`
@@ -170,7 +170,7 @@ Invalid path, wrong type, freed node: **`push_warning`**; **skip that row**; **c
 
 ## 6. Teaching, validation, SemVer
 
-- **Dock / CB-020:** extend validation for **`action_targets`** (null entries, paths, **`SET_UI_BOOL_FLAG`** vs **`state_watch`**, **`SET_MOUSE_FILTER`** branch fields, **`UiReactTransactionalActions`** control-triggered ban).
+- **Dock / CB-020:** extend validation for **`action_targets`** (null entries, paths, **`SET_UI_BOOL_FLAG`** vs **`state_watch`**, **`SET_MOUSE_FILTER`** branch fields, animation trigger allowlists per host).
 - **SemVer:** **`UiReactActionTarget`**, **`UiReactActionKind`**, and export shapes are **public API**; breaking ⇒ **major** (cf. **CB-039**).
 
 ---

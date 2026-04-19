@@ -4,6 +4,10 @@ extends RefCounted
 
 const _MAX_COMPUTED_SOURCES := 32
 
+const _TAB_CFG_PREFIX_TABS := "tab_config.tabs"
+const _TAB_CFG_PREFIX_VISIBLE := "tab_config.visible"
+const _TAB_CFG_PREFIX_DISABLED := "tab_config.disabled"
+
 
 static func try_resolve_computed(host: Control, computed_context: String) -> Variant:
 	if host == null or computed_context.is_empty():
@@ -489,14 +493,14 @@ static func _parse_control_prefix(host: Control, full_path: String) -> Dictionar
 			&"rest": rest_w,
 			&"next": rule.get(wp),
 		}
-	if full_path.begins_with("tab_config.tabs"):
-		var rest_t := full_path.substr(15).trim_prefix(".")
+	if full_path.begins_with(_TAB_CFG_PREFIX_TABS):
+		var rest_t := full_path.substr(_TAB_CFG_PREFIX_TABS.length()).trim_prefix(".")
 		return _tab_cfg_prefix(host, &"tabs_state", rest_t)
-	if full_path.begins_with("tab_config.disabled"):
-		var rest_d := full_path.substr(18).trim_prefix(".")
+	if full_path.begins_with(_TAB_CFG_PREFIX_DISABLED):
+		var rest_d := full_path.substr(_TAB_CFG_PREFIX_DISABLED.length()).trim_prefix(".")
 		return _tab_cfg_prefix(host, &"disabled_tabs_state", rest_d)
-	if full_path.begins_with("tab_config.visible"):
-		var rest_v := full_path.substr(17).trim_prefix(".")
+	if full_path.begins_with(_TAB_CFG_PREFIX_VISIBLE):
+		var rest_v := full_path.substr(_TAB_CFG_PREFIX_VISIBLE.length()).trim_prefix(".")
 		return _tab_cfg_prefix(host, &"visible_tabs_state", rest_v)
 	if full_path.begins_with("tab_config.content["):
 		var mc: RegExMatch = _rx_tab_content().search(full_path)
