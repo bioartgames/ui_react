@@ -22,7 +22,7 @@ enabled=PackedStringArray("res://addons/gut/plugin.cfg", "res://addons/ui_react/
 [ui_react]
 
 plugin_state_output_path="res://addons/ui_react/ui_resources/plugin_generated/"
-plugin_scan_mode=0
+plugin_scan_mode=1
 plugin_show_errors=true
 plugin_show_warnings=true
 plugin_show_info=true
@@ -35,6 +35,6 @@ plugin_graph_body_vsplit_offset=160
 plugin_graph_legend_visible=true
 plugin_graph_body_hsplit_offset=-1
 plugin_dock_last_tab=1
-plugin_wiring_last_scene_path=""
-plugin_wiring_last_scope_node_path=""
+plugin_wiring_last_scene_path="res://addons/ui_react/examples/inventory_screen_demo.tscn"
+plugin_wiring_last_scope_node_path="MainHBox/CenterColumn/FilterEdit"
 plugin_wiring_last_graph_node_id=""

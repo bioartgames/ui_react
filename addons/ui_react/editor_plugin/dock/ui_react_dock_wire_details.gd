@@ -3,6 +3,15 @@ class_name UiReactDockWireDetails
 extends Object
 
 const _SCRIPT_SORT_ARRAY_BY_KEY := "res://addons/ui_react/scripts/api/models/ui_react_wire_sort_array_by_key.gd"
+const _WIRE_RULE_INDEX_PATTERN := "^wire_rules\\[(\\d+)\\]:"
+
+static var _wire_rule_index_re: RegEx
+
+
+static func _wire_rule_index_regex() -> RegEx:
+	if _wire_rule_index_re == null:
+		_wire_rule_index_re = RegEx.create_from_string(_WIRE_RULE_INDEX_PATTERN)
+	return _wire_rule_index_re
 
 
 static func escape_bbcode_literal(s: String) -> String:
@@ -51,7 +60,7 @@ static func _report_rows(
 	rows.append({&"label": &"Inputs", &"value": _val_inputs(rule)})
 	rows.append({&"label": &"Outputs", &"value": _val_outputs(rule)})
 	rows.append({&"label": &"Runtime notes", &"value": _val_runtime(rule, host)})
-	rows.append({&"label": &"Validation warnings", &"value": _val_validation(rule)})
+	rows.append({&"label": &"Validation warnings", &"value": _validation_row_from_validator(rule_index, host, scene_root)})
 	return rows
 
 
@@ -243,54 +252,51 @@ static func _val_runtime(rule: Variant, host: Node) -> String:
 	return "\n".join(lines)
 
 
-static func _val_validation(rule: Variant) -> String:
-	var warns: PackedStringArray = []
-	if rule == null:
-		return "Null slot: runner skips this index; remove or assign a UiReactWireRule resource."
-	if not (rule is UiReactWireRule):
-		return "Value is not a UiReactWireRule."
-	var r := rule as UiReactWireRule
-	if not r.enabled:
-		warns.append("Rule is disabled; helper skips binding and apply.")
-	if rule is UiReactWireMapIntToString:
-		var m := rule as UiReactWireMapIntToString
-		if m.source_int_state == null:
-			warns.append("source_int_state is missing; apply() returns early.")
-		if m.target_string_state == null:
-			warns.append("target_string_state is missing; apply() returns early.")
-	elif rule is UiReactWireRefreshItemsFromCatalog:
-		var rr := rule as UiReactWireRefreshItemsFromCatalog
-		if rr.items_state == null or rr.catalog == null:
-			warns.append("items_state or catalog is missing; apply() returns early.")
-	elif rule is UiReactWireCopySelectionDetail:
-		var c := rule as UiReactWireCopySelectionDetail
-		if c.detail_state == null or c.selected_state == null:
-			warns.append("detail_state or selected_state is missing; apply() returns early.")
-	elif rule is UiReactWireSetStringOnBoolPulse:
-		var p := rule as UiReactWireSetStringOnBoolPulse
-		if p.pulse_bool == null:
-			warns.append("pulse_bool is missing; helper does not bind.")
-		if p.target_string_state == null:
-			warns.append("target_string_state is missing; apply_from_pulse() returns early.")
-		var tr := p.template_rising.strip_edges()
-		var tn := p.template_no_selection.strip_edges()
-		if tr.is_empty() and tn.is_empty():
-			warns.append("Both template strings are empty; output may be blank.")
-	elif rule is UiReactWireSyncBoolStateDebugLine:
-		var s := rule as UiReactWireSyncBoolStateDebugLine
-		if s.target_string_state == null:
-			warns.append("target_string_state is missing; apply() returns early.")
-	elif _is_sort_array_by_key(rule):
-		var srt := rule as UiReactWireSortArrayByKey
-		if srt.items_state == null or srt.sort_key_state == null:
-			warns.append("items_state or sort_key_state is missing; apply() returns early.")
-		else:
-			var key := srt.sort_key_state.get_string_value().strip_edges()
-			if key.is_empty():
-				warns.append("sort_key_state is empty after trim; apply() no-ops (no reorder).")
-	if warns.is_empty():
+## Filters [UiReactWiringValidator] issues to one [code]wire_rules[/code] index ([param issue_text] prefix [code]wire_rules[N]:[/code]).
+static func filter_wire_rule_issues_by_index(
+	issues: Array, rule_index: int
+) -> Array[UiReactDiagnosticModel.DiagnosticIssue]:
+	var out: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
+	var rx := _wire_rule_index_regex()
+	for it: Variant in issues:
+		if it is not UiReactDiagnosticModel.DiagnosticIssue:
+			continue
+		var issue := it as UiReactDiagnosticModel.DiagnosticIssue
+		var m := rx.search(issue.issue_text)
+		if m == null:
+			continue
+		if int(m.get_string(1)) == rule_index:
+			out.append(issue)
+	return out
+
+
+## Multi-line bullets for the details pane; same [member UiReactDiagnosticModel.DiagnosticIssue.issue_text] as Diagnostics.
+static func format_wire_rule_diagnostic_issues(issues: Array) -> String:
+	if issues.is_empty():
 		return "—"
-	return "\n".join(warns)
+	var lines: PackedStringArray = []
+	for it: Variant in issues:
+		if it is not UiReactDiagnosticModel.DiagnosticIssue:
+			continue
+		var issue := it as UiReactDiagnosticModel.DiagnosticIssue
+		lines.append("- %s" % issue.issue_text)
+		var hint := issue.fix_hint.strip_edges()
+		if not hint.is_empty():
+			lines.append("  Fix: %s" % hint)
+	return "\n".join(lines)
+
+
+static func _validation_row_from_validator(rule_index: int, host: Node, scene_root: Node) -> String:
+	if host == null or scene_root == null or not (host is Control):
+		return "—"
+	var owner := host as Control
+	if not owner.is_inside_tree():
+		return "—"
+	var node_path := scene_root.get_path_to(owner)
+	var component := UiReactScannerService.get_component_name_from_script(owner.get_script() as Script)
+	var all := UiReactWiringValidator.validate_wire_rules(component, owner, node_path)
+	var filtered: Array = filter_wire_rule_issues_by_index(all, rule_index)
+	return format_wire_rule_diagnostic_issues(filtered)
 
 
 static func _rule_class_name(r: UiReactWireRule) -> String:

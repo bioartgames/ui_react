@@ -24,37 +24,40 @@ static func validate_wire_rules(
 		var item: Variant = wr[i]
 		if item == null:
 			out.append(
-				UiReactDiagnosticModel.DiagnosticIssue.make_structured(
-					UiReactDiagnosticModel.Severity.WARNING,
+				_wire_rules_issue(
 					component,
-					str(owner.name),
-					"wire_rules[%d] is null; remove the empty slot." % i,
-					"Remove the array element or assign a UiReactWireRule subresource.",
+					owner,
 					node_path,
-					&"wire_rules",
-					&"",
-					UiReactDiagnosticModel.IssueKind.GENERIC,
-					"",
+					i,
+					"is null; remove the empty slot.",
+					"Remove the array element or assign a UiReactWireRule subresource.",
 				)
 			)
 			continue
 		if not (item is UiReactWireRule):
 			out.append(
-				UiReactDiagnosticModel.DiagnosticIssue.make_structured(
-					UiReactDiagnosticModel.Severity.WARNING,
+				_wire_rules_issue(
 					component,
-					str(owner.name),
-					"wire_rules[%d] must be a UiReactWireRule (got %s)." % [i, UiReactValidatorCommon.variant_type_name(item)],
-					"Assign a UiReactWireRule subresource (MapIntToString, RefreshItemsFromCatalog, SortArrayByKey, CopySelectionDetail, SetStringOnBoolPulse, SyncBoolStateDebugLine).",
+					owner,
 					node_path,
-					&"wire_rules",
-					&"",
-					UiReactDiagnosticModel.IssueKind.GENERIC,
-					"",
+					i,
+					"must be a UiReactWireRule (got %s)." % UiReactValidatorCommon.variant_type_name(item),
+					"Assign a UiReactWireRule subresource (MapIntToString, RefreshItemsFromCatalog, SortArrayByKey, CopySelectionDetail, SetStringOnBoolPulse, SyncBoolStateDebugLine).",
 				)
 			)
 			continue
 		var rule := item as UiReactWireRule
+		if not rule.enabled:
+			out.append(
+				_wire_rules_issue(
+					component,
+					owner,
+					node_path,
+					i,
+					"rule is disabled; helper skips binding and apply.",
+					"Enable the rule in the inspector or remove the slot if unused.",
+				)
+			)
 		if rule is UiReactWireMapIntToString:
 			out.append_array(
 				_validate_wire_rule_map_int(rule as UiReactWireMapIntToString, component, owner, node_path, i)
@@ -78,6 +81,17 @@ static func validate_wire_rules(
 		elif rule is UiReactWireSyncBoolStateDebugLine:
 			out.append_array(
 				_validate_wire_rule_bool_debug_line(rule as UiReactWireSyncBoolStateDebugLine, component, owner, node_path, i)
+			)
+		else:
+			out.append(
+				_wire_rules_issue(
+					component,
+					owner,
+					node_path,
+					i,
+					"unsupported concrete wire rule class for editor validation.",
+					"Use a documented rule type or extend UiReactWiringValidator.",
+				)
 			)
 	return out
 
@@ -230,6 +244,19 @@ static func _validate_wire_rule_sort_array_by_key(
 				component, owner, node_path, index_i, "descending_state must be UiBoolState when set.", "Assign UiBoolState or clear."
 			)
 		)
+	if key_st is UiStringState:
+		var key_trim := (key_st as UiStringState).get_string_value().strip_edges()
+		if key_trim.is_empty():
+			out.append(
+				_wire_rules_issue(
+					component,
+					owner,
+					node_path,
+					index_i,
+					"sort_key_state is empty after trim; apply() no-ops (no reorder).",
+					"Set a non-empty sort key string.",
+				)
+			)
 	return out
 
 

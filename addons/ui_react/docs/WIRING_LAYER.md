@@ -121,6 +121,8 @@ Official **`inventory_screen_demo`** uses only **`wire_rules`** on **`UiReact*`*
 
 **`wire_rules` row validation** (MVP rule types §6): missing / wrong-type **`@export`** state or **`catalog`** refs → **warning** (`UiReactValidatorService`).
 
+**Dependency Graph — Selected wire rule:** the details pane **Validation warnings** row shows the same **`UiReactWiringValidator.validate_wire_rules`** issues as **Diagnostics**, filtered to the selected `wire_rules` index (see [`UiReactDockWireDetails`](../editor_plugin/dock/ui_react_dock_wire_details.gd)). **Cross-node duplicate instance** checks (`validate_wiring_under_root`) stay in the **Diagnostics** list only until issues gain structured rule-instance linkage.
+
 **Cross-node duplicate rule:** the same **`UiReactWireRule`** instance **reference** on **`wire_rules`** of **two different nodes** → **dock warning** (see §3).
 
 **Unused `UiState` `.tres` diagnostics:** `UiState` resources referenced **only** inside `wire_rules` subresources are counted as used (`UiReactStateReferenceCollector`).
