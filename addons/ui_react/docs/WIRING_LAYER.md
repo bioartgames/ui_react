@@ -131,7 +131,7 @@ Official **`inventory_screen_demo`** uses only **`wire_rules`** on **`UiReact*`*
 
 **Follow-up** (optional backlog): invalid `NodePath` targets when future rules use paths. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md).
 
-**P5.2 — Wire rules UI (editor):** The **Ui React** bottom dock **Wiring** tab includes a **`wire_rules`** list (right split) for the **single** selected §5 host, adds concrete rules from the §6 set, removes/duplicates/reorders entries with **Undo**, and **Inspect rule** opens the Inspector on the same embedded **`UiReactWireRule`** subresources—**no** second on-disk format (**CB-035**).
+**P5.2 — Wire rules UI (editor):** The **Ui React** bottom dock **Wiring** tab includes a **`wire_rules`** list (right split) for the **single** selected §5 host, adds concrete rules from the §6 set, removes/duplicates/reorders entries with **Undo**, and **Inspect rule** opens the Inspector on the same embedded **`UiReactWireRule`** subresources—**no** second on-disk format (**CB-035**). A **Quick edit** strip under the list edits an allowlisted subset of rule fields (**`rule_id`** and a few strings/bools on selected concrete types); full editing remains in the **Inspector**.
 
 ---
 

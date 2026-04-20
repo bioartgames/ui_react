@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Editor dock — Dependency Graph / Wiring (`CB-058`, shallow quick edit):** under the **`wire_rules`** list, **Quick edit (selected rule)** for **`rule_id`** (Apply) and allowlisted **`@export`** strings/bools on **`UiReactWireCopySelectionDetail`** and **`UiReactWireSetStringOnBoolPulse`** (Apply for strings; checkboxes commit on toggle); commits use **`UiReactWireGraphEditService.try_commit_wire_rule_id`** / **`try_commit_wire_rule_shallow_export`** and the same **`duplicate(false)`** path as other dock rule edits. **Inspector** remains full parity for all fields.
 - **Controls:** `UiReactHostWireTree` (`scripts/internal/react/ui_react_host_wire_tree.gd`) centralizes `UiReactWireRuleHelper.schedule_attach` / `detach` for `wire_rules` hosts; named `WIRE_TRIGGER_*` storage codes on `UiReactWireRule` document stable on-disk trigger integers (see `WIRING_LAYER.md` §5).
 - **Testing / tooling:** `UiReactComputedService.reset_internal_state_for_tests()` clears all static wiring tables and listeners (GUT isolation).
 - **Scanner:** `UiReactScannerService.get_component_name_from_script` resolves **`class_name`** first when it matches `UiReactComponentRegistry.BINDINGS_BY_COMPONENT`, then falls back to the existing script-stem path heuristic.

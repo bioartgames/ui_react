@@ -4,6 +4,7 @@ extends VBoxContainer
 
 const _WireDetailsScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_wire_details.gd")
 const _WireGraphEditScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_wire_graph_edit_service.gd")
+const _WireShallowEditorScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_wire_rule_shallow_editor.gd")
 
 const _LIST_VISIBLE_RULE_ROWS := 3
 const _RULE_ROW_EST_HEIGHT := 30
@@ -17,6 +18,7 @@ var _after_wire_mutated: Callable = Callable()
 
 var _rules_scroll: ScrollContainer
 var _rules_container: VBoxContainer
+var _shallow_editor = null
 
 var _target: Node = null
 var _edited_scene_root: Node = null
@@ -41,6 +43,8 @@ func set_target_host(host: Control, root: Node) -> void:
 		_edited_scene_root = null
 		_selected_rule_index = -1
 		_clear_rules_container()
+		if _shallow_editor != null:
+			_shallow_editor.clear()
 		visible = false
 		_emit_rule_selection_changed()
 		return
@@ -136,16 +140,26 @@ func _build_ui() -> void:
 	rules_margin.add_theme_constant_override(&"margin_bottom", 6)
 	rules_panel.add_child(rules_margin)
 
+	var rules_outer := VBoxContainer.new()
+	rules_outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rules_outer.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	rules_outer.add_theme_constant_override(&"separation", 6)
+	rules_margin.add_child(rules_outer)
+
 	_rules_scroll = ScrollContainer.new()
 	_rules_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_rules_scroll.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	_rules_scroll.custom_minimum_size = Vector2(0, _RULE_ROW_EST_HEIGHT + _LIST_EXTRA_CHROME_HEIGHT)
-	rules_margin.add_child(_rules_scroll)
+	rules_outer.add_child(_rules_scroll)
 
 	_rules_container = VBoxContainer.new()
 	_rules_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_rules_container.add_theme_constant_override(&"separation", 4)
 	_rules_scroll.add_child(_rules_container)
+
+	_shallow_editor = _WireShallowEditorScript.new()
+	_shallow_editor.setup(_actions, _after_wire_mutated)
+	rules_outer.add_child(_shallow_editor)
 
 	visible = false
 
@@ -162,6 +176,16 @@ func _rebuild_rule_rows(arr: Array) -> void:
 		var item: Variant = arr[i]
 		_rules_container.add_child(_make_rule_row(i, item, arr.size()))
 	_update_rules_scroll_height(arr.size())
+	_sync_shallow_context()
+
+
+func _sync_shallow_context() -> void:
+	if _shallow_editor == null:
+		return
+	if _target == null:
+		_shallow_editor.clear()
+		return
+	_shallow_editor.set_context(_target as Control, _edited_scene_root, _selected_rule_index)
 
 
 func _update_rules_scroll_height(rule_count: int) -> void:

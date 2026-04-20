@@ -19,14 +19,24 @@ const _GraphFactoryScript := preload("res://addons/ui_react/editor_plugin/servic
 const _DockThemeScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_theme.gd")
 
 const _DETAILS_GRAPH_HELP_BB := (
-	"Pan: middle-drag · zoom: wheel · RMB: View or actions · double-click: Inspector (same as Focus).\n"
-	+ "[b]Reconnect:[/b] with the edge selected, [b]Shift+drag from the upstream state node[/b] (the tail of the arrow) onto another [b]state[/b] or [b]computed[/b] node. [b]Ctrl+Shift+drag[/b] (no edge selected): new link. [b]Delete[/b]: clear edge when allowed.\n"
-	+ "Node outline shape encodes role (control / state / computed); see Key above."
+	"[b]Move around[/b]\n"
+	+ "Pan: middle-drag. Zoom: wheel. Context actions: RMB.\n\n"
+	+ "[b]Edit connections[/b]\n"
+	+ "Reconnect an existing edge: select the edge, then [b]Shift+drag[/b] from the upstream state node (tail of arrow) to another [b]state[/b] or [b]computed[/b] node.\n"
+	+ "Create a new link: with no edge selected, [b]Ctrl+Shift+drag[/b].\n"
+	+ "Remove a selected edge: [b]Delete[/b] (when removable).\n\n"
+	+ "[b]Visual key[/b]\n"
+	+ "Node outline shape indicates role: control / state / computed."
 )
 const _DETAILS_GRAPH_HELP_PLAIN := (
-	"Pan: middle-drag · zoom: wheel · RMB: View or actions · double-click: Inspector (same as Focus).\n"
-	+ "Reconnect: with the edge selected, Shift+drag from the upstream state node (the tail of the arrow) onto another state or computed node. Ctrl+Shift+drag (no edge selected): new link. Delete: clear edge when allowed.\n"
-	+ "Node outline shape encodes role (control / state / computed); see Key above."
+	"Move around\n"
+	+ "Pan: middle-drag. Zoom: wheel. Context actions: RMB.\n\n"
+	+ "Edit connections\n"
+	+ "Reconnect an existing edge: select the edge, then Shift+drag from the upstream state node (tail of arrow) to another state or computed node.\n"
+	+ "Create a new link: with no edge selected, Ctrl+Shift+drag.\n"
+	+ "Remove a selected edge: Delete (when removable).\n\n"
+	+ "Visual key\n"
+	+ "Node outline shape indicates role: control / state / computed."
 )
 
 const _SCOPE_MIN_NODES := 20
@@ -657,6 +667,8 @@ func _after_wire_rules_section_commit() -> void:
 	if _request_dock_refresh.is_valid():
 		_request_dock_refresh.call()
 	refresh()
+	if _wire_rules_section != null:
+		_wire_rules_section.refresh_from_host()
 
 
 func _on_wire_rule_list_selection_changed(_rule_index: int) -> void:

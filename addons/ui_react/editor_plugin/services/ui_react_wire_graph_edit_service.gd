@@ -135,6 +135,116 @@ static func try_commit_wire_edge_disconnect(
 	)
 
 
+const _SHALLOW_STRING_EXPORT_MAX_LEN := 2048
+
+## Allowlisted [code]@export[/code] string fields for dock quick-edit (**[code]CB-058[/code]** shallow editor).
+const _SHALLOW_STRING_EXPORTS: Dictionary = {
+	&"UiReactWireCopySelectionDetail": [&"text_no_selection"],
+	&"UiReactWireSetStringOnBoolPulse": [&"template_rising", &"template_no_selection"],
+}
+
+## Allowlisted bool fields for dock quick-edit.
+const _SHALLOW_BOOL_EXPORTS: Dictionary = {
+	&"UiReactWireCopySelectionDetail": [&"clear_suffix_on_selection_change"],
+	&"UiReactWireSetStringOnBoolPulse": [&"require_rising_edge"],
+}
+
+
+static func _rule_script_class_name(rule: UiReactWireRule) -> StringName:
+	var sc: Script = rule.get_script() as Script
+	if sc == null:
+		return &""
+	var gn: StringName = sc.get_global_name()
+	return gn if String(gn) != "" else &""
+
+
+static func _shallow_export_prop_kind(expected_class_name: StringName, prop: StringName) -> int:
+	## Returns [code]0[/code] = string, [code]1[/code] = bool, [code]-1[/code] = not allowlisted.
+	if expected_class_name == &"" or prop == &"":
+		return -1
+	var strs: Variant = _SHALLOW_STRING_EXPORTS.get(expected_class_name, null)
+	if strs is Array:
+		for p: Variant in strs as Array:
+			if p is StringName and p == prop:
+				return 0
+			if str(p) == str(prop):
+				return 0
+	var bools: Variant = _SHALLOW_BOOL_EXPORTS.get(expected_class_name, null)
+	if bools is Array:
+		for p2: Variant in bools as Array:
+			if p2 is StringName and p2 == prop:
+				return 1
+			if str(p2) == str(prop):
+				return 1
+	return -1
+
+
+## Undo-safe assign of allowlisted string/bool [code]@export[/code] on a duplicated wire rule (**[code]CB-058[/code]** shallow editor).
+static func try_commit_wire_rule_shallow_export(
+	host: Control,
+	rule_index: int,
+	expected_class_name: StringName,
+	prop: StringName,
+	value: Variant,
+	actions: UiReactActionController,
+) -> bool:
+	var kind := _shallow_export_prop_kind(expected_class_name, prop)
+	if kind < 0:
+		push_warning("Ui React: shallow export not allowlisted: %s.%s" % [expected_class_name, prop])
+		return false
+	if kind == 0:
+		if typeof(value) != TYPE_STRING:
+			push_warning("Ui React: shallow export expects String for %s." % prop)
+			return false
+		var t: String = str(value).strip_edges()
+		if t.length() > _SHALLOW_STRING_EXPORT_MAX_LEN:
+			push_warning(
+				"Ui React: wire_rules[%d] %s exceeds max length (%d)."
+				% [rule_index, prop, _SHALLOW_STRING_EXPORT_MAX_LEN]
+			)
+			return false
+		var t_copy := t
+		var mut_s: Callable = func(rule: UiReactWireRule) -> bool:
+			if _rule_script_class_name(rule) != expected_class_name:
+				return false
+			if not prop in rule:
+				return false
+			if str(rule.get(prop)) == t_copy:
+				return false
+			rule.set(prop, t_copy)
+			return true
+		return try_mutate_wire_rule_at_index(
+			host,
+			rule_index,
+			mut_s,
+			actions,
+			"Ui React: wire_rules[%d] %s" % [rule_index, prop],
+		)
+	if kind == 1:
+		if typeof(value) != TYPE_BOOL:
+			push_warning("Ui React: shallow export expects bool for %s." % prop)
+			return false
+		var b: bool = bool(value)
+		var b_copy := b
+		var mut_b: Callable = func(rule: UiReactWireRule) -> bool:
+			if _rule_script_class_name(rule) != expected_class_name:
+				return false
+			if not prop in rule:
+				return false
+			if bool(rule.get(prop)) == b_copy:
+				return false
+			rule.set(prop, b_copy)
+			return true
+		return try_mutate_wire_rule_at_index(
+			host,
+			rule_index,
+			mut_b,
+			actions,
+			"Ui React: wire_rules[%d] %s" % [rule_index, prop],
+		)
+	return false
+
+
 static func try_commit_wire_rule_id(
 	host: Control,
 	rule_index: int,
@@ -142,6 +252,9 @@ static func try_commit_wire_rule_id(
 	actions: UiReactActionController,
 ) -> bool:
 	var trimmed := new_id.strip_edges()
+	if trimmed.is_empty():
+		push_warning("Ui React: rule_id cannot be empty after trim.")
+		return false
 	var mut3: Callable = func(rule: UiReactWireRule) -> bool:
 		if rule.rule_id == trimmed:
 			return false
