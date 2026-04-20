@@ -8,7 +8,7 @@ Self-contained building blocks for Godot 4.x: two-way **UiState** binding, optio
 
 ### Four pillars (resources-first; examples stay Inspector-authored)
 
-**Designer tooling:** In the **editor**, the **Wiring** tab (**Dependency Graph** + **`wire_rules`** list, Ui React dock) is the **blessed** place to **see and orchestrate** wiring, computeds, and dataflow in a scoped graph—**same** resources as the Inspector (**[`docs/ROADMAP.md`](docs/ROADMAP.md)** **North star**). **Official examples** remain edited as **Inspector** resources in **`.tscn`** so the **Charter** evidence bar stays objective.
+**Designer tooling:** In the **editor**, the **Wiring** tab (**Dependency Graph** + **`wire_rules`** list, Ui React dock) is the **blessed** place to **see and orchestrate** wiring, computeds, and dataflow in a scoped graph—**same** resources as the Inspector (**[`docs/ROADMAP.md`](docs/ROADMAP.md)** **North star**). **`UiComputed*`** **`sources[]`** edges support the same **Shift+drag reconnect** and **Rebind computed source…** flow as bindings (**CB-058**). **Official examples** remain edited as **Inspector** resources in **`.tscn`** so the **Charter** evidence bar stays objective.
 
 | Pillar | Role | Normative / entry |
 |--------|------|-------------------|

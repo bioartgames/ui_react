@@ -20,12 +20,12 @@ const _DockThemeScript := preload("res://addons/ui_react/editor_plugin/dock/ui_r
 
 const _DETAILS_GRAPH_HELP_BB := (
 	"Pan: middle-drag · zoom: wheel · RMB: View or actions · double-click: Inspector (same as Focus).\n"
-	+ "Shift+drag on a selected edge: reconnect. Ctrl+Shift+drag: new link. Delete: clear edge when allowed.\n"
+	+ "[b]Reconnect:[/b] with the edge selected, [b]Shift+drag from the upstream state node[/b] (the tail of the arrow) onto another [b]state[/b] or [b]computed[/b] node. [b]Ctrl+Shift+drag[/b] (no edge selected): new link. [b]Delete[/b]: clear edge when allowed.\n"
 	+ "Node outline shape encodes role (control / state / computed); see Key above."
 )
 const _DETAILS_GRAPH_HELP_PLAIN := (
 	"Pan: middle-drag · zoom: wheel · RMB: View or actions · double-click: Inspector (same as Focus).\n"
-	+ "Shift+drag on a selected edge: reconnect. Ctrl+Shift+drag: new link. Delete: clear edge when allowed.\n"
+	+ "Reconnect: with the edge selected, Shift+drag from the upstream state node (the tail of the arrow) onto another state or computed node. Ctrl+Shift+drag (no edge selected): new link. Delete: clear edge when allowed.\n"
 	+ "Node outline shape encodes role (control / state / computed); see Key above."
 )
 
@@ -761,7 +761,8 @@ func _fill_selection_wire_submenu(popup: PopupMenu) -> void:
 func _fill_selection_edge_edit_submenu(popup: PopupMenu) -> void:
 	popup.clear()
 	const TT_REBIND_BINDING := (
-		"Choose another .tres for this binding (undoable). Wire flows: use Rebind wire in/out."
+		"Choose another .tres for this binding (undoable). Wire flows: use Rebind wire in/out. "
+		+ "Computed sources[] edges: Rebind computed source… or Shift+drag reconnect from the upstream node."
 	)
 	const TT_REBIND_WIRE_IN := (
 		"Choose another input-slot state on this wire row (undoable). Not for computed-only edges."
@@ -770,7 +771,8 @@ func _fill_selection_edge_edit_submenu(popup: PopupMenu) -> void:
 		"Choose another output-slot state on this wire row (undoable). Not for computed-only edges."
 	)
 	const TT_REBIND_COMPUTED := (
-		"Replace one sources[] entry (undoable). Refresh the graph if this stays disabled."
+		"Replace one sources[] entry (undoable). Refresh the graph if this stays disabled. "
+		+ "Or Shift+drag reconnect from the upstream node onto another state/computed node (see bottom graph help)."
 	)
 	const TT_CLEAR_BINDING := "Clear optional binding here; required slots need the Inspector."
 	const TT_REMOVE_COMPUTED := "Clear this sources[] slot (undoable). Refresh if context is missing."
@@ -937,7 +939,8 @@ func _selection_edge_edit_action_count() -> int:
 
 func _append_single_edge_edit_action_to_menu(popup: PopupMenu) -> void:
 	const TT_REBIND_BINDING := (
-		"Choose another .tres for this binding (undoable). Wire flows: use Rebind wire in/out."
+		"Choose another .tres for this binding (undoable). Wire flows: use Rebind wire in/out. "
+		+ "Computed sources[] edges: Rebind computed source… or Shift+drag reconnect from the upstream node."
 	)
 	const TT_REBIND_WIRE_IN := (
 		"Choose another input-slot state on this wire row (undoable). Not for computed-only edges."
@@ -946,7 +949,8 @@ func _append_single_edge_edit_action_to_menu(popup: PopupMenu) -> void:
 		"Choose another output-slot state on this wire row (undoable). Not for computed-only edges."
 	)
 	const TT_REBIND_COMPUTED := (
-		"Replace one sources[] entry (undoable). Refresh the graph if this stays disabled."
+		"Replace one sources[] entry (undoable). Refresh the graph if this stays disabled. "
+		+ "Or Shift+drag reconnect from the upstream node onto another state/computed node (see bottom graph help)."
 	)
 	const TT_CLEAR_BINDING := "Clear optional binding here; required slots need the Inspector."
 	const TT_REMOVE_COMPUTED := "Clear this sources[] slot (undoable). Refresh if context is missing."
@@ -3294,6 +3298,15 @@ func _edge_details_summary_bb_plain(
 		var opt_hint := _optional_binding_dock_hint_bb_plain(ed, StringName(bp))
 		bb += opt_hint[0]
 		plain += opt_hint[1]
+		var bind_canvas := UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
+			"On canvas",
+			(
+				"[b]Reconnect:[/b] [b]Shift+drag[/b] from the [b]state[/b] node onto another [b]state[/b] or [b]computed[/b] node (same undo as [b]Rebind to resource…[/b])."
+			),
+			"Reconnect: Shift+drag from the state node onto another state or computed node (same undo as Rebind to resource…).",
+		)
+		bb += bind_canvas[0]
+		plain += bind_canvas[1]
 	elif kind == _SnapScript.EdgeKind.COMPUTED_SOURCE:
 		var hp2 := str(ed.get(&"host_path", ""))
 		var si := int(ed.get(&"computed_source_index", -1))
@@ -3333,6 +3346,29 @@ func _edge_details_summary_bb_plain(
 		if not cc.is_empty():
 			bb += "[i]Resolver path[/i] — [code]%s[/code]\n" % cc
 			plain += "Resolver path — %s\n" % cc
+		var root_cs: Node = null
+		if _plugin != null:
+			root_cs = _plugin.get_editor_interface().get_edited_scene_root()
+		if root_cs != null and _edge_allows_computed_rebind(ed, root_cs):
+			var ocv_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("On canvas")
+			bb += ocv_h[0]
+			plain += ocv_h[1]
+			bb += (
+				"[b]Reconnect:[/b] [b]Shift+drag[/b] from the [b]upstream[/b] endpoint node onto another [b]state[/b] or [b]computed[/b] node (valid targets highlight). "
+				+ "Same undo stack as [b]Rebind computed source…[/b].\n"
+			)
+			plain += (
+				"Reconnect: Shift+drag from the upstream endpoint node onto another state or computed node (valid targets highlight). "
+				+ "Same undo stack as Rebind computed source….\n"
+			)
+			bb += (
+				"[b]Pick[/b] [code].tres[/code][b]:[/b] [b]Edge edit[/b] (or selection menu) → [b]Rebind computed source…[/b].\n"
+			)
+			plain += "Pick .tres: Edge edit (or selection menu) → Rebind computed source….\n"
+		else:
+			var warn_cs := "[i]Refresh the graph if reconnect actions stay disabled.[/i]\n"
+			bb += warn_cs
+			plain += UiReactDockExplainDetailsPresenter.plain_from_bbcode_line(warn_cs)
 	elif kind == _SnapScript.EdgeKind.WIRE_FLOW:
 		var wh := str(ed.get(&"wire_host_path", ""))
 		var wi := int(ed.get(&"wire_rule_index", -1))
