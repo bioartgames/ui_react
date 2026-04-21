@@ -20,23 +20,23 @@ const _DockThemeScript := preload("res://addons/ui_react/editor_plugin/dock/ui_r
 
 const _DETAILS_GRAPH_HELP_BB := (
 	"[b]Move around[/b]\n"
-	+ "Pan: middle-drag. Zoom: wheel. Context actions: RMB.\n\n"
-	+ "[b]Edit connections[/b]\n"
-	+ "Reconnect an existing edge: select the edge, then [b]Shift+drag[/b] from the upstream state node (tail of arrow) to another [b]state[/b] or [b]computed[/b] node.\n"
-	+ "Create a new link: with no edge selected, [b]Ctrl+Shift+drag[/b].\n"
-	+ "Remove a selected edge: [b]Delete[/b] (when removable).\n\n"
-	+ "[b]Visual key[/b]\n"
-	+ "Node outline shape indicates role: control / state / computed."
+	+ "[b]Pan[/b] with middle mouse drag, [b]zoom[/b] with the mouse wheel, and open menus with [b]right-click[/b].\n\n"
+	+ "[b]Edit links[/b]\n"
+	+ "To [b]move an existing link[/b], select its edge, then [b]Shift+drag[/b] from the state at the arrow tail to another [b]State[/b] or [b]Computed[/b] chip.\n"
+	+ "To [b]start a new link[/b], leave edges unselected and [b]Ctrl+Shift+drag[/b] between two chips.\n"
+	+ "To [b]remove[/b] a selected edge, press [b]Delete[/b] when the dock allows it.\n\n"
+	+ "[b]Shapes[/b]\n"
+	+ "Chip outline shows whether the node is a [b]control[/b], a [b]state[/b] resource, or a [b]computed[/b] resource."
 )
 const _DETAILS_GRAPH_HELP_PLAIN := (
 	"Move around\n"
-	+ "Pan: middle-drag. Zoom: wheel. Context actions: RMB.\n\n"
-	+ "Edit connections\n"
-	+ "Reconnect an existing edge: select the edge, then Shift+drag from the upstream state node (tail of arrow) to another state or computed node.\n"
-	+ "Create a new link: with no edge selected, Ctrl+Shift+drag.\n"
-	+ "Remove a selected edge: Delete (when removable).\n\n"
-	+ "Visual key\n"
-	+ "Node outline shape indicates role: control / state / computed."
+	+ "Pan with middle mouse drag, zoom with the wheel, and use right-click for menus.\n\n"
+	+ "Edit links\n"
+	+ "Move an existing link: select the edge, then Shift+drag from the state at the arrow tail to another State or Computed chip.\n"
+	+ "Start a new link: leave edges unselected, then Ctrl+Shift+drag between two chips.\n"
+	+ "Remove a selected edge: press Delete when the dock allows it.\n\n"
+	+ "Shapes\n"
+	+ "Chip outline shows control vs state resource vs computed resource."
 )
 
 const _SCOPE_MIN_NODES := 20
@@ -207,36 +207,36 @@ func refresh() -> void:
 		return
 	if _plugin == null:
 		_set_hint_visible(true)
-		_set_hint("Plugin not ready.")
+		_set_hint("Ui React is still starting up; open this tab again in a moment.")
 		_clear_stale_snapshot()
 		return
 	var ei := _plugin.get_editor_interface()
 	var root := ei.get_edited_scene_root()
 	if root == null:
 		_set_hint_visible(true)
-		_set_hint("Open a scene to build the dependency graph.")
+		_set_hint("Open a saved scene tab first—the graph needs an active edited scene.")
 		_clear_stale_snapshot()
 		return
 	var sel: Array[Node] = ei.get_selection().get_selected_nodes()
 	if sel.size() != 1:
 		_set_hint_visible(true)
-		_set_hint("Select exactly one [code]UiReact*[/code] node in the edited scene.")
+		_set_hint("Pick exactly one Ui React control in the Scene tree (only one node can be selected).")
 		_clear_stale_snapshot()
 		return
 	var n: Node = sel[0]
 	if not (n is Control):
 		_set_hint_visible(true)
-		_set_hint("Selection must be a [code]Control[/code] ([code]UiReact*[/code]).")
+		_set_hint("Pick a Control node; the graph does not run on non-UI nodes.")
 		_clear_stale_snapshot()
 		return
 	if not UiReactScannerService.is_react_node(n):
 		_set_hint_visible(true)
-		_set_hint("Selection is not a [code]UiReact*[/code] control (no ui_react_* script stem).")
+		_set_hint("That node is not a Ui React control—its script name should start with ui_react_.")
 		_clear_stale_snapshot()
 		return
 	if not (n == root or root.is_ancestor_of(n)):
 		_set_hint_visible(true)
-		_set_hint("Selection must be part of the current edited scene.")
+		_set_hint("Pick a node that lives under the scene tab you are editing, not a stray editor pick.")
 		_clear_stale_snapshot()
 		return
 
@@ -338,7 +338,7 @@ func _apply_visual_from_snap_safe(snap: Variant, focus_id: String) -> void:
 		_graph_view.clear_graph()
 		_set_details_empty()
 		_set_hint_visible(true)
-		_set_hint("No nodes in scope for this layout. Lower layout caps, widen bindings, or Refresh after edits.")
+		_set_hint("Nothing landed in this graph scope—raise node/edge caps, turn filters back on, or click Refresh after Inspector edits.")
 		_sync_wire_rules_section()
 		return
 	(_graph_view as Object).call(&"set_layout", layout)
@@ -435,7 +435,9 @@ func _resolve_pin_target_graph_node_id() -> String:
 func _pin_graph_node_to_active_preset(node_id: String) -> void:
 	var pid := String(node_id).strip_edges()
 	if pid.is_empty():
-		push_warning("Ui React: nothing to pin for current selection.")
+		push_warning(
+			"Ui React: nothing to pin for the current graph selection. Select a node or edge first, then use Pin node."
+		)
 		return
 	var active: String = String(UiReactDockConfig.get_active_graph_scope_preset_name()).strip_edges()
 	if active.is_empty() or active.to_lower() == "default":
@@ -479,7 +481,7 @@ func _fill_scope_presets_list(presets_popup: PopupMenu) -> void:
 	_scope_preset_pick_abouts.clear()
 	presets_popup.add_item("Default", UiReactDockExplainMenuIds._CV_PRESET_DEFAULT)
 	presets_popup.set_item_tooltip(
-		presets_popup.item_count - 1, "Built-in scope (not a saved preset)."
+		presets_popup.item_count - 1, "Built-in graph scope (not a saved preset)."
 	)
 	var names: Array[String] = []
 	var about_by_name: Dictionary = {}
@@ -501,7 +503,7 @@ func _fill_scope_presets_list(presets_popup: PopupMenu) -> void:
 		_scope_preset_pick_abouts.append(abt)
 		var tip_i := presets_popup.item_count - 1
 		if abt.is_empty():
-			presets_popup.set_item_tooltip(tip_i, "No description.")
+			presets_popup.set_item_tooltip(tip_i, "No notes saved for this preset.")
 		else:
 			presets_popup.set_item_tooltip(tip_i, abt)
 
@@ -512,29 +514,29 @@ func _fill_scope_submenu(scope_popup: PopupMenu, presets_popup: PopupMenu) -> vo
 	scope_popup.add_submenu_node_item("Presets", presets_popup, UiReactDockExplainMenuIds._CV_SUB_PRESETS_LIST)
 	scope_popup.add_item("Save scope preset as…", UiReactDockExplainMenuIds._CV_SCOPE_SAVE)
 	scope_popup.set_item_tooltip(
-		scope_popup.item_count - 1, "Save current scope settings as a named preset."
+		scope_popup.item_count - 1, "Save the current graph caps, filters, and pins under a new preset name."
 	)
 	var active: String = String(UiReactDockConfig.get_active_graph_scope_preset_name()).strip_edges()
 	if not active.is_empty() and active.to_lower() != "default":
 		scope_popup.add_item('Update "%s"' % active, UiReactDockExplainMenuIds._CV_SCOPE_UPDATE)
 		scope_popup.set_item_tooltip(
 			scope_popup.item_count - 1,
-			"Overwrite the active preset with current scope settings (caps, filters, pins, description).",
+			"Overwrite the active preset with what you see now (caps, filters, pins, notes).",
 		)
 		var uidx := scope_popup.get_item_index(UiReactDockExplainMenuIds._CV_SCOPE_UPDATE)
 		if uidx >= 0:
 			var missing := UiReactDockExplainScopePresets.find_raw_preset_variant_by_name(active) == null
 			scope_popup.set_item_disabled(uidx, missing or _scope_current_matches_saved_named_preset(active))
 			if missing:
-				scope_popup.set_item_tooltip(uidx, "Preset missing from disk.")
+				scope_popup.set_item_tooltip(uidx, "That preset is no longer in saved settings—open Manage scope presets.")
 	scope_popup.add_item("Manage scope presets…", UiReactDockExplainMenuIds._CV_SCOPE_MANAGE)
-	scope_popup.set_item_tooltip(scope_popup.item_count - 1, "Delete saved scope presets.")
+	scope_popup.set_item_tooltip(scope_popup.item_count - 1, "Rename, review, or delete saved graph scope presets.")
 	var pin_id := _resolve_pin_target_graph_node_id()
 	if not pin_id.is_empty():
 		scope_popup.add_item("Pin node", UiReactDockExplainMenuIds._CV_SCOPE_PIN)
 		scope_popup.set_item_tooltip(
 			scope_popup.item_count - 1,
-			"Pins the graph node used as the anchor for this selection (same as Focus in Inspector for edges).",
+			"Pins the graph chip tied to this selection so it stays in scope (same anchor as Focus in Inspector on edges).",
 		)
 
 
@@ -574,7 +576,9 @@ func _on_scope_update_current_preset_pressed() -> void:
 		return
 	var raw := UiReactDockExplainScopePresets.find_raw_preset_variant_by_name(n)
 	if raw == null:
-		push_warning("Ui React: active preset not found on disk.")
+		push_warning(
+			"Ui React: the active scope preset file entry is missing. Open Manage scope presets or save a new preset, then try Update again."
+		)
 		return
 	var rec := _capture_current_scope_settings(n)
 	rec[&"about"] = UiReactDockExplainScopePresets.stored_about_for_preset_name(n)
@@ -590,7 +594,9 @@ func _on_scope_update_current_preset_pressed() -> void:
 			else:
 				out.append(old)
 	if not found:
-		push_warning("Ui React: could not update preset (missing entry).")
+		push_warning(
+			"Ui React: could not update that preset because it disappeared from the saved list. Rescan presets from Manage scope presets."
+		)
 		return
 	_persist_presets_array(out)
 	UiReactDockConfig.set_active_graph_scope_preset_name(n)
@@ -688,8 +694,8 @@ func _on_wire_rule_list_selection_changed(_rule_index: int) -> void:
 ## Graph RMB context menu — same builder as former Actions… MenuButton.
 func _fill_selection_actions_popup(popup: PopupMenu) -> void:
 	popup.clear()
-	const TT_COPY := "Copy plain-text details to the clipboard."
-	const TT_FOCUS := "Open the related scene node or resource in the Inspector when possible."
+	const TT_COPY := "Copy the plain-text details panel to the clipboard."
+	const TT_FOCUS := "Open the related scene node or resource in the Inspector when Godot allows it."
 
 	if _selection_kind != UiReactDockExplainMenuIds._SEL_NONE:
 		popup.add_item("Focus in Inspector", UiReactDockExplainMenuIds._SEL_ACT_FOCUS_INSPECTOR)
@@ -752,8 +758,8 @@ func _fill_selection_node_submenu(popup: PopupMenu) -> void:
 
 func _fill_selection_wire_submenu(popup: PopupMenu) -> void:
 	popup.clear()
-	const TT_WIRE_REFRESH := "Reload wire list after external edits or Undo."
-	const TT_WIRE_COPY_REP := "Copy selected rule details."
+	const TT_WIRE_REFRESH := "Reload the Wire rules list after edits elsewhere or Undo."
+	const TT_WIRE_COPY_REP := "Copy the selected wire rule report from the list below."
 	var wentries := _WireRuleCatalogScript.rule_script_entries()
 	for j: int in range(wentries.size()):
 		popup.add_item(
@@ -773,26 +779,26 @@ func _fill_selection_wire_submenu(popup: PopupMenu) -> void:
 func _fill_selection_edge_edit_submenu(popup: PopupMenu) -> void:
 	popup.clear()
 	const TT_REBIND_BINDING := (
-		"Choose another .tres for this binding (undoable). Wire flows: use Rebind wire in/out. "
-		+ "Computed sources[] edges: Rebind computed source… or Shift+drag reconnect from the upstream node."
+		"Pick another saved state file for this Inspector binding (you can undo). "
+		+ "For wire rows use Rebind wire input/output; for computed inputs use Rebind computed source or Shift-drag from the tail node."
 	)
 	const TT_REBIND_WIRE_IN := (
-		"Choose another input-slot state on this wire row (undoable). Not for computed-only edges."
+		"Pick another state for this wire rule’s input slot (you can undo). Does not apply to pure computed edges."
 	)
 	const TT_REBIND_WIRE_OUT := (
-		"Choose another output-slot state on this wire row (undoable). Not for computed-only edges."
+		"Pick another state for this wire rule’s output slot (you can undo). Does not apply to pure computed edges."
 	)
 	const TT_REBIND_COMPUTED := (
-		"Replace one sources[] entry (undoable). Refresh the graph if this stays disabled. "
-		+ "Or Shift+drag reconnect from the upstream node onto another state/computed node (see bottom graph help)."
+		"Swap one input on the computed resource for another state (you can undo). "
+		+ "If the action stays disabled, click Refresh; you can also Shift-drag from the upstream chip to a new target."
 	)
-	const TT_CLEAR_BINDING := "Clear optional binding here; required slots need the Inspector."
-	const TT_REMOVE_COMPUTED := "Clear this sources[] slot (undoable). Refresh if context is missing."
-	const TT_CLEAR_WIRE := "Clear both wire endpoints in one undo (both must be set)."
-	const TT_MOVE_UP := "Swap with previous sources[] entry (undoable)."
-	const TT_MOVE_DOWN := "Swap with next sources[] entry (undoable)."
-	const TT_REMOVE_SLOT := "Remove index and compact sources[] (undoable)."
-	const TT_CREATE_ASSIGN := "New matching .tres on an empty optional binding (undoable)."
+	const TT_CLEAR_BINDING := "Clears an optional binding here; required bindings must be edited in the Inspector."
+	const TT_REMOVE_COMPUTED := "Removes one computed input slot (you can undo). Refresh the graph if the row looks stale."
+	const TT_CLEAR_WIRE := "Clears both ends of this wire link in one undo; both slots must already be filled."
+	const TT_MOVE_UP := "Moves this computed input one step earlier in the list (you can undo)."
+	const TT_MOVE_DOWN := "Moves this computed input one step later in the list (you can undo)."
+	const TT_REMOVE_SLOT := "Deletes this computed input index and packs the list (you can undo)."
+	const TT_CREATE_ASSIGN := "Creates a new matching state file and assigns it to an empty optional binding (you can undo)."
 
 	var rebind_added := false
 	if _can_rebind_binding_edge():
@@ -951,26 +957,26 @@ func _selection_edge_edit_action_count() -> int:
 
 func _append_single_edge_edit_action_to_menu(popup: PopupMenu) -> void:
 	const TT_REBIND_BINDING := (
-		"Choose another .tres for this binding (undoable). Wire flows: use Rebind wire in/out. "
-		+ "Computed sources[] edges: Rebind computed source… or Shift+drag reconnect from the upstream node."
+		"Pick another saved state file for this Inspector binding (you can undo). "
+		+ "For wire rows use Rebind wire input/output; for computed inputs use Rebind computed source or Shift-drag from the tail node."
 	)
 	const TT_REBIND_WIRE_IN := (
-		"Choose another input-slot state on this wire row (undoable). Not for computed-only edges."
+		"Pick another state for this wire rule’s input slot (you can undo). Does not apply to pure computed edges."
 	)
 	const TT_REBIND_WIRE_OUT := (
-		"Choose another output-slot state on this wire row (undoable). Not for computed-only edges."
+		"Pick another state for this wire rule’s output slot (you can undo). Does not apply to pure computed edges."
 	)
 	const TT_REBIND_COMPUTED := (
-		"Replace one sources[] entry (undoable). Refresh the graph if this stays disabled. "
-		+ "Or Shift+drag reconnect from the upstream node onto another state/computed node (see bottom graph help)."
+		"Swap one input on the computed resource for another state (you can undo). "
+		+ "If the action stays disabled, click Refresh; you can also Shift-drag from the upstream chip to a new target."
 	)
-	const TT_CLEAR_BINDING := "Clear optional binding here; required slots need the Inspector."
-	const TT_REMOVE_COMPUTED := "Clear this sources[] slot (undoable). Refresh if context is missing."
-	const TT_CLEAR_WIRE := "Clear both wire endpoints in one undo (both must be set)."
-	const TT_MOVE_UP := "Swap with previous sources[] entry (undoable)."
-	const TT_MOVE_DOWN := "Swap with next sources[] entry (undoable)."
-	const TT_REMOVE_SLOT := "Remove index and compact sources[] (undoable)."
-	const TT_CREATE_ASSIGN := "New matching .tres on an empty optional binding (undoable)."
+	const TT_CLEAR_BINDING := "Clears an optional binding here; required bindings must be edited in the Inspector."
+	const TT_REMOVE_COMPUTED := "Removes one computed input slot (you can undo). Refresh the graph if the row looks stale."
+	const TT_CLEAR_WIRE := "Clears both ends of this wire link in one undo; both slots must already be filled."
+	const TT_MOVE_UP := "Moves this computed input one step earlier in the list (you can undo)."
+	const TT_MOVE_DOWN := "Moves this computed input one step later in the list (you can undo)."
+	const TT_REMOVE_SLOT := "Deletes this computed input index and packs the list (you can undo)."
+	const TT_CREATE_ASSIGN := "Creates a new matching state file and assigns it to an empty optional binding (you can undo)."
 
 	if _can_rebind_binding_edge():
 		popup.add_item("Rebind to resource…", UiReactDockExplainMenuIds._SEL_ACT_REBIND_BINDING)
@@ -1060,9 +1066,9 @@ func _apply_scope_preset_by_name(preset_name: String) -> void:
 func _fill_canvas_view_popup(popup: PopupMenu) -> void:
 	popup.clear()
 	popup.add_item("Refresh", UiReactDockExplainMenuIds._CV_REFRESH)
-	popup.set_item_tooltip(popup.item_count - 1, "Rebuild graph from current selection and scene.")
+	popup.set_item_tooltip(popup.item_count - 1, "Rebuild the graph from the current scene selection and filters.")
 	popup.add_item("Fit view", UiReactDockExplainMenuIds._CV_FIT)
-	popup.set_item_tooltip(popup.item_count - 1, "Reset pan/zoom on the graph.")
+	popup.set_item_tooltip(popup.item_count - 1, "Reset pan and zoom so the whole graph fits the view.")
 	popup.add_separator()
 	if _canvas_create_submenu_popup != null:
 		_fill_canvas_create_submenu(_canvas_create_submenu_popup)
@@ -1099,27 +1105,27 @@ func _fill_canvas_create_submenu(popup: PopupMenu) -> void:
 func _fill_canvas_view_submenu(popup: PopupMenu) -> void:
 	popup.clear()
 	popup.add_item("Full lists", UiReactDockExplainMenuIds._CV_TOGGLE_FULL_LISTS)
-	popup.set_item_tooltip(popup.item_count - 1, "Uncap upstream/downstream lines in the details pane.")
+	popup.set_item_tooltip(popup.item_count - 1, "Show full upstream/downstream lists in the details text.")
 	popup.set_item_as_checkable(popup.item_count - 1, true)
 	popup.set_item_checked(popup.item_count - 1, _cb_full_lists != null and _cb_full_lists.button_pressed)
 	popup.add_item("Show binding edges", UiReactDockExplainMenuIds._CV_TOGGLE_BINDING)
-	popup.set_item_tooltip(popup.item_count - 1, "Toggle binding edges (state → control property).")
+	popup.set_item_tooltip(popup.item_count - 1, "Show or hide lines from states into control bindings.")
 	popup.set_item_as_checkable(popup.item_count - 1, true)
 	popup.set_item_checked(popup.item_count - 1, _cb_bind != null and _cb_bind.button_pressed)
 	popup.add_item("Show computed edges", UiReactDockExplainMenuIds._CV_TOGGLE_COMPUTED)
-	popup.set_item_tooltip(popup.item_count - 1, "Toggle computed-source edges.")
+	popup.set_item_tooltip(popup.item_count - 1, "Show or hide lines that feed computed resources.")
 	popup.set_item_as_checkable(popup.item_count - 1, true)
 	popup.set_item_checked(popup.item_count - 1, _cb_computed != null and _cb_computed.button_pressed)
 	popup.add_item("Show wire edges", UiReactDockExplainMenuIds._CV_TOGGLE_WIRE)
-	popup.set_item_tooltip(popup.item_count - 1, "Toggle wire-rule flow edges.")
+	popup.set_item_tooltip(popup.item_count - 1, "Show or hide wire rule input/output lines.")
 	popup.set_item_as_checkable(popup.item_count - 1, true)
 	popup.set_item_checked(popup.item_count - 1, _cb_wire != null and _cb_wire.button_pressed)
 	popup.add_item("All edge labels", UiReactDockExplainMenuIds._CV_TOGGLE_EDGE_LABELS)
-	popup.set_item_tooltip(popup.item_count - 1, "Short labels on every edge; selection still expands below.")
+	popup.set_item_tooltip(popup.item_count - 1, "Always show short labels on edges; the details pane still expands the active edge.")
 	popup.set_item_as_checkable(popup.item_count - 1, true)
 	popup.set_item_checked(popup.item_count - 1, _cb_edge_labels != null and _cb_edge_labels.button_pressed)
 	popup.add_item("Show legend", UiReactDockExplainMenuIds._CV_TOGGLE_LEGEND)
-	popup.set_item_tooltip(popup.item_count - 1, "Show the node/edge color key above the graph.")
+	popup.set_item_tooltip(popup.item_count - 1, "Show the color key for node chips and edge lines above the graph.")
 	popup.set_item_as_checkable(popup.item_count - 1, true)
 	popup.set_item_checked(popup.item_count - 1, _legend_host != null and _legend_host.visible)
 
@@ -1437,7 +1443,7 @@ func _attempt_graph_edge_disconnect() -> void:
 	if k == _SnapScript.EdgeKind.BINDING:
 		if not _can_disconnect_binding_edge():
 			push_warning(
-				"Ui React: clear binding only for optional exports with a current assignment (use Inspector for required slots)."
+				"Ui React: graph delete only clears optional bindings that already have a resource. Use the Inspector for required slots, or pick a binding edge."
 			)
 			return
 		var hp := str(ed.get(&"host_path", ""))
@@ -1451,7 +1457,9 @@ func _attempt_graph_edge_disconnect() -> void:
 		)
 	elif k == _SnapScript.EdgeKind.COMPUTED_SOURCE:
 		if not _can_disconnect_computed_source():
-			push_warning("Ui React: cannot clear this computed source (refresh the graph or check host path).")
+			push_warning(
+				"Ui React: cannot remove this computed source from the graph right now. Click Rescan, confirm the host node still exists, then try again."
+			)
 			return
 		var hp_c := str(ed.get(&"host_path", ""))
 		var ctx := str(ed.get(&"computed_context", ""))
@@ -1461,7 +1469,7 @@ func _attempt_graph_edge_disconnect() -> void:
 	elif k == _SnapScript.EdgeKind.WIRE_FLOW:
 		if not _can_disconnect_wire_edge():
 			push_warning(
-				"Ui React: clear wire link only when both input and output slots are set on this edge (use Inspector otherwise)."
+				"Ui React: graph delete for a wire link needs both ends filled on that edge. Otherwise clear the slots in the Inspector on the Wire rules row."
 			)
 			return
 		var wh := str(ed.get(&"wire_host_path", ""))
@@ -1473,7 +1481,9 @@ func _attempt_graph_edge_disconnect() -> void:
 			host_w as Control, wi, win, wout, _actions
 		)
 	else:
-		push_warning("Ui React: Delete clears binding, computed-source, or wire-flow edges only.")
+		push_warning(
+			"Ui React: Delete from the graph only works on binding, computed-source, or wire-flow edges. Pick one of those edge types first."
+		)
 		return
 	if not committed:
 		return
@@ -1951,7 +1961,9 @@ func _on_graph_newlink_drag_ended(donor_id: String, target_id: String) -> void:
 			_open_newlink_wire_rules_only_popup(host, donor_st)
 			return
 		else:
-			push_warning("Ui React: no empty binding slot or wire_rules host for this drop.")
+			push_warning(
+				"Ui React: this control has no empty binding slot and no wire rule that can take that state. Try another target node or add a wire rule template."
+			)
 			return
 	elif tk == _SnapScript.NodeKind.UI_COMPUTED:
 		var ehp := str(td.get(&"embedded_host_path", ""))
@@ -1968,7 +1980,9 @@ func _on_graph_newlink_drag_ended(donor_id: String, target_id: String) -> void:
 		else:
 			var fp := str(td.get(&"state_file_path", ""))
 			if fp.is_empty():
-				push_warning("Ui React: could not resolve file-backed computed target.")
+				push_warning(
+					"Ui React: that computed node has no scene path to edit. Open the owning .tres or bind the computed on a control in this scene."
+				)
 				return
 			var res: Resource = load(fp)
 			if not (res is UiComputedStringState or res is UiComputedBoolState):
@@ -1978,7 +1992,7 @@ func _on_graph_newlink_drag_ended(donor_id: String, target_id: String) -> void:
 			)
 			if mounts.is_empty():
 				push_warning(
-					"Ui React: file-backed computed is not referenced from this scene (open the .tres or bind it on a host)."
+					"Ui React: that file-backed computed is not used in this scene yet. Assign it on a control binding or open its .tres, then try the link again."
 				)
 				return
 			if mounts.size() == 1:
@@ -2215,14 +2229,18 @@ func _try_commit_binding_rebind_from_edge(ed: Dictionary, ui_st: UiState, root: 
 	if hp.is_empty() or bp.is_empty():
 		return false
 	if not root.has_node(NodePath(hp)):
-		push_warning("Ui React: rebind host path is no longer valid: %s" % hp)
+		push_warning(
+			"Ui React: the control path %s is no longer in the scene. Save/reload the scene and Rescan the graph before rebinding." % hp
+		)
 		return false
 	var n: Node = root.get_node(NodePath(hp))
 	if not (n is Control):
 		return false
 	var prop_sn := StringName(bp)
 	if not prop_sn in n:
-		push_warning("Ui React: host no longer has export %s" % bp)
+		push_warning(
+			"Ui React: that control no longer has Inspector field %s. Rescan the graph or pick a binding that still exists." % bp
+		)
 		return false
 	_actions.assign_property_variant(n, prop_sn, ui_st, "Ui React: Rebind %s" % bp)
 	return true
@@ -2237,14 +2255,18 @@ func _try_commit_wire_rebind_from_edge(ed: Dictionary, for_input: bool, ui_st: U
 	if wh.is_empty() or wi < 0 or wprop == &"":
 		return false
 	if not root.has_node(NodePath(wh)):
-		push_warning("Ui React: wire host path is no longer valid: %s" % wh)
+		push_warning(
+			"Ui React: wire rule host path %s is no longer in the scene. Reload the scene and Rescan before editing this edge." % wh
+		)
 		return false
 	var host_n: Node = root.get_node(NodePath(wh))
 	if not (host_n is Control):
 		return false
 	var host := host_n as Control
 	if not (&"wire_rules" in host):
-		push_warning("Ui React: host has no wire_rules: %s" % wh)
+		push_warning(
+			"Ui React: that node at %s has no Wire rules export. Add wire rules in the Inspector or pick the correct host in the graph." % wh
+		)
 		return false
 	return _WireGraphEditScript.try_commit_wire_slot_rebind(host, wi, wprop, ui_st, _actions)
 
@@ -2277,7 +2299,9 @@ func _on_graph_reconnect_drag_ended(edge_idx: int, origin_id: String, target_id:
 		var ctx := str(ed.get(&"computed_context", ""))
 		var csi := int(ed.get(&"computed_source_index", -1))
 		if not root.has_node(NodePath(hp_c)):
-			push_warning("Ui React: rebind host path is no longer valid: %s" % hp_c)
+			push_warning(
+				"Ui React: computed host path %s is no longer valid. Reload the scene and Rescan the graph." % hp_c
+			)
 			return
 		var host_c: Node = root.get_node(NodePath(hp_c))
 		if not (host_c is Control):
@@ -2375,10 +2399,14 @@ func _on_rebind_file_selected(path: String) -> void:
 		return
 	var res: Resource = load(path)
 	if res == null:
-		push_warning("Ui React: could not load resource: %s" % path)
+		push_warning(
+			"Ui React: could not load %s. Check the path exists and is a saved .tres, then pick the file again." % path
+		)
 		return
 	if not (res is UiState):
-		push_warning("Ui React: selected file is not a UiState: %s" % path)
+		push_warning(
+			"Ui React: %s is not a UiState resource. Pick a bool/int/float/string/array state .tres from your project." % path
+		)
 		return
 	var ui_st := res as UiState
 	var committed := false
@@ -2409,7 +2437,9 @@ func _on_rebind_file_selected(path: String) -> void:
 			if hp_c.is_empty() or ctx.is_empty() or csi < 0:
 				return
 			if not root.has_node(NodePath(hp_c)):
-				push_warning("Ui React: rebind host path is no longer valid: %s" % hp_c)
+				push_warning(
+					"Ui React: computed host path %s is no longer valid. Reload the scene and Rescan the graph." % hp_c
+				)
 				return
 			var host_c: Node = root.get_node(NodePath(hp_c))
 			if not (host_c is Control):
@@ -2433,15 +2463,15 @@ func _on_rebind_file_selected(path: String) -> void:
 
 func _set_details_placeholder() -> void:
 	_set_details_both(
-		"[i]Select a node or edge in the graph to see details.[/i]\n\n" + _DETAILS_GRAPH_HELP_BB,
-		"Select a node or edge in the graph to see details.\n\n" + _DETAILS_GRAPH_HELP_PLAIN,
+		"[i]Click a chip or line in the graph to read details here.[/i]\n\n" + _DETAILS_GRAPH_HELP_BB,
+		"Click a chip or line in the graph to read details here.\n\n" + _DETAILS_GRAPH_HELP_PLAIN,
 	)
 
 
 func _set_details_empty() -> void:
 	_set_details_both(
-		"[i]No graph in scope. Refresh after changing bindings or selection.[/i]\n\n" + _DETAILS_GRAPH_HELP_BB,
-		"No graph in scope. Refresh after changing bindings or selection.\n\n" + _DETAILS_GRAPH_HELP_PLAIN,
+		"[i]No graph yet for this scope—click Refresh after you change bindings or filters.[/i]\n\n" + _DETAILS_GRAPH_HELP_BB,
+		"No graph yet for this scope—click Refresh after you change bindings or filters.\n\n" + _DETAILS_GRAPH_HELP_PLAIN,
 	)
 
 
@@ -4056,7 +4086,9 @@ func _on_scope_save_as_pressed() -> void:
 func _commit_upsert_preset_activate(rec: Dictionary) -> void:
 	var raw_name := String(rec.get(&"name", "")).strip_edges()
 	if raw_name.is_empty() or raw_name.to_lower() == "default":
-		push_warning("Ui React: choose a non-empty preset name other than “Default”.")
+		push_warning(
+			"Ui React: enter a non-empty scope preset name that is not “Default”, then confirm Save."
+		)
 		return
 	var arr: Array = UiReactDockExplainScopePresets.load_sorted_presets_raw()
 	var replaced := false
@@ -4090,7 +4122,9 @@ func _on_scope_save_name_canceled() -> void:
 func _on_scope_save_name_confirmed() -> void:
 	var raw_name := _scope_save_name_edit.text.strip_edges() if _scope_save_name_edit else ""
 	if raw_name.is_empty() or raw_name.to_lower() == "default":
-		push_warning("Ui React: choose a non-empty preset name other than “Default”.")
+		push_warning(
+			"Ui React: enter a non-empty scope preset name that is not “Default”, then confirm Save."
+		)
 		return
 	var rec := _capture_current_scope_settings(raw_name)
 	if _scope_save_about_edit != null:
@@ -4140,7 +4174,7 @@ func _on_scope_manage_pressed() -> void:
 		var li := _scope_manage_list.item_count - 1
 		var abt := String(d.get("about", d.get(&"about", ""))).strip_edges()
 		if abt.is_empty():
-			_scope_manage_list.set_item_tooltip(li, "No description.")
+			_scope_manage_list.set_item_tooltip(li, "No notes saved for this preset.")
 		else:
 			_scope_manage_list.set_item_tooltip(li, abt)
 	_scope_manage_dialog.popup_centered()
@@ -4220,7 +4254,9 @@ func _popup_create_state_save_dialog(_for_assign: bool) -> void:
 	var out_dir := _GraphFactoryScript.output_dir_from_project_settings()
 	var err := UiReactStateFactoryService.ensure_output_dir(out_dir)
 	if err != OK:
-		push_error("Ui React: could not create output folder: %s" % out_dir)
+		push_error(
+			"Ui React: could not create the state output folder %s. Fix the path in dock settings and try Create again." % out_dir
+		)
 		return
 	var base_node := "state"
 	var base_prop := ""
@@ -4267,10 +4303,14 @@ func _on_create_state_file_selected(path: String) -> void:
 		return
 	var loaded := _GraphFactoryScript.save_new_state_at_path(StringName(cls), path)
 	if loaded == null:
-		push_error("Ui React: failed to save resource.")
+		push_error(
+			"Ui React: failed to save the new state file. Check the folder is writable and the name is valid, then retry."
+		)
 		return
 	if not (loaded is UiState):
-		push_error("Ui React: saved resource is not UiState.")
+		push_error(
+			"Ui React: the file saved but is not a UiState. Pick a supported state class from the Create menu."
+		)
 		return
 	var ui_st := loaded as UiState
 	if assign_mode:
@@ -4285,7 +4325,9 @@ func _on_create_state_file_selected(path: String) -> void:
 		if not UiReactGraphNewBindingService.try_commit_assign(
 			hn as Control, _create_assign_component, _create_assign_prop, ui_st, _actions
 		):
-			push_warning("Ui React: create and assign failed (type or slot).")
+			push_warning(
+				"Ui React: create and assign failed because the binding type or slot no longer matches. Rescan and confirm the empty binding edge, then retry."
+			)
 			return
 	_create_assign_host_path = ""
 	_create_assign_prop = &""
@@ -4485,7 +4527,7 @@ func _build_ui() -> void:
 		_SnapScript.NodeKind.CONTROL,
 		"Focus control",
 		true,
-		"The UiReact host you picked when refreshing; layout is centered on this control."
+		"The control you picked when refreshing; the layout is centered on it."
 	)
 	_add_legend_node_chip(
 		_legend_nodes_row,
@@ -4493,7 +4535,7 @@ func _build_ui() -> void:
 		_SnapScript.NodeKind.CONTROL,
 		"Control",
 		false,
-		"Other UiReact hosts in this scoped graph."
+		"Other Ui React controls that appear in this scoped graph."
 	)
 	_add_legend_node_chip(
 		_legend_nodes_row,
@@ -4501,7 +4543,7 @@ func _build_ui() -> void:
 		_SnapScript.NodeKind.UI_STATE,
 		"State",
 		false,
-		"UiState resources (bindings, wires, computed inputs)."
+		"State resources wired to controls, wire rules, or computed nodes."
 	)
 	_add_legend_node_chip(
 		_legend_nodes_row,
@@ -4509,7 +4551,7 @@ func _build_ui() -> void:
 		_SnapScript.NodeKind.UI_COMPUTED,
 		"Computed",
 		false,
-		"UiComputed resources (sources[] aggregation)."
+		"Computed resources that combine other states (shown as their own chips)."
 	)
 
 	_legend_mid_spacer = Control.new()
@@ -4535,14 +4577,14 @@ func _build_ui() -> void:
 		_ExplainGraphViewScript.GRAPH_EDGE_COLOR_COMPUTED,
 		3.0,
 		"Computed src",
-		"sources[] entry: upstream state feeds a computed resource."
+		"Computed input: an upstream state feeds into a computed resource."
 	)
 	_add_legend_edge_sample(
 		_legend_edges_row,
 		_ExplainGraphViewScript.GRAPH_EDGE_COLOR_WIRE,
 		4.0,
 		"Wire",
-		"wire_rules row: input state(s) drive output state(s)."
+		"Wire rule row: inputs on the rule drive its outputs."
 	)
 	_legend_scope_spacer = Control.new()
 	_legend_scope_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -4551,7 +4593,7 @@ func _build_ui() -> void:
 	_legend_scope_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_legend_scope_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_legend_scope_label.text = "Scope: --"
-	_legend_scope_label.tooltip_text = "Graph layout scope summary (rendered nodes/edges)."
+	_legend_scope_label.tooltip_text = "How many nodes and edges are drawn after caps and filters."
 	_legend_edges_row.add_child(_legend_scope_label)
 
 	_legend_host.add_child(_legend_nodes_row)

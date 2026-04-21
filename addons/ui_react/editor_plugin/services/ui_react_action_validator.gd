@@ -21,8 +21,8 @@ static func validate_action_targets(
 					UiReactDiagnosticModel.Severity.WARNING,
 					component,
 					str(owner.name),
-					"action_targets[%d] is null." % i,
-					"Remove the empty entry or assign a UiReactActionTarget.",
+					"Action targets row %d is empty (null)." % i,
+					"Remove that row in the Inspector or assign a UiReactActionTarget resource.",
 					node_path,
 					&"action_targets",
 					&"",
@@ -43,8 +43,8 @@ static func validate_action_targets(
 					UiReactDiagnosticModel.Severity.WARNING,
 					component,
 					str(owner.name),
-					"action_targets[%d]: state_watch set but trigger is not PRESSED (ignored at runtime)." % i,
-					"Set trigger to PRESSED when using state_watch, or clear state_watch for control-driven rows.",
+					"Action row %d watches a state but Trigger is not Pressed (this combo is ignored at runtime)." % i,
+					"Set Trigger to Pressed when using State watch, or clear State watch for button- or control-driven rows.",
 					node_path,
 					&"action_targets",
 					&"",
@@ -61,11 +61,13 @@ static func validate_action_targets(
 						component,
 						str(owner.name),
 						(
-							"action_targets[%d] uses Trigger %s on %s, which this control never dispatches."
-							% [i, UiReactValidatorCommon.format_anim_trigger_name(row.trigger), component]
+							"Action row %d uses trigger %s, but this control does not fire that signal."
+							% [i, UiReactValidatorCommon.format_anim_trigger_name(row.trigger)]
 						),
-						"Supported triggers for %s: %s."
-						% [component, UiReactValidatorCommon.format_allowed_anim_triggers_hint(component)],
+						(
+							"For %s, use one of the supported triggers: %s."
+							% [component, UiReactValidatorCommon.format_allowed_anim_triggers_hint(component)]
+						),
 						node_path,
 						&"action_targets",
 						&"",
@@ -83,19 +85,19 @@ static func validate_action_targets(
 				_append_uifloat_ref(
 					out, component, owner, node_path, i, row.float_accumulator,
 					"action_targets[%d] %s needs float_accumulator." % [i, _kl],
-					"Assign UiFloatState (e.g. gold).",
+					"In the Inspector, assign a UiFloatState (for example the total pool).",
 					"action_targets[%d] float_accumulator must be UiFloatState." % i,
 				)
 				_append_uifloat_ref(
 					out, component, owner, node_path, i, row.float_factor_a,
 					"action_targets[%d] %s needs float_factor_a." % [i, _kl],
-					"Assign UiFloatState (e.g. price).",
+					"In the Inspector, assign a UiFloatState (for example unit price).",
 					"action_targets[%d] float_factor_a must be UiFloatState." % i,
 				)
 				_append_uifloat_ref(
 					out, component, owner, node_path, i, row.float_factor_b,
 					"action_targets[%d] %s needs float_factor_b." % [i, _kl],
-					"Assign UiFloatState (e.g. quantity).",
+					"In the Inspector, assign a UiFloatState (for example quantity).",
 					"action_targets[%d] float_factor_b must be UiFloatState." % i,
 				)
 				continue
@@ -106,25 +108,25 @@ static func validate_action_targets(
 				_append_uifloat_ref(
 					out, component, owner, node_path, i, row.float_from,
 					"action_targets[%d] TRANSFER_FLOAT_PRODUCT_CLAMPED needs float_from." % i,
-					"Assign UiFloatState (source pool).",
+					"In the Inspector, assign a UiFloatState for the source pool.",
 					"action_targets[%d] float_from must be UiFloatState." % i,
 				)
 				_append_uifloat_ref(
 					out, component, owner, node_path, i, row.float_to,
 					"action_targets[%d] TRANSFER_FLOAT_PRODUCT_CLAMPED needs float_to." % i,
-					"Assign UiFloatState (destination pool).",
+					"In the Inspector, assign a UiFloatState for the destination pool.",
 					"action_targets[%d] float_to must be UiFloatState." % i,
 				)
 				_append_uifloat_ref(
 					out, component, owner, node_path, i, row.float_factor_a,
 					"action_targets[%d] TRANSFER_FLOAT_PRODUCT_CLAMPED needs float_factor_a." % i,
-					"Assign UiFloatState (e.g. price).",
+					"In the Inspector, assign a UiFloatState (for example unit price).",
 					"action_targets[%d] float_factor_a must be UiFloatState." % i,
 				)
 				_append_uifloat_ref(
 					out, component, owner, node_path, i, row.float_factor_b,
 					"action_targets[%d] TRANSFER_FLOAT_PRODUCT_CLAMPED needs float_factor_b." % i,
-					"Assign UiFloatState (e.g. quantity).",
+					"In the Inspector, assign a UiFloatState (for example quantity).",
 					"action_targets[%d] float_factor_b must be UiFloatState." % i,
 				)
 				continue
@@ -135,19 +137,19 @@ static func validate_action_targets(
 				_append_uiint_ref(
 					out, component, owner, node_path, i, row.int_accumulator,
 					"action_targets[%d] ADD_PRODUCT_TO_INT needs int_accumulator." % i,
-					"Assign UiIntState.",
+					"In the Inspector, assign a UiIntState resource.",
 					"action_targets[%d] int_accumulator must be UiIntState." % i,
 				)
 				_append_uiint_ref(
 					out, component, owner, node_path, i, row.int_factor_a,
 					"action_targets[%d] ADD_PRODUCT_TO_INT needs int_factor_a." % i,
-					"Assign UiIntState.",
+					"In the Inspector, assign a UiIntState resource.",
 					"action_targets[%d] int_factor_a must be UiIntState." % i,
 				)
 				_append_uiint_ref(
 					out, component, owner, node_path, i, row.int_factor_b,
 					"action_targets[%d] ADD_PRODUCT_TO_INT needs int_factor_b." % i,
-					"Assign UiIntState.",
+					"In the Inspector, assign a UiIntState resource.",
 					"action_targets[%d] int_factor_b must be UiIntState." % i,
 				)
 				continue
@@ -158,25 +160,25 @@ static func validate_action_targets(
 				_append_uiint_ref(
 					out, component, owner, node_path, i, row.int_from,
 					"action_targets[%d] TRANSFER_INT_PRODUCT_CLAMPED needs int_from." % i,
-					"Assign UiIntState (source).",
+					"In the Inspector, assign a UiIntState for the source pool.",
 					"action_targets[%d] int_from must be UiIntState." % i,
 				)
 				_append_uiint_ref(
 					out, component, owner, node_path, i, row.int_to,
 					"action_targets[%d] TRANSFER_INT_PRODUCT_CLAMPED needs int_to." % i,
-					"Assign UiIntState (destination).",
+					"In the Inspector, assign a UiIntState for the destination pool.",
 					"action_targets[%d] int_to must be UiIntState." % i,
 				)
 				_append_uiint_ref(
 					out, component, owner, node_path, i, row.int_factor_a,
 					"action_targets[%d] TRANSFER_INT_PRODUCT_CLAMPED needs int_factor_a." % i,
-					"Assign UiIntState.",
+					"In the Inspector, assign a UiIntState resource.",
 					"action_targets[%d] int_factor_a must be UiIntState." % i,
 				)
 				_append_uiint_ref(
 					out, component, owner, node_path, i, row.int_factor_b,
 					"action_targets[%d] TRANSFER_INT_PRODUCT_CLAMPED needs int_factor_b." % i,
-					"Assign UiIntState.",
+					"In the Inspector, assign a UiIntState resource.",
 					"action_targets[%d] int_factor_b must be UiIntState." % i,
 				)
 				continue
@@ -187,7 +189,7 @@ static func validate_action_targets(
 				_append_uifloat_ref(
 					out, component, owner, node_path, i, row.float_literal_target,
 					"action_targets[%d] SET_FLOAT_LITERAL needs float_literal_target." % i,
-					"Assign UiFloatState.",
+					"In the Inspector, assign a UiFloatState resource.",
 					"action_targets[%d] float_literal_target must be UiFloatState." % i,
 				)
 				continue
@@ -205,8 +207,8 @@ static func validate_action_targets(
 						UiReactDiagnosticModel.Severity.ERROR,
 						component,
 						str(owner.name),
-						"action_targets[%d]: bool_flag_state duplicates state_watch (loop risk)." % i,
-						"Use a different UiBoolState for SET_UI_BOOL_FLAG.",
+						"Action row %d uses the same bool for both watch and flag (can loop)." % i,
+						"Pick a different UiBoolState for the UI bool flag, or change State watch.",
 						node_path,
 						&"action_targets",
 						&"",
@@ -226,8 +228,8 @@ static func validate_action_targets(
 					UiReactDiagnosticModel.Severity.WARNING,
 					component,
 					str(owner.name),
-					"action_targets[%d] needs a target NodePath." % i,
-					"Assign target in the Inspector.",
+					"Action row %d needs a target node picked." % i,
+					"In the Inspector, set Target by dragging a node from the scene.",
 					node_path,
 					&"action_targets",
 					&"",
@@ -245,8 +247,8 @@ static func validate_action_targets(
 						UiReactDiagnosticModel.Severity.ERROR,
 						component,
 						str(owner.name),
-						"action_targets[%d] target '%s' could not be resolved." % [i, row.target],
-						"Fix the NodePath relative to this control.",
+						"Action row %d target node was not found: %s." % [i, row.target],
+						"Fix the target path in the Inspector (relative to this control) or pick the node again.",
 						node_path,
 						&"action_targets",
 						&"",
@@ -261,8 +263,8 @@ static func validate_action_targets(
 							UiReactDiagnosticModel.Severity.ERROR,
 							component,
 							str(owner.name),
-							"action_targets[%d] SET_VISIBLE target must be CanvasItem/Control." % i,
-							"Point target at a visible node.",
+							"Action row %d Set visible must target something drawable (Control/CanvasItem)." % i,
+							"Pick a Control or CanvasItem in the Target field.",
 							node_path,
 							&"action_targets",
 							&"",
@@ -292,8 +294,8 @@ static func validate_action_targets(
 					UiReactDiagnosticModel.Severity.WARNING,
 					component,
 					str(owner.name),
-					"action_targets[%d] SET_UI_BOOL_FLAG needs bool_flag_state." % i,
-					"Assign bool_flag_state.",
+					"Action row %d (set UI bool flag) needs a bool flag state." % i,
+					"In the Inspector, assign Bool flag state to a UiBoolState.",
 					node_path,
 					&"action_targets",
 					&"",
@@ -331,8 +333,8 @@ static func _append_error_state_watch_on_numeric_row(
 			UiReactDiagnosticModel.Severity.ERROR,
 			component,
 			str(owner.name),
-			"action_targets[%d]: %s is control-triggered only (clear state_watch)." % [i, kind_name],
-			"Remove state_watch or use a different action kind.",
+			"Action row %d (%s) is driven by a button or control, so State watch must be empty." % [i, kind_name],
+			"Clear State watch on this row, or pick an action kind meant for state-driven rows.",
 			node_path,
 			&"action_targets",
 			&"",
@@ -375,7 +377,7 @@ static func _append_uifloat_ref(
 				component,
 				str(owner.name),
 				wrong_type_line,
-				"Assign UiFloatState.",
+				"In the Inspector, assign a UiFloatState resource.",
 				node_path,
 				&"action_targets",
 				&"",
@@ -418,7 +420,7 @@ static func _append_uiint_ref(
 				component,
 				str(owner.name),
 				wrong_type_line,
-				"Assign UiIntState.",
+				"In the Inspector, assign a UiIntState resource.",
 				node_path,
 				&"action_targets",
 				&"",

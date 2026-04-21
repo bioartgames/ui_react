@@ -18,7 +18,7 @@ static func severity_display_name(sev: int) -> String:
 
 
 static func idle_placeholder_text() -> String:
-	return "Select an issue above to view the report: full message, fix hints, and metadata."
+	return "Pick a row in the list above to see the full message, what to try next, and Inspector fields."
 
 
 static func build_details_bbcode(issue: UiReactDiagnosticModel.DiagnosticIssue) -> String:
@@ -38,9 +38,9 @@ static func build_details_bbcode(issue: UiReactDiagnosticModel.DiagnosticIssue) 
 	if not issue.fix_hint.is_empty():
 		body += "[b]Fix[/b]: %s\n" % issue.fix_hint
 	if issue.property_name != &"":
-		body += "[b]Property[/b]: %s\n" % str(issue.property_name)
+		body += "[b]Inspector property[/b]: %s\n" % str(issue.property_name)
 	if issue.suggested_state_class != &"":
-		body += "[b]Suggested type[/b]: %s\n" % str(issue.suggested_state_class)
+		body += "[b]Suggested resource type[/b]: %s\n" % str(issue.suggested_state_class)
 	if not String(issue.value_preview).is_empty():
 		if not String(issue.value_type).is_empty():
 			body += "[b]Value type[/b]: %s\n" % escape_bbcode_literal(String(issue.value_type))

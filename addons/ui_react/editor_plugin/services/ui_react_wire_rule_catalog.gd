@@ -21,10 +21,14 @@ static func instantiate_rule(menu_idx: int) -> UiReactWireRule:
 	var path: String = String(entries[menu_idx][&"path"])
 	var s: GDScript = load(path) as GDScript
 	if s == null:
-		push_warning("Ui React: could not load wire rule script %s" % path)
+		push_warning(
+			"Ui React: could not load wire rule script %s. Reinstall or repair the addon so that file exists." % path
+		)
 		return null
 	var inst: Variant = s.new()
 	if inst == null or not (inst is UiReactWireRule):
-		push_warning("Ui React: script did not instantiate a UiReactWireRule: %s" % path)
+		push_warning(
+			"Ui React: script at %s is not a valid wire rule type. Use a built-in rule script from the addon." % path
+		)
 		return null
 	return inst as UiReactWireRule

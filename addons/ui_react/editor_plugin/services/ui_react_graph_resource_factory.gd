@@ -72,7 +72,9 @@ static func save_new_state_at_path(state_class: StringName, path: String) -> Res
 	var parent := path.get_base_dir()
 	var err := UiReactStateFactoryService.ensure_output_dir(parent + "/")
 	if err != OK:
-		push_error("Ui React: could not create folder: %s" % parent)
+		push_error(
+			"Ui React: could not create folder %s. Pick a writable res:// path in the dock output settings." % parent
+		)
 		return null
 	var res := UiReactStateFactoryService.instantiate_state(state_class)
 	if res == null:

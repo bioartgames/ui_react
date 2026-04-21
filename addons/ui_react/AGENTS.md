@@ -48,6 +48,10 @@ This file is the **checklist** before large refactors. The **documentation map**
 
 ---
 
+## Maintainer hygiene
+
+- **User-facing copy** (Diagnostics strings, graph / Wiring dock text, menus, tooltips, `push_warning`): follow [`docs/EDITOR_COPY.md`](docs/EDITOR_COPY.md) (solo-designer tone; `issue_text` / `fix_hint` rules).
+
 ## Change policy
 
 - **`class_name`**, **`@export`** shapes, or **documented public** wiring/action API: follow [ROADMAP.md](docs/ROADMAP.md) Charter (SemVer) and record in [CHANGELOG.md](docs/CHANGELOG.md).

@@ -47,7 +47,7 @@ static func build(root: Node, focus: Control):
 	snap.downstream_lines.clear()
 	if EXPLAIN_GRAPH_DEBUG:
 		push_warning(
-			"UiReactExplainGraphBuilder: nodes=%d edges=%d cycles=%d layout_upstream=%d layout_downstream=%d"
+			"Ui React (debug): graph snapshot nodes=%d edges=%d cycles=%d layout_upstream=%d layout_downstream=%d — turn EXPLAIN_GRAPH_DEBUG off when finished."
 			% [snap.nodes.size(), snap.edges.size(), snap.cycle_candidates.size(), snap.upstream_ids.size(), snap.downstream_ids.size()]
 		)
 	return snap

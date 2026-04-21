@@ -37,7 +37,10 @@ func resolve_node_for_issue_fix(issue: UiReactDiagnosticModel.DiagnosticIssue) -
 		return null
 	var node := root.get_node_or_null(issue.node_path)
 	if node == null or not (node is Node):
-		push_warning("UiReactDock: node not found for path %s" % issue.node_path)
+		push_warning(
+			"Ui React: could not find a node at %s for this issue. Open the correct scene and click Rescan in the dock."
+			% issue.node_path
+		)
 		return null
 	return node
 
@@ -75,7 +78,10 @@ func create_and_assign_core(issue: UiReactDiagnosticModel.DiagnosticIssue, node:
 	UiReactDockConfig.save_ui_preference(UiReactDockConfig.KEY_STATE_OUTPUT_PATH, out_dir)
 	var err := UiReactStateFactoryService.ensure_output_dir(out_dir)
 	if err != OK:
-		push_error("UiReactDock: could not create output folder: %s" % out_dir)
+		push_error(
+			"Ui React: could not create the state output folder %s. Choose a writable folder in the dock output path or Project Settings."
+			% out_dir
+		)
 		return false
 
 	var res := UiReactStateFactoryService.instantiate_state(issue.suggested_state_class)
@@ -134,18 +140,20 @@ func on_row_reveal(flat_index: int) -> void:
 		return
 	var issue: UiReactDiagnosticModel.DiagnosticIssue = _dock._issues_shown[flat_index]
 	if issue.issue_kind != UiReactDiagnosticModel.IssueKind.UNUSED_STATE_FILE:
-		push_error("UiReactDock: Reveal applies only to unused state file rows.")
+		push_error("Ui React: Reveal only works for unused state file rows; pick one of those rows first.")
 		return
 	var res_path: String = issue.resource_path.strip_edges()
 	if res_path.is_empty():
-		push_error("UiReactDock: unused state row has empty resource_path.")
+		push_error("Ui React: that unused-state row has no file path; click Rescan to rebuild the list.")
 		return
 	if not ResourceLoader.exists(res_path):
-		push_error("UiReactDock: resource not found: %s" % res_path)
+		push_error(
+			"Ui React: file not found at %s. Fix or remove the .tres path, then Rescan." % res_path
+		)
 		return
 	var fs_dock := _dock._plugin.get_editor_interface().get_file_system_dock()
 	if fs_dock == null:
-		push_error("UiReactDock: FileSystem dock unavailable.")
+		push_error("Ui React: the FileSystem dock is unavailable; try again after the editor finishes loading.")
 		return
 	fs_dock.navigate_to_path(res_path)
 
@@ -215,4 +223,7 @@ func on_fix_all() -> void:
 	_dock._plugin.get_editor_interface().get_resource_filesystem().scan()
 	_dock.request_refresh(&"after_fix_all")
 	if failed > 0:
-		push_warning("UiReactDock: Fix All — created: %d, failed: %d" % [created, failed])
+		push_warning(
+			"Ui React: Fix All finished with %d created and %d failed. Check output path permissions and the listed issues, then try again."
+			% [created, failed]
+		)

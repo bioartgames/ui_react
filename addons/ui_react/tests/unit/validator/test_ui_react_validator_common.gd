@@ -94,9 +94,10 @@ func test_format_anim_trigger_name_text_changed() -> void:
 # --- format_allowed_anim_triggers_hint ---
 
 
-func test_format_hint_unknown_exact_placeholder() -> void:
+func test_format_hint_unknown_plain_language_placeholder() -> void:
 	var hint := UiReactValidatorCommon.format_allowed_anim_triggers_hint(UNKNOWN_COMPONENT)
-	assert_eq(hint, "(none registered for this control)")
+	assert_true(hint.contains("No motion triggers"))
+	assert_true(hint.contains("addon"))
 
 
 func test_format_hint_option_button_contains_selection_changed() -> void:

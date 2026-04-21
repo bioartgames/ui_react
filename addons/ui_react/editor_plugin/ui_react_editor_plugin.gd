@@ -9,7 +9,9 @@ var _dock: Control
 func _enter_tree() -> void:
 	var dock_scene := load(_DOCK_SCENE_PATH) as PackedScene
 	if dock_scene == null:
-		push_error("Ui React: missing dock scene at %s" % _DOCK_SCENE_PATH)
+		push_error(
+			"Ui React: dock scene is missing at %s. Restore the addon files or reinstall ui_react from the repo." % _DOCK_SCENE_PATH
+		)
 		return
 	_dock = dock_scene.instantiate() as Control
 	_dock.setup(self)

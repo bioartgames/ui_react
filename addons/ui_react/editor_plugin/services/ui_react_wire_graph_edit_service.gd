@@ -60,22 +60,34 @@ static func try_mutate_wire_rule_at_index(
 	if host == null or actions == null or not mutator.is_valid():
 		return false
 	if not (&"wire_rules" in host):
-		push_warning("Ui React: host has no wire_rules: %s" % host.get_path())
+		push_warning(
+			"Ui React: this control has no Wire rules export at %s. Add wire rules in the Inspector or pick another node in the graph."
+			% host.get_path()
+		)
 		return false
 	var arr := duplicate_wire_rules_array(host)
 	if rule_index < 0 or rule_index >= arr.size():
-		push_warning("Ui React: wire_rules index out of range: %d" % rule_index)
+		push_warning(
+			"Ui React: wire rule index %d is out of range for this control. Rescan the Wiring tab or pick another rule row."
+			% rule_index
+		)
 		return false
 	var old_rule: Variant = arr[rule_index]
 	if old_rule == null or not (old_rule is UiReactWireRule):
-		push_warning("Ui React: wire_rules[%d] is not a UiReactWireRule." % rule_index)
+		push_warning(
+			"Ui React: wire_rules row %d is not a valid wire rule resource. Fix that slot in the Inspector, then Rescan."
+			% rule_index
+		)
 		return false
 	# Undo needs a distinct rule instance in the array, but deep duplicate(true) clones nested
 	# UiState sub-resources and breaks Dependency Graph ids (embedded states use instance_id in
 	# UiReactExplainGraphBuilder._state_id), dropping WIRE_FLOW from layout scope and clearing the dock list.
 	var dup_res: Resource = (old_rule as Resource).duplicate(false)
 	if dup_res == null or not (dup_res is UiReactWireRule):
-		push_warning("Ui React: could not duplicate wire rule at index %d." % rule_index)
+		push_warning(
+			"Ui React: could not duplicate the wire rule at row %d. Save the scene and try again, or duplicate the subresource in the Inspector."
+			% rule_index
+		)
 		return false
 	var new_rule := dup_res as UiReactWireRule
 	if not bool(mutator.call(new_rule)):
@@ -94,7 +106,10 @@ static func try_commit_wire_slot_rebind(
 ) -> bool:
 	var mut: Callable = func(rule: UiReactWireRule) -> bool:
 		if not wprop in rule:
-			push_warning("Ui React: rule has no export %s" % str(wprop))
+			push_warning(
+				"Ui React: this rule has no Inspector field named %s. Refresh the graph or edit the rule type in the Inspector."
+				% str(wprop)
+			)
 			return false
 		rule.set(wprop, ui_st)
 		return true
@@ -117,9 +132,15 @@ static func try_commit_wire_edge_disconnect(
 	var mut2: Callable = func(rule: UiReactWireRule) -> bool:
 		if not in_prop in rule or not out_prop in rule:
 			if not in_prop in rule:
-				push_warning("Ui React: rule has no export %s" % str(in_prop))
+				push_warning(
+					"Ui React: this rule has no input field %s for clearing a link. Refresh the graph or pick another edge."
+					% str(in_prop)
+				)
 			if not out_prop in rule:
-				push_warning("Ui React: rule has no export %s" % str(out_prop))
+				push_warning(
+					"Ui React: this rule has no output field %s for clearing a link. Refresh the graph or pick another edge."
+					% str(out_prop)
+				)
 			return false
 		if rule.get(in_prop) == null and rule.get(out_prop) == null:
 			return false
@@ -274,18 +295,23 @@ static func try_commit_wire_rule_shallow_field(
 ) -> bool:
 	var desc := _find_shallow_field_descriptor(expected_class_name, prop)
 	if desc.is_empty():
-		push_warning("Ui React: shallow field not allowlisted: %s.%s" % [expected_class_name, prop])
+		push_warning(
+			"Ui React: quick-edit is not enabled for %s.%s. Edit that field on the Wire rules resource in the Inspector instead."
+			% [expected_class_name, prop]
+		)
 		return false
 	var kind := String(desc.get(&"kind", "")).strip_edges()
 	var max_len := int(desc.get(&"max_len", _SHALLOW_STRING_EXPORT_MAX_LEN))
 	if kind == _SHALLOW_FIELD_KIND_STRING:
 		if typeof(value) != TYPE_STRING:
-			push_warning("Ui React: shallow field expects String for %s." % prop)
+			push_warning(
+				"Ui React: that field must be text (String) for %s. Paste plain text, not another resource type." % prop
+			)
 			return false
 		var t: String = str(value).strip_edges()
 		if t.length() > max_len:
 			push_warning(
-				"Ui React: wire_rules[%d] %s exceeds max length (%d)."
+				"Ui React: wire_rules row %d — %s is longer than %d characters. Shorten the text or edit it in the Inspector."
 				% [rule_index, prop, max_len]
 			)
 			return false
@@ -308,7 +334,9 @@ static func try_commit_wire_rule_shallow_field(
 		)
 	if kind == _SHALLOW_FIELD_KIND_BOOL:
 		if typeof(value) != TYPE_BOOL:
-			push_warning("Ui React: shallow field expects bool for %s." % prop)
+			push_warning(
+				"Ui React: that toggle must be on or off (bool) for %s. Click the checkbox again or reset the field." % prop
+			)
 			return false
 		var b: bool = bool(value)
 		var b_copy := b
@@ -328,7 +356,10 @@ static func try_commit_wire_rule_shallow_field(
 			actions,
 			"Ui React: wire_rules[%d] %s" % [rule_index, prop],
 		)
-	push_warning("Ui React: unsupported shallow field kind for %s.%s: %s" % [expected_class_name, prop, kind])
+	push_warning(
+		"Ui React: unsupported field kind “%s” for %s.%s. Update the addon or edit this rule only in the Inspector."
+		% [kind, expected_class_name, prop]
+	)
 	return false
 
 
@@ -354,7 +385,9 @@ static func try_commit_wire_rule_id(
 ) -> bool:
 	var trimmed := new_id.strip_edges()
 	if trimmed.is_empty():
-		push_warning("Ui React: rule_id cannot be empty after trim.")
+		push_warning(
+			"Ui React: Rule id cannot be empty after trimming spaces. Enter a short id or cancel the rename."
+		)
 		return false
 	var mut3: Callable = func(rule: UiReactWireRule) -> bool:
 		if rule.rule_id == trimmed:
@@ -397,7 +430,10 @@ static func try_commit_wire_rule_trigger(
 	actions: UiReactActionController,
 ) -> bool:
 	if not _is_valid_trigger_ordinal(trigger_ordinal):
-		push_warning("Ui React: invalid wire rule trigger ordinal: %d" % trigger_ordinal)
+		push_warning(
+			"Ui React: that trigger value (%d) is not valid for wire rules. Pick Text changed or Selection changed from the menu."
+			% trigger_ordinal
+		)
 		return false
 	var ord_copy := trigger_ordinal
 	var mut_tr: Callable = func(rule: UiReactWireRule) -> bool:
@@ -445,7 +481,9 @@ static func try_commit_append_wire_rule_with_in(
 		return false
 	var in_prop := first_wire_in_property(rule)
 	if in_prop == &"":
-		push_warning("Ui React: wire rule has no input export to assign.")
+		push_warning(
+			"Ui React: this wire rule template has no empty input slot to receive a state. Pick another template or wire manually in the Inspector."
+		)
 		return false
 	var arr := duplicate_wire_rules_array(host)
 	if rule.rule_id.is_empty():

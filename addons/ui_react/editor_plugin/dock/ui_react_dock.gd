@@ -8,8 +8,12 @@ const TAB_DIAGNOSTICS := 0
 const TAB_WIRING := 1
 const _DIAG_TAB_BASE := "Diagnostics"
 
-const _EMPTY_ISSUES_NO_DIAGNOSTICS := "No issues reported for the current scan."
-const _EMPTY_ISSUES_FILTERED := "No issues match the current filters or search."
+const _EMPTY_ISSUES_NO_DIAGNOSTICS := (
+	"No issues reported for the current scan—either the scene is clean or nothing matched the scan scope."
+)
+const _EMPTY_ISSUES_FILTERED := (
+	"No issues match the current filters or search; try clearing the search box or changing severity filters or group mode."
+)
 
 ## Blocks save callbacks while applying persisted values (avoids duplicate writes / refresh loops).
 var _suppress_pref_save: bool = false
@@ -574,8 +578,8 @@ func refresh() -> void:
 				UiReactDiagnosticModel.Severity.INFO,
 				"",
 				"",
-				"Open a scene in the editor, then click Rescan.",
-				"Diagnostics use the active edited scene. Open one from the Scene or FileSystem dock, or switch to its tab if it's already open, then press Rescan.",
+				"No edited scene is open, so Diagnostics has nothing to scan.",
+				"Open a scene from the Scene or FileSystem dock (or click its tab), then click Rescan in this dock.",
 				NodePath(),
 				&"",
 				&"",
@@ -609,8 +613,8 @@ func refresh() -> void:
 				UiReactDiagnosticModel.Severity.INFO,
 				"",
 				"",
-				"Change scan scope or add Ui React nodes, then click Rescan.",
-				"Use Scan for Entire scene or Selection. Entire scene covers all Ui React nodes in the open scene; Selection follows your current selection and its subtree. Add Ui React components, adjust the selection, or switch scan mode, then press Rescan.",
+				"This scan found no Ui React controls in the current scope.",
+				"Switch Scan to Entire scene or widen your selection, add Ui React nodes to the scene, then click Rescan.",
 				NodePath(),
 				&"",
 				&"",

@@ -48,7 +48,10 @@ static func build_issues(output_dir: String, root: Node) -> Array[UiReactDiagnos
 	var candidates: Array[String] = []
 	var list_err := da.list_dir_begin()
 	if list_err != OK:
-		push_warning("UiReactUnusedStateService: list_dir_begin failed (%s) for %s" % [list_err, dir_trim])
+		push_warning(
+			"Ui React: could not list files in the state output folder %s (error %s). Check the folder path and permissions, then Rescan."
+			% [dir_trim, list_err]
+		)
 		return issues
 	var entry := da.get_next()
 	while entry != "":

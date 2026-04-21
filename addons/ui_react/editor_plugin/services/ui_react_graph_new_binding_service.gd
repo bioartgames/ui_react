@@ -22,7 +22,10 @@ static func try_commit_clear_binding_export(
 	if host == null or actions == null or prop == &"":
 		return false
 	if not binding_export_is_optional(component, prop):
-		push_warning("Ui React: graph clear refused — %s is not an optional binding for this control." % str(prop))
+		push_warning(
+			"Ui React: cannot clear %s from the graph because it is required for this control. Clear it in the Inspector only if the registry marks it optional."
+			% str(prop)
+		)
 		return false
 	if not prop in host:
 		return false
@@ -95,7 +98,10 @@ static func try_commit_assign(
 	if not prop in host:
 		return false
 	if host.get(prop) != null:
-		push_warning("Ui React: graph assign refused — %s is not empty." % str(prop))
+		push_warning(
+			"Ui React: cannot assign to %s because it already has a resource. Clear or replace that binding in the Inspector first."
+			% str(prop)
+		)
 		return false
 	var kind: String = ""
 	var bindings: Array = UiReactComponentRegistry.BINDINGS_BY_COMPONENT.get(component, [])
@@ -107,7 +113,10 @@ static func try_commit_assign(
 		component, prop, kind, host
 	)
 	if not UiReactBindingValidator._binding_type_ok(donor, expected, component, prop):
-		push_warning("Ui React: graph assign refused — type mismatch for %s." % str(prop))
+		push_warning(
+			"Ui React: that state type does not match %s for this control. Drag a compatible UiState or fix the binding kind in the Inspector."
+			% str(prop)
+		)
 		return false
 	actions.assign_property_variant(
 		host,

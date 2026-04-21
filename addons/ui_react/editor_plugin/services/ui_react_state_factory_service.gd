@@ -36,7 +36,9 @@ static func instantiate_state(state_class: StringName) -> Resource:
 		"UiArrayState":
 			return UiArrayState.new([])
 		_:
-			push_warning("UiReactStateFactoryService: unknown or non-instantiable state class %s" % state_class)
+			push_warning(
+				"Ui React: unknown state type %s. Pick a supported UiState class from the dock or docs." % state_class
+			)
 			return null
 
 
@@ -57,7 +59,10 @@ static func build_unique_file_path(output_dir: String, node_name: String, proper
 		if not _resource_file_exists(candidate):
 			return candidate
 		i += 1
-	push_error("UiReactStateFactoryService: could not find free filename for base %s" % base)
+	push_error(
+		"Ui React: could not find a free file name for %s after many tries. Clear old files in the output folder or change the path."
+		% base
+	)
 	return first
 
 
@@ -79,6 +84,9 @@ static func _sanitize(s: String) -> String:
 static func save_and_reload(resource: Resource, path: String) -> Resource:
 	var err := ResourceSaver.save(resource, path)
 	if err != OK:
-		push_error("UiReactStateFactoryService: failed to save %s (error %d)" % [path, err])
+		push_error(
+			"Ui React: failed to save state to %s (error %d). Check disk space and that the folder is writable."
+			% [path, err]
+		)
 		return null
 	return ResourceLoader.load(path)

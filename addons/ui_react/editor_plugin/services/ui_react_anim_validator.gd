@@ -23,8 +23,8 @@ static func validate_anim_targets(
 					UiReactDiagnosticModel.Severity.WARNING,
 					component,
 					str(owner.name),
-					"animation_targets[%d] is null." % i,
-					"Remove the empty array element or assign a UiAnimTarget.",
+					"Animation targets row %d is empty (null)." % i,
+					"In the Inspector, remove that row or assign a UiAnimTarget resource.",
 					node_path,
 					&"animation_targets",
 					&"",
@@ -47,8 +47,8 @@ static func validate_anim_targets(
 					UiReactDiagnosticModel.Severity.WARNING,
 					component,
 					str(owner.name),
-					"UiAnimTarget #%d has no Target NodePath." % i,
-					"Assign Target (drag a Control) or remove this entry.",
+					"Motion row %d has no target control picked." % i,
+					"In the Inspector, drag a Control into Target, or remove this row if you do not need it.",
 					node_path,
 					&"animation_targets",
 					&"",
@@ -65,8 +65,8 @@ static func validate_anim_targets(
 						UiReactDiagnosticModel.Severity.ERROR,
 						component,
 						str(owner.name),
-						"UiAnimTarget #%d Target '%s' could not be resolved." % [i, at.target],
-						"Fix the NodePath relative to this control.",
+						"Motion row %d points at a node that is not found: %s." % [i, at.target],
+						"Fix the target path in the Inspector (path is relative to this control), or pick the node again by dragging.",
 						node_path,
 						&"animation_targets",
 						&"",
@@ -81,8 +81,8 @@ static func validate_anim_targets(
 						UiReactDiagnosticModel.Severity.ERROR,
 						component,
 						str(owner.name),
-						"UiAnimTarget #%d Target is not a Control." % i,
-						"Point Target at a Control node.",
+						"Motion row %d target is not a Control node." % i,
+						"Pick a Control (or a child Control) in the Target field.",
 						node_path,
 						&"animation_targets",
 						&"",
@@ -103,11 +103,13 @@ static func validate_anim_targets(
 					component,
 					str(owner.name),
 					(
-						"UiAnimTarget #%d uses Trigger %s on %s, which this control never dispatches."
-						% [i, UiReactValidatorCommon.format_anim_trigger_name(at.trigger), component]
+						"Motion row %d uses trigger %s, but this control does not fire that signal."
+						% [i, UiReactValidatorCommon.format_anim_trigger_name(at.trigger)]
 					),
-					"Supported triggers for %s: %s."
-					% [component, UiReactValidatorCommon.format_allowed_anim_triggers_hint(component)],
+					(
+						"For %s, use one of the supported triggers: %s."
+						% [component, UiReactValidatorCommon.format_allowed_anim_triggers_hint(component)]
+					),
 					node_path,
 					&"animation_targets",
 					&"",
@@ -124,8 +126,8 @@ static func validate_anim_targets(
 						UiReactDiagnosticModel.Severity.ERROR,
 						component,
 						str(owner.name),
-						"UiAnimTarget #%d selection_slot (%d) >= item_count (%d)." % [i, at.selection_slot, il.item_count],
-						"Use selection_slot in 0..item_count-1, or -1 for non-row targets.",
+						"Motion row %d is tied to list row %d, but the list only has %d rows." % [i, at.selection_slot, il.item_count],
+						"Set Selection slot to a valid index (0 .. last row), or -1 if this motion is not row-specific.",
 						node_path,
 						&"animation_targets",
 						&"",
@@ -141,8 +143,8 @@ static func validate_anim_targets(
 						UiReactDiagnosticModel.Severity.ERROR,
 						component,
 						str(owner.name),
-						"UiAnimTarget #%d selection_slot (%d) >= visible row count (%d)." % [i, at.selection_slot, vc],
-						"Use selection_slot in 0..visible_row_count-1, or -1 for non-row targets.",
+						"Motion row %d is tied to tree row %d, but only %d visible rows exist." % [i, at.selection_slot, vc],
+						"Set Selection slot to a valid visible row index, or -1 if this motion is not row-specific.",
 						node_path,
 						&"animation_targets",
 						&"",

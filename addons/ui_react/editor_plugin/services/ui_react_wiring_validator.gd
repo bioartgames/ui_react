@@ -30,8 +30,8 @@ static func validate_wire_rules(
 					owner,
 					node_path,
 					i,
-					"is null; remove the empty slot.",
-					"Remove the array element or assign a UiReactWireRule subresource.",
+					"this row is empty.",
+					"Remove the row in the Inspector or assign a wire rule subresource.",
 				)
 			)
 			continue
@@ -42,8 +42,8 @@ static func validate_wire_rules(
 					owner,
 					node_path,
 					i,
-					"must be a UiReactWireRule (got %s)." % UiReactValidatorCommon.variant_type_name(item),
-					"Assign a UiReactWireRule subresource (MapIntToString, RefreshItemsFromCatalog, SortArrayByKey, CopySelectionDetail, SetStringOnBoolPulse, SyncBoolStateDebugLine).",
+					"this slot is not a wire rule resource (found %s)." % UiReactValidatorCommon.variant_type_name(item),
+					"Assign a supported wire rule type (map int to string, refresh list from catalog, sort array, copy selection text, set string on pulse, or debug line sync).",
 				)
 			)
 			continue
@@ -55,8 +55,8 @@ static func validate_wire_rules(
 					owner,
 					node_path,
 					i,
-					"rule is disabled; helper skips binding and apply.",
-					"Enable the rule in the inspector or remove the slot if unused.",
+					"this rule is turned off, so it will not run.",
+					"Enable the rule in the Inspector or remove the row if you do not need it.",
 				)
 			)
 		if rule is UiReactWireMapIntToString:
@@ -90,8 +90,8 @@ static func validate_wire_rules(
 					owner,
 					node_path,
 					i,
-					"unsupported concrete wire rule class for editor validation.",
-					"Use a documented rule type or extend UiReactWiringValidator.",
+					"this rule type is not covered by editor checks yet.",
+					"Use a built-in wire rule type from the docs, or ask a maintainer to add validation for custom rules.",
 				)
 			)
 	return out
@@ -124,10 +124,10 @@ static func _collect_cross_node_duplicate_rules(
 								"UiReactWireRuleHelper",
 								str(n.name),
 								(
-									"wire_rules: same UiReactWireRule instance is also on %s; use one rule instance per host (docs/WIRING_LAYER.md)."
+									"Wire rules reuse the same rule resource as another control (%s); each control needs its own copy."
 									% prev_path
 								),
-								"Duplicate the subresource in the inspector or assign a separate rule per control.",
+								"Duplicate the wire rule subresource in the Inspector, or assign a separate rule resource per control.",
 								n.get_path(),
 								&"wire_rules",
 								&"",
@@ -146,24 +146,59 @@ static func _validate_wire_rule_map_int(
 ) -> Array[UiReactDiagnosticModel.DiagnosticIssue]:
 	var out: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
 	if rule.source_int_state == null:
-		out.append(_wire_rules_issue(component, owner, node_path, index_i, "source_int_state is required.", "Assign UiIntState."))
+		out.append(
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"the source number state is missing.",
+				"In the Inspector, assign Source int state to a UiIntState resource.",
+			)
+		)
 	elif not (rule.source_int_state is UiIntState):
 		out.append(
 			_wire_rules_issue(
-				component, owner, node_path, index_i, "source_int_state must be UiIntState.", "Assign a UiIntState resource."
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Source int state must be a UiIntState resource.",
+				"Pick a UiIntState resource for Source int state.",
 			)
 		)
 	if rule.target_string_state == null:
-		out.append(_wire_rules_issue(component, owner, node_path, index_i, "target_string_state is required.", "Assign UiStringState."))
+		out.append(
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"the target text state is missing.",
+				"In the Inspector, assign Target string state to a UiStringState resource.",
+			)
+		)
 	elif not (rule.target_string_state is UiStringState):
 		out.append(
 			_wire_rules_issue(
-				component, owner, node_path, index_i, "target_string_state must be UiStringState.", "Assign UiStringState."
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Target string state must be a UiStringState resource.",
+				"Pick a UiStringState for Target string state.",
 			)
 		)
 	if rule.hint_state != null and not (rule.hint_state is UiStringState):
 		out.append(
-			_wire_rules_issue(component, owner, node_path, index_i, "hint_state must be UiStringState when set.", "Assign UiStringState or clear.")
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Hint state must be a UiStringState when set.",
+				"Assign a UiStringState or clear Hint state.",
+			)
 		)
 	return out
 
@@ -173,15 +208,36 @@ static func _validate_wire_rule_refresh(
 ) -> Array[UiReactDiagnosticModel.DiagnosticIssue]:
 	var out: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
 	if rule.items_state == null:
-		out.append(_wire_rules_issue(component, owner, node_path, index_i, "items_state is required.", "Assign UiArrayState."))
+		out.append(
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"the list items state is missing.",
+				"In the Inspector, assign Items state to a UiArrayState resource.",
+			)
+		)
 	elif not (rule.items_state is UiArrayState):
 		out.append(
-			_wire_rules_issue(component, owner, node_path, index_i, "items_state must be UiArrayState.", "Assign UiArrayState.")
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Items state must be a UiArrayState resource.",
+				"Pick a UiArrayState for Items state.",
+			)
 		)
 	if rule.catalog == null:
 		out.append(
 			_wire_rules_issue(
-				component, owner, node_path, index_i, "catalog is required.", "Assign UiReactWireCatalogData (or subclass)."
+				component,
+				owner,
+				node_path,
+				index_i,
+				"the wire catalog resource is missing.",
+				"In the Inspector, assign Catalog to a UiReactWireCatalogData (or your subclass).",
 			)
 		)
 	elif not (rule.catalog is UiReactWireCatalogData):
@@ -191,26 +247,41 @@ static func _validate_wire_rule_refresh(
 				owner,
 				node_path,
 				index_i,
-				"catalog must be UiReactWireCatalogData.",
-				"Assign UiReactWireCatalogData or a game subclass.",
+				"Catalog must be a UiReactWireCatalogData resource.",
+				"Assign a catalog data resource or a game-specific subclass.",
 			)
 		)
 	if rule.filter_text_state != null and not (rule.filter_text_state is UiStringState):
 		out.append(
 			_wire_rules_issue(
-				component, owner, node_path, index_i, "filter_text_state must be UiStringState when set.", "Assign UiStringState or clear."
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Filter text state must be a UiStringState when set.",
+				"Assign a UiStringState or clear Filter text state.",
 			)
 		)
 	if rule.category_kind_state != null and not (rule.category_kind_state is UiStringState):
 		out.append(
 			_wire_rules_issue(
-				component, owner, node_path, index_i, "category_kind_state must be UiStringState when set.", "Assign UiStringState or clear."
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Category kind state must be a UiStringState when set.",
+				"Assign a UiStringState or clear Category kind state.",
 			)
 		)
 	if rule.selected_state != null and not (rule.selected_state is UiIntState):
 		out.append(
 			_wire_rules_issue(
-				component, owner, node_path, index_i, "selected_state must be UiIntState when set.", "Assign UiIntState or clear."
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Selected state must be a UiIntState when set.",
+				"Assign a UiIntState or clear Selected state.",
 			)
 		)
 	var icon_path := rule.first_row_icon_path.strip_edges()
@@ -221,8 +292,8 @@ static func _validate_wire_rule_refresh(
 				owner,
 				node_path,
 				index_i,
-				"first_row_icon_path should use a res:// path for stable editor/runtime loading.",
-				"Use a res:// texture path or clear the field.",
+				"First row icon path should start with res:// so the editor and game load the same file.",
+				"Use a project texture path (res://…) or clear First row icon path.",
 			)
 		)
 	_append_wire_text_len_issue(
@@ -237,27 +308,60 @@ static func _validate_wire_rule_sort_array_by_key(
 	var out: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
 	var items_st: Variant = rule.get(&"items_state")
 	if items_st == null:
-		out.append(_wire_rules_issue(component, owner, node_path, index_i, "items_state is required.", "Assign UiArrayState."))
+		out.append(
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"the list items state is missing.",
+				"In the Inspector, assign Items state to a UiArrayState resource.",
+			)
+		)
 	elif not (items_st is UiArrayState):
 		out.append(
 			_wire_rules_issue(
-				component, owner, node_path, index_i, "items_state must be UiArrayState.", "Assign UiArrayState."
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Items state must be a UiArrayState resource.",
+				"Pick a UiArrayState for Items state.",
 			)
 		)
 	var key_st: Variant = rule.get(&"sort_key_state")
 	if key_st == null:
-		out.append(_wire_rules_issue(component, owner, node_path, index_i, "sort_key_state is required.", "Assign UiStringState."))
+		out.append(
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"the sort key text state is missing.",
+				"In the Inspector, assign Sort key state to a UiStringState resource.",
+			)
+		)
 	elif not (key_st is UiStringState):
 		out.append(
 			_wire_rules_issue(
-				component, owner, node_path, index_i, "sort_key_state must be UiStringState.", "Assign UiStringState."
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Sort key state must be a UiStringState resource.",
+				"Pick a UiStringState for Sort key state.",
 			)
 		)
 	var desc_st: Variant = rule.get(&"descending_state")
 	if desc_st != null and not (desc_st is UiBoolState):
 		out.append(
 			_wire_rules_issue(
-				component, owner, node_path, index_i, "descending_state must be UiBoolState when set.", "Assign UiBoolState or clear."
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Descending state must be a UiBoolState when set.",
+				"Assign a UiBoolState or clear Descending state.",
 			)
 		)
 	if key_st is UiStringState:
@@ -269,8 +373,8 @@ static func _validate_wire_rule_sort_array_by_key(
 					owner,
 					node_path,
 					index_i,
-					"sort_key_state is empty after trim; apply() no-ops (no reorder).",
-					"Set a non-empty sort key string.",
+					"the sort key text is empty, so this rule will not reorder the list.",
+					"Set Sort key state to a non-empty string (the field name to sort by).",
 				)
 			)
 	return out
@@ -281,29 +385,69 @@ static func _validate_wire_rule_copy_detail(
 ) -> Array[UiReactDiagnosticModel.DiagnosticIssue]:
 	var out: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
 	if rule.detail_state == null:
-		out.append(_wire_rules_issue(component, owner, node_path, index_i, "detail_state is required.", "Assign UiStringState."))
+		out.append(
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"the detail text state is missing.",
+				"In the Inspector, assign Detail state to a UiStringState resource.",
+			)
+		)
 	elif not (rule.detail_state is UiStringState):
 		out.append(
 			_wire_rules_issue(
-				component, owner, node_path, index_i, "detail_state must be UiStringState.", "Assign UiStringState."
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Detail state must be a UiStringState resource.",
+				"Pick a UiStringState for Detail state.",
 			)
 		)
 	if rule.selected_state == null:
-		out.append(_wire_rules_issue(component, owner, node_path, index_i, "selected_state is required.", "Assign UiIntState."))
+		out.append(
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"the selected row index state is missing.",
+				"In the Inspector, assign Selected state to a UiIntState resource.",
+			)
+		)
 	elif not (rule.selected_state is UiIntState):
 		out.append(
-			_wire_rules_issue(component, owner, node_path, index_i, "selected_state must be UiIntState.", "Assign UiIntState.")
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Selected state must be a UiIntState resource.",
+				"Pick a UiIntState for Selected state.",
+			)
 		)
 	if rule.items_state != null and not (rule.items_state is UiArrayState):
 		out.append(
 			_wire_rules_issue(
-				component, owner, node_path, index_i, "items_state must be UiArrayState when set.", "Assign UiArrayState or clear."
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Items state must be a UiArrayState when set.",
+				"Assign a UiArrayState or clear Items state.",
 			)
 		)
 	if rule.suffix_note_state != null and not (rule.suffix_note_state is UiStringState):
 		out.append(
 			_wire_rules_issue(
-				component, owner, node_path, index_i, "suffix_note_state must be UiStringState when set.", "Assign UiStringState or clear."
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Suffix note state must be a UiStringState when set.",
+				"Assign a UiStringState or clear Suffix note state.",
 			)
 		)
 	_append_wire_text_len_issue(
@@ -317,16 +461,48 @@ static func _validate_wire_rule_bool_pulse(
 ) -> Array[UiReactDiagnosticModel.DiagnosticIssue]:
 	var out: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
 	if rule.pulse_bool == null:
-		out.append(_wire_rules_issue(component, owner, node_path, index_i, "pulse_bool is required.", "Assign UiBoolState."))
+		out.append(
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"the pulse bool state is missing.",
+				"In the Inspector, assign Pulse bool to a UiBoolState resource.",
+			)
+		)
 	elif not (rule.pulse_bool is UiBoolState):
 		out.append(
-			_wire_rules_issue(component, owner, node_path, index_i, "pulse_bool must be UiBoolState.", "Assign UiBoolState.")
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Pulse bool must be a UiBoolState resource.",
+				"Pick a UiBoolState for Pulse bool.",
+			)
 		)
 	if rule.target_string_state == null:
-		out.append(_wire_rules_issue(component, owner, node_path, index_i, "target_string_state is required.", "Assign UiStringState."))
+		out.append(
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"the target text state is missing.",
+				"In the Inspector, assign Target string state to a UiStringState resource.",
+			)
+		)
 	elif not (rule.target_string_state is UiStringState):
 		out.append(
-			_wire_rules_issue(component, owner, node_path, index_i, "target_string_state must be UiStringState.", "Assign UiStringState.")
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Target string state must be a UiStringState resource.",
+				"Pick a UiStringState for Target string state.",
+			)
 		)
 	var has_no_sel := not rule.template_no_selection.strip_edges().is_empty()
 	var has_rising := not rule.template_rising.strip_edges().is_empty()
@@ -337,38 +513,76 @@ static func _validate_wire_rule_bool_pulse(
 				owner,
 				node_path,
 				index_i,
-				"SetStringOnBoolPulse needs template_rising and/or template_no_selection.",
-				"Set at least one non-empty template string.",
+				"this rule needs at least one non-empty template (rising edge or no-selection).",
+				"In the Inspector, fill Template rising and/or Template no selection.",
 			)
 		)
 	if has_no_sel:
 		if rule.selected_state == null:
 			out.append(
 				_wire_rules_issue(
-					component, owner, node_path, index_i, "template_no_selection requires selected_state.", "Assign UiIntState for row lookup."
+					component,
+					owner,
+					node_path,
+					index_i,
+					"Template no selection needs a selected row index state.",
+					"Assign Selected state to a UiIntState used by your list.",
 				)
 			)
 		elif not (rule.selected_state is UiIntState):
 			out.append(
-				_wire_rules_issue(component, owner, node_path, index_i, "selected_state must be UiIntState.", "Assign UiIntState.")
+				_wire_rules_issue(
+					component,
+					owner,
+					node_path,
+					index_i,
+					"Selected state must be a UiIntState resource.",
+					"Pick a UiIntState for Selected state.",
+				)
 			)
 		if rule.items_state == null:
 			out.append(
 				_wire_rules_issue(
-					component, owner, node_path, index_i, "template_no_selection requires items_state.", "Assign UiArrayState for row lookup."
+					component,
+					owner,
+					node_path,
+					index_i,
+					"Template no selection needs the list items state.",
+					"Assign Items state to a UiArrayState your rows come from.",
 				)
 			)
 		elif not (rule.items_state is UiArrayState):
 			out.append(
-				_wire_rules_issue(component, owner, node_path, index_i, "items_state must be UiArrayState.", "Assign UiArrayState.")
+				_wire_rules_issue(
+					component,
+					owner,
+					node_path,
+					index_i,
+					"Items state must be a UiArrayState resource.",
+					"Pick a UiArrayState for Items state.",
+				)
 			)
 	if rule.selected_state != null and not (rule.selected_state is UiIntState):
 		out.append(
-			_wire_rules_issue(component, owner, node_path, index_i, "selected_state must be UiIntState when set.", "Assign UiIntState or clear.")
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Selected state must be a UiIntState when set.",
+				"Assign a UiIntState or clear Selected state.",
+			)
 		)
 	if rule.items_state != null and not (rule.items_state is UiArrayState):
 		out.append(
-			_wire_rules_issue(component, owner, node_path, index_i, "items_state must be UiArrayState when set.", "Assign UiArrayState or clear.")
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Items state must be a UiArrayState when set.",
+				"Assign a UiArrayState or clear Items state.",
+			)
 		)
 	_append_wire_text_len_issue(
 		out, component, owner, node_path, index_i, rule.template_rising, "template_rising"
@@ -384,16 +598,48 @@ static func _validate_wire_rule_bool_debug_line(
 ) -> Array[UiReactDiagnosticModel.DiagnosticIssue]:
 	var out: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
 	if rule.bool_state == null:
-		out.append(_wire_rules_issue(component, owner, node_path, index_i, "bool_state is required.", "Assign UiBoolState."))
+		out.append(
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"the bool state to mirror is missing.",
+				"In the Inspector, assign Bool state to a UiBoolState resource.",
+			)
+		)
 	elif not (rule.bool_state is UiBoolState):
 		out.append(
-			_wire_rules_issue(component, owner, node_path, index_i, "bool_state must be UiBoolState.", "Assign UiBoolState.")
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Bool state must be a UiBoolState resource.",
+				"Pick a UiBoolState for Bool state.",
+			)
 		)
 	if rule.target_string_state == null:
-		out.append(_wire_rules_issue(component, owner, node_path, index_i, "target_string_state is required.", "Assign UiStringState."))
+		out.append(
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"the target text state is missing.",
+				"In the Inspector, assign Target string state to a UiStringState resource.",
+			)
+		)
 	elif not (rule.target_string_state is UiStringState):
 		out.append(
-			_wire_rules_issue(component, owner, node_path, index_i, "target_string_state must be UiStringState.", "Assign UiStringState.")
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"Target string state must be a UiStringState resource.",
+				"Pick a UiStringState for Target string state.",
+			)
 		)
 	_append_wire_text_len_issue(
 		out, component, owner, node_path, index_i, rule.line_prefix, "line_prefix"
@@ -419,8 +665,8 @@ static func _append_wire_text_len_issue(
 			owner,
 			node_path,
 			index_i,
-			"%s exceeds max length (%d)." % [field_name, _WIRE_QUICK_EDIT_TEXT_MAX_LEN],
-			"Shorten the value.",
+			"%s is longer than the quick-edit limit (%d characters)." % [field_name, _WIRE_QUICK_EDIT_TEXT_MAX_LEN],
+			"Shorten that text in the Inspector, or edit it in an external file and paste a shorter snippet.",
 		)
 	)
 

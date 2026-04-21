@@ -32,7 +32,7 @@ static func format_anim_trigger_name(trigger: UiAnimTarget.Trigger) -> String:
 static func format_allowed_anim_triggers_hint(component: String) -> String:
 	var allowed: Array = get_allowed_anim_triggers(component)
 	if allowed.is_empty():
-		return "(none registered for this control)"
+		return "No motion triggers are registered for this control in the addon; animation rows may still be allowed."
 	var parts: PackedStringArray = PackedStringArray()
 	for t in allowed:
 		parts.append(format_anim_trigger_name(t as UiAnimTarget.Trigger))

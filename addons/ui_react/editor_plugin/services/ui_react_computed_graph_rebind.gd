@@ -84,24 +84,36 @@ static func _try_commit_sources_index(
 		return false
 	var c0: Variant = try_resolve_computed(host, computed_context)
 	if c0 == null:
-		push_warning("Ui React: could not resolve computed at context: %s" % computed_context)
+		push_warning(
+			"Ui React: could not find the computed resource for %s. Rescan the Wiring graph or reopen the scene."
+			% computed_context
+		)
 		return false
 	var raw: Variant = c0.get(&"sources")
 	if typeof(raw) != TYPE_ARRAY:
 		return false
 	var arr: Array = raw as Array
 	if source_index < 0 or source_index >= arr.size():
-		push_warning("Ui React: computed sources index out of range: %d" % source_index)
+		push_warning(
+			"Ui React: computed source slot %d is out of range. Refresh the graph or remove that slot in the Inspector."
+			% source_index
+		)
 		return false
 
 	var head: Dictionary = _parse_control_prefix(host, computed_context)
 	if head.is_empty() or not bool(head.get(&"ok", false)):
-		push_warning("Ui React: invalid computed_context for commit: %s" % computed_context)
+		push_warning(
+			"Ui React: internal graph path %s is not valid for this edit. Click Rescan on the Wiring tab and try again."
+			% computed_context
+		)
 		return false
 	var rest: String = str(head.get(&"rest", ""))
 	var first_child: Variant = head[&"next"]
 	if first_child == null and not rest.is_empty():
-		push_warning("Ui React: null path segment in computed_context: %s" % computed_context)
+		push_warning(
+			"Ui React: broken graph path %s (missing nested computed). Rescan the graph after fixing nested sources in the Inspector."
+			% computed_context
+		)
 		return false
 
 	var new_subtree: Variant
@@ -196,7 +208,10 @@ static func _try_commit_sources_array_mutation(
 		return false
 	var c0: Variant = try_resolve_computed(host, computed_context)
 	if c0 == null:
-		push_warning("Ui React: could not resolve computed at context: %s" % computed_context)
+		push_warning(
+			"Ui React: could not find the computed resource for %s. Rescan the Wiring graph or reopen the scene."
+			% computed_context
+		)
 		return false
 	var raw0: Variant = c0.get(&"sources")
 	if typeof(raw0) != TYPE_ARRAY:
@@ -204,12 +219,18 @@ static func _try_commit_sources_array_mutation(
 
 	var head: Dictionary = _parse_control_prefix(host, computed_context)
 	if head.is_empty() or not bool(head.get(&"ok", false)):
-		push_warning("Ui React: invalid computed_context for commit: %s" % computed_context)
+		push_warning(
+			"Ui React: internal graph path %s is not valid for this edit. Click Rescan on the Wiring tab and try again."
+			% computed_context
+		)
 		return false
 	var rest: String = str(head.get(&"rest", ""))
 	var first_child: Variant = head[&"next"]
 	if first_child == null and not rest.is_empty():
-		push_warning("Ui React: null path segment in computed_context: %s" % computed_context)
+		push_warning(
+			"Ui React: broken graph path %s (missing nested computed). Rescan the graph after fixing nested sources in the Inspector."
+			% computed_context
+		)
 		return false
 
 	var new_subtree: Variant
@@ -304,7 +325,10 @@ static func try_commit_append_or_fill_source(
 		return false
 	var c0: Variant = try_resolve_computed(host, computed_context)
 	if c0 == null:
-		push_warning("Ui React: could not resolve computed at context: %s" % computed_context)
+		push_warning(
+			"Ui React: could not find the computed resource for %s. Rescan the Wiring graph or reopen the scene."
+			% computed_context
+		)
 		return false
 	var raw: Variant = c0.get(&"sources")
 	if typeof(raw) != TYPE_ARRAY:
@@ -312,17 +336,26 @@ static func try_commit_append_or_fill_source(
 	var arr: Array = raw as Array
 	var idx := _source_index_for_fill_or_append(arr)
 	if idx < 0:
-		push_warning("Ui React: computed sources full or invalid (max %d)." % _MAX_COMPUTED_SOURCES)
+		push_warning(
+			"Ui React: this computed already has the maximum number of sources (%d). Remove one in the Inspector before adding another."
+			% _MAX_COMPUTED_SOURCES
+		)
 		return false
 
 	var head: Dictionary = _parse_control_prefix(host, computed_context)
 	if head.is_empty() or not bool(head.get(&"ok", false)):
-		push_warning("Ui React: invalid computed_context for commit: %s" % computed_context)
+		push_warning(
+			"Ui React: internal graph path %s is not valid for this edit. Click Rescan on the Wiring tab and try again."
+			% computed_context
+		)
 		return false
 	var rest: String = str(head.get(&"rest", ""))
 	var first_child: Variant = head[&"next"]
 	if first_child == null and not rest.is_empty():
-		push_warning("Ui React: null path segment in computed_context: %s" % computed_context)
+		push_warning(
+			"Ui React: broken graph path %s (missing nested computed). Rescan the graph after fixing nested sources in the Inspector."
+			% computed_context
+		)
 		return false
 
 	var new_subtree: Variant

@@ -19,7 +19,7 @@ static func escape_bbcode_literal(s: String) -> String:
 
 
 static func idle_placeholder_text() -> String:
-	return "Select a rule above to view its wiring story: intent, states, runtime bindings, and validation."
+	return "Pick a wire rule row above to see what it does, which states it uses, and how it runs on this control."
 
 
 static func build_details_bbcode(
@@ -60,7 +60,7 @@ static func _report_rows(
 	rows.append({&"label": &"Inputs", &"value": _val_inputs(rule)})
 	rows.append({&"label": &"Outputs", &"value": _val_outputs(rule)})
 	rows.append({&"label": &"Runtime notes", &"value": _val_runtime(rule, host)})
-	rows.append({&"label": &"Validation warnings", &"value": _validation_row_from_validator(rule_index, host, scene_root)})
+	rows.append({&"label": &"Checks", &"value": _validation_row_from_validator(rule_index, host, scene_root)})
 	return rows
 
 
@@ -115,21 +115,26 @@ static func _val_intent(rule: Variant, host: Node) -> String:
 	if rule == null:
 		return "—"
 	if rule is UiReactWireMapIntToString:
-		var hcls := host.get_class() if host else "—"
 		return (
-			"Map an integer source (tree/tab/option index) to a kind string and optional hint line. "
-			+ "Host control: %s." % hcls
+			"Shows a label string (and optional hint) from the current index on lists, tabs, or option menus. "
+			+ "Reads the control’s selection and your int-to-string map."
 		)
 	if rule is UiReactWireRefreshItemsFromCatalog:
-		return "Rebuild item rows from catalog using filter text and optional category; normalize selection index."
+		return (
+			"Rebuilds the item list from your catalog using filter text and optional category, then keeps the selection sensible."
+		)
 	if rule is UiReactWireCopySelectionDetail:
-		return "Format detail text from list/tab selection and row payloads; optional suffix line."
+		return (
+			"Fills a detail line from the selected row (and optional suffix), using the list or tab’s stored rows."
+		)
 	if rule is UiReactWireSetStringOnBoolPulse:
-		return "On bool pulse, write templated text using selected row placeholders."
+		return (
+			"Writes templated text into a string state when a bool pulses, optionally pulling fields from the selected row."
+		)
 	if rule is UiReactWireSyncBoolStateDebugLine:
-		return "Mirror a bool into a debug string line (prefix + value)."
+		return "Keeps a short debug string in sync with a bool (prefix plus on/off text)."
 	if _is_sort_array_by_key(rule):
-		return "Sort array rows by a dictionary key (or str compare for non-dict rows); optional descending."
+		return "Sorts the items array by a named field (or plain text for non-dictionary rows), with optional descending order."
 	return "—"
 
 
@@ -214,40 +219,37 @@ static func _val_runtime(rule: Variant, host: Node) -> String:
 		return "—"
 	if rule is UiReactWireMapIntToString:
 		var r := rule as UiReactWireMapIntToString
-		var hcls := host.get_class() if host else "—"
 		lines.append(
-			(
-				"- Host class %s: helper binds selection signals when the control supports them "
-				+ "(Tree / OptionButton / TabContainer) and source_int_state.changed."
-			)
-			% hcls
+			"- Listens for selection changes on supported controls and when the source int state changes."
 		)
 		if r.trigger != UiReactWireRule.TriggerKind.SELECTION_CHANGED:
-			lines.append("- Note: helper warns when trigger is not SELECTION_CHANGED for MapIntToString.")
+			lines.append(
+				"- Note: this rule type expects Trigger set to selection changed; other triggers are warned in Checks."
+			)
 	elif rule is UiReactWireRefreshItemsFromCatalog:
 		lines.append(
-			"- Helper binds trigger-appropriate host signals plus filter_text_state and category_kind_state changes."
+			"- Listens for the right control signals for its trigger, and when filter or category text changes."
 		)
 	elif _is_sort_array_by_key(rule):
 		lines.append(
-			"- State-driven only: items_state, sort_key_state, descending_state changed (trigger ignored for binding)."
+			"- Runs when items, sort key, or descending bool change; the trigger field does not drive binding for this rule."
 		)
 	elif rule is UiReactWireCopySelectionDetail:
 		lines.append(
-			"- On selection path, suffix may clear before recompute when clear_suffix_on_selection_change is true."
+			"- When selection changes, it may clear the suffix first if you enabled that option, then rebuild the line."
 		)
-		lines.append("- Also listens to items_state and suffix_note_state changes.")
+		lines.append("- Also reacts when the items list or suffix note state changes.")
 	elif rule is UiReactWireSetStringOnBoolPulse:
 		lines.append(
-			"- Bound to pulse_bool value_changed; apply() is a no-op, work happens in apply_from_pulse()."
+			"- Listens for changes on the pulse bool; the rule’s main work runs on that pulse, not on a generic apply step."
 		)
 	elif rule is UiReactWireSyncBoolStateDebugLine:
-		lines.append("- Runs once at attach and on bool_state value_changed when bool_state is set.")
+		lines.append("- Runs when the control attaches and whenever the watched bool changes.")
 	else:
 		return "—"
 	if rule is UiReactWireRule:
 		lines.append(
-			"- Rule order in wire_rules matters (e.g. sort before copy-detail on the same host; see WIRING_LAYER.md §6)."
+			"- Rule order on this control matters (for example, sort the list before copying detail text from it)."
 		)
 	return "\n".join(lines)
 

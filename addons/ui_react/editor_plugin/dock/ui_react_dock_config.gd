@@ -44,7 +44,10 @@ static func save_ui_preference(key: String, value: Variant) -> void:
 	ProjectSettings.set_setting(key, value)
 	var err := ProjectSettings.save()
 	if err != OK:
-		push_warning("UiReactDockConfig: could not save project settings (%s)" % key)
+		push_warning(
+			"Ui React: could not save project settings for %s. Use Project → Project Settings… → Save, then retry the dock action."
+			% key
+		)
 
 
 static func save_wiring_restore_state(scene_path: String, scope_node_path: String, graph_node_id: String) -> void:
@@ -53,7 +56,9 @@ static func save_wiring_restore_state(scene_path: String, scope_node_path: Strin
 	ProjectSettings.set_setting(KEY_WIRING_LAST_GRAPH_NODE_ID, graph_node_id)
 	var err := ProjectSettings.save()
 	if err != OK:
-		push_warning("UiReactDockConfig: could not save wiring restore state")
+		push_warning(
+			"Ui React: could not save wiring session restore data. Save Project Settings from the Project menu, then reopen the Wiring tab."
+		)
 
 
 static func register_default_project_settings() -> void:
@@ -109,7 +114,9 @@ static func register_default_project_settings() -> void:
 	if added_defaults:
 		var err := ProjectSettings.save()
 		if err != OK:
-			push_warning("UiReactDockConfig: could not save default project settings")
+			push_warning(
+				"Ui React: could not save default Ui React project settings. Save Project Settings manually, then restart the editor if it persists."
+			)
 
 
 static func load_into(dock: UiReactDock) -> void:
@@ -236,7 +243,9 @@ static func save_graph_scope_presets_raw(arr: Array) -> void:
 	ProjectSettings.set_setting(KEY_GRAPH_SCOPE_PRESETS, JSON.stringify(serial))
 	var err := ProjectSettings.save()
 	if err != OK:
-		push_warning("UiReactDockConfig: could not save graph scope presets")
+		push_warning(
+			"Ui React: could not save graph scope presets. Save Project Settings from the Project menu and try your preset change again."
+		)
 
 
 static func get_active_graph_scope_preset_name() -> String:
@@ -247,7 +256,9 @@ static func set_active_graph_scope_preset_name(preset_name: String) -> void:
 	ProjectSettings.set_setting(KEY_GRAPH_ACTIVE_SCOPE_PRESET, preset_name.strip_edges())
 	var err := ProjectSettings.save()
 	if err != OK:
-		push_warning("UiReactDockConfig: could not save active graph scope preset")
+		push_warning(
+			"Ui React: could not save the active graph scope preset name. Save Project Settings from the Project menu and retry."
+		)
 
 
 static func save_ignored_unused_state_paths_dict(paths: Dictionary) -> void:
@@ -263,4 +274,6 @@ static func save_ignored_unused_state_paths_dict(paths: Dictionary) -> void:
 	ProjectSettings.set_setting(KEY_IGNORED_UNUSED_STATE_PATHS, arr)
 	var err := ProjectSettings.save()
 	if err != OK:
-		push_warning("UiReactDockConfig: could not save ignored unused state paths")
+		push_warning(
+			"Ui React: could not save ignored unused-state paths. Save Project Settings from the Project menu and retry Ignore."
+		)
