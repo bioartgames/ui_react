@@ -136,17 +136,89 @@ static func try_commit_wire_edge_disconnect(
 
 
 const _SHALLOW_STRING_EXPORT_MAX_LEN := 2048
+const _SHALLOW_FIELD_KIND_STRING := &"string"
+const _SHALLOW_FIELD_KIND_BOOL := &"bool"
+const _SHALLOW_FIELD_APPLY_EXPLICIT := &"explicit"
+const _SHALLOW_FIELD_APPLY_IMMEDIATE := &"immediate"
 
-## Allowlisted [code]@export[/code] string fields for dock quick-edit (**[code]CB-058[/code]** shallow editor).
-const _SHALLOW_STRING_EXPORTS: Dictionary = {
-	&"UiReactWireCopySelectionDetail": [&"text_no_selection"],
-	&"UiReactWireSetStringOnBoolPulse": [&"template_rising", &"template_no_selection"],
-}
-
-## Allowlisted bool fields for dock quick-edit.
-const _SHALLOW_BOOL_EXPORTS: Dictionary = {
-	&"UiReactWireCopySelectionDetail": [&"clear_suffix_on_selection_change"],
-	&"UiReactWireSetStringOnBoolPulse": [&"require_rising_edge"],
+## Descriptor map for in-tab wire payload edits (CB-058 Milestone 2). Complex/nested fields stay Inspector-only.
+const _SHALLOW_FIELD_DESCRIPTORS_BY_CLASS: Dictionary = {
+	&"UiReactWireCopySelectionDetail": [
+		{
+			&"prop": &"text_no_selection",
+			&"label": "text_no_selection",
+			&"display_label": "Text when nothing is selected",
+			&"designer_help": "Message shown when the bound list has no selection. Use it for empty-state hints or instructions.",
+			&"kind": _SHALLOW_FIELD_KIND_STRING,
+			&"apply_mode": _SHALLOW_FIELD_APPLY_EXPLICIT,
+			&"max_len": _SHALLOW_STRING_EXPORT_MAX_LEN,
+			&"help": "Shown when there is no list selection.",
+		},
+		{
+			&"prop": &"clear_suffix_on_selection_change",
+			&"label": "clear_suffix_on_selection_change",
+			&"display_label": "Clear suffix when selection changes",
+			&"designer_help": "When enabled, the suffix note clears whenever the selected row changes so stale suffix text does not linger.",
+			&"kind": _SHALLOW_FIELD_KIND_BOOL,
+			&"apply_mode": _SHALLOW_FIELD_APPLY_IMMEDIATE,
+			&"help": "When true, clears suffix_note_state whenever selected_state changes.",
+		},
+	],
+	&"UiReactWireSetStringOnBoolPulse": [
+		{
+			&"prop": &"template_rising",
+			&"label": "template_rising",
+			&"display_label": "Text when pulse is true",
+			&"designer_help": "Template written when the watched bool becomes true. Placeholders {name}, {kind}, and {qty} come from the selected list row.",
+			&"kind": _SHALLOW_FIELD_KIND_STRING,
+			&"apply_mode": _SHALLOW_FIELD_APPLY_EXPLICIT,
+			&"max_len": _SHALLOW_STRING_EXPORT_MAX_LEN,
+			&"help": "Placeholders: {name}, {kind}, {qty} from selected row.",
+		},
+		{
+			&"prop": &"template_no_selection",
+			&"label": "template_no_selection",
+			&"display_label": "Text when no row is selected",
+			&"designer_help": "Used only when no list row is selected and this field is not empty. Lets you show a different message than the rising-edge template.",
+			&"kind": _SHALLOW_FIELD_KIND_STRING,
+			&"apply_mode": _SHALLOW_FIELD_APPLY_EXPLICIT,
+			&"max_len": _SHALLOW_STRING_EXPORT_MAX_LEN,
+			&"help": "Used when no row is selected and this template is non-empty.",
+		},
+		{
+			&"prop": &"require_rising_edge",
+			&"label": "require_rising_edge",
+			&"display_label": "Only on false → true",
+			&"designer_help": "When enabled, the rule runs only when the bool goes from false to true (a rising edge), not on every frame while it stays true.",
+			&"kind": _SHALLOW_FIELD_KIND_BOOL,
+			&"apply_mode": _SHALLOW_FIELD_APPLY_IMMEDIATE,
+			&"help": "When true, runs only on false→true pulse transitions.",
+		},
+	],
+	&"UiReactWireSyncBoolStateDebugLine": [
+		{
+			&"prop": &"line_prefix",
+			&"label": "line_prefix",
+			&"display_label": "Line prefix",
+			&"designer_help": "Optional text placed before the bool value when syncing into the target string state. Helps label debug lines.",
+			&"kind": _SHALLOW_FIELD_KIND_STRING,
+			&"apply_mode": _SHALLOW_FIELD_APPLY_EXPLICIT,
+			&"max_len": _SHALLOW_STRING_EXPORT_MAX_LEN,
+			&"help": "Text prepended to the bool value in target_string_state.",
+		}
+	],
+	&"UiReactWireRefreshItemsFromCatalog": [
+		{
+			&"prop": &"first_row_icon_path",
+			&"label": "first_row_icon_path",
+			&"display_label": "First row icon path",
+			&"designer_help": "Optional texture path for the icon on the first catalog row that passes the current filters. Leave empty to use the default.",
+			&"kind": _SHALLOW_FIELD_KIND_STRING,
+			&"apply_mode": _SHALLOW_FIELD_APPLY_EXPLICIT,
+			&"max_len": _SHALLOW_STRING_EXPORT_MAX_LEN,
+			&"help": "Optional icon path for the first row that passes current filters.",
+		}
+	],
 }
 
 
@@ -158,29 +230,41 @@ static func _rule_script_class_name(rule: UiReactWireRule) -> StringName:
 	return gn if String(gn) != "" else &""
 
 
-static func _shallow_export_prop_kind(expected_class_name: StringName, prop: StringName) -> int:
-	## Returns [code]0[/code] = string, [code]1[/code] = bool, [code]-1[/code] = not allowlisted.
+static func shallow_field_descriptors_for_class(rule_class_name: StringName) -> Array:
+	var out: Array = []
+	if rule_class_name == &"":
+		return out
+	var raw: Variant = _SHALLOW_FIELD_DESCRIPTORS_BY_CLASS.get(rule_class_name, null)
+	if raw is not Array:
+		return out
+	for it: Variant in raw as Array:
+		if it is Dictionary:
+			out.append((it as Dictionary).duplicate())
+	return out
+
+
+static func shallow_field_descriptors_for_rule(rule: UiReactWireRule) -> Array:
+	if rule == null:
+		return []
+	return shallow_field_descriptors_for_class(_rule_script_class_name(rule))
+
+
+static func _find_shallow_field_descriptor(
+	expected_class_name: StringName,
+	prop: StringName
+) -> Dictionary:
 	if expected_class_name == &"" or prop == &"":
-		return -1
-	var strs: Variant = _SHALLOW_STRING_EXPORTS.get(expected_class_name, null)
-	if strs is Array:
-		for p: Variant in strs as Array:
-			if p is StringName and p == prop:
-				return 0
-			if str(p) == str(prop):
-				return 0
-	var bools: Variant = _SHALLOW_BOOL_EXPORTS.get(expected_class_name, null)
-	if bools is Array:
-		for p2: Variant in bools as Array:
-			if p2 is StringName and p2 == prop:
-				return 1
-			if str(p2) == str(prop):
-				return 1
-	return -1
+		return {}
+	for d: Dictionary in shallow_field_descriptors_for_class(expected_class_name):
+		var dprop: Variant = d.get(&"prop", &"")
+		var dprop_sn: StringName = dprop if dprop is StringName else StringName(str(dprop))
+		if dprop_sn == prop:
+			return d
+	return {}
 
 
-## Undo-safe assign of allowlisted string/bool [code]@export[/code] on a duplicated wire rule (**[code]CB-058[/code]** shallow editor).
-static func try_commit_wire_rule_shallow_export(
+## Undo-safe assign of descriptor-allowlisted shallow field on a duplicated wire rule (CB-058 Milestone 2).
+static func try_commit_wire_rule_shallow_field(
 	host: Control,
 	rule_index: int,
 	expected_class_name: StringName,
@@ -188,19 +272,21 @@ static func try_commit_wire_rule_shallow_export(
 	value: Variant,
 	actions: UiReactActionController,
 ) -> bool:
-	var kind := _shallow_export_prop_kind(expected_class_name, prop)
-	if kind < 0:
-		push_warning("Ui React: shallow export not allowlisted: %s.%s" % [expected_class_name, prop])
+	var desc := _find_shallow_field_descriptor(expected_class_name, prop)
+	if desc.is_empty():
+		push_warning("Ui React: shallow field not allowlisted: %s.%s" % [expected_class_name, prop])
 		return false
-	if kind == 0:
+	var kind := String(desc.get(&"kind", "")).strip_edges()
+	var max_len := int(desc.get(&"max_len", _SHALLOW_STRING_EXPORT_MAX_LEN))
+	if kind == _SHALLOW_FIELD_KIND_STRING:
 		if typeof(value) != TYPE_STRING:
-			push_warning("Ui React: shallow export expects String for %s." % prop)
+			push_warning("Ui React: shallow field expects String for %s." % prop)
 			return false
 		var t: String = str(value).strip_edges()
-		if t.length() > _SHALLOW_STRING_EXPORT_MAX_LEN:
+		if t.length() > max_len:
 			push_warning(
 				"Ui React: wire_rules[%d] %s exceeds max length (%d)."
-				% [rule_index, prop, _SHALLOW_STRING_EXPORT_MAX_LEN]
+				% [rule_index, prop, max_len]
 			)
 			return false
 		var t_copy := t
@@ -220,9 +306,9 @@ static func try_commit_wire_rule_shallow_export(
 			actions,
 			"Ui React: wire_rules[%d] %s" % [rule_index, prop],
 		)
-	if kind == 1:
+	if kind == _SHALLOW_FIELD_KIND_BOOL:
 		if typeof(value) != TYPE_BOOL:
-			push_warning("Ui React: shallow export expects bool for %s." % prop)
+			push_warning("Ui React: shallow field expects bool for %s." % prop)
 			return false
 		var b: bool = bool(value)
 		var b_copy := b
@@ -242,7 +328,22 @@ static func try_commit_wire_rule_shallow_export(
 			actions,
 			"Ui React: wire_rules[%d] %s" % [rule_index, prop],
 		)
+	push_warning("Ui React: unsupported shallow field kind for %s.%s: %s" % [expected_class_name, prop, kind])
 	return false
+
+
+## Back-compat wrapper for prior shallow-export callers.
+static func try_commit_wire_rule_shallow_export(
+	host: Control,
+	rule_index: int,
+	expected_class_name: StringName,
+	prop: StringName,
+	value: Variant,
+	actions: UiReactActionController,
+) -> bool:
+	return try_commit_wire_rule_shallow_field(
+		host, rule_index, expected_class_name, prop, value, actions
+	)
 
 
 static func try_commit_wire_rule_id(

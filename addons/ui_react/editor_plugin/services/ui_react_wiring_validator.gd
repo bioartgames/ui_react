@@ -2,6 +2,7 @@
 class_name UiReactWiringValidator
 extends RefCounted
 
+const _WIRE_QUICK_EDIT_TEXT_MAX_LEN := 2048
 const _SCRIPT_WIRE_SORT_ARRAY_BY_KEY := "res://addons/ui_react/scripts/api/models/ui_react_wire_sort_array_by_key.gd"
 
 
@@ -212,6 +213,21 @@ static func _validate_wire_rule_refresh(
 				component, owner, node_path, index_i, "selected_state must be UiIntState when set.", "Assign UiIntState or clear."
 			)
 		)
+	var icon_path := rule.first_row_icon_path.strip_edges()
+	if not icon_path.is_empty() and not icon_path.begins_with("res://"):
+		out.append(
+			_wire_rules_issue(
+				component,
+				owner,
+				node_path,
+				index_i,
+				"first_row_icon_path should use a res:// path for stable editor/runtime loading.",
+				"Use a res:// texture path or clear the field.",
+			)
+		)
+	_append_wire_text_len_issue(
+		out, component, owner, node_path, index_i, rule.first_row_icon_path, "first_row_icon_path"
+	)
 	return out
 
 
@@ -290,6 +306,9 @@ static func _validate_wire_rule_copy_detail(
 				component, owner, node_path, index_i, "suffix_note_state must be UiStringState when set.", "Assign UiStringState or clear."
 			)
 		)
+	_append_wire_text_len_issue(
+		out, component, owner, node_path, index_i, rule.text_no_selection, "text_no_selection"
+	)
 	return out
 
 
@@ -351,6 +370,12 @@ static func _validate_wire_rule_bool_pulse(
 		out.append(
 			_wire_rules_issue(component, owner, node_path, index_i, "items_state must be UiArrayState when set.", "Assign UiArrayState or clear.")
 		)
+	_append_wire_text_len_issue(
+		out, component, owner, node_path, index_i, rule.template_rising, "template_rising"
+	)
+	_append_wire_text_len_issue(
+		out, component, owner, node_path, index_i, rule.template_no_selection, "template_no_selection"
+	)
 	return out
 
 
@@ -370,7 +395,34 @@ static func _validate_wire_rule_bool_debug_line(
 		out.append(
 			_wire_rules_issue(component, owner, node_path, index_i, "target_string_state must be UiStringState.", "Assign UiStringState.")
 		)
+	_append_wire_text_len_issue(
+		out, component, owner, node_path, index_i, rule.line_prefix, "line_prefix"
+	)
 	return out
+
+
+static func _append_wire_text_len_issue(
+	out: Array[UiReactDiagnosticModel.DiagnosticIssue],
+	component: String,
+	owner: Control,
+	node_path: NodePath,
+	index_i: int,
+	value: String,
+	field_name: String
+) -> void:
+	var t := value.strip_edges()
+	if t.length() <= _WIRE_QUICK_EDIT_TEXT_MAX_LEN:
+		return
+	out.append(
+		_wire_rules_issue(
+			component,
+			owner,
+			node_path,
+			index_i,
+			"%s exceeds max length (%d)." % [field_name, _WIRE_QUICK_EDIT_TEXT_MAX_LEN],
+			"Shorten the value.",
+		)
+	)
 
 
 static func _wire_rules_issue(

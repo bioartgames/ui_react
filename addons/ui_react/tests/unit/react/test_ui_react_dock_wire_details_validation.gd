@@ -102,3 +102,46 @@ func test_disabled_rule_emits_validator_copy_in_details() -> void:
 	var plain := UiReactDockWireDetails.build_details_plain_text(rule, 0, host, root)
 	assert_true(plain.contains("disabled"))
 	assert_true(plain.contains("wire_rules[0]:"))
+
+
+func test_refresh_rule_warns_on_non_res_icon_path() -> void:
+	var root := Control.new()
+	var host := UiReactItemList.new()
+	add_child_autofree(root)
+	root.add_child(host)
+	host.name = "ItemList"
+	var rule := UiReactWireRefreshItemsFromCatalog.new()
+	rule.items_state = UiArrayState.new([])
+	rule.catalog = UiReactWireCatalogData.new()
+	rule.first_row_icon_path = "user://icon.png"
+	host.wire_rules = [rule]
+	var issues := UiReactWiringValidator.validate_wire_rules("UiReactItemList", host, NodePath("ItemList"))
+	var found := false
+	for it in issues:
+		if String(it.issue_text).contains("first_row_icon_path"):
+			found = true
+			break
+	assert_true(found)
+
+
+func test_sync_bool_debug_line_warns_when_line_prefix_too_long() -> void:
+	var root := Control.new()
+	var host := UiReactItemList.new()
+	add_child_autofree(root)
+	root.add_child(host)
+	host.name = "ItemList"
+	var rule := UiReactWireSyncBoolStateDebugLine.new()
+	rule.bool_state = UiBoolState.new(false)
+	rule.target_string_state = UiStringState.new("")
+	var long_prefix := ""
+	for i: int in range(2100):
+		long_prefix += "x"
+	rule.line_prefix = long_prefix
+	host.wire_rules = [rule]
+	var issues := UiReactWiringValidator.validate_wire_rules("UiReactItemList", host, NodePath("ItemList"))
+	var found := false
+	for it in issues:
+		if String(it.issue_text).contains("line_prefix exceeds max length"):
+			found = true
+			break
+	assert_true(found)

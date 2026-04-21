@@ -70,6 +70,7 @@ func focus_rule_index(idx: int) -> void:
 	if idx < 0 or idx >= arr.size():
 		return
 	if _selected_rule_index == idx:
+		_sync_shallow_editor_to_selection()
 		return
 	_selected_rule_index = idx
 	_rebuild_rule_rows(arr)
@@ -176,16 +177,29 @@ func _rebuild_rule_rows(arr: Array) -> void:
 		var item: Variant = arr[i]
 		_rules_container.add_child(_make_rule_row(i, item, arr.size()))
 	_update_rules_scroll_height(arr.size())
-	_sync_shallow_context()
+	_sync_shallow_editor_to_selection()
 
 
-func _sync_shallow_context() -> void:
+func _sync_shallow_editor_to_selection() -> void:
 	if _shallow_editor == null:
 		return
 	if _target == null:
 		_shallow_editor.clear()
 		return
 	_shallow_editor.set_context(_target as Control, _edited_scene_root, _selected_rule_index)
+
+
+## Sets list selection + highlight + shallow quick-edit; does not open the Inspector (use [code]_select_rule[/code] for that).
+func _select_row_for_quick_edit(index: int) -> void:
+	if _target == null:
+		return
+	var wr: Variant = _target.get(&"wire_rules")
+	var arr: Array = wr as Array if wr is Array else []
+	if index < 0 or index >= arr.size():
+		return
+	_selected_rule_index = index
+	_rebuild_rule_rows(arr)
+	_emit_rule_selection_changed()
 
 
 func _update_rules_scroll_height(rule_count: int) -> void:
@@ -222,7 +236,10 @@ func _make_rule_row(index: int, item: Variant, arr_size: int) -> Control:
 	sel_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sel_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	sel_btn.pressed.connect(func() -> void: _select_rule(fi))
-	sel_btn.tooltip_text = "Select this rule and open it in the Inspector."
+	sel_btn.tooltip_text = (
+		"Select this rule for quick edit below and open the rule resource in the Inspector. "
+		+ "Row controls (enable, trigger, order) also move quick edit to that row without opening the Inspector."
+	)
 	if index == _selected_rule_index:
 		var sel_style := StyleBoxFlat.new()
 		sel_style.bg_color = Color(0.25, 0.45, 0.75, 0.28)
@@ -341,8 +358,7 @@ func _on_row_enabled_toggled(index: int, enabled: bool) -> void:
 		_actions
 	):
 		return
-	_selected_rule_index = index
-	_last_emitted_rule_index = -2
+	_select_row_for_quick_edit(index)
 	if _after_wire_mutated.is_valid():
 		_after_wire_mutated.call()
 	else:
@@ -359,8 +375,7 @@ func _on_row_trigger_selected(index: int, trigger_ordinal: int) -> void:
 		_actions
 	):
 		return
-	_selected_rule_index = index
-	_last_emitted_rule_index = -2
+	_select_row_for_quick_edit(index)
 	if _after_wire_mutated.is_valid():
 		_after_wire_mutated.call()
 	else:

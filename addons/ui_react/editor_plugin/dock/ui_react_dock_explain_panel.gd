@@ -455,7 +455,7 @@ func _pin_graph_node_to_active_preset(node_id: String) -> void:
 		if _pinned_node_ids[i] == pid:
 			return
 	_pinned_node_ids.append(pid)
-	var arr: Array = UiReactDockConfig.load_graph_scope_presets_raw()
+	var arr: Array = UiReactDockExplainScopePresets.load_sorted_presets_raw()
 	var out: Array = []
 	var updated := false
 	for it: Variant in arr:
@@ -483,7 +483,7 @@ func _fill_scope_presets_list(presets_popup: PopupMenu) -> void:
 	)
 	var names: Array[String] = []
 	var about_by_name: Dictionary = {}
-	for it: Variant in UiReactDockConfig.load_graph_scope_presets_raw():
+	for it: Variant in UiReactDockExplainScopePresets.load_sorted_presets_raw():
 		if it is not Dictionary:
 			continue
 		var d: Dictionary = it as Dictionary
@@ -578,7 +578,7 @@ func _on_scope_update_current_preset_pressed() -> void:
 		return
 	var rec := _capture_current_scope_settings(n)
 	rec[&"about"] = UiReactDockExplainScopePresets.stored_about_for_preset_name(n)
-	var arr: Array = UiReactDockConfig.load_graph_scope_presets_raw()
+	var arr: Array = UiReactDockExplainScopePresets.load_sorted_presets_raw()
 	var out: Array = []
 	var found := false
 	for it: Variant in arr:
@@ -3410,6 +3410,13 @@ func _edge_details_summary_bb_plain(
 				wout,
 			]
 			plain += "Input export %s → output export %s (dock action row: rebind input/output).\n" % [win, wout]
+		var root_w: Node = null
+		if _plugin != null:
+			root_w = _plugin.get_editor_interface().get_edited_scene_root()
+		var qef := _wire_rule_quick_edit_fields_bb_plain(root_w, wh, wi)
+		if not qef[0].is_empty() or not qef[1].is_empty():
+			bb += qef[0]
+			plain += qef[1]
 
 	if from_id == _last_focus_id or to_id == _last_focus_id:
 		var rtf := UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
@@ -3419,6 +3426,43 @@ func _edge_details_summary_bb_plain(
 		)
 		bb += rtf[0]
 		plain += rtf[1]
+	return PackedStringArray([bb, plain])
+
+
+func _wire_rule_quick_edit_fields_bb_plain(
+	root: Node,
+	wire_host_path: String,
+	wire_rule_index: int
+) -> PackedStringArray:
+	if root == null or wire_host_path.is_empty() or wire_rule_index < 0:
+		return PackedStringArray(["", ""])
+	if not root.has_node(NodePath(wire_host_path)):
+		return PackedStringArray(["", ""])
+	var n: Node = root.get_node(NodePath(wire_host_path))
+	if not (n is Control):
+		return PackedStringArray(["", ""])
+	var wr: Variant = (n as Control).get(&"wire_rules")
+	var arr: Array = wr as Array if wr is Array else []
+	if wire_rule_index < 0 or wire_rule_index >= arr.size():
+		return PackedStringArray(["", ""])
+	var item: Variant = arr[wire_rule_index]
+	if item == null or not (item is UiReactWireRule):
+		return PackedStringArray(["", ""])
+	var rule := item as UiReactWireRule
+	var labels: PackedStringArray = PackedStringArray()
+	for d: Dictionary in _WireGraphEditScript.shallow_field_descriptors_for_rule(rule):
+		var label := String(d.get(&"label", d.get(&"prop", ""))).strip_edges()
+		if label.is_empty():
+			continue
+		labels.append(label)
+	if labels.is_empty():
+		return PackedStringArray(["", ""])
+	var joined := ", ".join(labels)
+	var head := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Quick edit fields")
+	var bb := head[0]
+	var plain := head[1]
+	bb += "Available in [b]Quick edit[/b]: [code]%s[/code].\n" % joined
+	plain += "Available in Quick edit: %s.\n" % joined
 	return PackedStringArray([bb, plain])
 
 
@@ -3945,7 +3989,7 @@ func _rebuild_scope_preset_dropdown() -> void:
 	_scope_preset_option.clear()
 	_scope_preset_option.add_item("Default")
 	_scope_preset_option.set_item_metadata(0, "")
-	_scope_presets_cache = UiReactDockConfig.load_graph_scope_presets_raw()
+	_scope_presets_cache = UiReactDockExplainScopePresets.load_sorted_presets_raw()
 	var names: Array[String] = []
 	for it: Variant in _scope_presets_cache:
 		if it is Dictionary:
@@ -4014,7 +4058,7 @@ func _commit_upsert_preset_activate(rec: Dictionary) -> void:
 	if raw_name.is_empty() or raw_name.to_lower() == "default":
 		push_warning("Ui React: choose a non-empty preset name other than “Default”.")
 		return
-	var arr: Array = UiReactDockConfig.load_graph_scope_presets_raw()
+	var arr: Array = UiReactDockExplainScopePresets.load_sorted_presets_raw()
 	var replaced := false
 	var out: Array = []
 	for it: Variant in arr:
@@ -4085,7 +4129,7 @@ func _on_scope_manage_pressed() -> void:
 	if _scope_manage_list == null or _scope_manage_dialog == null:
 		return
 	_scope_manage_list.clear()
-	for it: Variant in UiReactDockConfig.load_graph_scope_presets_raw():
+	for it: Variant in UiReactDockExplainScopePresets.load_sorted_presets_raw():
 		if it is not Dictionary:
 			continue
 		var d: Dictionary = it as Dictionary
@@ -4109,7 +4153,7 @@ func _on_scope_manage_delete_pressed() -> void:
 	if sel.is_empty():
 		return
 	var del_name := _scope_manage_list.get_item_text(sel[0])
-	var arr: Array = UiReactDockConfig.load_graph_scope_presets_raw()
+	var arr: Array = UiReactDockExplainScopePresets.load_sorted_presets_raw()
 	var out: Array = []
 	for it: Variant in arr:
 		if it is Dictionary:
@@ -4179,15 +4223,24 @@ func _popup_create_state_save_dialog(_for_assign: bool) -> void:
 		push_error("Ui React: could not create output folder: %s" % out_dir)
 		return
 	var base_node := "state"
-	var base_prop := _create_state_class_pending.to_lower()
+	var base_prop := ""
 	if _for_assign and not _create_assign_host_path.is_empty():
 		var root := _plugin.get_editor_interface().get_edited_scene_root()
 		if root != null and root.has_node(NodePath(_create_assign_host_path)):
 			var hn: Node = root.get_node(NodePath(_create_assign_host_path))
 			base_node = str(hn.name)
 			base_prop = str(_create_assign_prop)
-	var path := UiReactStateFactoryService.build_unique_file_path(out_dir, base_node, base_prop)
-	dlg.title = "Save new %s" % _create_state_class_pending
+	var path := _GraphFactoryScript.suggest_state_save_path(
+		_create_state_class_pending, out_dir, base_node, base_prop
+	)
+	if _for_assign and not _create_assign_prop.is_empty():
+		dlg.title = "Save new %s for %s.%s" % [
+			_create_state_class_pending,
+			base_node,
+			String(_create_assign_prop),
+		]
+	else:
+		dlg.title = "Save new %s" % _create_state_class_pending
 	dlg.current_path = path
 	dlg.popup_centered_ratio(0.55)
 

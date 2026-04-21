@@ -1,34 +1,23 @@
-## Dock quick-edit strip for allowlisted [code]wire_rules[/code] string/bool exports (**[code]CB-058[/code]**), under the rule list.
+## Dock quick-edit strip for descriptor-allowlisted [code]wire_rules[/code] fields (CB-058 Milestone 2).
 class_name UiReactDockWireRuleShallowEditor
 extends VBoxContainer
 
-const _CLASS_COPY := &"UiReactWireCopySelectionDetail"
-const _CLASS_PULSE := &"UiReactWireSetStringOnBoolPulse"
+const _FIELD_KIND_STRING := &"string"
+const _FIELD_KIND_BOOL := &"bool"
 
 var _actions: UiReactActionController
 var _after_wire_mutated: Callable = Callable()
 
 var _host: Control = null
 var _rule_index: int = -1
+var _rule_class_name: StringName = &""
 
-var _title_lbl: Label
-var _class_lbl: Label
 var _rule_id_edit: LineEdit
-var _rule_id_apply: Button
+var _fields_host: VBoxContainer
+var _empty_hint_lbl: Label
 
-var _sep: HSeparator
-var _block_copy: VBoxContainer
-var _text_no_sel_edit: LineEdit
-var _text_no_sel_apply: Button
-var _clear_suffix_cb: CheckBox
-
-var _block_pulse: VBoxContainer
-var _tpl_rising_edit: LineEdit
-var _tpl_rising_apply: Button
-var _tpl_no_sel_edit: LineEdit
-var _tpl_no_sel_apply: Button
-var _rising_edge_cb: CheckBox
-
+var _field_string_edits: Dictionary = {}
+var _field_bool_checks: Dictionary = {}
 var _syncing := false
 
 
@@ -44,17 +33,15 @@ func setup(
 func clear() -> void:
 	_host = null
 	_rule_index = -1
+	_rule_class_name = &""
 	visible = false
 	_syncing = true
-	if _rule_id_edit:
+	if _rule_id_edit != null:
 		_rule_id_edit.text = ""
-	if _text_no_sel_edit:
-		_text_no_sel_edit.text = ""
-	if _tpl_rising_edit:
-		_tpl_rising_edit.text = ""
-	if _tpl_no_sel_edit:
-		_tpl_no_sel_edit.text = ""
 	_syncing = false
+	_field_string_edits.clear()
+	_field_bool_checks.clear()
+	_rebuild_descriptor_rows([])
 
 
 func set_context(host: Control, _root: Node, rule_index: int) -> void:
@@ -73,32 +60,15 @@ func set_context(host: Control, _root: Node, rule_index: int) -> void:
 		clear()
 		return
 	var rule := item as UiReactWireRule
-	var sc: Script = rule.get_script() as Script
-	var gname := &""
-	if sc != null:
-		var gn: StringName = sc.get_global_name()
-		if String(gn) != "":
-			gname = gn
+	var gname := UiReactWireGraphEditService._rule_script_class_name(rule)
+	_rule_class_name = gname
 	visible = true
 	_syncing = true
-	_class_lbl.text = "Quick edit — %s" % String(gname) if gname != &"" else "Quick edit — (rule)"
 	_rule_id_edit.text = rule.rule_id
-	_block_copy.visible = rule is UiReactWireCopySelectionDetail
-	_block_pulse.visible = rule is UiReactWireSetStringOnBoolPulse
-	if rule is UiReactWireCopySelectionDetail:
-		var cd := rule as UiReactWireCopySelectionDetail
-		_text_no_sel_edit.text = cd.text_no_selection
-		_clear_suffix_cb.set_block_signals(true)
-		_clear_suffix_cb.button_pressed = cd.clear_suffix_on_selection_change
-		_clear_suffix_cb.set_block_signals(false)
-	if rule is UiReactWireSetStringOnBoolPulse:
-		var bp := rule as UiReactWireSetStringOnBoolPulse
-		_tpl_rising_edit.text = bp.template_rising
-		_tpl_no_sel_edit.text = bp.template_no_selection
-		_rising_edge_cb.set_block_signals(true)
-		_rising_edge_cb.button_pressed = bp.require_rising_edge
-		_rising_edge_cb.set_block_signals(false)
 	_syncing = false
+	var descriptors: Array = UiReactWireGraphEditService.shallow_field_descriptors_for_rule(rule)
+	_rebuild_descriptor_rows(descriptors)
+	_sync_descriptor_values(rule, descriptors)
 
 
 func _build_ui() -> void:
@@ -106,111 +76,156 @@ func _build_ui() -> void:
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	visible = false
 
-	_title_lbl = Label.new()
-	_title_lbl.text = "Quick edit (selected rule)"
-	_title_lbl.tooltip_text = "Subset of wire rule fields; full editing stays in the Inspector."
-	add_child(_title_lbl)
-
-	_class_lbl = Label.new()
-	_class_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	add_child(_class_lbl)
-
 	var rid_row := HBoxContainer.new()
 	rid_row.add_theme_constant_override(&"separation", 6)
 	rid_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var rid_lbl := Label.new()
-	rid_lbl.text = "rule_id"
-	rid_lbl.custom_minimum_size = Vector2(100, 0)
+	rid_lbl.text = "Rule id (stable)"
+	rid_lbl.tooltip_text = (
+		"Stable identifier for this rule. Graph edges reference it; keep it unique and avoid renaming "
+		+ "unless you update wiring that points at it."
+	)
+	rid_lbl.custom_minimum_size = Vector2(140, 0)
 	rid_row.add_child(rid_lbl)
 	_rule_id_edit = LineEdit.new()
 	_rule_id_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_rule_id_edit.placeholder_text = "Stable rule id"
+	_rule_id_edit.tooltip_text = rid_lbl.tooltip_text
+	_rule_id_edit.focus_exited.connect(_commit_rule_id_if_needed)
+	_rule_id_edit.text_submitted.connect(func(_s: String) -> void: _commit_rule_id_if_needed())
 	rid_row.add_child(_rule_id_edit)
-	_rule_id_apply = Button.new()
-	_rule_id_apply.text = "Apply"
-	_rule_id_apply.tooltip_text = "Apply rule_id (undoable). Cannot be empty."
-	_rule_id_apply.pressed.connect(_on_rule_id_apply_pressed)
-	rid_row.add_child(_rule_id_apply)
 	add_child(rid_row)
 
-	_sep = HSeparator.new()
-	add_child(_sep)
+	var sep := HSeparator.new()
+	add_child(sep)
 
-	_block_copy = VBoxContainer.new()
-	_block_copy.add_theme_constant_override(&"separation", 4)
-	_block_copy.visible = false
-	_block_copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	add_child(_block_copy)
+	_fields_host = VBoxContainer.new()
+	_fields_host.add_theme_constant_override(&"separation", 4)
+	_fields_host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	add_child(_fields_host)
 
-	var row_tns := HBoxContainer.new()
-	row_tns.add_theme_constant_override(&"separation", 6)
-	row_tns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var tns_lbl := Label.new()
-	tns_lbl.text = "text_no_selection"
-	tns_lbl.custom_minimum_size = Vector2(140, 0)
-	row_tns.add_child(tns_lbl)
-	_text_no_sel_edit = LineEdit.new()
-	_text_no_sel_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_text_no_sel_edit.tooltip_text = "Shown when there is no list selection."
-	row_tns.add_child(_text_no_sel_edit)
-	_text_no_sel_apply = Button.new()
-	_text_no_sel_apply.text = "Apply"
-	_text_no_sel_apply.pressed.connect(_on_text_no_selection_apply)
-	row_tns.add_child(_text_no_sel_apply)
-	_block_copy.add_child(row_tns)
+	_empty_hint_lbl = Label.new()
+	_empty_hint_lbl.text = "No extra quick-edit fields for this rule type."
+	_empty_hint_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_empty_hint_lbl.modulate = Color(1, 1, 1, 0.75)
+	_fields_host.add_child(_empty_hint_lbl)
 
-	_clear_suffix_cb = CheckBox.new()
-	_clear_suffix_cb.text = "clear_suffix_on_selection_change"
-	_clear_suffix_cb.tooltip_text = (
-		"When true, clears suffix_note_state whenever selected_state changes before recomputing detail."
-	)
-	_clear_suffix_cb.toggled.connect(_on_clear_suffix_toggled)
-	_block_copy.add_child(_clear_suffix_cb)
 
-	_block_pulse = VBoxContainer.new()
-	_block_pulse.add_theme_constant_override(&"separation", 4)
-	_block_pulse.visible = false
-	_block_pulse.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	add_child(_block_pulse)
+func _rebuild_descriptor_rows(descriptors: Array) -> void:
+	if _fields_host == null:
+		return
+	for i: int in range(_fields_host.get_child_count() - 1, -1, -1):
+		_fields_host.get_child(i).queue_free()
+	_field_string_edits.clear()
+	_field_bool_checks.clear()
+	if descriptors.is_empty():
+		_empty_hint_lbl = Label.new()
+		_empty_hint_lbl.text = "No extra quick-edit fields for this rule type."
+		_empty_hint_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_empty_hint_lbl.modulate = Color(1, 1, 1, 0.75)
+		_fields_host.add_child(_empty_hint_lbl)
+		return
+	_empty_hint_lbl = null
+	for desc: Dictionary in descriptors:
+		var kind := String(desc.get(&"kind", "")).strip_edges()
+		var prop_v: Variant = desc.get(&"prop", &"")
+		var prop: StringName = prop_v if prop_v is StringName else StringName(str(prop_v))
+		if prop == &"":
+			continue
+		if kind == _FIELD_KIND_STRING:
+			_add_string_field_row(desc, prop)
+		elif kind == _FIELD_KIND_BOOL:
+			_add_bool_field_row(desc, prop)
 
-	var row_tr := HBoxContainer.new()
-	row_tr.add_theme_constant_override(&"separation", 6)
-	row_tr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var tr_lbl := Label.new()
-	tr_lbl.text = "template_rising"
-	tr_lbl.custom_minimum_size = Vector2(140, 0)
-	row_tr.add_child(tr_lbl)
-	_tpl_rising_edit = LineEdit.new()
-	_tpl_rising_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_tpl_rising_edit.tooltip_text = "Placeholders: {name}, {kind}, {qty} from selected row."
-	row_tr.add_child(_tpl_rising_edit)
-	_tpl_rising_apply = Button.new()
-	_tpl_rising_apply.text = "Apply"
-	_tpl_rising_apply.pressed.connect(_on_template_rising_apply)
-	row_tr.add_child(_tpl_rising_apply)
-	_block_pulse.add_child(row_tr)
 
-	var row_tns2 := HBoxContainer.new()
-	row_tns2.add_theme_constant_override(&"separation", 6)
-	row_tns2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var tns2_lbl := Label.new()
-	tns2_lbl.text = "template_no_selection"
-	tns2_lbl.custom_minimum_size = Vector2(140, 0)
-	row_tns2.add_child(tns2_lbl)
-	_tpl_no_sel_edit = LineEdit.new()
-	_tpl_no_sel_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row_tns2.add_child(_tpl_no_sel_edit)
-	_tpl_no_sel_apply = Button.new()
-	_tpl_no_sel_apply.text = "Apply"
-	_tpl_no_sel_apply.pressed.connect(_on_template_no_selection_apply)
-	row_tns2.add_child(_tpl_no_sel_apply)
-	_block_pulse.add_child(row_tns2)
+func _desc_display_label(desc: Dictionary) -> String:
+	var dl: Variant = desc.get(&"display_label", "")
+	if dl is String and not (dl as String).is_empty():
+		return dl as String
+	var lb: Variant = desc.get(&"label", "")
+	if lb is String and not (lb as String).is_empty():
+		return lb as String
+	var pv: Variant = desc.get(&"prop", &"")
+	return str(pv)
 
-	_rising_edge_cb = CheckBox.new()
-	_rising_edge_cb.text = "require_rising_edge"
-	_rising_edge_cb.tooltip_text = "When true, only runs on false→true pulse_bool transition."
-	_rising_edge_cb.toggled.connect(_on_rising_edge_toggled)
-	_block_pulse.add_child(_rising_edge_cb)
+
+func _desc_designer_help(desc: Dictionary) -> String:
+	var dh: Variant = desc.get(&"designer_help", "")
+	if dh is String and not (dh as String).strip_edges().is_empty():
+		return (dh as String).strip_edges()
+	var hp: Variant = desc.get(&"help", "")
+	if hp is String:
+		return (hp as String).strip_edges()
+	return ""
+
+
+func _add_string_field_row(desc: Dictionary, prop: StringName) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override(&"separation", 6)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var label := Label.new()
+	label.text = _desc_display_label(desc)
+	label.custom_minimum_size = Vector2(140, 0)
+	var help := _desc_designer_help(desc)
+	if not help.is_empty():
+		label.tooltip_text = help
+	row.add_child(label)
+	var edit := LineEdit.new()
+	edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if not help.is_empty():
+		edit.tooltip_text = help
+		var short := help
+		if short.length() > 96:
+			short = short.substr(0, 93) + "…"
+		edit.placeholder_text = short
+	edit.focus_exited.connect(func() -> void: _commit_shallow_string_if_needed(prop, edit))
+	edit.text_submitted.connect(func(_s: String) -> void: _commit_shallow_string_if_needed(prop, edit))
+	row.add_child(edit)
+	_fields_host.add_child(row)
+	_field_string_edits[prop] = edit
+
+
+func _add_bool_field_row(desc: Dictionary, prop: StringName) -> void:
+	var cb := CheckBox.new()
+	cb.text = _desc_display_label(desc)
+	var help := _desc_designer_help(desc)
+	if not help.is_empty():
+		cb.tooltip_text = help
+	cb.toggled.connect(func(on: bool) -> void: _on_descriptor_bool_toggled(prop, on, cb))
+	_fields_host.add_child(cb)
+	_field_bool_checks[prop] = cb
+
+
+func _get_rule_at_index() -> UiReactWireRule:
+	if _host == null or _rule_index < 0:
+		return null
+	var wr: Variant = _host.get(&"wire_rules")
+	var arr: Array = wr as Array if wr is Array else []
+	if _rule_index >= arr.size():
+		return null
+	var item: Variant = arr[_rule_index]
+	return item as UiReactWireRule if item is UiReactWireRule else null
+
+
+func _sync_descriptor_values(rule: UiReactWireRule, descriptors: Array) -> void:
+	_syncing = true
+	for desc: Dictionary in descriptors:
+		var prop_v: Variant = desc.get(&"prop", &"")
+		var prop: StringName = prop_v if prop_v is StringName else StringName(str(prop_v))
+		if prop == &"" or not prop in rule:
+			continue
+		var kind := String(desc.get(&"kind", "")).strip_edges()
+		if kind == _FIELD_KIND_STRING and _field_string_edits.has(prop):
+			var edit: LineEdit = _field_string_edits[prop] as LineEdit
+			if edit != null:
+				edit.text = str(rule.get(prop))
+		elif kind == _FIELD_KIND_BOOL and _field_bool_checks.has(prop):
+			var cb: CheckBox = _field_bool_checks[prop] as CheckBox
+			if cb != null:
+				cb.set_block_signals(true)
+				cb.button_pressed = bool(rule.get(prop))
+				cb.set_block_signals(false)
+	_syncing = false
 
 
 func _notify_mutated() -> void:
@@ -218,69 +233,88 @@ func _notify_mutated() -> void:
 		_after_wire_mutated.call()
 
 
-func _on_rule_id_apply_pressed() -> void:
-	if _host == null or _actions == null or _rule_index < 0:
+func _resync_rule_id_edit() -> void:
+	var rule := _get_rule_at_index()
+	if rule == null or _rule_id_edit == null:
+		return
+	_syncing = true
+	_rule_id_edit.text = rule.rule_id
+	_syncing = false
+
+
+func _resync_string_edit_from_rule(prop: StringName, edit: LineEdit) -> void:
+	var rule := _get_rule_at_index()
+	if rule == null or edit == null or not prop in rule:
+		return
+	_syncing = true
+	edit.text = str(rule.get(prop))
+	_syncing = false
+
+
+func _commit_rule_id_if_needed() -> void:
+	if _syncing or _host == null or _actions == null or _rule_index < 0 or _rule_id_edit == null:
+		return
+	var rule := _get_rule_at_index()
+	if rule == null:
+		return
+	var trimmed := _rule_id_edit.text.strip_edges()
+	if trimmed.is_empty():
+		_resync_rule_id_edit()
+		return
+	if trimmed == rule.rule_id:
+		_syncing = true
+		_rule_id_edit.text = rule.rule_id
+		_syncing = false
 		return
 	if not UiReactWireGraphEditService.try_commit_wire_rule_id(
 		_host, _rule_index, _rule_id_edit.text, _actions
 	):
+		_resync_rule_id_edit()
 		return
 	_notify_mutated()
 
 
-func _on_text_no_selection_apply() -> void:
-	if _host == null or _actions == null or _rule_index < 0:
+func _commit_shallow_string_if_needed(prop: StringName, edit: LineEdit) -> void:
+	if _syncing or _host == null or _actions == null or _rule_index < 0 or _rule_class_name == &"" or edit == null:
 		return
-	if not UiReactWireGraphEditService.try_commit_wire_rule_shallow_export(
-		_host, _rule_index, _CLASS_COPY, &"text_no_selection", _text_no_sel_edit.text, _actions
-	):
+	var rule := _get_rule_at_index()
+	if rule == null or not prop in rule:
 		return
-	_notify_mutated()
-
-
-func _on_clear_suffix_toggled(on: bool) -> void:
-	if _syncing or _host == null or _actions == null or _rule_index < 0:
-		return
-	if not UiReactWireGraphEditService.try_commit_wire_rule_shallow_export(
-		_host, _rule_index, _CLASS_COPY, &"clear_suffix_on_selection_change", on, _actions
-	):
+	var t := edit.text.strip_edges()
+	if t == str(rule.get(prop)).strip_edges():
 		_syncing = true
-		_clear_suffix_cb.set_block_signals(true)
-		_clear_suffix_cb.button_pressed = not on
-		_clear_suffix_cb.set_block_signals(false)
+		edit.text = str(rule.get(prop))
+		_syncing = false
+		return
+	if not UiReactWireGraphEditService.try_commit_wire_rule_shallow_field(
+		_host,
+		_rule_index,
+		_rule_class_name,
+		prop,
+		edit.text,
+		_actions
+	):
+		_resync_string_edit_from_rule(prop, edit)
 		return
 	_notify_mutated()
 
 
-func _on_template_rising_apply() -> void:
-	if _host == null or _actions == null or _rule_index < 0:
+func _on_descriptor_bool_toggled(prop: StringName, on: bool, cb: CheckBox) -> void:
+	if _syncing or _host == null or _actions == null or _rule_index < 0 or _rule_class_name == &"":
 		return
-	if not UiReactWireGraphEditService.try_commit_wire_rule_shallow_export(
-		_host, _rule_index, _CLASS_PULSE, &"template_rising", _tpl_rising_edit.text, _actions
+	if not UiReactWireGraphEditService.try_commit_wire_rule_shallow_field(
+		_host,
+		_rule_index,
+		_rule_class_name,
+		prop,
+		on,
+		_actions
 	):
-		return
-	_notify_mutated()
-
-
-func _on_template_no_selection_apply() -> void:
-	if _host == null or _actions == null or _rule_index < 0:
-		return
-	if not UiReactWireGraphEditService.try_commit_wire_rule_shallow_export(
-		_host, _rule_index, _CLASS_PULSE, &"template_no_selection", _tpl_no_sel_edit.text, _actions
-	):
-		return
-	_notify_mutated()
-
-
-func _on_rising_edge_toggled(on: bool) -> void:
-	if _syncing or _host == null or _actions == null or _rule_index < 0:
-		return
-	if not UiReactWireGraphEditService.try_commit_wire_rule_shallow_export(
-		_host, _rule_index, _CLASS_PULSE, &"require_rising_edge", on, _actions
-	):
-		_syncing = true
-		_rising_edge_cb.set_block_signals(true)
-		_rising_edge_cb.button_pressed = not on
-		_rising_edge_cb.set_block_signals(false)
+		if cb != null:
+			_syncing = true
+			cb.set_block_signals(true)
+			cb.button_pressed = not on
+			cb.set_block_signals(false)
+			_syncing = false
 		return
 	_notify_mutated()
