@@ -2,6 +2,12 @@
 class_name RAGService
 extends RefCounted
 
+const RAG_FILE_WALKER = preload("res://addons/ai_assistant_hub/rag/rag_file_walker.gd")
+const RAG_CHUNKER = preload("res://addons/ai_assistant_hub/rag/rag_chunker.gd")
+const RAG_INDEX_STORE = preload("res://addons/ai_assistant_hub/rag/rag_index_store.gd")
+const RAG_RETRIEVER = preload("res://addons/ai_assistant_hub/rag/rag_retriever.gd")
+const RAG_PROMPT_BUILDER = preload("res://addons/ai_assistant_hub/rag/rag_prompt_builder.gd")
+
 var _plugin: EditorPlugin
 var _walker: RAGFileWalker
 var _chunker: RAGChunker
@@ -12,11 +18,11 @@ var _prompt_builder: RAGPromptBuilder
 
 func _init(plugin: EditorPlugin) -> void:
 	_plugin = plugin
-	_walker = RAGFileWalker.new()
-	_chunker = RAGChunker.new()
-	_index_store = RAGIndexStore.new(_chunker)
-	_retriever = RAGRetriever.new()
-	_prompt_builder = RAGPromptBuilder.new()
+	_walker = RAG_FILE_WALKER.new()
+	_chunker = RAG_CHUNKER.new()
+	_index_store = RAG_INDEX_STORE.new(_chunker)
+	_retriever = RAG_RETRIEVER.new()
+	_prompt_builder = RAG_PROMPT_BUILDER.new()
 
 
 func initialize() -> void:

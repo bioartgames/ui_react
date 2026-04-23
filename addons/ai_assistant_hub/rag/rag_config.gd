@@ -31,7 +31,7 @@ const MAX_TOKEN_FREQUENCY_BONUS := 4
 const MAX_PATH_BONUS := 6
 
 ## File filtering.
-const INCLUDED_EXTENSIONS := PackedStringArray([
+const INCLUDED_EXTENSIONS := [
 	"gd",
 	"gdshader",
 	"tscn",
@@ -40,20 +40,20 @@ const INCLUDED_EXTENSIONS := PackedStringArray([
 	"json",
 	"md",
 	"txt"
-])
+]
 
-const EXCLUDED_PREFIXES := PackedStringArray([
+const EXCLUDED_PREFIXES := [
 	"res://.godot/",
 	"res://.git/",
 	"res://.import/",
 	"res://addons/gut/"
-])
+]
 
-const EXCLUDED_SUFFIXES := PackedStringArray([
+const EXCLUDED_SUFFIXES := [
 	".uid",
 	".import",
 	".translation"
-])
+]
 
 
 static func rag_enabled() -> bool:
