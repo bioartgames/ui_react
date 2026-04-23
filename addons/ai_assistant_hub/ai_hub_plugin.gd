@@ -8,6 +8,9 @@ const PREF_REMOVE_THINK:= "plugins/ai_assistant_hub/preferences/thinking_target"
 const PREF_SCROLL_BOTTOM:= "plugins/ai_assistant_hub/preferences/always_scroll_to_bottom"
 const PREF_SKIP_GREETING:= "plugins/ai_assistant_hub/preferences/skip_greeting"
 const PREF_AUDIO_HINTS:= "plugins/ai_assistant_hub/preferences/audio_hints"
+const PREF_RAG_ENABLED:= "plugins/ai_assistant_hub/rag/enabled"
+const PREF_RAG_MAX_FILES:= "plugins/ai_assistant_hub/rag/max_files"
+const PREF_RAG_TOP_K:= "plugins/ai_assistant_hub/rag/top_k"
 const OPT_DEBUG:= "plugins/ai_assistant_hub/options/debug_mode"
 
 const CONFIG_LLM_API:= "plugins/ai_assistant_hub/llm_api"
@@ -139,6 +142,40 @@ func initialize_project_settings() -> void:
 	if not ProjectSettings.has_setting(PREF_AUDIO_HINTS):
 		ProjectSettings.set_setting(PREF_AUDIO_HINTS, true)
 		ProjectSettings.save()
+
+	if not ProjectSettings.has_setting(PREF_RAG_ENABLED):
+		ProjectSettings.set_setting(PREF_RAG_ENABLED, true)
+		ProjectSettings.save()
+
+	if not ProjectSettings.has_setting(PREF_RAG_MAX_FILES):
+		ProjectSettings.set_setting(PREF_RAG_MAX_FILES, 1500)
+		ProjectSettings.save()
+
+	if not ProjectSettings.has_setting(PREF_RAG_TOP_K):
+		ProjectSettings.set_setting(PREF_RAG_TOP_K, 6)
+		ProjectSettings.save()
+
+	var rag_enabled_property_info = {
+		"name": PREF_RAG_ENABLED,
+		"type": TYPE_BOOL
+	}
+	ProjectSettings.add_property_info(rag_enabled_property_info)
+
+	var rag_max_files_property_info = {
+		"name": PREF_RAG_MAX_FILES,
+		"type": TYPE_INT,
+		"hint": PROPERTY_HINT_RANGE,
+		"hint_string": "1,10000,1"
+	}
+	ProjectSettings.add_property_info(rag_max_files_property_info)
+
+	var rag_top_k_property_info = {
+		"name": PREF_RAG_TOP_K,
+		"type": TYPE_INT,
+		"hint": PROPERTY_HINT_RANGE,
+		"hint_string": "1,32,1"
+	}
+	ProjectSettings.add_property_info(rag_top_k_property_info)
 	
 	plugin_data.set_value("general","last_used_version",get_version())
 	plugin_data.save(PLUGIN_DATA_PATH)

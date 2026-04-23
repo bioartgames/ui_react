@@ -39,6 +39,7 @@ var _assistant_settings: AIAssistantResource
 var _last_quick_prompt: AIQuickPromptResource
 var _code_selector: AssistantToolSelection
 var _bot_answer_handler: AIAnswerHandler
+var _rag_service: RAGService
 var _llm: LLMInterface
 var _conversation: AIConversation
 var _chat_save_path: String
@@ -53,6 +54,8 @@ func initialize(plugin:AIHubPlugin, assistant_settings: AIAssistantResource, bot
 		await ready
 	_code_selector = AssistantToolSelection.new(plugin)
 	_bot_answer_handler = AIAnswerHandler.new(plugin, _code_selector)
+	_rag_service = RAGService.new(plugin)
+	_rag_service.initialize()
 	_bot_answer_handler.bot_message_produced.connect(func(message): _add_to_chat(message, Caller.Bot) )
 	_bot_answer_handler.error_message_produced.connect(func(message): _add_to_chat(message, Caller.System) )
 	_set_tab_label()
@@ -274,7 +277,10 @@ func _submit_prompt(prompt:String, quick_prompt:AIQuickPromptResource = null) ->
 		_abandon_request()
 	_last_quick_prompt = quick_prompt
 	bot_portrait.is_thinking = true
-	_conversation.add_user_prompt(prompt)
+	var final_prompt := prompt
+	if ProjectSettings.get_setting(AIHubPlugin.PREF_RAG_ENABLED, true) and _rag_service != null:
+		final_prompt = _rag_service.build_augmented_user_prompt(prompt)
+	_conversation.add_user_prompt(final_prompt)
 	if not _llm:
 		AIHubPlugin.print_err("No LLM provider loaded. Check your Project Settings!")
 		_add_to_chat("No language model provider loaded. Check configuration!", Caller.System)
