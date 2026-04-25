@@ -1,4 +1,4 @@
-[gd_scene load_steps=62 format=3 uid="uid://ca8gfny15h7yc"]
+[gd_scene load_steps=61 format=3 uid="uid://ca8gfny15h7yc"]
 
 [ext_resource type="Script" uid="uid://dd4kr4kdd6cnc" path="res://addons/ui_react/scripts/controls/ui_react_tree.gd" id="2_tree"]
 [ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://addons/ui_react/scripts/controls/ui_react_line_edit.gd" id="3_le"]
@@ -22,7 +22,7 @@
 [ext_resource type="Script" uid="uid://d0qonr8j0o6lo" path="res://addons/ui_react/scripts/api/models/ui_react_tree_node.gd" id="21_tnode"]
 [ext_resource type="Script" uid="uid://bb8t2qrgil0ob" path="res://addons/ui_react/scripts/api/models/ui_react_wire_set_string_on_bool_pulse.gd" id="22_wpulse"]
 [ext_resource type="Script" uid="uid://ckxya8dq4gqug" path="res://addons/ui_react/scripts/api/models/ui_react_wire_sync_bool_state_debug_line.gd" id="23_wdbg"]
-[ext_resource type="Script" uid="uid://6d4hb1i0lprx" path="res://addons/ui_react/scripts/api/models/ui_react_wire_sort_array_by_key.gd" id="24_wsort"]
+[ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_wire_sort_array_by_key.gd" id="24_wsort"]
 
 [sub_resource type="Resource" id="tn_all"]
 script = ExtResource("21_tnode")
@@ -159,16 +159,6 @@ state_watch = SubResource("locked_bool")
 action = 3
 target = NodePath("../InputBlocker")
 
-[sub_resource type="Resource" id="sort_preset_str"]
-script = ExtResource("7_str")
-value = "name"
-
-[sub_resource type="Resource" id="wire_sort_items"]
-script = ExtResource("24_wsort")
-items_state = SubResource("items_arr")
-sort_key_state = SubResource("sort_preset_str")
-rule_id = "sort_items_by_key"
-
 [sub_resource type="Resource" id="detail_str"]
 script = ExtResource("7_str")
 value = "No selection."
@@ -242,6 +232,16 @@ bool_state = SubResource("actions_disabled")
 target_string_state = SubResource("dbg_dis_str")
 line_prefix = "actions disabled_state: "
 rule_id = "debug_actions_disabled"
+
+[sub_resource type="Resource" id="sort_preset_str"]
+script = ExtResource("7_str")
+value = "name"
+
+[sub_resource type="Resource" id="wire_sort_items"]
+script = ExtResource("24_wsort")
+items_state = SubResource("items_arr")
+sort_key_state = SubResource("sort_preset_str")
+rule_id = "sort_items_by_key"
 
 [sub_resource type="Resource" id="anim_pop_use"]
 script = ExtResource("13_anim")
