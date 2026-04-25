@@ -28,7 +28,7 @@ Use this guide for **any user-visible string** in the Ui React **editor plugin**
 
 ## Before / after examples
 
-### Wiring (Diagnostics + wire-rule “Checks” row)
+### Wiring (Diagnostics-only issues)
 
 **Before**
 

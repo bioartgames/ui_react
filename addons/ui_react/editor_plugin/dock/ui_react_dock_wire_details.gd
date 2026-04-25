@@ -3,17 +3,6 @@ class_name UiReactDockWireDetails
 extends Object
 
 const _SCRIPT_SORT_ARRAY_BY_KEY := "res://addons/ui_react/scripts/api/models/ui_react_wire_sort_array_by_key.gd"
-const _WIRE_RULE_INDEX_PATTERN := "^wire_rules\\[(\\d+)\\]:"
-
-static var _wire_rule_index_re: RegEx
-
-
-static func _wire_rule_index_regex() -> RegEx:
-	if _wire_rule_index_re == null:
-		_wire_rule_index_re = RegEx.create_from_string(_WIRE_RULE_INDEX_PATTERN)
-	return _wire_rule_index_re
-
-
 static func escape_bbcode_literal(s: String) -> String:
 	return s.replace("[", "[lb]")
 
@@ -59,7 +48,6 @@ static func _report_rows(
 	rows.append({&"label": &"Intent and Runtime", &"value": _val_intent_and_runtime(rule, host)})
 	rows.append({&"label": &"Inputs", &"value": _val_inputs(rule)})
 	rows.append({&"label": &"Outputs", &"value": _val_outputs(rule)})
-	rows.append({&"label": &"Checks", &"value": _validation_row_from_validator(rule_index, host, scene_root)})
 	return rows
 
 
@@ -235,7 +223,7 @@ static func _val_runtime(rule: Variant, host: Node) -> String:
 		)
 		if r.trigger != UiReactWireRule.TriggerKind.SELECTION_CHANGED:
 			lines.append(
-				"- Note: this rule type expects Trigger set to selection changed; other triggers are warned in Checks."
+				"- Note: this rule type expects Trigger set to selection changed; other triggers are reported in Diagnostics."
 			)
 	elif rule is UiReactWireRefreshItemsFromCatalog:
 		lines.append(
@@ -263,53 +251,6 @@ static func _val_runtime(rule: Variant, host: Node) -> String:
 			"- Rule order on this control matters (for example, sort the list before copying detail text from it)."
 		)
 	return "\n".join(lines)
-
-
-## Filters [UiReactWiringValidator] issues to one [code]wire_rules[/code] index ([param issue_text] prefix [code]wire_rules[N]:[/code]).
-static func filter_wire_rule_issues_by_index(
-	issues: Array, rule_index: int
-) -> Array[UiReactDiagnosticModel.DiagnosticIssue]:
-	var out: Array[UiReactDiagnosticModel.DiagnosticIssue] = []
-	var rx := _wire_rule_index_regex()
-	for it: Variant in issues:
-		if it is not UiReactDiagnosticModel.DiagnosticIssue:
-			continue
-		var issue := it as UiReactDiagnosticModel.DiagnosticIssue
-		var m := rx.search(issue.issue_text)
-		if m == null:
-			continue
-		if int(m.get_string(1)) == rule_index:
-			out.append(issue)
-	return out
-
-
-## Multi-line bullets for the details pane; same [member UiReactDiagnosticModel.DiagnosticIssue.issue_text] as Diagnostics.
-static func format_wire_rule_diagnostic_issues(issues: Array) -> String:
-	if issues.is_empty():
-		return "—"
-	var lines: PackedStringArray = []
-	for it: Variant in issues:
-		if it is not UiReactDiagnosticModel.DiagnosticIssue:
-			continue
-		var issue := it as UiReactDiagnosticModel.DiagnosticIssue
-		lines.append("- %s" % issue.issue_text)
-		var hint := issue.fix_hint.strip_edges()
-		if not hint.is_empty():
-			lines.append("  Fix: %s" % hint)
-	return "\n".join(lines)
-
-
-static func _validation_row_from_validator(rule_index: int, host: Node, scene_root: Node) -> String:
-	if host == null or scene_root == null or not (host is Control):
-		return "—"
-	var owner := host as Control
-	if not owner.is_inside_tree():
-		return "—"
-	var node_path := scene_root.get_path_to(owner)
-	var component := UiReactScannerService.get_component_name_from_script(owner.get_script() as Script)
-	var all := UiReactWiringValidator.validate_wire_rules(component, owner, node_path)
-	var filtered: Array = filter_wire_rule_issues_by_index(all, rule_index)
-	return format_wire_rule_diagnostic_issues(filtered)
 
 
 static func _rule_class_name(r: UiReactWireRule) -> String:
