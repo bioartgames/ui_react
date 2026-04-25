@@ -2,6 +2,10 @@
 class_name UiReactDockConfig
 extends RefCounted
 
+const _EditorBottomPanelShortcut := preload(
+	"res://addons/ui_react/editor_plugin/services/ui_react_editor_bottom_panel_shortcut.gd"
+)
+
 const SCAN_MODE_SELECTION := 0
 const SCAN_MODE_SCENE := 1
 
@@ -31,6 +35,8 @@ const KEY_WIRING_LAST_SCENE_PATH := "ui_react/plugin_wiring_last_scene_path"
 const KEY_WIRING_LAST_SCOPE_NODE_PATH := "ui_react/plugin_wiring_last_scope_node_path"
 ## Last graph node id ([code]ctrl:[/code]… / [code]state:[/code]…) when selection was a node; empty otherwise.
 const KEY_WIRING_LAST_GRAPH_NODE_ID := "ui_react/plugin_wiring_last_graph_node_id"
+## JSON object for the editor bottom-panel tab shortcut ([code]v[/code], [code]enabled[/code], [code]keycode[/code], modifiers). See [UiReactEditorBottomPanelShortcut].
+const KEY_EDITOR_BOTTOM_PANEL_SHORTCUT_JSON := "ui_react/plugin_editor_bottom_panel_shortcut_json"
 
 const DEF_DOCK_LAST_TAB := 0
 
@@ -110,6 +116,12 @@ static func register_default_project_settings() -> void:
 		added_defaults = true
 	if not ProjectSettings.has_setting(KEY_WIRING_LAST_GRAPH_NODE_ID):
 		ProjectSettings.set_setting(KEY_WIRING_LAST_GRAPH_NODE_ID, "")
+		added_defaults = true
+	if not ProjectSettings.has_setting(KEY_EDITOR_BOTTOM_PANEL_SHORTCUT_JSON):
+		ProjectSettings.set_setting(
+			KEY_EDITOR_BOTTOM_PANEL_SHORTCUT_JSON,
+			_EditorBottomPanelShortcut.spec_to_json(_EditorBottomPanelShortcut.default_shortcut_spec())
+		)
 		added_defaults = true
 	if added_defaults:
 		var err := ProjectSettings.save()

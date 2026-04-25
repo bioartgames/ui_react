@@ -50,3 +50,4 @@ plugin_dock_last_tab=1
 plugin_wiring_last_scene_path="res://addons/ui_react/examples/inventory_screen_demo.tscn"
 plugin_wiring_last_scope_node_path="MainHBox/LeftColumn/CategoryTree"
 plugin_wiring_last_graph_node_id="ctrl:MainHBox/LeftColumn/CategoryTree"
+plugin_editor_bottom_panel_shortcut_json="{\"alt\":true,\"ctrl\":false,\"enabled\":true,\"keycode\":85,\"meta\":false,\"shift\":false,\"v\":1}"
