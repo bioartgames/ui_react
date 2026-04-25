@@ -2588,13 +2588,13 @@ func _narrative_upstream_heading_bb_plain(anchor_kind: int) -> PackedStringArray
 	if anchor_kind == _SnapScript.NodeKind.CONTROL:
 		return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
 			"Upstream",
-			"in this snapshot — state/computed feeding this control’s bindings",
-			"in this snapshot — state/computed feeding this control's bindings",
+			"State/Computed Feeding This Control's Bindings",
+			"State/Computed Feeding This Control's Bindings",
 		)
 	return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
 		"Upstream",
-		"in this snapshot — declarative reach toward this resource",
-		"in this snapshot — declarative reach toward this resource",
+		"Declarative Reach Toward This Resource",
+		"Declarative Reach Toward This Resource",
 	)
 
 
@@ -2602,13 +2602,13 @@ func _narrative_downstream_heading_bb_plain(anchor_kind: int) -> PackedStringArr
 	if anchor_kind == _SnapScript.NodeKind.CONTROL:
 		return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
 			"Downstream",
-			"in this snapshot — states/computed or controls reached via this control’s bindings",
-			"in this snapshot — states/computed or controls reached via this control's bindings",
+			"States/Computed or Controls Reached via This Control's Bindings",
+			"States/Computed or Controls Reached via This Control's Bindings",
 		)
 	return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
 		"Downstream",
-		"in this snapshot — states/computed or controls this resource feeds",
-		"in this snapshot — states/computed or controls this resource feeds",
+		"States/Computed or Controls This Resource Feeds",
+		"States/Computed or Controls This Resource Feeds",
 	)
 
 
@@ -2626,15 +2626,15 @@ func _append_reachability_from_narrative(narr: Object) -> PackedStringArray:
 	plain += up_h[1]
 	if n_narr.upstream_display_lines.is_empty():
 		if ak == _SnapScript.NodeKind.CONTROL:
-			var msg := "[i]No upstream in this snapshot—only direct bindings feed this control.[/i]\n"
+			var msg := "[i]No Upstream — Only Direct Bindings Feed This Control.[/i]\n"
 			bb += msg
 			plain += UiReactDockExplainDetailsPresenter.plain_from_bbcode_line(msg)
 		elif ak == _SnapScript.NodeKind.UI_STATE or ak == _SnapScript.NodeKind.UI_COMPUTED:
-			var msg_r := "[i]No upstream in this snapshot—no declarative sources reach this resource.[/i]\n"
+			var msg_r := "[i]No Upstream — No Declarative Sources Reach This Resource.[/i]\n"
 			bb += msg_r
 			plain += UiReactDockExplainDetailsPresenter.plain_from_bbcode_line(msg_r)
 		else:
-			var msg2 := "[i]No upstream in this snapshot.[/i]\n"
+			var msg2 := "[i]No Upstream.[/i]\n"
 			bb += msg2
 			plain += UiReactDockExplainDetailsPresenter.plain_from_bbcode_line(msg2)
 	else:
@@ -2651,7 +2651,7 @@ func _append_reachability_from_narrative(narr: Object) -> PackedStringArray:
 		plain += "(none)\n"
 	else:
 		if not dsl.is_empty():
-			var st_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("States / computed")
+			var st_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("States / Computed")
 			bb += st_h[0]
 			plain += st_h[1]
 			for line3: String in dsl:
@@ -2725,7 +2725,7 @@ func _mismatch_banner_bb_plain(narr: Object) -> PackedStringArray:
 	var truncated := bool(stats.get(&"truncated", false))
 	if not missing and not truncated:
 		return PackedStringArray(["", ""])
-	var cn_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Canvas note")
+	var cn_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Canvas Note")
 	var bb := cn_h[0]
 	var plain := cn_h[1]
 	if missing:
@@ -2803,8 +2803,8 @@ func _connections_section_bb_plain(node_id: String, d: Dictionary, edges: Array)
 			bb += pair0[0] + "\n"
 			plain += pair0[1] + "\n"
 		if not any_bind:
-			bb += "[i]No registry bindings listed for this component in this snapshot.[/i]\n"
-			plain += "No registry bindings listed for this component in this snapshot.\n"
+			bb += "[i]No Registry Bindings Listed for This Component.[/i]\n"
+			plain += "No Registry Bindings Listed for This Component.\n"
 	else:
 		for row: Dictionary in rows:
 			var prop_sn: StringName = row.get(&"property", &"") as StringName
@@ -2835,7 +2835,7 @@ func _connections_section_bb_plain(node_id: String, d: Dictionary, edges: Array)
 			continue
 		others.append(ed2)
 	if not others.is_empty():
-		var oe2 := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Other edges")
+		var oe2 := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Other Edges")
 		bb += "\n" + oe2[0]
 		plain += "\n" + oe2[1]
 		for ed3: Dictionary in others:
@@ -2854,7 +2854,7 @@ func _wire_rules_summary_bb_plain(host: Control) -> PackedStringArray:
 	var arr: Array = wr as Array
 	if arr.is_empty():
 		return PackedStringArray(["", ""])
-	var wr_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Wire rules")
+	var wr_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Wire Rules")
 	var bb := wr_h[0]
 	var plain := wr_h[1]
 	for i in arr.size():
@@ -2921,12 +2921,12 @@ func _append_selected_wire_rule_report_bb_plain(bb: String, plain: String) -> Pa
 		return PackedStringArray([bb, plain])
 	var sel_idx := _wire_rules_section.get_selected_rule_index()
 	if sel_idx < 0 or sel_idx >= arr.size():
-		var pick_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Selected wire rule")
+		var pick_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Selected Wire Rule")
 		var pick_bb := pick_h[0] + "Select a rule in the list above to view full rule details.\n"
 		var pick_plain := pick_h[1] + "Select a rule in the list above to view full rule details.\n"
 		return UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, pick_bb, pick_plain)
 	var item: Variant = arr[sel_idx]
-	var wr_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Selected wire rule")
+	var wr_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Selected Wire Rule")
 	var wr_bb := wr_h[0] + _WireDetailsScript.build_details_bbcode(item, sel_idx, host, root)
 	var wr_plain := wr_h[1] + _WireDetailsScript.build_details_plain_text(item, sel_idx, host, root) + "\n"
 	return UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, wr_bb, wr_plain)
@@ -2949,7 +2949,7 @@ func _format_incident_edge_bb_plain(ed: Dictionary) -> PackedStringArray:
 
 
 func _focus_relation_blurb_bb_plain(node_id: String, layout_focus_id: String, node_layer: Dictionary) -> PackedStringArray:
-	var rel_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Relative to layout center")
+	var rel_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Relative to Layout Center")
 	var bb := rel_h[0]
 	var plain := rel_h[1]
 	if node_id == layout_focus_id:
@@ -3048,7 +3048,7 @@ func _fill_node_details(node_id: String) -> void:
 				plain = j[1]
 
 	if narr != null:
-		var gc_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Graph context")
+		var gc_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Graph Context")
 		var graph_bb := gc_h[0]
 		var graph_plain := gc_h[1]
 		var reach := _append_reachability_from_narrative(narr)
@@ -3085,7 +3085,7 @@ func _fill_node_details(node_id: String) -> void:
 	)
 
 	if nk != _SnapScript.NodeKind.CONTROL:
-		var ie_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Incident edges")
+		var ie_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Incident Edges")
 		var inc_bb := ie_h[0]
 		var inc_plain := ie_h[1]
 		if incident.is_empty():
@@ -3138,20 +3138,20 @@ func _edge_details_summary_bb_plain(
 			var ep0 := _edge_endpoint_pair_for_summary_bb_plain(from_id, to_id)
 			var body_cs_bb := "%s → %s, %s" % [ep0[0], ep0[2], slot0[0]]
 			var body_cs_plain := "%s → %s, %s" % [ep0[1], ep0[3], slot0[1]]
-			var cs_ri := UiReactDockExplainDetailsPresenter.details_run_in_bb_plain("Computed source", body_cs_bb, body_cs_plain)
+			var cs_ri := UiReactDockExplainDetailsPresenter.details_run_in_bb_plain("Computed Source", body_cs_bb, body_cs_plain)
 			bb = cs_ri[0]
 			plain = cs_ri[1]
 		_SnapScript.EdgeKind.WIRE_FLOW:
-			var wf_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Wire flow")
+			var wf_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Wire Flow")
 			bb = wf_h[0]
 			plain = wf_h[1]
 			bb += "[code]%s[/code] → [code]%s[/code]\n" % [from_short, to_short]
 			plain += "%s → %s\n" % [from_short, to_short]
-			bb += "A [code]wire_rules[/code] row connects input [code]%s[/code] to output [code]%s[/code] (each endpoint is a state or computed resource in this snapshot).\n" % [
+			bb += "A [code]wire_rules[/code] Row Connects Input [code]%s[/code] to Output [code]%s[/code] (Each Endpoint Is a State or Computed Resource).\n" % [
 				from_short,
 				to_short,
 			]
-			plain += "A wire_rules row connects input %s to output %s (each endpoint is a state or computed resource in this snapshot).\n" % [
+			plain += "A wire_rules Row Connects Input %s to Output %s (Each Endpoint Is a State or Computed Resource).\n" % [
 				from_short,
 				to_short,
 			]
@@ -3209,7 +3209,7 @@ func _edge_details_summary_bb_plain(
 		var win := str(ed.get(&"wire_in_property", ""))
 		var wout := str(ed.get(&"wire_out_property", ""))
 		if not win.is_empty() and not wout.is_empty():
-			var re_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Rule exports")
+			var re_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Rule Exports")
 			bb += re_h[0]
 			plain += re_h[1]
 			bb += "Input export [code]%s[/code] → output export [code]%s[/code] (dock action row: rebind input/output).\n" % [
@@ -3256,7 +3256,7 @@ func _wire_rule_quick_edit_fields_bb_plain(
 	if labels.is_empty():
 		return PackedStringArray(["", ""])
 	var joined := ", ".join(labels)
-	var head := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Quick edit fields")
+	var head := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Quick Edit Fields")
 	var bb := head[0]
 	var plain := head[1]
 	bb += "Available in [b]Quick edit[/b]: [code]%s[/code].\n" % joined
@@ -3281,7 +3281,7 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 				bb += "This wire rule is [i]disabled (paused)[/i]; it will not run until re-enabled.\n"
 				plain += "This wire rule is disabled (paused); it will not run until re-enabled.\n"
 	if narr != null:
-		var gc_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Graph context")
+		var gc_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Graph Context")
 		var graph_bb2 := gc_h[0]
 		var graph_plain2 := gc_h[1]
 		var reach2 := _append_reachability_from_narrative(narr)

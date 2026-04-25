@@ -56,10 +56,9 @@ static func _report_rows(
 	else:
 		rows.append({&"label": &"Node", &"value": str(host.name)})
 		rows.append({&"label": &"Path", &"value": _val_host_path(host, scene_root)})
-	rows.append({&"label": &"Intent", &"value": _val_intent(rule, host)})
+	rows.append({&"label": &"Intent and Runtime", &"value": _val_intent_and_runtime(rule, host)})
 	rows.append({&"label": &"Inputs", &"value": _val_inputs(rule)})
 	rows.append({&"label": &"Outputs", &"value": _val_outputs(rule)})
-	rows.append({&"label": &"Runtime notes", &"value": _val_runtime(rule, host)})
 	rows.append({&"label": &"Checks", &"value": _validation_row_from_validator(rule_index, host, scene_root)})
 	return rows
 
@@ -136,6 +135,18 @@ static func _val_intent(rule: Variant, host: Node) -> String:
 	if _is_sort_array_by_key(rule):
 		return "Sorts the items array by a named field (or plain text for non-dictionary rows), with optional descending order."
 	return "—"
+
+
+static func _val_intent_and_runtime(rule: Variant, host: Node) -> String:
+	var intent := _val_intent(rule, host)
+	var runtime := _val_runtime(rule, host)
+	if intent == "—" and runtime == "—":
+		return "—"
+	if runtime == "—":
+		return intent
+	if intent == "—":
+		return runtime
+	return "%s\n%s" % [intent, runtime]
 
 
 static func _val_inputs(rule: Variant) -> String:
