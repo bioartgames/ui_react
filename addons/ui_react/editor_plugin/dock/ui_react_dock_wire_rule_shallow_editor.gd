@@ -80,16 +80,16 @@ func _build_ui() -> void:
 	rid_row.add_theme_constant_override(&"separation", 6)
 	rid_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var rid_lbl := Label.new()
-	rid_lbl.text = "Rule id (stable)"
+	rid_lbl.text = "Rule id"
 	rid_lbl.tooltip_text = (
-		"Stable identifier for this rule. Graph edges reference it; keep it unique and avoid renaming "
+		"Identifier for this rule. Graph edges reference it; keep it unique and avoid renaming "
 		+ "unless you update wiring that points at it."
 	)
 	rid_lbl.custom_minimum_size = Vector2(140, 0)
 	rid_row.add_child(rid_lbl)
 	_rule_id_edit = LineEdit.new()
 	_rule_id_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_rule_id_edit.placeholder_text = "Stable rule id"
+	_rule_id_edit.placeholder_text = "Rule id"
 	_rule_id_edit.tooltip_text = rid_lbl.tooltip_text
 	_rule_id_edit.focus_exited.connect(_commit_rule_id_if_needed)
 	_rule_id_edit.text_submitted.connect(func(_s: String) -> void: _commit_rule_id_if_needed())

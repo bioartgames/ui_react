@@ -326,14 +326,14 @@ func _select_rule(index: int) -> void:
 
 func _format_rule_line(index: int, item: Variant) -> String:
 	if item == null:
-		return "[%d] (null)" % (index + 1)
+		return "(null)"
 	var cls := _rule_class_label(item)
 	var rule_field := "—"
 	if item is UiReactWireRule:
 		var rid: String = (item as UiReactWireRule).rule_id
 		if not rid.is_empty():
 			rule_field = rid
-	return "[%d] %s — %s" % [index + 1, cls, rule_field]
+	return "%s — %s" % [cls, rule_field]
 
 
 func _rule_class_label(item: Variant) -> String:

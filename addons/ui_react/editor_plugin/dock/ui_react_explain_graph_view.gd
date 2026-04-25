@@ -175,6 +175,44 @@ func select_node_by_id(node_id: String) -> void:
 	node_selected.emit(node_id)
 
 
+func is_edge_index_visible(edge_index: int) -> bool:
+	if _layout.is_empty():
+		return false
+	var edges: Array = _layout.get(&"draw_edges", []) as Array
+	if edge_index < 0 or edge_index >= edges.size():
+		return false
+	var ev: Variant = edges[edge_index]
+	if ev is not Dictionary:
+		return false
+	return _edge_visible(ev as Dictionary)
+
+
+## Programmatic edge selection. Emits [signal edge_selected] with the same payload as click-pick.
+func select_edge_by_index(edge_index: int) -> bool:
+	if _layout.is_empty():
+		return false
+	var edges: Array = _layout.get(&"draw_edges", []) as Array
+	if edge_index < 0 or edge_index >= edges.size():
+		return false
+	var ev: Variant = edges[edge_index]
+	if ev is not Dictionary:
+		return false
+	var ed: Dictionary = ev as Dictionary
+	if not _edge_visible(ed):
+		return false
+	_selected_node_id = ""
+	_selected_edge_index = edge_index
+	edge_selected.emit(
+		str(ed.get(&"from_id", "")),
+		str(ed.get(&"to_id", "")),
+		int(ed.get(&"kind", -1)),
+		str(ed.get(&"label", "")),
+		edge_index
+	)
+	queue_redraw()
+	return true
+
+
 func reset_view() -> void:
 	var ir := _inner_rect()
 	_pan = ir.position + ir.size * 0.5

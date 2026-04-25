@@ -19,6 +19,18 @@ config/icon="res://icon.svg"
 
 enabled=PackedStringArray("res://addons/gut/plugin.cfg", "res://addons/ui_react/editor_plugin/plugin.cfg")
 
+[plugins]
+
+ai_assistant_hub/options/debug_mode=0
+ai_assistant_hub/llm_api="jan_api"
+ai_assistant_hub/preferences/thinking_target=0
+ai_assistant_hub/preferences/skip_greeting=false
+ai_assistant_hub/preferences/always_scroll_to_bottom=false
+ai_assistant_hub/preferences/audio_hints=true
+ai_assistant_hub/rag/enabled=true
+ai_assistant_hub/rag/max_files=1500
+ai_assistant_hub/rag/top_k=6
+
 [ui_react]
 
 plugin_state_output_path="res://addons/ui_react/ui_resources/plugin_generated/"
@@ -31,7 +43,7 @@ plugin_group_mode=0
 plugin_ignored_unused_state_paths=PackedStringArray()
 plugin_graph_scope_presets_json="[]"
 plugin_graph_active_scope_preset_name=""
-plugin_graph_body_vsplit_offset=160
+plugin_graph_body_vsplit_offset=-73
 plugin_graph_legend_visible=true
 plugin_graph_body_hsplit_offset=-1
 plugin_dock_last_tab=1

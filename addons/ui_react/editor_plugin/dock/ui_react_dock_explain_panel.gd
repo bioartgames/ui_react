@@ -380,6 +380,7 @@ func _on_graph_edge(from_id: String, to_id: String, kind: int, label: String, ed
 	_selection_kind = UiReactDockExplainMenuIds._SEL_EDGE
 	_sync_wire_rules_section()
 	_fill_edge_details(from_id, to_id, kind, label, edge_index)
+	_try_focus_wire_rule_list_from_edge(kind, edge_index)
 
 
 func _on_graph_cleared() -> void:
@@ -677,11 +678,20 @@ func _after_wire_rules_section_commit() -> void:
 		_wire_rules_section.refresh_from_host()
 
 
-func _on_wire_rule_list_selection_changed(_rule_index: int) -> void:
+func _on_wire_rule_list_selection_changed(rule_index: int) -> void:
 	if _selection_kind == UiReactDockExplainMenuIds._SEL_NODE and not _graph_selected_node_id.is_empty():
 		_fill_node_details(_graph_selected_node_id)
 		return
 	if _selection_kind == UiReactDockExplainMenuIds._SEL_EDGE and _graph_selected_edge_index >= 0:
+		var new_ei := _find_first_visible_wire_flow_edge_index_for_rule(rule_index)
+		if (
+			new_ei >= 0
+			and new_ei != _graph_selected_edge_index
+			and _graph_view != null
+			and _graph_view.has_method(&"select_edge_by_index")
+		):
+			if bool((_graph_view as Object).call(&"select_edge_by_index", new_ei)):
+				return
 		_fill_edge_details(
 			_last_edge_from_id,
 			_last_edge_to_id,
@@ -2757,24 +2767,6 @@ func _edge_binding_skip_inspector_blurb(ed: Dictionary) -> bool:
 	return hn is Control
 
 
-func _optional_binding_dock_hint_bb_plain(ed: Dictionary, bp: StringName) -> PackedStringArray:
-	var hp := str(ed.get(&"host_path", ""))
-	if hp.is_empty() or _plugin == null:
-		return PackedStringArray(["", ""])
-	var ei := _plugin.get_editor_interface()
-	var root := ei.get_edited_scene_root()
-	if root == null or not root.has_node(NodePath(hp)):
-		return PackedStringArray(["", ""])
-	var hn: Node = root.get_node(NodePath(hp))
-	if not hn is Control:
-		return PackedStringArray(["", ""])
-	var comp2 := UiReactScannerService.get_component_name_from_script((hn as Control).get_script() as Script)
-	if not UiReactGraphNewBindingService.binding_export_is_optional(comp2, bp):
-		return PackedStringArray(["", ""])
-	var msg := "[i]Optional export — [b]Clear optional binding[/b] is available in the dock action row (undoable).[/i]\n"
-	return PackedStringArray([msg, UiReactDockExplainDetailsPresenter.plain_from_bbcode_line(msg)])
-
-
 func _edge_missing_control_path_bb_plain() -> PackedStringArray:
 	var bb_part := "[i]No control path on this edge in the snapshot—use [b]Focus in Inspector[/b] or refresh the graph.[/i]\n"
 	var plain_part := "No control path on this edge in the snapshot—use Focus in Inspector or refresh the graph.\n"
@@ -3337,9 +3329,6 @@ func _edge_details_summary_bb_plain(
 			else:
 				bb += "Inspector on control [code]%s[/code], export [code]%s[/code].\n" % [hp, bp]
 				plain += "Inspector on control %s, export %s.\n" % [hp, bp]
-		var opt_hint := _optional_binding_dock_hint_bb_plain(ed, StringName(bp))
-		bb += opt_hint[0]
-		plain += opt_hint[1]
 		var bind_canvas := UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
 			"On canvas",
 			(
@@ -3550,9 +3539,39 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 	bb = j2[0]
 	plain = j2[1]
 
-	_try_focus_wire_rule_list_from_edge(kind, edge_index)
 	var wrj := _append_selected_wire_rule_report_bb_plain(bb, plain)
 	_set_details_both(wrj[0], wrj[1])
+
+
+static func find_first_wire_flow_edge_index_for_rule(
+	layout: Dictionary,
+	rule_index: int,
+	is_edge_visible: Callable = Callable(),
+) -> int:
+	if rule_index < 0:
+		return -1
+	var edges: Array = layout.get(&"draw_edges", []) as Array
+	for i: int in range(edges.size()):
+		var ev: Variant = edges[i]
+		if ev is not Dictionary:
+			continue
+		var ed: Dictionary = ev as Dictionary
+		if int(ed.get(&"kind", -1)) != _SnapScript.EdgeKind.WIRE_FLOW:
+			continue
+		if int(ed.get(&"wire_rule_index", -1)) != rule_index:
+			continue
+		if is_edge_visible.is_valid() and not bool(is_edge_visible.call(i)):
+			continue
+		return i
+	return -1
+
+
+func _find_first_visible_wire_flow_edge_index_for_rule(rule_index: int) -> int:
+	var visible_cb: Callable = Callable()
+	if _graph_view != null and _graph_view.has_method(&"is_edge_index_visible"):
+		visible_cb = func(edge_index: int) -> bool:
+			return bool((_graph_view as Object).call(&"is_edge_index_visible", edge_index))
+	return find_first_wire_flow_edge_index_for_rule(_last_layout, rule_index, visible_cb)
 
 
 func _try_focus_wire_rule_list_from_edge(kind: int, edge_index: int) -> void:
