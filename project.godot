@@ -27,6 +27,9 @@ ai_assistant_hub/preferences/thinking_target=0
 ai_assistant_hub/preferences/skip_greeting=false
 ai_assistant_hub/preferences/always_scroll_to_bottom=false
 ai_assistant_hub/preferences/audio_hints=true
+ai_assistant_hub/rag/enabled=true
+ai_assistant_hub/rag/max_files=1500
+ai_assistant_hub/rag/top_k=6
 
 [ui_react]
 
