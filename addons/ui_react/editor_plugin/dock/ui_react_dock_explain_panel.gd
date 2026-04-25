@@ -2667,12 +2667,6 @@ func _append_reachability_from_narrative(narr: Object) -> PackedStringArray:
 	return PackedStringArray([bb, plain])
 
 
-func _details_declarative_footer_bb_plain() -> PackedStringArray:
-	var bb := UiReactDockExplainContextMenus.DETAILS_DECLARATIVE_ONE_LINER_BB
-	var plain := UiReactDockExplainDetailsPresenter.plain_from_bbcode_line(UiReactDockExplainContextMenus.DETAILS_DECLARATIVE_ONE_LINER_BB)
-	return PackedStringArray([bb, plain])
-
-
 func _append_cycle_section_bb_plain(anchor_id: String) -> PackedStringArray:
 	if _last_snap == null:
 		return PackedStringArray(["", ""])
@@ -2748,85 +2742,6 @@ func _id_in_packed(ids: PackedStringArray, needle: String) -> bool:
 		if String(ids[i]) == needle:
 			return true
 	return false
-
-
-## When true, omit binding **Where to edit** (healthy path resolves to a Control in the edited scene).
-func _edge_binding_skip_inspector_blurb(ed: Dictionary) -> bool:
-	var hp := str(ed.get(&"host_path", ""))
-	if hp.is_empty():
-		return false
-	if _plugin == null:
-		return false
-	var ei := _plugin.get_editor_interface()
-	var root := ei.get_edited_scene_root()
-	if root == null:
-		return false
-	if not root.has_node(NodePath(hp)):
-		return false
-	var hn: Node = root.get_node(NodePath(hp))
-	return hn is Control
-
-
-func _edge_missing_control_path_bb_plain() -> PackedStringArray:
-	var bb_part := "[i]No control path on this edge in the snapshot—use [b]Focus in Inspector[/b] or refresh the graph.[/i]\n"
-	var plain_part := "No control path on this edge in the snapshot—use Focus in Inspector or refresh the graph.\n"
-	return PackedStringArray([bb_part, plain_part])
-
-
-func _other_edges_at_anchor_bb_plain(
-	anchor_id: String, selected_edge_index: int
-) -> PackedStringArray:
-	if anchor_id.is_empty():
-		return PackedStringArray(["", ""])
-	var edges: Array = _last_layout.get(&"draw_edges", []) as Array
-	if selected_edge_index < 0 or selected_edge_index >= edges.size():
-		return PackedStringArray(["", ""])
-	var sel_ev: Variant = edges[selected_edge_index]
-	if sel_ev is not Dictionary:
-		return PackedStringArray(["", ""])
-	var sel_sig := UiReactDockExplainGraphMutations.incident_edge_sig(sel_ev as Dictionary)
-	var others: Array[Dictionary] = []
-	for i: int in range(edges.size()):
-		if i == selected_edge_index:
-			continue
-		var ev2: Variant = edges[i]
-		if ev2 is not Dictionary:
-			continue
-		var ed2: Dictionary = ev2 as Dictionary
-		if UiReactDockExplainGraphMutations.incident_edge_sig(ed2) == sel_sig:
-			continue
-		var fid := str(ed2.get(&"from_id", ""))
-		var tid := str(ed2.get(&"to_id", ""))
-		if fid == anchor_id or tid == anchor_id:
-			others.append(ed2)
-	if others.is_empty():
-		return PackedStringArray(["", ""])
-	others.sort_custom(
-		func(a: Dictionary, b: Dictionary) -> bool:
-			var ka := int(a.get(&"kind", -1))
-			var kb := int(b.get(&"kind", -1))
-			if ka != kb:
-				return ka < kb
-			var fa := str(a.get(&"from_id", ""))
-			var fb := str(b.get(&"from_id", ""))
-			if fa != fb:
-				return fa < fb
-			return str(a.get(&"to_id", "")) < str(b.get(&"to_id", ""))
-	)
-	var oe_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Other edges at this anchor")
-	var bb := oe_h[0]
-	var plain := oe_h[1]
-	var cap := UiReactDockExplainContextMenus.OTHER_EDGES_AT_ANCHOR_CAP
-	var n_show := mini(others.size(), cap)
-	for j: int in n_show:
-		var pair := _format_incident_edge_bb_plain(others[j])
-		bb += pair[0] + "\n"
-		plain += pair[1] + "\n"
-	var overflow := others.size() - n_show
-	if overflow > 0:
-		bb += "[i]+%d more in this graph[/i]\n" % overflow
-		plain += "+%d more in this graph\n" % overflow
-	return PackedStringArray([bb, plain])
 
 
 func _find_binding_edge_for_prop(incident: Array[Dictionary], node_id: String, prop: String) -> Dictionary:
@@ -3145,20 +3060,7 @@ func _fill_node_details(node_id: String) -> void:
 		var mm := _mismatch_banner_bb_plain(narr)
 		graph_bb += mm[0]
 		graph_plain += mm[1]
-		var disc := _details_declarative_footer_bb_plain()
-		graph_bb += disc[0]
-		graph_plain += disc[1]
 		j = UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, graph_bb, graph_plain)
-		bb = j[0]
-		plain = j[1]
-
-	var skip_on_canvas := node_id == layout_focus and nk == _SnapScript.NodeKind.CONTROL
-	if not skip_on_canvas:
-		var oc_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("On canvas")
-		var hl := _node_headline_bb_plain(node_id, d, layout_focus)
-		var canvas_bb := oc_h[0] + hl[0]
-		var canvas_plain := oc_h[1] + hl[1]
-		j = UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, canvas_bb, canvas_plain)
 		bb = j[0]
 		plain = j[1]
 
@@ -3202,42 +3104,6 @@ func _fill_node_details(node_id: String) -> void:
 		j = UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, inc_bb, inc_plain)
 		bb = j[0]
 		plain = j[1]
-
-	if node_id != layout_focus:
-		var rel := _focus_relation_blurb_bb_plain(node_id, layout_focus, node_layer)
-		j = UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, rel[0], rel[1])
-		bb = j[0]
-		plain = j[1]
-
-	var tech_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Technical")
-	var tech_bb := tech_h[0]
-	var tech_plain := tech_h[1]
-	var full_l := str(d.get(&"label", ""))
-	if nk == _SnapScript.NodeKind.CONTROL:
-		var cp := str(d.get(&"control_path", ""))
-		if not cp.is_empty():
-			tech_bb += "Scene path: [code]%s[/code]\n" % cp
-			tech_plain += "Scene path: %s\n" % cp
-	elif nk == _SnapScript.NodeKind.UI_STATE or nk == _SnapScript.NodeKind.UI_COMPUTED:
-		var fp := str(d.get(&"state_file_path", ""))
-		if not fp.is_empty():
-			tech_bb += "Resource: [code]%s[/code]\n" % fp
-			tech_plain += "Resource: %s\n" % fp
-		else:
-			var eh := str(d.get(&"embedded_host_path", ""))
-			var ec := str(d.get(&"embedded_context", ""))
-			if not eh.is_empty():
-				tech_bb += "Embedded — host: [code]%s[/code] context: [code]%s[/code]\n" % [eh, ec]
-				tech_plain += "Embedded — host: %s context: %s\n" % [eh, ec]
-	if not full_l.is_empty():
-		tech_bb += "Full label: %s\n" % full_l
-		tech_plain += "Full label: %s\n" % full_l
-	tech_bb += "Technical id: [code]%s[/code]\n" % node_id
-	tech_plain += "Technical id: %s\n" % node_id
-
-	j = UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, tech_bb, tech_plain)
-	bb = j[0]
-	plain = j[1]
 
 	var wrj := _append_selected_wire_rule_report_bb_plain(bb, plain)
 	_set_details_both(wrj[0], wrj[1])
@@ -3314,51 +3180,11 @@ func _edge_details_summary_bb_plain(
 			plain += "Detail: %s\n" % label
 
 	if kind == _SnapScript.EdgeKind.BINDING:
-		var hp := str(ed.get(&"host_path", ""))
-		var bp := str(ed.get(&"binding_property", ""))
-		if bp.is_empty():
-			bp = str(ed.get(&"label", label))
-		if not _edge_binding_skip_inspector_blurb(ed):
-			var wte_b := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Where to edit")
-			bb += wte_b[0]
-			plain += wte_b[1]
-			if hp.is_empty():
-				var miss_b := _edge_missing_control_path_bb_plain()
-				bb += miss_b[0]
-				plain += miss_b[1]
-			else:
-				bb += "Inspector on control [code]%s[/code], export [code]%s[/code].\n" % [hp, bp]
-				plain += "Inspector on control %s, export %s.\n" % [hp, bp]
-		var bind_canvas := UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
-			"On canvas",
-			(
-				"[b]Reconnect:[/b] [b]Shift+drag[/b] from the [b]state[/b] node onto another [b]state[/b] or [b]computed[/b] node (same undo as [b]Rebind to resource…[/b])."
-			),
-			"Reconnect: Shift+drag from the state node onto another state or computed node (same undo as Rebind to resource…).",
-		)
-		bb += bind_canvas[0]
-		plain += bind_canvas[1]
+		pass
 	elif kind == _SnapScript.EdgeKind.COMPUTED_SOURCE:
-		var hp2 := str(ed.get(&"host_path", ""))
 		var si := int(ed.get(&"computed_source_index", -1))
 		var slot_sp := _computed_source_slot_phrase_bb_plain(si)
 		var ep := _edge_endpoint_pair_for_summary_bb_plain(from_id, to_id)
-		var wte_c := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Where to edit")
-		bb += wte_c[0]
-		plain += wte_c[1]
-		if hp2.is_empty():
-			var miss_c := _edge_missing_control_path_bb_plain()
-			bb += miss_c[0]
-			plain += miss_c[1]
-		else:
-			bb += (
-				"Inspector — select owning control [code]%s[/code], then edit %s on the computed resource.\n"
-				% [hp2, slot_sp[0]]
-			)
-			plain += (
-				"Inspector — select owning control %s, then edit %s on the computed resource.\n"
-				% [hp2, slot_sp[1]]
-			)
 		var cc := str(ed.get(&"computed_context", ""))
 		if not to_id.is_empty():
 			var own_ri := UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
@@ -3377,47 +3203,9 @@ func _edge_details_summary_bb_plain(
 		if not cc.is_empty():
 			bb += "[i]Resolver path[/i] — [code]%s[/code]\n" % cc
 			plain += "Resolver path — %s\n" % cc
-		var root_cs: Node = null
-		if _plugin != null:
-			root_cs = _plugin.get_editor_interface().get_edited_scene_root()
-		if root_cs != null and _edge_allows_computed_rebind(ed, root_cs):
-			var ocv_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("On canvas")
-			bb += ocv_h[0]
-			plain += ocv_h[1]
-			bb += (
-				"[b]Reconnect:[/b] [b]Shift+drag[/b] from the [b]upstream[/b] endpoint node onto another [b]state[/b] or [b]computed[/b] node (valid targets highlight). "
-				+ "Same undo stack as [b]Rebind computed source…[/b].\n"
-			)
-			plain += (
-				"Reconnect: Shift+drag from the upstream endpoint node onto another state or computed node (valid targets highlight). "
-				+ "Same undo stack as Rebind computed source….\n"
-			)
-			bb += (
-				"[b]Pick[/b] [code].tres[/code][b]:[/b] [b]Edge edit[/b] (or selection menu) → [b]Rebind computed source…[/b].\n"
-			)
-			plain += "Pick .tres: Edge edit (or selection menu) → Rebind computed source….\n"
-		else:
-			var warn_cs := "[i]Refresh the graph if reconnect actions stay disabled.[/i]\n"
-			bb += warn_cs
-			plain += UiReactDockExplainDetailsPresenter.plain_from_bbcode_line(warn_cs)
 	elif kind == _SnapScript.EdgeKind.WIRE_FLOW:
 		var wh := str(ed.get(&"wire_host_path", ""))
 		var wi := int(ed.get(&"wire_rule_index", -1))
-		var wte_w := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Where to edit")
-		bb += wte_w[0]
-		plain += wte_w[1]
-		if wh.is_empty():
-			var miss_w := _edge_missing_control_path_bb_plain()
-			bb += miss_w[0]
-			plain += miss_w[1]
-		else:
-			bb += "Control [code]%s[/code], [code]wire_rules[/code]" % wh
-			plain += "Control %s, wire_rules" % wh
-			if wi >= 0:
-				bb += " row [code]%d[/code]" % wi
-				plain += " row %d" % wi
-			bb += ".\n"
-			plain += ".\n"
 		var win := str(ed.get(&"wire_in_property", ""))
 		var wout := str(ed.get(&"wire_out_property", ""))
 		if not win.is_empty() and not wout.is_empty():
@@ -3436,15 +3224,6 @@ func _edge_details_summary_bb_plain(
 		if not qef[0].is_empty() or not qef[1].is_empty():
 			bb += qef[0]
 			plain += qef[1]
-
-	if from_id == _last_focus_id or to_id == _last_focus_id:
-		var rtf := UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
-			"Relation to focus",
-			"Touches the focus control directly.",
-			"Touches the focus control directly.",
-		)
-		bb += rtf[0]
-		plain += rtf[1]
 	return PackedStringArray([bb, plain])
 
 
@@ -3491,7 +3270,6 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 	var narr: Object = _get_narrative_cached_ex(
 		anchor_id, ex[0] as PackedStringArray, ex[1] as PackedStringArray
 	) as Object
-	var token := UiReactDockExplainGraphMutations.edge_short_token(kind)
 	var summ := _edge_details_summary_bb_plain(from_id, to_id, kind, label, edge_index)
 	var bb := summ[0]
 	var plain := summ[1]
@@ -3502,10 +3280,6 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 			if ed0 is Dictionary and not bool((ed0 as Dictionary).get(&"wire_rule_enabled", true)):
 				bb += "This wire rule is [i]disabled (paused)[/i]; it will not run until re-enabled.\n"
 				plain += "This wire rule is disabled (paused); it will not run until re-enabled.\n"
-	var sib := _other_edges_at_anchor_bb_plain(anchor_id, edge_index)
-	var j2 := UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, sib[0], sib[1])
-	bb = j2[0]
-	plain = j2[1]
 	if narr != null:
 		var gc_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Graph context")
 		var graph_bb2 := gc_h[0]
@@ -3519,25 +3293,9 @@ func _fill_edge_details(from_id: String, to_id: String, kind: int, label: String
 		var mm2 := _mismatch_banner_bb_plain(narr)
 		graph_bb2 += mm2[0]
 		graph_plain2 += mm2[1]
-		var disc2 := _details_declarative_footer_bb_plain()
-		graph_bb2 += disc2[0]
-		graph_plain2 += disc2[1]
-		j2 = UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, graph_bb2, graph_plain2)
+		var j2 := UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, graph_bb2, graph_plain2)
 		bb = j2[0]
 		plain = j2[1]
-
-	var tech_e := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Technical")
-	var tech_bb2 := tech_e[0]
-	var tech_plain2 := tech_e[1]
-	tech_bb2 += "Kind token: [code]%s[/code]\nFrom id: [code]%s[/code]\nTo id: [code]%s[/code]\n" % [
-		token,
-		from_id,
-		to_id,
-	]
-	tech_plain2 += "Kind token: %s\nFrom id: %s\nTo id: %s\n" % [token, from_id, to_id]
-	j2 = UiReactDockExplainDetailsPresenter.details_append_major(bb, plain, tech_bb2, tech_plain2)
-	bb = j2[0]
-	plain = j2[1]
 
 	var wrj := _append_selected_wire_rule_report_bb_plain(bb, plain)
 	_set_details_both(wrj[0], wrj[1])
