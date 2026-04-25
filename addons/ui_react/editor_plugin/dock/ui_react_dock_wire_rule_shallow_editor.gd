@@ -105,7 +105,7 @@ func _build_ui() -> void:
 	add_child(_fields_host)
 
 	_empty_hint_lbl = Label.new()
-	_empty_hint_lbl.text = "No extra quick-edit fields for this rule type."
+	_empty_hint_lbl.text = "Edit in Inspector for this rule type."
 	_empty_hint_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_empty_hint_lbl.modulate = Color(1, 1, 1, 0.75)
 	_fields_host.add_child(_empty_hint_lbl)
@@ -120,7 +120,7 @@ func _rebuild_descriptor_rows(descriptors: Array) -> void:
 	_field_bool_checks.clear()
 	if descriptors.is_empty():
 		_empty_hint_lbl = Label.new()
-		_empty_hint_lbl.text = "No extra quick-edit fields for this rule type."
+		_empty_hint_lbl.text = "Edit in Inspector for this rule type."
 		_empty_hint_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_empty_hint_lbl.modulate = Color(1, 1, 1, 0.75)
 		_fields_host.add_child(_empty_hint_lbl)

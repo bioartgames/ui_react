@@ -246,10 +246,6 @@ static func _val_runtime(rule: Variant, host: Node) -> String:
 		lines.append("- Runs when the control attaches and whenever the watched bool changes.")
 	else:
 		return "—"
-	if rule is UiReactWireRule:
-		lines.append(
-			"- Rule order on this control matters (for example, sort the list before copying detail text from it)."
-		)
 	return "\n".join(lines)
 
 
