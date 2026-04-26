@@ -3,6 +3,9 @@ extends Control
 class_name UiReactDock
 
 const _WiringPanelScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_wiring_panel.gd")
+const _SettingsPopupScene: PackedScene = preload(
+	"res://addons/ui_react/editor_plugin/settings/ui_react_dock_settings_popup.tscn"
+)
 
 const TAB_DIAGNOSTICS := 0
 const TAB_WIRING := 1
@@ -72,6 +75,7 @@ var _last_diagnostics_title_count: int = -1
 
 ## group_key -> expanded (for grouped view)
 var _group_expanded: Dictionary = {}
+var _settings_popup: Control = null
 
 
 func setup(plugin: EditorPlugin) -> void:
@@ -86,6 +90,38 @@ func setup(plugin: EditorPlugin) -> void:
 	_connect_editor_signals()
 	call_deferred(&"_run_startup_refresh")
 	call_deferred(&"_deferred_wiring_tab_activate")
+
+
+func set_plugin_owner(plugin: EditorPlugin) -> void:
+	_plugin = plugin
+
+
+func open_and_focus_diagnostics() -> void:
+	if _tabs == null:
+		return
+	_tabs.current_tab = TAB_DIAGNOSTICS
+	_last_tab_for_persist = TAB_DIAGNOSTICS
+
+
+func open_and_focus_wiring() -> void:
+	if _tabs == null:
+		return
+	_tabs.current_tab = TAB_WIRING
+	_last_tab_for_persist = TAB_WIRING
+	call_deferred(&"_deferred_wiring_tab_activate")
+
+
+func get_current_editor_tab() -> int:
+	if _tabs == null:
+		return -1
+	return _tabs.current_tab
+
+
+func capture_session_for_layout_persist() -> void:
+	if _tabs:
+		UiReactDockConfig.save_last_tab_session(_tabs.current_tab)
+	if _wiring_panel != null and _wiring_panel.has_method(&"capture_session_for_persist"):
+		_wiring_panel.call(&"capture_session_for_persist")
 
 
 func request_refresh(_reason: StringName = &"manual") -> void:
@@ -186,6 +222,11 @@ func _build_ui() -> void:
 	_auto_refresh.toggled.connect(_on_auto_refresh_toggled)
 	_auto_refresh.tooltip_text = "In Selection mode, rescan when the editor selection changes."
 	mode_row.add_child(_auto_refresh)
+	var settings_btn := Button.new()
+	settings_btn.text = "Settings"
+	settings_btn.tooltip_text = "Open Ui React plugin settings."
+	settings_btn.pressed.connect(_on_settings_pressed)
+	mode_row.add_child(settings_btn)
 
 	var group_row := HBoxContainer.new()
 	vbox.add_child(group_row)
@@ -413,7 +454,7 @@ func _on_tabs_tab_selected(tab_idx: int) -> void:
 		if prev == TAB_WIRING and tab_idx != TAB_WIRING:
 			if _wiring_panel != null and _wiring_panel.has_method(&"capture_session_for_persist"):
 				_wiring_panel.call(&"capture_session_for_persist")
-		UiReactDockConfig.save_ui_preference(UiReactDockConfig.KEY_DOCK_LAST_TAB, tab_idx)
+		UiReactDockConfig.save_last_tab_session(tab_idx)
 	_last_tab_for_persist = tab_idx
 	if tab_idx == TAB_WIRING and not _suppress_pref_save:
 		call_deferred(&"_deferred_wiring_tab_activate")
@@ -697,3 +738,17 @@ func _on_copy_report_pressed() -> void:
 
 func _on_fix_all_pressed() -> void:
 	_dock_actions.on_fix_all()
+
+
+func _on_settings_pressed() -> void:
+	if _settings_popup == null:
+		var popup_scene := _SettingsPopupScene
+		if popup_scene == null:
+			return
+		_settings_popup = popup_scene.instantiate() as Control
+		if _settings_popup != null:
+			add_child(_settings_popup)
+	if _settings_popup == null:
+		return
+	if _settings_popup.has_method(&"open_popup"):
+		_settings_popup.call(&"open_popup")

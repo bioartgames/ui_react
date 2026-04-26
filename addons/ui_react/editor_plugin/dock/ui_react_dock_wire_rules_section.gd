@@ -5,6 +5,7 @@ extends VBoxContainer
 const _WireDetailsScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_wire_details.gd")
 const _WireGraphEditScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_wire_graph_edit_service.gd")
 const _WireShallowEditorScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_wire_rule_shallow_editor.gd")
+const _WireStackCatalogScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_wire_rule_stack_catalog.gd")
 
 const _LIST_VISIBLE_RULE_ROWS := 3
 const _RULE_ROW_EST_HEIGHT := 30
@@ -116,6 +117,28 @@ func append_rule_from_catalog_index(catalog_idx: int) -> void:
 	arr.append(rule)
 	_selected_rule_index = arr.size() - 1
 	_commit_wire_rules(arr, "Ui React: Add wire rule")
+
+
+## Appends a built-in recipe from [UiReactWireRuleStackCatalog] in one [code]_commit_wire_rules[/code] / undo step ([code]CB-063[/code]).
+func append_stack_from_catalog_index(stack_idx: int) -> void:
+	if _target == null or _actions == null:
+		return
+	var entries: Array[Dictionary] = _WireStackCatalogScript.stack_entries()
+	if stack_idx < 0 or stack_idx >= entries.size():
+		return
+	var stack: Array[UiReactWireRule] = _WireStackCatalogScript.instantiate_stack(stack_idx)
+	if stack.is_empty():
+		return
+	var arr: Array[UiReactWireRule] = _get_wr_array_duplicate()
+	var base: int = arr.size()
+	for i: int in range(stack.size()):
+		var rule: UiReactWireRule = stack[i]
+		if String(rule.rule_id).is_empty():
+			rule.rule_id = "rule_%d" % (base + i)
+		arr.append(rule)
+	_selected_rule_index = arr.size() - 1
+	var label: String = "Ui React: Add wire stack: %s" % String(entries[stack_idx][&"label"])
+	_commit_wire_rules(arr, label)
 
 
 func _build_ui() -> void:

@@ -115,10 +115,10 @@ await UiAnimUtils.animate_expand(self, some_control).finished
 ### 5) Optional: **Ui React** editor plugin
 
 1. Open **Project → Project Settings → Plugins** and enable **Ui React** (bundled at `editor_plugin/plugin.cfg`).
-2. Open the **Ui React** panel in the **bottom editor dock** (tab bar: **Diagnostics**, **Wiring**). Hover the **Ui React** tab for **`Toggle Ui React Bottom Panel (Alt+U)`** by default. The key name in parentheses follows the current binding from **Project Settings** (**`plugin_editor_bottom_panel_shortcut_json`**, table below).
+2. Open the **Ui React** panel in the **bottom editor dock** (tab bar: **Diagnostics**, **Wiring**). The tab has **no** global toggle shortcut; hover it for **`Toggle Ui React Bottom Panel (Alt+1, Alt+2)`** by default (main row digits, not numpad; text updates if you change shortcuts in dock **Settings**). Open dock **Settings** (top row button) to reassign those actions.
 3. Choose **Scan: Selection** or **Entire scene**, press **Rescan** to run diagnostics on demand, and review results. Dock choices (scan mode, **Group** mode, filters, auto-refresh, output folder) are **remembered per project** when you reopen it. The **last dock tab** (**Diagnostics** vs **Wiring**) is remembered too; if **Wiring** was last, the editor restores the **Wiring** scope control and (when valid) the last **graph node** selection for that edited scene. The **Diagnostics** tab title shows the **filtered visible issue count** (e.g. `Diagnostics (12)`). The tool also **updates when you switch the active edited scene**, and when **EditorFileSystem** reports filesystem changes (coalesced refresh so rapid imports do not spam rescans). Open the **Wiring** tab for the **recommended** workbench (**[`docs/ROADMAP.md`](docs/ROADMAP.md)** **North star**): the **Dependency Graph** (left) **refreshes when your scene selection changes** (debounced), after **undo/redo** (**`EditorUndoRedoManager.version_changed`**), and when you press **Refresh**; the **`wire_rules`** list (right) stays in sync. Select a single **`UiReact*`** node to set scope; the **details** pane holds the narrative report (upstream/downstream, cycle candidates) and **Visual** graph (**`CB-018A.1`**–**`CB-018A.5`**) shows a **scoped** canvas (**orthogonal** edges, **legend**, **filters**, **Focus in Inspector** / **Copy details**, pan/zoom, canvas **reconnect** / **new link** where implemented—declarative snapshot, not a runtime trace).
-4. Use **Group** (flat / by node / by severity), **Filter**, and severity toggles to narrow the list. **Binding** issues (validator output) show **Fix**, **Focus**, and **Ignore**—**Ignore** is session-only until the next **Rescan**. **Unused state file** rows apply only to the **active edited, saved** scene: a typed `UiState` `.tres` must (1) live under the configured output folder, (2) have its `res://` path appear in that scene’s **`.tscn` text on disk**, and (3) **not** be assigned on any **Ui React** export in that scene’s node tree. Such rows show **Reveal** and **Ignore**—**Reveal** calls the FileSystem dock’s **`navigate_to_path`** for that `.tres`; **Ignore** is **stored in Project Settings** (**`ui_react/plugin_ignored_unused_state_paths`**) and survives **Rescan**. **Unsaved scenes** (no `scene_file_path`) produce **no** unused-state rows. **Script-only** references (never written into the `.tscn`) are **not** detected as candidates. This is **not** a project-wide unused scan. With **Group → By node**, unused-file rows appear under **Unused state files**, not under **`(scene)`**. Click an issue summary in the **upper list** to select it and show full details in the **report** below. **Hover** any control for a short tooltip (scope, filters, and actions).
-5. For unassigned `*_state` slots with a suggested type, use **Fix** on a row (single issue) or **Fix All** in the toolbar (every eligible **binding** row in the **filtered** list). **Ignore All** applies session **Ignore** to binding rows and appends unused-file paths to the persisted ignore list (see **Project settings** below). New `.tres` files are saved under the configured folder (default `res://addons/ui_react/ui_resources/plugin_generated/`); if a filename already exists, the plugin saves as `<name>_2.tres`, `<name>_3.tres`, … instead of overwriting. Override the folder with **`ui_react/plugin_state_output_path`**.
+4. Use **Group** (flat / by node / by severity), **Filter**, and severity toggles to narrow the list. **Binding** issues (validator output) show **Fix**, **Focus**, and **Ignore**—**Ignore** is session-only until the next **Rescan**. **Unused state file** rows apply only to the **active edited, saved** scene: a typed `UiState` `.tres` must (1) live under the configured output folder, (2) have its `res://` path appear in that scene’s **`.tscn` text on disk**, and (3) **not** be assigned on any **Ui React** export in that scene’s node tree. Such rows show **Reveal** and **Ignore**—**Reveal** calls the FileSystem dock’s **`navigate_to_path`** for that `.tres`; **Ignore** is **stored in Project Settings** (**`ui_react/settings/diagnostics/ignored_unused_state_paths`**) and survives **Rescan**. **Unsaved scenes** (no `scene_file_path`) produce **no** unused-state rows. **Script-only** references (never written into the `.tscn`) are **not** detected as candidates. This is **not** a project-wide unused scan. With **Group → By node**, unused-file rows appear under **Unused state files**, not under **`(scene)`**. Click an issue summary in the **upper list** to select it and show full details in the **report** below. **Hover** any control for a short tooltip (scope, filters, and actions).
+5. For unassigned `*_state` slots with a suggested type, use **Fix** on a row (single issue) or **Fix All** in the toolbar (every eligible **binding** row in the **filtered** list). **Ignore All** applies session **Ignore** to binding rows and appends unused-file paths to the persisted ignore list (see **Project settings** below). New `.tres` files are saved under the configured folder (default `res://addons/ui_react/ui_resources/plugin_generated/`); if a filename already exists, the plugin saves as `<name>_2.tres`, `<name>_3.tres`, … instead of overwriting. Override the folder with **`ui_react/settings/resources/output_path`**.
 6. **Repo hygiene:** Do not commit plugin-generated `.tres` under that folder unless a **committed** example scene references them. Remove one-off Quick Create leftovers before opening a PR.
 
 All plugin usage details are documented in this README.
@@ -451,11 +451,11 @@ The plugin **version** is declared in [`editor_plugin/plugin.cfg`](editor_plugin
 - **Click an issue summary** to load the **report**: full issue text, fix hint, component/node/path, **Resource** (`res://` path when the issue carries `resource_path`), property metadata when applicable, and—when present—scan-time **Value type** / **Effective value** (truncated for long strings).
 - **Toolbar:** **Rescan**, **Copy report**, **Fix All** (binding issues only; eligible filtered rows), and **Ignore All** (applies session **Ignore** to binding issues; adds **edited-scene** unused-file paths to the **persisted** ignore list). **Row actions:** binding rows—**Fix**, **Focus**, **Ignore**; unused-file rows (see step 4 scope)—**Reveal**, **Ignore**. Use **Copy report** to copy the filtered list using the same summary text as each row (and fix hints when present).
 
-**Persisted per project:** scan mode, **Group** mode, severity filters, auto-refresh, state output folder, ignored unused file paths (**`ui_react/plugin_ignored_unused_state_paths`**), **last dock tab** (**`ui_react/plugin_dock_last_tab`**), **Wiring return state** (**`ui_react/plugin_wiring_last_scene_path`**, **`ui_react/plugin_wiring_last_scope_node_path`**, **`ui_react/plugin_wiring_last_graph_node_id`**), and the optional **bottom-panel keyboard shortcut** (**`ui_react/plugin_editor_bottom_panel_shortcut_json`**) are saved in **Project Settings** and restored when you reopen the project (no need to reconfigure each session).
+**Persisted per project:** diagnostics/dock preferences (scan mode, **Group** mode, severity filters, auto-refresh, output folder), ignored unused file paths (**`ui_react/settings/diagnostics/ignored_unused_state_paths`**), graph legend default, and Ui React shortcut settings are saved in **Project Settings** as internal keys. Session/layout restore state (last dock tab, Wiring return node, graph split offset, scope preset payload) is stored in plugin layout metadata.
 
 **When diagnostics update:** the list updates when you press **Rescan**, when you open or **switch the active edited scene** tab, when **EditorFileSystem** signals filesystem changes, and—if **Auto-refresh on selection** is enabled—in **Selection** mode when the editor selection changes.
 
-**Rescan** clears **session-only** hides (**Ignore** on binding issues). It does **not** remove paths from **`plugin_ignored_unused_state_paths`**; clear those in **Project Settings** if needed.
+**Rescan** clears **session-only** hides (**Ignore** on binding issues). It does **not** remove paths from **`ui_react/settings/diagnostics/ignored_unused_state_paths`**; clear those in **Project Settings** if needed.
 
 ## Dock features
 
@@ -472,25 +472,16 @@ The plugin **version** is declared in [`editor_plugin/plugin.cfg`](editor_plugin
 | **Focus** | Binding rows only: select the scene node for that issue (disabled when the row has no `node_path`). |
 | **Fix** | Binding rows only: for an unassigned `*_state` with a suggested type (**Info** optional slots or **Warning** required slots), creates the typed state, saves it, assigns with **undo/redo**. |
 | **Fix All** | Same as **Fix** for **every** eligible **binding** row in the **current filtered** list. |
-| **Ignore** / **Ignore All** | Binding issues: hide until **Rescan**. Unused-file issues (edited scene file + output folder rule): append path to **`plugin_ignored_unused_state_paths`** (persisted). |
+| **Ignore** / **Ignore All** | Binding issues: hide until **Rescan**. Unused-file issues (edited scene file + output folder rule): append path to **`ui_react/settings/diagnostics/ignored_unused_state_paths`** (persisted). |
 
 ## Project settings
 
+Ui React now uses a **plugin-only** settings surface (dock **Settings** button). Shortcut fields are not intended for direct Project Settings editing. The plugin stores these internal keys:
+
 | Key | Default | Meaning |
 |-----|---------|---------|
-| `ui_react/plugin_state_output_path` | `res://addons/ui_react/ui_resources/plugin_generated/` | Folder for plugin-generated `.tres` files (trailing `/` recommended). |
-| `ui_react/plugin_scan_mode` | `0` | `0` = Selection scan, `1` = Entire scene. |
-| `ui_react/plugin_show_errors` | `true` | Show **Errors** in the list. |
-| `ui_react/plugin_show_warnings` | `true` | Show **Warnings** in the list. |
-| `ui_react/plugin_show_info` | `true` | Show **Info** in the list. |
-| `ui_react/plugin_auto_refresh` | `true` | Auto-refresh when selection changes (Selection scan only). |
-| `ui_react/plugin_group_mode` | `0` | `0` = Flat list, `1` = By node, `2` = By severity. |
-| `ui_react/plugin_ignored_unused_state_paths` | `PackedStringArray()` (empty) | `res://` paths of **scene-file-scoped** unused-file diagnostics hidden until removed from this list. |
-| `ui_react/plugin_dock_last_tab` | `0` | `0` = **Diagnostics** tab, `1` = **Wiring** tab. |
-| `ui_react/plugin_wiring_last_scene_path` | `""` | Edited scene **`scene_file_path`** when Wiring session was last captured (empty = unsaved scene). |
-| `ui_react/plugin_wiring_last_scope_node_path` | `""` | Scene-root-relative **`NodePath`** string for the **`UiReact*`** scope **`Control`**. |
-| `ui_react/plugin_wiring_last_graph_node_id` | `""` | Last graph **node** id when selection was a node (`ctrl:` / `state:` …); empty if last highlight was an edge or cleared. |
-| `ui_react/plugin_editor_bottom_panel_shortcut_json` | `{"v":1,"enabled":true,"keycode":85,"alt":true,"shift":false,"ctrl":false,"meta":false}` | JSON for the **bottom-panel tab shortcut** (`85` = **KEY_U**, i.e. **Alt+U**). Set **`"enabled":false`** or **`{}`** to disable. Invalid JSON falls back to the default; the plugin **reloads** the binding when this setting changes (no editor restart). |
+| `ui_react/settings/shortcuts/open_diagnostics_json` | `Alt+1` | Open/focus the Diagnostics tab (opens bottom panel first when needed). |
+| `ui_react/settings/shortcuts/open_wiring_json` | `Alt+2` | Open/focus the Wiring tab (opens bottom panel first when needed). |
 
 ## Binding metadata & validation
 
@@ -508,8 +499,8 @@ Use **`UiArrayState`** for `items_state` so inspector intent and diagnostics lin
 
 ## Architecture (for contributors)
 
-- `ui_react_editor_plugin.gd` — `EditorPlugin` entry; registers the bottom dock, tab tooltip, and optional **Project Settings** shortcut (`plugin_editor_bottom_panel_shortcut_json`).
-- `editor_plugin/services/ui_react_editor_bottom_panel_shortcut.gd` — Parses shortcut JSON and formats the bottom-tab tooltip.
+- `ui_react_editor_plugin.gd` — `EditorPlugin` entry; registers the bottom dock (no tab shortcut), tab tooltip, and plugin action shortcut dispatch (`open_diagnostics_json`, `open_wiring_json`).
+- `editor_plugin/services/ui_react_editor_bottom_panel_shortcut.gd` — Parses open-shortcut JSON and formats the bottom-tab tooltip.
 - `dock/ui_react_dock.gd` — Dock UI, refresh orchestration, editor signal wiring.
 - `models/ui_react_diagnostic_model.gd` — `DiagnosticIssue`, **IssueKind** (`GENERIC` vs `UNUSED_STATE_FILE`), **`resource_path`** for file-scoped rows.
 - `services/ui_react_scanner_service.gd` — Finds `UiReact*` nodes and binding metadata.

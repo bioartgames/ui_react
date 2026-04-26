@@ -33,21 +33,15 @@ ai_assistant_hub/rag/top_k=6
 
 [ui_react]
 
-plugin_state_output_path="res://addons/ui_react/ui_resources/plugin_generated/"
-plugin_scan_mode=1
-plugin_show_errors=true
-plugin_show_warnings=true
-plugin_show_info=true
-plugin_auto_refresh=true
-plugin_group_mode=0
-plugin_ignored_unused_state_paths=PackedStringArray()
-plugin_graph_scope_presets_json="[]"
-plugin_graph_active_scope_preset_name=""
-plugin_graph_body_vsplit_offset=160
-plugin_graph_legend_visible=true
-plugin_graph_body_hsplit_offset=-1
-plugin_dock_last_tab=1
-plugin_wiring_last_scene_path="res://addons/ui_react/examples/inventory_screen_demo.tscn"
-plugin_wiring_last_scope_node_path="MainHBox/LeftColumn/CategoryTree"
-plugin_wiring_last_graph_node_id="ctrl:MainHBox/LeftColumn/CategoryTree"
-plugin_editor_bottom_panel_shortcut_json="{\"alt\":true,\"ctrl\":false,\"enabled\":true,\"keycode\":85,\"meta\":false,\"shift\":false,\"v\":1}"
+settings/diagnostics/show_errors=true
+settings/diagnostics/show_warnings=true
+settings/diagnostics/show_info=true
+settings/diagnostics/auto_refresh=true
+settings/diagnostics/group_mode=0
+settings/diagnostics/ignored_unused_state_paths=PackedStringArray()
+settings/graph/legend_visible=true
+settings/schema_version=3
+settings/resources/output_path="res://addons/ui_react/ui_resources/plugin_generated/"
+settings/diagnostics/scan_mode=1
+settings/shortcuts/open_diagnostics_json="{\"alt\":true,\"ctrl\":false,\"enabled\":true,\"keycode\":49,\"meta\":false,\"shift\":false,\"v\":1}"
+settings/shortcuts/open_wiring_json="{\"alt\":true,\"ctrl\":false,\"enabled\":true,\"keycode\":50,\"meta\":false,\"shift\":false,\"v\":1}"

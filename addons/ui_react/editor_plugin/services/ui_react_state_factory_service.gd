@@ -8,7 +8,7 @@ const MAX_UNIQUE_FILENAME_SUFFIX_ATTEMPTS := 10000
 
 
 static func default_output_dir() -> String:
-	var p := String(ProjectSettings.get_setting("ui_react/plugin_state_output_path", DEFAULT_OUTPUT_DIR)).strip_edges()
+	var p := String(ProjectSettings.get_setting(UiReactDockConfig.KEY_STATE_OUTPUT_PATH, DEFAULT_OUTPUT_DIR)).strip_edges()
 	if p.is_empty():
 		p = DEFAULT_OUTPUT_DIR
 	if not p.ends_with("/"):

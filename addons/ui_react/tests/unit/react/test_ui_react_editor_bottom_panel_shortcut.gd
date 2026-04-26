@@ -5,60 +5,65 @@ const _S := preload(
 )
 
 
-func test_default_spec_round_trips_json() -> void:
-	var spec: Dictionary = _S.default_shortcut_spec()
-	var json := _S.spec_to_json(spec)
-	var sc_variant: Variant = _S.shortcut_from_json_string(json)
-	assert_not_null(sc_variant)
-	var sc := sc_variant as Shortcut
-	assert_eq(sc.events.size(), 1)
-	var ev := sc.events[0] as InputEventKey
-	assert_eq(ev.keycode, KEY_U)
-	assert_true(ev.alt_pressed)
-	assert_false(ev.shift_pressed)
-	assert_false(ev.ctrl_pressed)
-	assert_false(ev.meta_pressed)
+func test_default_open_specs_round_trip_json() -> void:
+	var dspec: Dictionary = _S.default_open_diagnostics_spec()
+	var wspec: Dictionary = _S.default_open_wiring_spec()
+	var djson := _S.spec_to_json(dspec)
+	var wjson := _S.spec_to_json(wspec)
+	var dsc: Variant = _S.open_shortcut_from_json_string(djson, dspec)
+	var wsc: Variant = _S.open_shortcut_from_json_string(wjson, wspec)
+	assert_not_null(dsc)
+	assert_not_null(wsc)
+	var dev := (dsc as Shortcut).events[0] as InputEventKey
+	var wev := (wsc as Shortcut).events[0] as InputEventKey
+	assert_eq(dev.keycode, KEY_1)
+	assert_true(dev.alt_pressed)
+	assert_eq(wev.keycode, KEY_2)
+	assert_true(wev.alt_pressed)
 
 
-func test_empty_string_uses_default_alt_u() -> void:
-	var sc_variant: Variant = _S.shortcut_from_json_string("")
+func test_empty_string_uses_fallback_spec() -> void:
+	var fb := _S.default_open_diagnostics_spec()
+	var sc_variant: Variant = _S.open_shortcut_from_json_string("", fb)
 	assert_not_null(sc_variant)
 	var ev := (sc_variant as Shortcut).events[0] as InputEventKey
-	assert_eq(ev.keycode, KEY_U)
+	assert_eq(ev.keycode, KEY_1)
 	assert_true(ev.alt_pressed)
 
 
-func test_invalid_json_uses_default_alt_u() -> void:
-	var sc_variant: Variant = _S.shortcut_from_json_string("not json {{{")
+func test_invalid_json_uses_fallback_and_warns() -> void:
+	var fb := _S.default_open_wiring_spec()
+	var sc_variant: Variant = _S.open_shortcut_from_json_string("not json {{{", fb)
 	assert_engine_error(1)
 	assert_not_null(sc_variant)
 	var ev := (sc_variant as Shortcut).events[0] as InputEventKey
-	assert_eq(ev.keycode, KEY_U)
-	assert_true(ev.alt_pressed)
+	assert_eq(ev.keycode, KEY_2)
 
 
 func test_disabled_spec_returns_null_shortcut() -> void:
-	assert_null(_S.shortcut_from_json_string('{"v":1,"enabled":false}'))
-	assert_null(_S.shortcut_from_json_string("{}"))
+	var fb := _S.default_open_diagnostics_spec()
+	assert_null(_S.open_shortcut_from_json_string('{"v":1,"enabled":false}', fb))
+	assert_null(_S.open_shortcut_from_json_string("{}", fb))
 
 
-func test_unknown_version_falls_back_to_default() -> void:
-	var sc_variant: Variant = _S.shortcut_from_json_string(
-		'{"v":99,"enabled":true,"keycode":4194338,"alt":false}'
+func test_unknown_version_falls_back_to_fallback() -> void:
+	var fb := _S.default_open_diagnostics_spec()
+	var sc_variant: Variant = _S.open_shortcut_from_json_string(
+		'{"v":99,"enabled":true,"keycode":4194338,"alt":false}', fb
 	)
 	assert_engine_error(1)
 	assert_not_null(sc_variant)
 	var ev := (sc_variant as Shortcut).events[0] as InputEventKey
-	assert_eq(ev.keycode, KEY_U)
-	assert_true(ev.alt_pressed)
+	assert_eq(ev.keycode, KEY_1)
 
 
-func test_format_tab_tooltip_default_matches_toggle_line() -> void:
-	var sc_variant: Variant = _S.shortcut_from_json_string(_S.spec_to_json(_S.default_shortcut_spec()))
-	var tip := _S.format_tab_tooltip(sc_variant)
-	assert_eq(tip, "Toggle Ui React Bottom Panel (Alt+U)")
+func test_format_bottom_panel_tab_tooltip_two_shortcuts() -> void:
+	var d := _S.build_shortcut_from_spec(_S.default_open_diagnostics_spec())
+	var w := _S.build_shortcut_from_spec(_S.default_open_wiring_spec())
+	var tip := _S.format_bottom_panel_tab_tooltip(d, w)
+	assert_eq(tip, "Toggle Ui React Bottom Panel (Alt+1, Alt+2)")
 
 
-func test_format_tab_tooltip_no_shortcut_when_null() -> void:
-	var tip := _S.format_tab_tooltip(null)
-	assert_eq(tip, "Toggle Ui React Bottom Panel")
+func test_format_bottom_panel_tab_tooltip_both_disabled() -> void:
+	var tip := _S.format_bottom_panel_tab_tooltip(null, null)
+	assert_eq(tip, "Toggle Ui React Bottom Panel (disabled, disabled)")

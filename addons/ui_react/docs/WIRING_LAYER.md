@@ -104,6 +104,10 @@ These concrete subclasses ship in the wiring implementation (**capabilities** fi
 - **Debug bool snapshot:** **`UiReactWireSyncBoolStateDebugLine`** + **`UiReactLabel`** + **`text_state`**.
 - **Sort filtered rows:** After **`UiReactWireRefreshItemsFromCatalog`** fills **`items_state`**, add **`UiReactWireSortArrayByKey`** on the **`UiReactItemList`** (same **`items_state`**, **`sort_key_state`** bound to your sort key—e.g. **`UiStringState`** driven by an **`UiReactOptionButton`** whose item **text** matches row **keys**, or game-mapped strings).
 
+### 6.2 Stacks (authoring presets)
+
+**Stacks** are **editor-only** authoring accelerators (**`CB-063`**) that **append** a curated **`Array[UiReactWireRule]`** to the host’s **`wire_rules`** in a **single undo** step. They are implemented as the static catalog [`UiReactWireRuleStackCatalog`](../editor_plugin/services/ui_react_wire_rule_stack_catalog.gd) and are **not** a second on-disk format—recipes are normal subresources. Built-in rules ship with **empty state references**; **§8** diagnostics and the **wire rule** details row list what to fill. From the **Dependency Graph**, open **Selection** right-click → **Wire** → **Stacks** and pick **Add stack: …** (MVP: **Inventory detail** — `SortArrayByKey`, `CopySelectionDetail`, `SetStringOnBoolPulse`; **Filter, sort, detail** — `RefreshItemsFromCatalog`, `SortArrayByKey`, `CopySelectionDetail`; **Catalog list** — `RefreshItemsFromCatalog`, `CopySelectionDetail`).
+
 Official **`inventory_screen_demo`** uses only **`wire_rules`** on **`UiReact*`** nodes—**no** scene root script; **`UiReactWireRuleHelper`** runs on each host (**refresh**, **sort**, **copy detail**, suffix, debug).
 
 ---

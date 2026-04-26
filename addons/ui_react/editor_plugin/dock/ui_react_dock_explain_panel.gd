@@ -7,6 +7,7 @@ const _ExplainBuilderScript := preload("res://addons/ui_react/editor_plugin/serv
 const _ComputedRebindScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_computed_graph_rebind.gd")
 const _WireGraphEditScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_wire_graph_edit_service.gd")
 const _WireRuleCatalogScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_wire_rule_catalog.gd")
+const _WireStackCatalogScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_wire_rule_stack_catalog.gd")
 const _ComputedMountsScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_computed_resource_mounts.gd")
 const _NewBindingScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_graph_new_binding_service.gd")
 const _ResolverScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_graph_node_state_resolver.gd")
@@ -86,6 +87,7 @@ var _canvas_view_context_popup: PopupMenu
 var _selection_create_bind_submenu_popup: PopupMenu
 var _selection_node_submenu_popup: PopupMenu
 var _selection_wire_submenu_popup: PopupMenu
+var _selection_wire_stacks_submenu_popup: PopupMenu
 var _selection_edge_edit_submenu_popup: PopupMenu
 var _canvas_create_submenu_popup: PopupMenu
 var _canvas_view_submenu_popup: PopupMenu
@@ -272,15 +274,10 @@ func restore_wiring_session_from_project_settings() -> bool:
 	var root := ei.get_edited_scene_root()
 	if root == null:
 		return false
-	var stored_scene := String(
-		ProjectSettings.get_setting(UiReactDockConfig.KEY_WIRING_LAST_SCENE_PATH, "")
-	)
-	var stored_scope_node_path := String(
-		ProjectSettings.get_setting(UiReactDockConfig.KEY_WIRING_LAST_SCOPE_NODE_PATH, "")
-	)
-	var stored_graph_node_id := String(
-		ProjectSettings.get_setting(UiReactDockConfig.KEY_WIRING_LAST_GRAPH_NODE_ID, "")
-	)
+	var sess: Dictionary = UiReactDockConfig.get_wiring_restore_state()
+	var stored_scene := String(sess.get("scene_path", ""))
+	var stored_scope_node_path := String(sess.get("scope_node_path", ""))
+	var stored_graph_node_id := String(sess.get("graph_node_id", ""))
 	var cur_scene := String(root.scene_file_path)
 	if stored_scene != cur_scene:
 		return false
@@ -776,6 +773,13 @@ func _fill_selection_wire_submenu(popup: PopupMenu) -> void:
 			"Add wire: %s" % String(wentries[j][&"label"]),
 			UiReactDockExplainMenuIds._SEL_ACT_WIRE_ADD_BASE + j,
 		)
+	if _selection_wire_stacks_submenu_popup != null:
+		_fill_wire_stacks_submenu(_selection_wire_stacks_submenu_popup)
+		popup.add_submenu_node_item(
+			"Stacks",
+			_selection_wire_stacks_submenu_popup,
+			UiReactDockExplainMenuIds._SEL_ACT_WIRE_STACK_SUBMENU_ROOT,
+		)
 	popup.add_item("Refresh wire list", UiReactDockExplainMenuIds._SEL_ACT_WIRE_REFRESH_LIST)
 	popup.set_item_tooltip(popup.item_count - 1, TT_WIRE_REFRESH)
 	popup.add_item("Copy rule details", UiReactDockExplainMenuIds._SEL_ACT_WIRE_COPY_RULE_REPORT)
@@ -784,6 +788,19 @@ func _fill_selection_wire_submenu(popup: PopupMenu) -> void:
 	if cr_i >= 0 and _wire_rules_section != null:
 		var sel_ix: int = _wire_rules_section.get_selected_rule_index()
 		popup.set_item_disabled(cr_i, sel_ix < 0)
+
+
+## Fills nested **Wire → Stacks** from [UiReactWireRuleStackCatalog] ([code]CB-063[/code]).
+func _fill_wire_stacks_submenu(p: PopupMenu) -> void:
+	p.clear()
+	var sentry: Array[Dictionary] = _WireStackCatalogScript.stack_entries()
+	for i: int in range(sentry.size()):
+		var e: Dictionary = sentry[i]
+		p.add_item(
+			"Add stack: %s" % String(e.get(&"label", &"")),
+			UiReactDockExplainMenuIds._SEL_ACT_WIRE_STACK_ADD_BASE + i,
+		)
+		p.set_item_tooltip(p.get_item_count() - 1, String(e.get(&"about", &"")))
 
 
 func _fill_selection_edge_edit_submenu(popup: PopupMenu) -> void:
@@ -894,6 +911,12 @@ func _on_selection_node_submenu_id(_id: int) -> void:
 
 
 func _on_selection_wire_submenu_id(id: int) -> void:
+	var ns: int = _WireStackCatalogScript.stack_entries().size()
+	if id >= UiReactDockExplainMenuIds._SEL_ACT_WIRE_STACK_ADD_BASE and id < UiReactDockExplainMenuIds._SEL_ACT_WIRE_STACK_ADD_BASE + ns:
+		var sidx: int = id - UiReactDockExplainMenuIds._SEL_ACT_WIRE_STACK_ADD_BASE
+		if _wire_rules_section != null:
+			_wire_rules_section.append_stack_from_catalog_index(sidx)
+		return
 	var nw := _WireRuleCatalogScript.rule_script_entries().size()
 	if id == UiReactDockExplainMenuIds._SEL_ACT_WIRE_REFRESH_LIST:
 		if _wire_rules_section != null:
@@ -3566,8 +3589,7 @@ func _apply_graph_body_split_editor_theme() -> void:
 func _restore_graph_body_split_offset() -> void:
 	if _graph_split_restored or _graph_body_split == null:
 		return
-	var saved: Variant = ProjectSettings.get_setting(UiReactDockConfig.KEY_GRAPH_BODY_VSPLIT_OFFSET, -1)
-	var off := int(saved)
+	var off := UiReactDockConfig.get_graph_body_vsplit_offset()
 	if off < 0:
 		_graph_split_restored = true
 		return
@@ -3599,9 +3621,7 @@ func _apply_graph_body_split_offset_clamped(off: int) -> void:
 func _on_explain_panel_tree_exiting() -> void:
 	if _graph_body_split == null:
 		return
-	UiReactDockConfig.save_ui_preference(
-		UiReactDockConfig.KEY_GRAPH_BODY_VSPLIT_OFFSET, _graph_body_split.split_offset
-	)
+	UiReactDockConfig.save_graph_body_vsplit_offset(_graph_body_split.split_offset)
 
 
 func _add_legend_edge_sample(
@@ -4455,6 +4475,10 @@ func _build_ui() -> void:
 	_selection_wire_submenu_popup.name = "SelectionWireSubmenu"
 	_selection_actions_context_popup.add_child(_selection_wire_submenu_popup)
 	_selection_wire_submenu_popup.id_pressed.connect(_on_selection_wire_submenu_id)
+	_selection_wire_stacks_submenu_popup = PopupMenu.new()
+	_selection_wire_stacks_submenu_popup.name = "SelectionWireStacksSubmenu"
+	_selection_wire_submenu_popup.add_child(_selection_wire_stacks_submenu_popup)
+	_selection_wire_stacks_submenu_popup.id_pressed.connect(_on_selection_wire_submenu_id)
 	_selection_edge_edit_submenu_popup = PopupMenu.new()
 	_selection_edge_edit_submenu_popup.name = "SelectionEdgeEditSubmenu"
 	_selection_actions_context_popup.add_child(_selection_edge_edit_submenu_popup)
