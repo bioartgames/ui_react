@@ -34,6 +34,8 @@ const _SEL_SUB_WIRE_ROOT := 1261
 const _SEL_SUB_EDGE_EDIT_ROOT := 1262
 const _SEL_SUB_SCOPE_ROOT := 1263
 const _SEL_SUB_CREATE_BIND_ROOT := 1264
+## Nested **Wire → Add rule…** single-rule catalog submenu root (sibling to [code]Stacks[/code]).
+const _SEL_SUB_WIRE_ADD_RULE_ROOT := 1265
 const _SEL_ACT_FOCUS_INSPECTOR := 1180
 const _SEL_ACT_WIRE_ADD_BASE := 1210
 ## Nested [b]Wire → Stacks[/b] preset submenu root ([code]CB-063[/code]). Sibling to stack row ids, not a stack action id.

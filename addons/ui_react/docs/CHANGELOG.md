@@ -53,6 +53,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Editor dock — Selection RMB → Wire** submenu reorganized: per-rule `Add wire: <Type>` entries moved into a nested **Add rule…** submenu, sibling to **Stacks**; **Refresh wire list** and **Copy rule details** sit below a separator. No row-id changes; existing handler dispatch unchanged. ([`UiReactDockExplainPanel._fill_selection_wire_submenu`](../editor_plugin/dock/ui_react_dock_explain_panel.gd))
 - **Editor copy:** Diagnostics validators, wire rule details, Dependency Graph help, menus/tooltips, and dock warnings use solo-designer plain language; see [`EDITOR_COPY.md`](EDITOR_COPY.md).
 - **Editor dock — Selected wire rule details:** removed the inline **Checks** row from [`UiReactDockWireDetails`](../editor_plugin/dock/ui_react_dock_wire_details.gd). Wiring issue display and resolution are now Diagnostics-only; wire details stay descriptive (intent/runtime/inputs/outputs).
 - **Validator parity (`CB-058`):** wiring validation now includes quick-edit-aligned checks for oversized shallow text fields (`text_no_selection`, `template_rising`, `template_no_selection`, `line_prefix`, `first_row_icon_path`) and warns when `first_row_icon_path` is not `res://`-scoped.

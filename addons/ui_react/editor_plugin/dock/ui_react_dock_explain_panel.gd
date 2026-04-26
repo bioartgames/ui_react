@@ -87,6 +87,7 @@ var _canvas_view_context_popup: PopupMenu
 var _selection_create_bind_submenu_popup: PopupMenu
 var _selection_node_submenu_popup: PopupMenu
 var _selection_wire_submenu_popup: PopupMenu
+var _selection_wire_add_rule_submenu_popup: PopupMenu
 var _selection_wire_stacks_submenu_popup: PopupMenu
 var _selection_edge_edit_submenu_popup: PopupMenu
 var _canvas_create_submenu_popup: PopupMenu
@@ -768,10 +769,12 @@ func _fill_selection_wire_submenu(popup: PopupMenu) -> void:
 	const TT_WIRE_REFRESH := "Reload the Wire rules list after edits elsewhere or Undo."
 	const TT_WIRE_COPY_REP := "Copy the selected wire rule report from the list below."
 	var wentries := _WireRuleCatalogScript.rule_script_entries()
-	for j: int in range(wentries.size()):
-		popup.add_item(
-			"Add wire: %s" % String(wentries[j][&"label"]),
-			UiReactDockExplainMenuIds._SEL_ACT_WIRE_ADD_BASE + j,
+	if _selection_wire_add_rule_submenu_popup != null and wentries.size() > 0:
+		_fill_wire_add_rule_submenu(_selection_wire_add_rule_submenu_popup, wentries)
+		popup.add_submenu_node_item(
+			"Add rule…",
+			_selection_wire_add_rule_submenu_popup,
+			UiReactDockExplainMenuIds._SEL_SUB_WIRE_ADD_RULE_ROOT,
 		)
 	if _selection_wire_stacks_submenu_popup != null:
 		_fill_wire_stacks_submenu(_selection_wire_stacks_submenu_popup)
@@ -780,6 +783,8 @@ func _fill_selection_wire_submenu(popup: PopupMenu) -> void:
 			_selection_wire_stacks_submenu_popup,
 			UiReactDockExplainMenuIds._SEL_ACT_WIRE_STACK_SUBMENU_ROOT,
 		)
+	if popup.item_count > 0:
+		popup.add_separator()
 	popup.add_item("Refresh wire list", UiReactDockExplainMenuIds._SEL_ACT_WIRE_REFRESH_LIST)
 	popup.set_item_tooltip(popup.item_count - 1, TT_WIRE_REFRESH)
 	popup.add_item("Copy rule details", UiReactDockExplainMenuIds._SEL_ACT_WIRE_COPY_RULE_REPORT)
@@ -801,6 +806,16 @@ func _fill_wire_stacks_submenu(p: PopupMenu) -> void:
 			UiReactDockExplainMenuIds._SEL_ACT_WIRE_STACK_ADD_BASE + i,
 		)
 		p.set_item_tooltip(p.get_item_count() - 1, String(e.get(&"about", &"")))
+
+
+## Fills nested **Wire → Add rule…** from [UiReactWireRuleCatalog].
+func _fill_wire_add_rule_submenu(p: PopupMenu, wentries: Array) -> void:
+	p.clear()
+	for j: int in range(wentries.size()):
+		p.add_item(
+			"Add wire: %s" % String(wentries[j][&"label"]),
+			UiReactDockExplainMenuIds._SEL_ACT_WIRE_ADD_BASE + j,
+		)
 
 
 func _fill_selection_edge_edit_submenu(popup: PopupMenu) -> void:
@@ -4475,6 +4490,10 @@ func _build_ui() -> void:
 	_selection_wire_submenu_popup.name = "SelectionWireSubmenu"
 	_selection_actions_context_popup.add_child(_selection_wire_submenu_popup)
 	_selection_wire_submenu_popup.id_pressed.connect(_on_selection_wire_submenu_id)
+	_selection_wire_add_rule_submenu_popup = PopupMenu.new()
+	_selection_wire_add_rule_submenu_popup.name = "SelectionWireAddRuleSubmenu"
+	_selection_wire_submenu_popup.add_child(_selection_wire_add_rule_submenu_popup)
+	_selection_wire_add_rule_submenu_popup.id_pressed.connect(_on_selection_wire_submenu_id)
 	_selection_wire_stacks_submenu_popup = PopupMenu.new()
 	_selection_wire_stacks_submenu_popup.name = "SelectionWireStacksSubmenu"
 	_selection_wire_submenu_popup.add_child(_selection_wire_stacks_submenu_popup)
