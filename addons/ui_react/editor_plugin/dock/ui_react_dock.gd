@@ -3,9 +3,6 @@ extends Control
 class_name UiReactDock
 
 const _WiringPanelScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_wiring_panel.gd")
-const _SettingsPopupScene: PackedScene = preload(
-	"res://addons/ui_react/editor_plugin/settings/ui_react_dock_settings_popup.tscn"
-)
 
 const TAB_DIAGNOSTICS := 0
 const TAB_WIRING := 1
@@ -75,7 +72,6 @@ var _last_diagnostics_title_count: int = -1
 
 ## group_key -> expanded (for grouped view)
 var _group_expanded: Dictionary = {}
-var _settings_popup: Control = null
 
 
 func setup(plugin: EditorPlugin) -> void:
@@ -222,11 +218,6 @@ func _build_ui() -> void:
 	_auto_refresh.toggled.connect(_on_auto_refresh_toggled)
 	_auto_refresh.tooltip_text = "In Selection mode, rescan when the editor selection changes."
 	mode_row.add_child(_auto_refresh)
-	var settings_btn := Button.new()
-	settings_btn.text = "Settings"
-	settings_btn.tooltip_text = "Open Ui React plugin settings."
-	settings_btn.pressed.connect(_on_settings_pressed)
-	mode_row.add_child(settings_btn)
 
 	var group_row := HBoxContainer.new()
 	vbox.add_child(group_row)
@@ -738,17 +729,3 @@ func _on_copy_report_pressed() -> void:
 
 func _on_fix_all_pressed() -> void:
 	_dock_actions.on_fix_all()
-
-
-func _on_settings_pressed() -> void:
-	if _settings_popup == null:
-		var popup_scene := _SettingsPopupScene
-		if popup_scene == null:
-			return
-		_settings_popup = popup_scene.instantiate() as Control
-		if _settings_popup != null:
-			add_child(_settings_popup)
-	if _settings_popup == null:
-		return
-	if _settings_popup.has_method(&"open_popup"):
-		_settings_popup.call(&"open_popup")

@@ -19,18 +19,6 @@ config/icon="res://icon.svg"
 
 enabled=PackedStringArray("res://addons/gut/plugin.cfg", "res://addons/ui_react/editor_plugin/plugin.cfg")
 
-[plugins]
-
-ai_assistant_hub/options/debug_mode=0
-ai_assistant_hub/llm_api="jan_api"
-ai_assistant_hub/preferences/thinking_target=0
-ai_assistant_hub/preferences/skip_greeting=false
-ai_assistant_hub/preferences/always_scroll_to_bottom=false
-ai_assistant_hub/preferences/audio_hints=true
-ai_assistant_hub/rag/enabled=true
-ai_assistant_hub/rag/max_files=1500
-ai_assistant_hub/rag/top_k=6
-
 [ui_react]
 
 settings/diagnostics/show_errors=true
@@ -42,6 +30,6 @@ settings/diagnostics/ignored_unused_state_paths=PackedStringArray()
 settings/graph/legend_visible=true
 settings/schema_version=3
 settings/resources/output_path="res://addons/ui_react/ui_resources/plugin_generated/"
-settings/diagnostics/scan_mode=1
+settings/diagnostics/scan_mode=0
 settings/shortcuts/open_diagnostics_json="{\"alt\":true,\"ctrl\":false,\"enabled\":true,\"keycode\":49,\"meta\":false,\"shift\":false,\"v\":1}"
 settings/shortcuts/open_wiring_json="{\"alt\":true,\"ctrl\":false,\"enabled\":true,\"keycode\":50,\"meta\":false,\"shift\":false,\"v\":1}"

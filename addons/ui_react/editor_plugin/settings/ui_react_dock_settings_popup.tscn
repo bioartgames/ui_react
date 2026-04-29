@@ -1,6 +1,0 @@
-[gd_scene load_steps=2 format=3]
-
-[ext_resource type="Script" path="res://addons/ui_react/editor_plugin/settings/ui_react_dock_settings_popup.gd" id="1_script"]
-
-[node name="UiReactDockSettingsPopup" type="PopupPanel"]
-script = ExtResource("1_script")

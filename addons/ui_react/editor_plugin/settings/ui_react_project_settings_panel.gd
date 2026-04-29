@@ -65,7 +65,7 @@ func _build_ui() -> void:
 	actions.add_child(revert_btn)
 	var reset_btn := Button.new()
 	reset_btn.text = "Reset defaults"
-	reset_btn.tooltip_text = "Clear all ignored paths (no shortcut editor here; use the dock Settings popup for hotkeys)."
+	reset_btn.tooltip_text = "Clear all ignored paths. Open-tab shortcuts use internal Project Settings keys (defaults Alt+1 / Alt+2); edit JSON there if needed."
 	reset_btn.pressed.connect(_on_reset_defaults_pressed)
 	actions.add_child(reset_btn)
 	add_child(actions)

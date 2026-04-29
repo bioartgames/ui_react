@@ -18,10 +18,11 @@ static func validate_transactional_under_root(root: Node) -> Array[UiReactDiagno
 			for i in range(1, apply_paths.size()):
 				var extra: NodePath = apply_paths[i] as NodePath
 				var n2: Node = root.get_node_or_null(extra)
+				var ac := "UiReactTextureButton" if n2 is UiReactTextureButton else "UiReactButton"
 				out.append(
 					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
 						UiReactDiagnosticModel.Severity.ERROR,
-						"UiReactButton",
+						ac,
 						str(n2.name) if n2 else "",
 						"More than one Apply button is wired to the same transactional group.",
 						"Keep one Apply-style button per group (Transactional host role Apply all); remove or reassign extras.",
@@ -36,10 +37,11 @@ static func validate_transactional_under_root(root: Node) -> Array[UiReactDiagno
 			for i in range(1, cancel_paths.size()):
 				var extra2: NodePath = cancel_paths[i] as NodePath
 				var n3: Node = root.get_node_or_null(extra2)
+				var cc := "UiReactTextureButton" if n3 is UiReactTextureButton else "UiReactButton"
 				out.append(
 					UiReactDiagnosticModel.DiagnosticIssue.make_structured(
 						UiReactDiagnosticModel.Severity.ERROR,
-						"UiReactTextureButton",
+						cc,
 						str(n3.name) if n3 else "",
 						"More than one Cancel button is wired to the same transactional group.",
 						"Keep one Cancel-style button per group (Transactional host role Cancel all); remove or reassign extras.",
