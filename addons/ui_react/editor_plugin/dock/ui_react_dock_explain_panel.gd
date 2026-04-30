@@ -1,8 +1,9 @@
 ## Editor dock tab: declarative dependency snapshot ([code]CB-018A[/code]) plus visual graph layout ([code]CB-018A.5[/code]) for the Wiring workbench.
-var _scope := UiReactSubscriptionScope.new()
 ## The graph and embedded wire-rules list also perform authoring edits (rebind, disconnect, new link, scope presets, create state) via [UiReactActionController] and graph edit services—not a read-only viewer.
 class_name UiReactDockExplainPanel
 extends MarginContainer
+
+var _scope := UiReactSubscriptionScope.new()
 
 const _ExplainBuilderScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_explain_graph_builder.gd")
 const _ComputedRebindScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_computed_graph_rebind.gd")
@@ -182,6 +183,7 @@ func setup(
 	actions: UiReactActionController,
 	request_dock_refresh: Callable = Callable(),
 ) -> void:
+	_scope = UiReactSubscriptionScope.new()
 	_plugin = plugin
 	_actions = actions
 	_request_dock_refresh = request_dock_refresh
@@ -4573,3 +4575,17 @@ func _set_hint(t: String) -> void:
 
 func _exit_tree() -> void:
 	_scope.dispose()
+	if _selection_actions_context_popup != null and is_instance_valid(_selection_actions_context_popup):
+		_selection_actions_context_popup.queue_free()
+	if _canvas_view_context_popup != null and is_instance_valid(_canvas_view_context_popup):
+		_canvas_view_context_popup.queue_free()
+	if _newlink_binding_popup != null and is_instance_valid(_newlink_binding_popup):
+		_newlink_binding_popup.queue_free()
+	if _newlink_mixed_popup != null and is_instance_valid(_newlink_mixed_popup):
+		_newlink_mixed_popup.queue_free()
+	if _newlink_mount_popup != null and is_instance_valid(_newlink_mount_popup):
+		_newlink_mount_popup.queue_free()
+	if _rebind_file_dialog != null and is_instance_valid(_rebind_file_dialog):
+		_rebind_file_dialog.queue_free()
+	if _create_state_save_dialog != null and is_instance_valid(_create_state_save_dialog):
+		_create_state_save_dialog.queue_free()

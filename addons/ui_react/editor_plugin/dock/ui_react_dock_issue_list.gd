@@ -200,5 +200,11 @@ func _make_issue_row(issue: UiReactDiagnosticModel.DiagnosticIssue, flat_index: 
 	return row
 
 
+func dispose() -> void:
+	if _scope != null:
+		_scope.dispose()
+		_scope = null
+
+
 func _exit_tree() -> void:
-	_scope.dispose()
+	dispose()

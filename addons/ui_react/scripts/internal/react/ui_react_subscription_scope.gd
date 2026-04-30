@@ -9,6 +9,11 @@ var _disposed: bool = false
 
 func connect_signal(sig: Signal, cb: Callable, flags: int = 0) -> void:
 	if _disposed:
+		if OS.is_debug_build():
+			push_warning(
+				"UiReactSubscriptionScope.connect_signal called on disposed scope: signal=%s, callable=%s, scope=%s"
+				% [str(sig), str(cb), str(self)]
+			)
 		return
 	if not cb.is_valid():
 		return

@@ -12,9 +12,10 @@ const _EMPTY_ISSUES_NO_DIAGNOSTICS := (
 	"No issues reported for the current scan—either the scene is clean or nothing matched the scan scope."
 )
 const _EMPTY_ISSUES_FILTERED := (
-var _scope := UiReactSubscriptionScope.new()
 	"No issues match the current filters or search; try clearing the search box or changing severity filters or group mode."
 )
+
+var _scope := UiReactSubscriptionScope.new()
 
 ## Blocks save callbacks while applying persisted values (avoids duplicate writes / refresh loops).
 var _suppress_pref_save: bool = false
@@ -432,6 +433,10 @@ func _disconnect_editor_signals() -> void:
 func _exit_tree() -> void:
 	_scope.dispose()
 	_disconnect_editor_signals()
+	if _dock_actions != null and _dock_actions.has_method("dispose"):
+		_dock_actions.dispose()
+	if _issue_list != null and _issue_list.has_method("dispose"):
+		_issue_list.dispose()
 
 
 func _on_selection_changed() -> void:

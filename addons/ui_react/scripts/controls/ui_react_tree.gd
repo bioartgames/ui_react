@@ -1,6 +1,7 @@
 extends Tree
-var _scope := UiReactSubscriptionScope.new()
 class_name UiReactTree
+
+var _scope := UiReactSubscriptionScope.new()
 
 const _TREE_NODE_SCRIPT: Script = preload("res://addons/ui_react/scripts/api/models/ui_react_tree_node.gd")
 const _UiReactHostWireTree := preload("res://addons/ui_react/scripts/internal/react/ui_react_host_wire_tree.gd")

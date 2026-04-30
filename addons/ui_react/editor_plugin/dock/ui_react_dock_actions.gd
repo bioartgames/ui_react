@@ -1,7 +1,8 @@
-var _scope := UiReactSubscriptionScope.new()
 ## Fix, copy, focus, ignore, and scan-collection actions for [UiReactDock].
 class_name UiReactDockActions
 extends RefCounted
+
+var _scope := UiReactSubscriptionScope.new()
 
 var _dock: UiReactDock
 
@@ -230,5 +231,11 @@ func on_fix_all() -> void:
 		)
 
 
+func dispose() -> void:
+	if _scope != null:
+		_scope.dispose()
+		_scope = null
+
+
 func _exit_tree() -> void:
-	_scope.dispose()
+	dispose()

@@ -4,7 +4,7 @@ extends VBoxContainer
 
 const _FIELD_KIND_STRING := &"string"
 const _FIELD_KIND_BOOL := &"bool"
-var _scope := UiReactSubscriptionScope.new()
+var _scope: UiReactSubscriptionScope = null
 
 var _actions: UiReactActionController
 var _after_wire_mutated: Callable = Callable()
@@ -22,10 +22,16 @@ var _field_bool_checks: Dictionary = {}
 var _syncing := false
 
 
+func _enter_tree() -> void:
+	_scope = UiReactSubscriptionScope.new()
+
+
 func setup(
 	actions: UiReactActionController,
 	after_wire_mutated: Callable = Callable(),
 ) -> void:
+	if _scope == null:
+		_scope = UiReactSubscriptionScope.new()
 	_actions = actions
 	_after_wire_mutated = after_wire_mutated
 	_build_ui()
@@ -322,4 +328,6 @@ func _on_descriptor_bool_toggled(prop: StringName, on: bool, cb: CheckBox) -> vo
 
 
 func _exit_tree() -> void:
-	_scope.dispose()
+	if _scope != null:
+		_scope.dispose()
+		_scope = null

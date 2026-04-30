@@ -1,6 +1,7 @@
 @tool
-var _scope := UiReactSubscriptionScope.new()
 extends EditorPlugin
+
+var _scope: UiReactSubscriptionScope = null
 
 const _DOCK_SCENE_PATH := "res://addons/ui_react/editor_plugin/dock/ui_react_dock.tscn"
 const _BottomShortcut := preload(
@@ -15,6 +16,7 @@ static var _shortcut_property_info_registered_global: bool = false
 
 
 func _enter_tree() -> void:
+	_scope = UiReactSubscriptionScope.new()
 	UiReactDockConfig.migrate_project_settings_to_v2_clean_break()
 	UiReactDockConfig.register_default_project_settings()
 	var dock_scene := load(_DOCK_SCENE_PATH) as PackedScene
@@ -36,7 +38,9 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
-	_scope.dispose()
+	if _scope != null:
+		_scope.dispose()
+		_scope = null
 	if ProjectSettings.settings_changed.is_connected(_on_project_settings_changed):
 		ProjectSettings.settings_changed.disconnect(_on_project_settings_changed)
 	if scene_changed.is_connected(_on_editor_scene_changed):

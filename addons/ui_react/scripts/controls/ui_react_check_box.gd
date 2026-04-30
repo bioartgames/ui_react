@@ -1,6 +1,7 @@
 extends CheckBox
-var _scope := UiReactSubscriptionScope.new()
 class_name UiReactCheckBox
+
+var _scope := UiReactSubscriptionScope.new()
 
 const _UiReactHostWireTree := preload("res://addons/ui_react/scripts/internal/react/ui_react_host_wire_tree.gd")
 

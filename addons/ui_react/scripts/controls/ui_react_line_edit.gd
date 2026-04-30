@@ -1,6 +1,7 @@
 extends LineEdit
-var _scope := UiReactSubscriptionScope.new()
 class_name UiReactLineEdit
+
+var _scope: UiReactSubscriptionScope = null
 
 const _UiReactHostWireTree := preload("res://addons/ui_react/scripts/internal/react/ui_react_host_wire_tree.gd")
 
@@ -31,11 +32,14 @@ var _text_state: UiStringState
 
 
 func _enter_tree() -> void:
+	_scope = UiReactSubscriptionScope.new()
 	_UiReactHostWireTree.on_enter(self)
 
 
 func _exit_tree() -> void:
-	_scope.dispose()
+	if _scope != null:
+		_scope.dispose()
+		_scope = null
 	_UiReactHostWireTree.on_exit(self)
 
 
