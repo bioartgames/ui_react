@@ -24,6 +24,7 @@ func on_enter_tree() -> void:
 
 
 func on_exit_tree() -> void:
+	disconnect_all_states()
 	_TxnSession.unregister_host(_host)
 
 

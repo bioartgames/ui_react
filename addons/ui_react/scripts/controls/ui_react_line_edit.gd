@@ -34,6 +34,7 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
+	_disconnect_all_states()
 	_UiReactHostWireTree.on_exit(self)
 
 

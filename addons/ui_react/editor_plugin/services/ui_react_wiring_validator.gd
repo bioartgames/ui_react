@@ -3,12 +3,6 @@ class_name UiReactWiringValidator
 extends RefCounted
 
 const _WIRE_QUICK_EDIT_TEXT_MAX_LEN := 2048
-const _SCRIPT_WIRE_SORT_ARRAY_BY_KEY := "res://addons/ui_react/scripts/api/models/ui_react_wire_sort_array_by_key.gd"
-
-
-static func _is_wire_sort_array_by_key(rule: UiReactWireRule) -> bool:
-	var sc: Script = rule.get_script() as Script
-	return sc != null and sc.resource_path == _SCRIPT_WIRE_SORT_ARRAY_BY_KEY
 
 
 static func validate_wire_rules(
@@ -69,7 +63,7 @@ static func validate_wire_rules(
 					rule as UiReactWireRefreshItemsFromCatalog, component, owner, node_path, i
 				)
 			)
-		elif _is_wire_sort_array_by_key(rule):
+		elif rule is UiReactWireSortArrayByKey:
 			out.append_array(_validate_wire_rule_sort_array_by_key(rule, component, owner, node_path, i))
 		elif rule is UiReactWireCopySelectionDetail:
 			out.append_array(

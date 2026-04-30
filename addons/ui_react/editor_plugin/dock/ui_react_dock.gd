@@ -3,6 +3,7 @@ extends Control
 class_name UiReactDock
 
 const _WiringPanelScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_wiring_panel.gd")
+const _DockRefreshCoalescer := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_refresh_coalescer.gd")
 
 const TAB_DIAGNOSTICS := 0
 const TAB_WIRING := 1
@@ -18,10 +19,7 @@ const _EMPTY_ISSUES_FILTERED := (
 ## Blocks save callbacks while applying persisted values (avoids duplicate writes / refresh loops).
 var _suppress_pref_save: bool = false
 
-## Coalesces multiple refresh requests into one deferred [method refresh] call per frame.
-var _coalesced_refresh_pending: bool = false
-## When true, next [method refresh] clears unused-state file cache ([code]UiReactUnusedStateService[/code]).
-var _unused_cache_invalidate_pending: bool = false
+var _refresh_coalescer: RefCounted
 ## Set by [method _run_startup_refresh]; cleared after first successful root or one no-scene retry.
 var _expect_startup_scene_retry: bool = false
 ## Coalesces [EditorUndoRedoManager] undo/redo into one deferred **Wiring** tab refresh per frame.
@@ -76,6 +74,8 @@ var _group_expanded: Dictionary = {}
 
 func setup(plugin: EditorPlugin) -> void:
 	_plugin = plugin
+	_refresh_coalescer = _DockRefreshCoalescer.new()
+	_refresh_coalescer.setup(self)
 	_actions = UiReactActionController.new(plugin.get_undo_redo())
 	_build_ui()
 	_dock_actions = UiReactDockActions.new(self)
@@ -90,6 +90,9 @@ func setup(plugin: EditorPlugin) -> void:
 
 func set_plugin_owner(plugin: EditorPlugin) -> void:
 	_plugin = plugin
+	if _refresh_coalescer == null:
+		_refresh_coalescer = _DockRefreshCoalescer.new()
+		_refresh_coalescer.setup(self)
 
 
 func open_and_focus_diagnostics() -> void:
@@ -121,16 +124,13 @@ func capture_session_for_layout_persist() -> void:
 
 
 func request_refresh(_reason: StringName = &"manual") -> void:
-	if _reason == &"manual":
-		_unused_cache_invalidate_pending = true
-	if _coalesced_refresh_pending:
-		return
-	_coalesced_refresh_pending = true
-	call_deferred(&"_execute_pending_refresh")
+	if _refresh_coalescer != null:
+		_refresh_coalescer.request_refresh(_reason == &"manual")
 
 
-func _execute_pending_refresh() -> void:
-	_coalesced_refresh_pending = false
+func _dock_coalescer_flush() -> void:
+	if _refresh_coalescer != null:
+		_refresh_coalescer.acknowledge_flush_started()
 	refresh()
 
 
@@ -598,8 +598,9 @@ func _update_bottom_action_buttons() -> void:
 func refresh() -> void:
 	_issues_all.clear()
 	_ignored_issue_keys.clear()
-	var clear_unused_cache := _unused_cache_invalidate_pending
-	_unused_cache_invalidate_pending = false
+	var clear_unused_cache := false
+	if _refresh_coalescer != null:
+		clear_unused_cache = _refresh_coalescer.take_invalidate_unused_for_flush()
 	if clear_unused_cache:
 		UiReactUnusedStateService.clear_load_cache()
 	var ei := _plugin.get_editor_interface()
@@ -668,28 +669,21 @@ func refresh() -> void:
 
 
 func _apply_filters() -> void:
-	_issues_shown.clear()
-	var q := ""
+	var search_q := ""
 	if _search_edit:
-		q = _search_edit.text.strip_edges()
-
-	for issue in _issues_all:
-		if issue.severity == UiReactDiagnosticModel.Severity.ERROR and not _filter_err.button_pressed:
-			continue
-		if issue.severity == UiReactDiagnosticModel.Severity.WARNING and not _filter_warn.button_pressed:
-			continue
-		if issue.severity == UiReactDiagnosticModel.Severity.INFO and not _filter_info.button_pressed:
-			continue
-		if (
-			issue.issue_kind == UiReactDiagnosticModel.IssueKind.UNUSED_STATE_FILE
-			and _ignored_unused_state_paths.has(issue.resource_path)
-		):
-			continue
-		if not UiReactDockFilter.matches_search(issue, q):
-			continue
-		if _ignored_issue_keys.has(UiReactDockFilter.fingerprint(issue)):
-			continue
-		_issues_shown.append(issue)
+		search_q = _search_edit.text.strip_edges()
+	var show_err := _filter_err != null and _filter_err.button_pressed
+	var show_warn := _filter_warn != null and _filter_warn.button_pressed
+	var show_inf := _filter_info != null and _filter_info.button_pressed
+	_issues_shown = UiReactDockFilter.visible_issues(
+		_issues_all,
+		search_q,
+		show_err,
+		show_warn,
+		show_inf,
+		_ignored_issue_keys,
+		_ignored_unused_state_paths,
+	)
 
 	_selected_flat_index = -1
 	if _issues_shown.is_empty():

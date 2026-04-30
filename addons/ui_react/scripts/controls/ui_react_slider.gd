@@ -34,6 +34,10 @@ func _ready() -> void:
 	UiReactStateBindingHelper.deferred_finish_initialization(self)
 
 
+func _exit_tree() -> void:
+	_disconnect_all_states()
+
+
 func _disconnect_all_states() -> void:
 	if _value_state != null:
 		UiReactControlStateWire.unbind_value_changed(self, _value_state, &"value_state", _on_value_state_changed)

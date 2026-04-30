@@ -2,8 +2,6 @@
 class_name UiReactWireRuleIntrospection
 extends RefCounted
 
-const _SCRIPT_WIRE_SORT_ARRAY_BY_KEY := "res://addons/ui_react/scripts/api/models/ui_react_wire_sort_array_by_key.gd"
-
 
 ## Returns [code]{ "role": "in"|"out", "state": UiState, "property": StringName }[/code] dictionaries (state may be null; skip at call sites).
 static func list_io(rule: UiReactWireRule) -> Array[Dictionary]:
@@ -21,7 +19,7 @@ static func list_io(rule: UiReactWireRule) -> Array[Dictionary]:
 		out.append(_entry(&"in", r2.category_kind_state, &"category_kind_state"))
 		out.append(_entry(&"in", r2.selected_state, &"selected_state"))
 		out.append(_entry(&"out", r2.items_state, &"items_state"))
-	elif _is_wire_sort_array_by_key(rule):
+	elif rule is UiReactWireSortArrayByKey:
 		out.append(_entry(&"in", rule.get(&"items_state") as UiState, &"items_state"))
 		out.append(_entry(&"in", rule.get(&"sort_key_state") as UiState, &"sort_key_state"))
 		out.append(_entry(&"in", rule.get(&"descending_state") as UiState, &"descending_state"))
@@ -47,8 +45,3 @@ static func list_io(rule: UiReactWireRule) -> Array[Dictionary]:
 
 static func _entry(role: StringName, state: UiState, property: StringName) -> Dictionary:
 	return {&"role": role, &"state": state, &"property": property}
-
-
-static func _is_wire_sort_array_by_key(rule: UiReactWireRule) -> bool:
-	var sc: Script = rule.get_script() as Script
-	return sc != null and sc.resource_path == _SCRIPT_WIRE_SORT_ARRAY_BY_KEY

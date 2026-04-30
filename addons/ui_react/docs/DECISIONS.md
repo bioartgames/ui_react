@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-04-29 — Deferred: trim global `class_name` surface + Tree pooling (audit follow-up)
+
+**Context:** Review noted a broad **`class_name`** registration list (editor + runtime) and **full Tree rebuild** behavior when **`tree_items_state`** / list payloads churn (fine for modest data; costly at scale).
+
+**Decision:** Defer **`class_name` reduction** to a chartered SemVer-conscious migration (no drive-by stripping). Defer **row reuse / pooling** to a scoped performance milestone with benchmarks and regressions.
+
+**Consequences:** Expectations anchored for contributors; pooling or renaming later updates **CHANGELOG** / **ROADMAP** as appropriate.
+
+**Links:** **`docs/CHANGELOG.md`**, **`scripts/controls/ui_react_tree.gd`**, **`scripts/controls/ui_react_item_list.gd`**
+
+---
+
 ## 2026-04-09 — CB-058 / North star: Dependency Graph as blessed designer workbench
 
 **Context:** Wiring, computeds, transactional, and actions are powerful but **spread** across Inspector, dock tabs, and scene tree. Designers benefit from a **single orchestration surface** (animation-tree-style) that **does not** fork the resource model.

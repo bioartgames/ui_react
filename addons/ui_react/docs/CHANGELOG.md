@@ -13,6 +13,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **`UiReactWireRuleHelper`**, **`UiReactWireRuleIntrospection`**, **`UiReactWiringValidator`:** detect **`UiReactWireSortArrayByKey`** via **`rule is UiReactWireSortArrayByKey`** (no script-path string equality).
+- **`UiAnimLoopRunner`:** inner loop helpers use **`signal`** declarations instead of **`var … = Signal()`**; **`_helper_stack`** is **`Array[Node]`**.
+- **Editor diagnostics dock:** **`UiReactDockFilter.visible_issues`** (**pure**) centralizes severity, search, and ignore-key narrowing; Diagnostics refresh **coalescing** and manual unused-cache clearing live in **`UiReactDockRefreshCoalescer`** (`editor_plugin/dock/ui_react_dock_refresh_coalescer.gd`).
 - **Repo / shell (release readiness, Pass 13):** removed third-party **`ai_assistant_hub`** **`[plugins]`** entries from root **`project.godot`**; **`.vscode/settings.json`** uses a placeholder **`godotTools.editorPath.godot4`** (replace locally; see root **`AGENTS.md`**); **`docs/RELEASE_READINESS_PASSES.md`** Pass **13** scope lists **`editor_plugin/plugin.cfg`** and **`ui_react_editor_plugin.gd`** (correct paths).
 - **Plugin metadata:** **`editor_plugin/plugin.cfg`** **`version`** set to **3.0.0** to match the latest dated section in **`docs/CHANGELOG.md`**; bump **`version=`** again when cutting the next tagged release.
 - **Docs (release readiness, Pass 12):** README **Quickstart** inventory example documents **`UiReactWireSortArrayByKey`** and points at **`WIRING_LAYER`** §6; **Examples at a glance** marks **`anim_targets_catalog_demo`** **Actions** as used (**`SET_FLOAT_LITERAL`** on **`FireCompletedButton`**); **Required vs optional** table **Bindings** column aligned with **ROADMAP** **CB-052** (incl. Slider/SpinBox/ProgressBar **†**, label **—**, §5 hosts); primary story + blessed path state **`UiReactWireRuleHelper`** applies to **`wire_rules`** exports per **`WIRING_LAYER`** §3; **Four pillars** graph copy limits Dependency Graph **`sources[]`** UX to **`UiComputedStringState`/`UiComputedBoolState`** subclasses (matches graph builder).
@@ -20,10 +23,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Reactive lifecycle:** **`UiReact*`** controls and **`UiReactBaseButtonReactive`** **`on_exit_tree`** now call **`UiReactControlStateWire.unbind_value_changed`** (and computed hooks) on **`Node._exit_tree`** before transactional / wiring teardown, so **`UiReactComputedService`** static registration cannot leak across **`queue_free`**, scene swaps, or GUT teardown.
 - **`UiReactTransactionalValidator`:** duplicate **Apply** / **Cancel** per-group errors now label **`UiReactButton`** vs **`UiReactTextureButton`** from the offending node type (Pass **14** integration polish).
 
 ### Added
 
+- **Testing:** **`test_ui_react_control_lifecycle_computed`** — **`UiComputedBoolInvert`** rebound to a replacement **`UiReactCheckBox`** after the first instance is **`queue_free`**, guarding **`UiReactComputedService`** teardown on **`_exit_tree`**.
 - **Editor dock — Selection RMB** **Wire → Stacks** submenu inserts curated multi-rule recipes (**Inventory detail**, **Filter, sort, detail**, **Catalog list**) as a **single undo** step ([`UiReactWireRuleStackCatalog`](../editor_plugin/services/ui_react_wire_rule_stack_catalog.gd), [`append_stack_from_catalog_index`](../editor_plugin/dock/ui_react_dock_wire_rules_section.gd) on `UiReactDockWireRulesSection`). **No** new exports; rules ship with empty state slots so existing **§8** diagnostics guide completion (**`CB-063`**).
 - **Editor plugin — plugin-only settings surface:** removed user-facing Ui React Project Settings tab exposure (dock shortcut capture UI was added later and **removed** — see **Changed** in **[Unreleased]**).
 - **Editor plugin — dual action shortcuts:** two internal Project Settings keys (`open_diagnostics_json`, `open_wiring_json`) with defaults **Alt+1** / **Alt+2**; both open/select the Ui React bottom panel when needed (no editor restart).

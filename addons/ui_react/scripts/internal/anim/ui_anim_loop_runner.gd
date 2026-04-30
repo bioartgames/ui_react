@@ -7,7 +7,7 @@ extends RefCounted
 ## Must match [member UiAnimRuntimeControl.META_ANIMATION_LOOP_HELPER].
 const META_ANIMATION_LOOP_HELPER: StringName = &"_is_animation_loop_helper"
 
-static var _helper_stack: Array = []
+static var _helper_stack: Array[Node] = []
 
 static func push_loop_helper(helper: Node) -> void:
 	_helper_stack.append(helper)
@@ -65,7 +65,7 @@ static func loop_animation(_source_node: Node, target: Control, animation_callab
 
 ## Helper node for executing finite animation loops.
 class _FiniteLoopHelper extends Node:
-	var sequence_finished = Signal()
+	signal sequence_finished
 
 	func execute_sequence(sequence: UiAnimSequence) -> void:
 		await sequence.play()
@@ -75,7 +75,7 @@ class _FiniteLoopHelper extends Node:
 
 ## Helper node for managing infinite animation loops.
 class _AnimationLoopHelper extends Node:
-	var loop_finished = Signal()
+	signal loop_finished
 	var _is_running = false
 	var _target_control: Control = null
 	var _active_tweens: Array[Tween] = []

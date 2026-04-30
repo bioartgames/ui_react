@@ -51,6 +51,7 @@ This file is the **checklist** before large refactors. The **documentation map**
 ## Maintainer hygiene
 
 - **User-facing copy** (Diagnostics strings, graph / Wiring dock text, menus, tooltips, `push_warning`): follow [`docs/EDITOR_COPY.md`](docs/EDITOR_COPY.md) (solo-designer tone; `issue_text` / `fix_hint` rules).
+- **New `UiReact*` reactive controls:** in **`Node._exit_tree`**, call **`_disconnect_all_states()`** before **`UiReactHostWireTree.on_exit`** where **`wire_rules`** apply; **`UiReactButton`** / **`UiReactTextureButton`** delegate to **`UiReactBaseButtonReactive.on_exit_tree`** (state unbind **before** transactional **`unregister_host`**).
 
 ## Change policy
 
