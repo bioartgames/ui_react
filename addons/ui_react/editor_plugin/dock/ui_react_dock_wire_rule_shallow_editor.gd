@@ -4,6 +4,7 @@ extends VBoxContainer
 
 const _FIELD_KIND_STRING := &"string"
 const _FIELD_KIND_BOOL := &"bool"
+var _scope := UiReactSubscriptionScope.new()
 
 var _actions: UiReactActionController
 var _after_wire_mutated: Callable = Callable()
@@ -91,8 +92,8 @@ func _build_ui() -> void:
 	_rule_id_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_rule_id_edit.placeholder_text = "Rule id"
 	_rule_id_edit.tooltip_text = rid_lbl.tooltip_text
-	_rule_id_edit.focus_exited.connect(_commit_rule_id_if_needed)
-	_rule_id_edit.text_submitted.connect(func(_s: String) -> void: _commit_rule_id_if_needed())
+	_scope.connect_signal(_rule_id_edit.focus_exited, _commit_rule_id_if_needed)
+	_scope.connect_signal(_rule_id_edit.text_submitted, func(_s: String) -> void: _commit_rule_id_if_needed())
 	rid_row.add_child(_rule_id_edit)
 	add_child(rid_row)
 
@@ -178,8 +179,8 @@ func _add_string_field_row(desc: Dictionary, prop: StringName) -> void:
 		if short.length() > 96:
 			short = short.substr(0, 93) + "…"
 		edit.placeholder_text = short
-	edit.focus_exited.connect(func() -> void: _commit_shallow_string_if_needed(prop, edit))
-	edit.text_submitted.connect(func(_s: String) -> void: _commit_shallow_string_if_needed(prop, edit))
+	_scope.connect_signal(edit.focus_exited, func() -> void: _commit_shallow_string_if_needed(prop, edit))
+	_scope.connect_signal(edit.text_submitted, func(_s: String) -> void: _commit_shallow_string_if_needed(prop, edit))
 	row.add_child(edit)
 	_fields_host.add_child(row)
 	_field_string_edits[prop] = edit
@@ -191,7 +192,7 @@ func _add_bool_field_row(desc: Dictionary, prop: StringName) -> void:
 	var help := _desc_designer_help(desc)
 	if not help.is_empty():
 		cb.tooltip_text = help
-	cb.toggled.connect(func(on: bool) -> void: _on_descriptor_bool_toggled(prop, on, cb))
+	_scope.connect_signal(cb.toggled, func(on: bool) -> void: _on_descriptor_bool_toggled(prop, on, cb))
 	_fields_host.add_child(cb)
 	_field_bool_checks[prop] = cb
 
@@ -318,3 +319,7 @@ func _on_descriptor_bool_toggled(prop: StringName, on: bool, cb: CheckBox) -> vo
 			_syncing = false
 		return
 	_notify_mutated()
+
+
+func _exit_tree() -> void:
+	_scope.dispose()
