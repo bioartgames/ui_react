@@ -12,6 +12,7 @@ const _EMPTY_ISSUES_NO_DIAGNOSTICS := (
 	"No issues reported for the current scan—either the scene is clean or nothing matched the scan scope."
 )
 const _EMPTY_ISSUES_FILTERED := (
+var _scope := UiReactSubscriptionScope.new()
 	"No issues match the current filters or search; try clearing the search box or changing severity filters or group mode."
 )
 
@@ -197,7 +198,7 @@ func _build_ui() -> void:
 	_tabs.set_tab_title(1, "Wiring")
 
 	if not _tabs.tab_selected.is_connected(_on_tabs_tab_selected):
-		_tabs.tab_selected.connect(_on_tabs_tab_selected)
+		_scope.connect_signal(_tabs.tab_selected, _on_tabs_tab_selected)
 
 	var mode_row := HBoxContainer.new()
 	vbox.add_child(mode_row)
@@ -206,7 +207,7 @@ func _build_ui() -> void:
 	_mode_option = OptionButton.new()
 	_mode_option.add_item("Selection", UiReactDockConfig.SCAN_MODE_SELECTION)
 	_mode_option.add_item("Entire scene", UiReactDockConfig.SCAN_MODE_SCENE)
-	_mode_option.item_selected.connect(_on_scan_mode_selected)
+	_scope.connect_signal(_mode_option.item_selected, _on_scan_mode_selected)
 	_mode_option.tooltip_text = (
 		"Scan mode selector: Selection scans selected subtrees; Entire scene scans all UiReact* nodes."
 	)
@@ -215,7 +216,7 @@ func _build_ui() -> void:
 	_auto_refresh = CheckBox.new()
 	_auto_refresh.text = "Auto-refresh on selection"
 	_auto_refresh.button_pressed = true
-	_auto_refresh.toggled.connect(_on_auto_refresh_toggled)
+	_scope.connect_signal(_auto_refresh.toggled, _on_auto_refresh_toggled)
 	_auto_refresh.tooltip_text = "In Selection mode, rescan when the editor selection changes."
 	mode_row.add_child(_auto_refresh)
 
@@ -227,7 +228,7 @@ func _build_ui() -> void:
 	_group_option.add_item("Flat list", UiReactDockConfig.GROUP_FLAT)
 	_group_option.add_item("By node", UiReactDockConfig.GROUP_BY_NODE)
 	_group_option.add_item("By severity", UiReactDockConfig.GROUP_BY_SEVERITY)
-	_group_option.item_selected.connect(_on_group_mode_selected)
+	_scope.connect_signal(_group_option.item_selected, _on_group_mode_selected)
 	_group_option.tooltip_text = "Grouping selector: Flat list, by node, or by severity."
 	group_row.add_child(_group_option)
 
@@ -238,19 +239,19 @@ func _build_ui() -> void:
 	_filter_err = CheckBox.new()
 	_filter_err.text = "Errors"
 	_filter_err.button_pressed = true
-	_filter_err.toggled.connect(_on_filter_errors_toggled)
+	_scope.connect_signal(_filter_err.toggled, _on_filter_errors_toggled)
 	_filter_err.tooltip_text = "Show or hide error diagnostics."
 	filt_row.add_child(_filter_err)
 	_filter_warn = CheckBox.new()
 	_filter_warn.text = "Warnings"
 	_filter_warn.button_pressed = true
-	_filter_warn.toggled.connect(_on_filter_warnings_toggled)
+	_scope.connect_signal(_filter_warn.toggled, _on_filter_warnings_toggled)
 	_filter_warn.tooltip_text = "Show or hide warning diagnostics."
 	filt_row.add_child(_filter_warn)
 	_filter_info = CheckBox.new()
 	_filter_info.text = "Info"
 	_filter_info.button_pressed = true
-	_filter_info.toggled.connect(_on_filter_info_toggled)
+	_scope.connect_signal(_filter_info.toggled, _on_filter_info_toggled)
 	_filter_info.tooltip_text = "Show or hide informational diagnostics."
 	filt_row.add_child(_filter_info)
 
@@ -261,14 +262,14 @@ func _build_ui() -> void:
 	_search_edit = LineEdit.new()
 	_search_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_search_edit.placeholder_text = "Node, path, property, message…"
-	_search_edit.text_changed.connect(_on_search_text_changed)
+	_scope.connect_signal(_search_edit.text_changed, _on_search_text_changed)
 	_search_edit.tooltip_text = "Filter issues by node name, path, property, component, message text, or fix hint."
 	search_row.add_child(_search_edit)
 
 	_search_timer = Timer.new()
 	_search_timer.one_shot = true
 	_search_timer.wait_time = 0.12
-	_search_timer.timeout.connect(_apply_filters)
+	_scope.connect_signal(_search_timer.timeout, _apply_filters)
 	vbox.add_child(_search_timer)
 
 	var path_row := HBoxContainer.new()
@@ -278,7 +279,7 @@ func _build_ui() -> void:
 	_path_edit = LineEdit.new()
 	_path_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_path_edit.text = UiReactStateFactoryService.default_output_dir()
-	_path_edit.text_submitted.connect(func(p): _on_path_changed(p))
+	_scope.connect_signal(_path_edit.text_submitted, func(p): _on_path_changed(p))
 	_path_edit.tooltip_text = "Folder for new .tres from Fix / Fix All (adds _2, _3… if the name exists)."
 	path_row.add_child(_path_edit)
 
@@ -372,24 +373,24 @@ func _build_ui() -> void:
 	_btn_refresh = Button.new()
 	_btn_refresh.text = "Rescan"
 	_btn_refresh.tooltip_text = "Rescan now. Clears temporary ignores until next run."
-	_btn_refresh.pressed.connect(func(): request_refresh(&"manual"))
+	_scope.connect_signal(_btn_refresh.pressed, func(): request_refresh(&"manual"))
 	btn_row.add_child(_btn_refresh)
 	_btn_copy = Button.new()
 	_btn_copy.text = "Copy report"
-	_btn_copy.pressed.connect(_on_copy_report_pressed)
+	_scope.connect_signal(_btn_copy.pressed, _on_copy_report_pressed)
 	_btn_copy.tooltip_text = "Copy the filtered diagnostics report to the clipboard."
 	btn_row.add_child(_btn_copy)
 	_btn_fix_all = Button.new()
 	_btn_fix_all.text = "Fix All"
 	_btn_fix_all.tooltip_text = "Batch empty-slot fixes for INFO/WARNING. Use row Fix for errors and replaces."
 	_btn_fix_all.disabled = true
-	_btn_fix_all.pressed.connect(_on_fix_all_pressed)
+	_scope.connect_signal(_btn_fix_all.pressed, _on_fix_all_pressed)
 	btn_row.add_child(_btn_fix_all)
 	_btn_ignore_all = Button.new()
 	_btn_ignore_all.text = "Ignore All"
 	_btn_ignore_all.tooltip_text = "Hide all visible issues until the next Rescan."
 	_btn_ignore_all.disabled = true
-	_btn_ignore_all.pressed.connect(_on_ignore_all_pressed)
+	_scope.connect_signal(_btn_ignore_all.pressed, _on_ignore_all_pressed)
 	btn_row.add_child(_btn_ignore_all)
 
 	_replace_confirm_dialog = ConfirmationDialog.new()
@@ -404,13 +405,13 @@ func _connect_editor_signals() -> void:
 	var ei := _plugin.get_editor_interface()
 	var selection := ei.get_selection()
 	if not selection.selection_changed.is_connected(_on_selection_changed):
-		selection.selection_changed.connect(_on_selection_changed)
+		_scope.connect_signal(selection.selection_changed, _on_selection_changed)
 	var ur := _plugin.get_undo_redo()
 	if ur != null and not ur.version_changed.is_connected(_on_undo_redo_version_changed):
-		ur.version_changed.connect(_on_undo_redo_version_changed)
+		_scope.connect_signal(ur.version_changed, _on_undo_redo_version_changed)
 	var fs := ei.get_resource_filesystem()
 	if fs != null and not fs.filesystem_changed.is_connected(_on_editor_filesystem_changed):
-		fs.filesystem_changed.connect(_on_editor_filesystem_changed)
+		_scope.connect_signal(fs.filesystem_changed, _on_editor_filesystem_changed)
 
 
 func _disconnect_editor_signals() -> void:
@@ -429,6 +430,7 @@ func _disconnect_editor_signals() -> void:
 
 
 func _exit_tree() -> void:
+	_scope.dispose()
 	_disconnect_editor_signals()
 
 

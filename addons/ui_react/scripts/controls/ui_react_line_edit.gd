@@ -1,4 +1,5 @@
 extends LineEdit
+var _scope := UiReactSubscriptionScope.new()
 class_name UiReactLineEdit
 
 const _UiReactHostWireTree := preload("res://addons/ui_react/scripts/internal/react/ui_react_host_wire_tree.gd")
@@ -34,13 +35,14 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
+	_scope.dispose()
 	_UiReactHostWireTree.on_exit(self)
 
 
 func _ready() -> void:
-	text_changed.connect(_on_text_changed)
-	focus_entered.connect(_on_focus_entered)
-	focus_exited.connect(_on_focus_exited)
+	_scope.connect_signal(text_changed, _on_text_changed)
+	_scope.connect_signal(focus_entered, _on_focus_entered)
+	_scope.connect_signal(focus_exited, _on_focus_exited)
 	_disconnect_all_states()
 	_connect_all_states()
 	_validate_animation_targets()

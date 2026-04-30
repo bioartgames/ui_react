@@ -1,5 +1,6 @@
 extends Label
 class_name UiReactLabel
+var _scope := UiReactSubscriptionScope.new()
 
 var _bind := UiReactTwoWayBindingDriver.new()
 var _text_state: UiState
@@ -110,7 +111,7 @@ func _rebind_nested_states(value: Variant) -> void:
 			if v is UiState:
 				var nested_state: UiState = v
 				if not nested_state.value_changed.is_connected(_on_nested_changed):
-					nested_state.value_changed.connect(_on_nested_changed)
+					_scope.connect_signal(nested_state.value_changed, _on_nested_changed)
 				_nested_states.append(nested_state)
 
 
@@ -121,3 +122,7 @@ func _on_nested_changed(_new_value: Variant, _old_value: Variant) -> void:
 
 func _as_text(value: Variant) -> String:
 	return UiReactStateBindingHelper.as_text_recursive(value)
+
+
+func _exit_tree() -> void:
+	_scope.dispose()

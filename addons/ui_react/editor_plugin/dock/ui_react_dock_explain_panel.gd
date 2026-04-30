@@ -1,4 +1,5 @@
 ## Editor dock tab: declarative dependency snapshot ([code]CB-018A[/code]) plus visual graph layout ([code]CB-018A.5[/code]) for the Wiring workbench.
+var _scope := UiReactSubscriptionScope.new()
 ## The graph and embedded wire-rules list also perform authoring edits (rebind, disconnect, new link, scope presets, create state) via [UiReactActionController] and graph edit services—not a read-only viewer.
 class_name UiReactDockExplainPanel
 extends MarginContainer
@@ -198,11 +199,11 @@ func setup(
 	_rebuild_scope_preset_dropdown()
 	_sync_active_scope_preset_from_settings(true)
 	if not tree_exiting.is_connected(_on_explain_panel_tree_exiting):
-		tree_exiting.connect(_on_explain_panel_tree_exiting)
+		_scope.connect_signal(tree_exiting, _on_explain_panel_tree_exiting)
 	call_deferred(&"_restore_graph_body_split_offset")
 	var ei := _plugin.get_editor_interface()
 	if not ei.get_selection().selection_changed.is_connected(_on_editor_selection_changed):
-		ei.get_selection().selection_changed.connect(_on_editor_selection_changed)
+		_scope.connect_signal(ei.get_selection().selection_changed, _on_editor_selection_changed)
 
 
 func refresh() -> void:
@@ -1924,7 +1925,7 @@ func _ensure_newlink_binding_popup() -> PopupMenu:
 	_newlink_binding_popup = PopupMenu.new()
 	var bc: Control = _plugin.get_editor_interface().get_base_control()
 	bc.add_child(_newlink_binding_popup)
-	_newlink_binding_popup.id_pressed.connect(_on_newlink_binding_menu_id)
+	_scope.connect_signal(_newlink_binding_popup.id_pressed, _on_newlink_binding_menu_id)
 	return _newlink_binding_popup
 
 
@@ -2085,7 +2086,7 @@ func _ensure_newlink_mixed_popup() -> PopupMenu:
 	_newlink_mixed_popup = PopupMenu.new()
 	var bc: Control = _plugin.get_editor_interface().get_base_control()
 	bc.add_child(_newlink_mixed_popup)
-	_newlink_mixed_popup.id_pressed.connect(_on_newlink_mixed_menu_id)
+	_scope.connect_signal(_newlink_mixed_popup.id_pressed, _on_newlink_mixed_menu_id)
 	return _newlink_mixed_popup
 
 
@@ -2218,7 +2219,7 @@ func _ensure_newlink_mount_popup() -> PopupMenu:
 	_newlink_mount_popup = PopupMenu.new()
 	var bc2: Control = _plugin.get_editor_interface().get_base_control()
 	bc2.add_child(_newlink_mount_popup)
-	_newlink_mount_popup.id_pressed.connect(_on_newlink_mount_menu_id)
+	_scope.connect_signal(_newlink_mount_popup.id_pressed, _on_newlink_mount_menu_id)
 	return _newlink_mount_popup
 
 
@@ -2432,7 +2433,7 @@ func _ensure_rebind_file_dialog() -> EditorFileDialog:
 	dlg.access = EditorFileDialog.ACCESS_RESOURCES
 	dlg.title = "Pick UiState resource"
 	dlg.add_filter("*.tres", "Tres resources")
-	dlg.file_selected.connect(_on_rebind_file_selected)
+	_scope.connect_signal(dlg.file_selected, _on_rebind_file_selected)
 	var base: Control = _plugin.get_editor_interface().get_base_control()
 	base.add_child(dlg)
 	_rebind_file_dialog = dlg
@@ -4100,7 +4101,7 @@ func _ensure_create_state_save_dialog() -> EditorFileDialog:
 	dlg.file_mode = EditorFileDialog.FILE_MODE_SAVE_FILE
 	dlg.access = EditorFileDialog.ACCESS_RESOURCES
 	dlg.add_filter("*.tres", "Resource")
-	dlg.file_selected.connect(_on_create_state_file_selected)
+	_scope.connect_signal(dlg.file_selected, _on_create_state_file_selected)
 	_plugin.get_editor_interface().get_base_control().add_child(dlg)
 	_create_state_save_dialog = dlg
 	return dlg
@@ -4224,7 +4225,7 @@ func _build_ui() -> void:
 	_auto_refresh_timer = Timer.new()
 	_auto_refresh_timer.wait_time = 0.15
 	_auto_refresh_timer.one_shot = true
-	_auto_refresh_timer.timeout.connect(_on_debounced_auto_refresh)
+	_scope.connect_signal(_auto_refresh_timer.timeout, _on_debounced_auto_refresh)
 	add_child(_auto_refresh_timer)
 
 	_hidden_chrome_host = Control.new()
@@ -4238,42 +4239,42 @@ func _build_ui() -> void:
 	_scope_preset_option.tooltip_text = (
 		"Scope preset selector: layout caps, filters, and pinned nodes (project settings)."
 	)
-	_scope_preset_option.item_selected.connect(_on_scope_preset_selected)
+	_scope.connect_signal(_scope_preset_option.item_selected, _on_scope_preset_selected)
 	_hidden_chrome_host.add_child(_scope_preset_option)
 
 	_cb_full_lists = CheckBox.new()
 	_cb_full_lists.text = "Full lists"
 	_cb_full_lists.tooltip_text = "Uncap upstream/downstream lines in the details pane."
 	_cb_full_lists.button_pressed = false
-	_cb_full_lists.toggled.connect(_on_full_lists_toggled)
+	_scope.connect_signal(_cb_full_lists.toggled, _on_full_lists_toggled)
 	_hidden_chrome_host.add_child(_cb_full_lists)
 
 	_cb_bind = CheckBox.new()
 	_cb_bind.text = "Binding"
 	_cb_bind.button_pressed = true
 	_cb_bind.tooltip_text = "Toggle binding edges (state → control property)."
-	_cb_bind.toggled.connect(func(_on: bool) -> void: _push_visual_filters())
+	_scope.connect_signal(_cb_bind.toggled, func(_on: bool) -> void: _push_visual_filters())
 	_hidden_chrome_host.add_child(_cb_bind)
 
 	_cb_computed = CheckBox.new()
 	_cb_computed.text = "Computed"
 	_cb_computed.button_pressed = true
 	_cb_computed.tooltip_text = "Toggle computed-source edges."
-	_cb_computed.toggled.connect(func(_on2: bool) -> void: _push_visual_filters())
+	_scope.connect_signal(_cb_computed.toggled, func(_on2: bool) -> void: _push_visual_filters())
 	_hidden_chrome_host.add_child(_cb_computed)
 
 	_cb_wire = CheckBox.new()
 	_cb_wire.text = "Wire"
 	_cb_wire.button_pressed = true
 	_cb_wire.tooltip_text = "Toggle wire-rule flow edges."
-	_cb_wire.toggled.connect(func(_on3: bool) -> void: _push_visual_filters())
+	_scope.connect_signal(_cb_wire.toggled, func(_on3: bool) -> void: _push_visual_filters())
 	_hidden_chrome_host.add_child(_cb_wire)
 
 	_cb_edge_labels = CheckBox.new()
 	_cb_edge_labels.text = "All edge labels"
 	_cb_edge_labels.button_pressed = false
 	_cb_edge_labels.tooltip_text = "Short labels on every edge; selection still expands below."
-	_cb_edge_labels.toggled.connect(func(_on4: bool) -> void: _push_visual_filters())
+	_scope.connect_signal(_cb_edge_labels.toggled, func(_on4: bool) -> void: _push_visual_filters())
 	_hidden_chrome_host.add_child(_cb_edge_labels)
 
 	_scope_save_name_dialog = AcceptDialog.new()
@@ -4294,8 +4295,8 @@ func _build_ui() -> void:
 	_scope_save_about_edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	svb.add_child(_scope_save_about_edit)
 	_scope_save_name_dialog.add_child(svb)
-	_scope_save_name_dialog.confirmed.connect(_on_scope_save_name_confirmed)
-	_scope_save_name_dialog.canceled.connect(_on_scope_save_name_canceled)
+	_scope.connect_signal(_scope_save_name_dialog.confirmed, _on_scope_save_name_confirmed)
+	_scope.connect_signal(_scope_save_name_dialog.canceled, _on_scope_save_name_canceled)
 	add_child(_scope_save_name_dialog)
 
 	_scope_manage_dialog = AcceptDialog.new()
@@ -4308,7 +4309,7 @@ func _build_ui() -> void:
 	mvb.add_child(_scope_manage_list)
 	var del_btn := Button.new()
 	del_btn.text = "Delete selected"
-	del_btn.pressed.connect(_on_scope_manage_delete_pressed)
+	_scope.connect_signal(del_btn.pressed, _on_scope_manage_delete_pressed)
 	mvb.add_child(del_btn)
 	_scope_manage_dialog.add_child(mvb)
 	add_child(_scope_manage_dialog)
@@ -4323,7 +4324,7 @@ func _build_ui() -> void:
 	_legend_host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_legend_host.add_theme_constant_override(&"separation", 6)
 	_legend_host.visible = true
-	_legend_host.resized.connect(_on_legend_host_resized)
+	_scope.connect_signal(_legend_host.resized, _on_legend_host_resized)
 	_visual_host.add_child(_legend_host)
 
 	_legend_nodes_row = HBoxContainer.new()
@@ -4416,15 +4417,15 @@ func _build_ui() -> void:
 	_graph_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_graph_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_graph_view.custom_minimum_size = Vector2(280, 200)
-	_graph_view.node_selected.connect(_on_graph_node)
-	_graph_view.edge_selected.connect(_on_graph_edge)
-	_graph_view.inspector_focus_selection_requested.connect(_on_graph_inspector_focus_selection_requested)
-	_graph_view.selection_cleared.connect(_on_graph_cleared)
-	_graph_view.reconnect_drag_ended.connect(_on_graph_reconnect_drag_ended)
-	_graph_view.newlink_drag_ended.connect(_on_graph_newlink_drag_ended)
-	_graph_view.edge_disconnect_requested.connect(_on_graph_edge_disconnect_requested)
-	_graph_view.context_menu_requested.connect(_on_graph_context_menu_requested)
-	_graph_view.canvas_view_menu_requested.connect(_on_canvas_view_menu_requested)
+	_scope.connect_signal(_graph_view.node_selected, _on_graph_node)
+	_scope.connect_signal(_graph_view.edge_selected, _on_graph_edge)
+	_scope.connect_signal(_graph_view.inspector_focus_selection_requested, _on_graph_inspector_focus_selection_requested)
+	_scope.connect_signal(_graph_view.selection_cleared, _on_graph_cleared)
+	_scope.connect_signal(_graph_view.reconnect_drag_ended, _on_graph_reconnect_drag_ended)
+	_scope.connect_signal(_graph_view.newlink_drag_ended, _on_graph_newlink_drag_ended)
+	_scope.connect_signal(_graph_view.edge_disconnect_requested, _on_graph_edge_disconnect_requested)
+	_scope.connect_signal(_graph_view.context_menu_requested, _on_graph_context_menu_requested)
+	_scope.connect_signal(_graph_view.canvas_view_menu_requested, _on_canvas_view_menu_requested)
 	_graph_view.set_reconnect_handlers(
 		Callable(self, &"_reconnect_can_start_cb"),
 		Callable(self, &"_reconnect_is_valid_target_cb")
@@ -4456,7 +4457,7 @@ func _build_ui() -> void:
 		Callable(self, &"_after_wire_rules_section_commit"),
 	)
 	if _wire_rules_section.has_signal(&"rule_selection_changed"):
-		_wire_rules_section.rule_selection_changed.connect(_on_wire_rule_list_selection_changed)
+		_scope.connect_signal(_wire_rules_section.rule_selection_changed, _on_wire_rule_list_selection_changed)
 	_below_graph_column.add_child(_wire_rules_section)
 
 	_details_scroll = ScrollContainer.new()
@@ -4481,59 +4482,59 @@ func _build_ui() -> void:
 	_selection_actions_context_popup = PopupMenu.new()
 	_selection_actions_context_popup.name = "SelectionActionsContextPopup"
 	base_ctl.add_child(_selection_actions_context_popup)
-	_selection_actions_context_popup.id_pressed.connect(_on_selection_action_id)
+	_scope.connect_signal(_selection_actions_context_popup.id_pressed, _on_selection_action_id)
 	_selection_node_submenu_popup = PopupMenu.new()
 	_selection_node_submenu_popup.name = "SelectionNodeSubmenu"
 	_selection_actions_context_popup.add_child(_selection_node_submenu_popup)
-	_selection_node_submenu_popup.id_pressed.connect(_on_selection_node_submenu_id)
+	_scope.connect_signal(_selection_node_submenu_popup.id_pressed, _on_selection_node_submenu_id)
 	_selection_wire_submenu_popup = PopupMenu.new()
 	_selection_wire_submenu_popup.name = "SelectionWireSubmenu"
 	_selection_actions_context_popup.add_child(_selection_wire_submenu_popup)
-	_selection_wire_submenu_popup.id_pressed.connect(_on_selection_wire_submenu_id)
+	_scope.connect_signal(_selection_wire_submenu_popup.id_pressed, _on_selection_wire_submenu_id)
 	_selection_wire_add_rule_submenu_popup = PopupMenu.new()
 	_selection_wire_add_rule_submenu_popup.name = "SelectionWireAddRuleSubmenu"
 	_selection_wire_submenu_popup.add_child(_selection_wire_add_rule_submenu_popup)
-	_selection_wire_add_rule_submenu_popup.id_pressed.connect(_on_selection_wire_submenu_id)
+	_scope.connect_signal(_selection_wire_add_rule_submenu_popup.id_pressed, _on_selection_wire_submenu_id)
 	_selection_wire_stacks_submenu_popup = PopupMenu.new()
 	_selection_wire_stacks_submenu_popup.name = "SelectionWireStacksSubmenu"
 	_selection_wire_submenu_popup.add_child(_selection_wire_stacks_submenu_popup)
-	_selection_wire_stacks_submenu_popup.id_pressed.connect(_on_selection_wire_submenu_id)
+	_scope.connect_signal(_selection_wire_stacks_submenu_popup.id_pressed, _on_selection_wire_submenu_id)
 	_selection_edge_edit_submenu_popup = PopupMenu.new()
 	_selection_edge_edit_submenu_popup.name = "SelectionEdgeEditSubmenu"
 	_selection_actions_context_popup.add_child(_selection_edge_edit_submenu_popup)
-	_selection_edge_edit_submenu_popup.id_pressed.connect(_on_selection_edge_edit_submenu_id)
+	_scope.connect_signal(_selection_edge_edit_submenu_popup.id_pressed, _on_selection_edge_edit_submenu_id)
 	_selection_create_bind_submenu_popup = PopupMenu.new()
 	_selection_create_bind_submenu_popup.name = "SelectionCreateBindSubmenu"
 	_selection_actions_context_popup.add_child(_selection_create_bind_submenu_popup)
-	_selection_create_bind_submenu_popup.id_pressed.connect(_on_selection_create_bind_submenu_id)
+	_scope.connect_signal(_selection_create_bind_submenu_popup.id_pressed, _on_selection_create_bind_submenu_id)
 	_canvas_view_context_popup = PopupMenu.new()
 	_canvas_view_context_popup.name = "CanvasViewContextPopup"
 	base_ctl.add_child(_canvas_view_context_popup)
-	_canvas_view_context_popup.id_pressed.connect(_on_canvas_view_menu_id)
+	_scope.connect_signal(_canvas_view_context_popup.id_pressed, _on_canvas_view_menu_id)
 	_canvas_create_submenu_popup = PopupMenu.new()
 	_canvas_create_submenu_popup.name = "CanvasCreateSubmenu"
 	_canvas_view_context_popup.add_child(_canvas_create_submenu_popup)
-	_canvas_create_submenu_popup.id_pressed.connect(_on_canvas_create_submenu_id)
+	_scope.connect_signal(_canvas_create_submenu_popup.id_pressed, _on_canvas_create_submenu_id)
 	_canvas_view_submenu_popup = PopupMenu.new()
 	_canvas_view_submenu_popup.name = "CanvasViewSubmenu"
 	_canvas_view_context_popup.add_child(_canvas_view_submenu_popup)
-	_canvas_view_submenu_popup.id_pressed.connect(_on_canvas_view_submenu_id)
+	_scope.connect_signal(_canvas_view_submenu_popup.id_pressed, _on_canvas_view_submenu_id)
 	_canvas_scope_submenu_popup = PopupMenu.new()
 	_canvas_scope_submenu_popup.name = "CanvasScopeSubmenu"
 	_canvas_view_context_popup.add_child(_canvas_scope_submenu_popup)
 	_canvas_scope_presets_popup = PopupMenu.new()
 	_canvas_scope_presets_popup.name = "CanvasScopePresetsList"
 	_canvas_scope_submenu_popup.add_child(_canvas_scope_presets_popup)
-	_canvas_scope_presets_popup.id_pressed.connect(_on_scope_presets_list_id)
-	_canvas_scope_submenu_popup.id_pressed.connect(_on_scope_actions_submenu_id)
+	_scope.connect_signal(_canvas_scope_presets_popup.id_pressed, _on_scope_presets_list_id)
+	_scope.connect_signal(_canvas_scope_submenu_popup.id_pressed, _on_scope_actions_submenu_id)
 	_selection_scope_submenu_popup = PopupMenu.new()
 	_selection_scope_submenu_popup.name = "SelectionScopeSubmenu"
 	_selection_actions_context_popup.add_child(_selection_scope_submenu_popup)
 	_selection_scope_presets_popup = PopupMenu.new()
 	_selection_scope_presets_popup.name = "SelectionScopePresetsList"
 	_selection_scope_submenu_popup.add_child(_selection_scope_presets_popup)
-	_selection_scope_presets_popup.id_pressed.connect(_on_scope_presets_list_id)
-	_selection_scope_submenu_popup.id_pressed.connect(_on_scope_actions_submenu_id)
+	_scope.connect_signal(_selection_scope_presets_popup.id_pressed, _on_scope_presets_list_id)
+	_scope.connect_signal(_selection_scope_submenu_popup.id_pressed, _on_scope_actions_submenu_id)
 
 
 func _set_hint_visible(on: bool) -> void:
@@ -4568,3 +4569,7 @@ func _clear_stale_snapshot() -> void:
 func _set_hint(t: String) -> void:
 	if _hint:
 		_hint.text = t
+
+
+func _exit_tree() -> void:
+	_scope.dispose()

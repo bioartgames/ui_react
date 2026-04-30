@@ -1,4 +1,5 @@
 @tool
+var _scope := UiReactSubscriptionScope.new()
 extends EditorPlugin
 
 const _DOCK_SCENE_PATH := "res://addons/ui_react/editor_plugin/dock/ui_react_dock.tscn"
@@ -29,12 +30,13 @@ func _enter_tree() -> void:
 	_register_bottom_panel_tab()
 	_reload_action_shortcuts()
 	if not ProjectSettings.settings_changed.is_connected(_on_project_settings_changed):
-		ProjectSettings.settings_changed.connect(_on_project_settings_changed)
+		_scope.connect_signal(ProjectSettings.settings_changed, _on_project_settings_changed)
 	set_process_input(true)
-	scene_changed.connect(_on_editor_scene_changed)
+	_scope.connect_signal(scene_changed, _on_editor_scene_changed)
 
 
 func _exit_tree() -> void:
+	_scope.dispose()
 	if ProjectSettings.settings_changed.is_connected(_on_project_settings_changed):
 		ProjectSettings.settings_changed.disconnect(_on_project_settings_changed)
 	if scene_changed.is_connected(_on_editor_scene_changed):
