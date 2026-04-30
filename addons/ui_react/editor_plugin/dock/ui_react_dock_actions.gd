@@ -230,5 +230,5 @@ func on_fix_all() -> void:
 		)
 
 
-func _exit_tree() -> void:
+func dispose() -> void:
 	_scope.dispose()
