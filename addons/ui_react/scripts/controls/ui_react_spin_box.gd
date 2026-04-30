@@ -1,6 +1,5 @@
 extends SpinBox
 class_name UiReactSpinBox
-var _scope := UiReactSubscriptionScope.new()
 
 var _bind := UiReactTwoWayBindingDriver.new()
 var _value_state: UiState
@@ -38,9 +37,9 @@ var _disabled_state: UiBoolState
 var _last_value: float = 0.0
 
 func _ready() -> void:
-	_scope.connect_signal(value_changed, _on_value_changed)
-	_scope.connect_signal(focus_entered, _on_focus_entered)
-	_scope.connect_signal(focus_exited, _on_focus_exited)
+	value_changed.connect(_on_value_changed)
+	focus_entered.connect(_on_focus_entered)
+	focus_exited.connect(_on_focus_exited)
 	_disconnect_all_states()
 	_connect_all_states()
 	if _value_state == null:
@@ -166,7 +165,3 @@ func _on_value_state_changed(new_value: Variant, _old_value: Variant) -> void:
 
 func _on_disabled_state_changed(new_value: Variant, _old_value: Variant) -> void:
 	editable = not UiReactStateBindingHelper.coerce_bool(new_value)
-
-
-func _exit_tree() -> void:
-	_scope.dispose()

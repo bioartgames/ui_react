@@ -1,4 +1,3 @@
-var _scope := UiReactSubscriptionScope.new()
 ## Fix, copy, focus, ignore, and scan-collection actions for [UiReactDock].
 class_name UiReactDockActions
 extends RefCounted
@@ -65,8 +64,8 @@ func maybe_confirm_replace_binding(node: Node, issue: UiReactDiagnosticModel.Dia
 	var on_cancel := func() -> void:
 		accepted = false
 		finished = true
-	_scope.connect_signal(_dock._replace_confirm_dialog.confirmed, on_ok, CONNECT_ONE_SHOT)
-	_scope.connect_signal(_dock._replace_confirm_dialog.canceled, on_cancel, CONNECT_ONE_SHOT)
+	_dock._replace_confirm_dialog.confirmed.connect(on_ok, CONNECT_ONE_SHOT)
+	_dock._replace_confirm_dialog.canceled.connect(on_cancel, CONNECT_ONE_SHOT)
 	while not finished:
 		await _dock.get_tree().process_frame
 	return accepted
@@ -228,7 +227,3 @@ func on_fix_all() -> void:
 			"Ui React: Fix All finished with %d created and %d failed. Check output path permissions and the listed issues, then try again."
 			% [created, failed]
 		)
-
-
-func dispose() -> void:
-	_scope.dispose()

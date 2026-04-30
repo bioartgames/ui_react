@@ -10,7 +10,6 @@ const _WireStackCatalogScript := preload("res://addons/ui_react/editor_plugin/se
 const _LIST_VISIBLE_RULE_ROWS := 3
 const _RULE_ROW_EST_HEIGHT := 30
 const _LIST_EXTRA_CHROME_HEIGHT := 12
-var _scope := UiReactSubscriptionScope.new()
 
 signal rule_selection_changed(rule_index: int)
 
@@ -250,7 +249,7 @@ func _make_rule_row(index: int, item: Variant, arr_size: int) -> Control:
 	enabled_cb.disabled = item == null or not (item is UiReactWireRule)
 	if item is UiReactWireRule:
 		enabled_cb.button_pressed = (item as UiReactWireRule).enabled
-	_scope.connect_signal(enabled_cb.toggled, func(on: bool) -> void: _on_row_enabled_toggled(fi, on))
+	enabled_cb.toggled.connect(func(on: bool) -> void: _on_row_enabled_toggled(fi, on))
 	row.add_child(enabled_cb)
 
 	var sel_btn := Button.new()
@@ -259,7 +258,7 @@ func _make_rule_row(index: int, item: Variant, arr_size: int) -> Control:
 	sel_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	sel_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sel_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	_scope.connect_signal(sel_btn.pressed, func() -> void: _select_rule(fi))
+	sel_btn.pressed.connect(func() -> void: _select_rule(fi))
 	sel_btn.tooltip_text = (
 		"Select this rule for quick edit below and open the rule resource in the Inspector. "
 		+ "Row controls (enable, trigger, order) also move quick edit to that row without opening the Inspector."
@@ -296,7 +295,7 @@ func _make_rule_row(index: int, item: Variant, arr_size: int) -> Control:
 			if trig_opt.get_item_id(k2) == trig_ord:
 				trig_opt.select(k2)
 				break
-	_scope.connect_signal(trig_opt.item_selected, 
+	trig_opt.item_selected.connect(
 		func(sel_idx: int) -> void: _on_row_trigger_selected(fi, trig_opt.get_item_id(sel_idx))
 	)
 	row.add_child(trig_opt)
@@ -311,27 +310,27 @@ func _make_rule_row(index: int, item: Variant, arr_size: int) -> Control:
 	order.allow_lesser = false
 	order.value = float(fi + 1)
 	order.custom_minimum_size = Vector2(56, 0)
-	_scope.connect_signal(order.value_changed, func(v: float) -> void: _on_row_order_changed(fi, int(round(v))))
+	order.value_changed.connect(func(v: float) -> void: _on_row_order_changed(fi, int(round(v))))
 	row.add_child(order)
 
 	var dup_btn := Button.new()
 	dup_btn.text = "Duplicate"
 	dup_btn.tooltip_text = "Duplicate this rule."
 	dup_btn.disabled = item == null or not (item is Resource)
-	_scope.connect_signal(dup_btn.pressed, func() -> void: _duplicate_at(fi))
+	dup_btn.pressed.connect(func() -> void: _duplicate_at(fi))
 	row.add_child(dup_btn)
 
 	var del_btn := Button.new()
 	del_btn.text = "Delete"
 	del_btn.tooltip_text = "Delete this rule."
-	_scope.connect_signal(del_btn.pressed, func() -> void: _remove_at(fi))
+	del_btn.pressed.connect(func() -> void: _remove_at(fi))
 	row.add_child(del_btn)
 
 	var copy_btn := Button.new()
 	copy_btn.text = "Copy details"
 	copy_btn.tooltip_text = "Copy this rule's details."
 	copy_btn.disabled = item == null or not (item is UiReactWireRule)
-	_scope.connect_signal(copy_btn.pressed, func() -> void: _copy_details_at(fi))
+	copy_btn.pressed.connect(func() -> void: _copy_details_at(fi))
 	row.add_child(copy_btn)
 
 	return row
@@ -522,7 +521,3 @@ func _copy_details_at(index: int) -> void:
 		_edited_scene_root
 	)
 	DisplayServer.clipboard_set(t)
-
-
-func _exit_tree() -> void:
-	_scope.dispose()

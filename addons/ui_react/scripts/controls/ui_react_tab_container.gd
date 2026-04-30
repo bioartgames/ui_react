@@ -1,5 +1,4 @@
 extends TabContainer
-var _scope := UiReactSubscriptionScope.new()
 class_name UiReactTabContainer
 
 const _UiReactHostWireTree := preload("res://addons/ui_react/scripts/internal/react/ui_react_host_wire_tree.gd")
@@ -51,12 +50,11 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
-	_scope.dispose()
 	_UiReactHostWireTree.on_exit(self)
 
 
 func _ready() -> void:
-	_scope.connect_signal(tab_selected, _on_tab_selected)
+	tab_selected.connect(_on_tab_selected)
 	_previous_tab_index = current_tab
 	_disconnect_all_states()
 	_connect_all_states()
@@ -91,13 +89,13 @@ func _connect_tab_config_signals() -> void:
 	if _tab_config == null:
 		return
 	if _tab_config.tabs_state != null:
-		_scope.connect_signal(_tab_config.tabs_state.value_changed, _on_tabs_state_changed)
+		_tab_config.tabs_state.value_changed.connect(_on_tabs_state_changed)
 		_on_tabs_state_changed(_tab_config.tabs_state.get_value(), null)
 	if _tab_config.disabled_tabs_state != null:
-		_scope.connect_signal(_tab_config.disabled_tabs_state.value_changed, _on_disabled_tabs_state_changed)
+		_tab_config.disabled_tabs_state.value_changed.connect(_on_disabled_tabs_state_changed)
 		_on_disabled_tabs_state_changed(_tab_config.disabled_tabs_state.get_value(), null)
 	if _tab_config.visible_tabs_state != null:
-		_scope.connect_signal(_tab_config.visible_tabs_state.value_changed, _on_visible_tabs_state_changed)
+		_tab_config.visible_tabs_state.value_changed.connect(_on_visible_tabs_state_changed)
 		_on_visible_tabs_state_changed(_tab_config.visible_tabs_state.get_value(), null)
 
 

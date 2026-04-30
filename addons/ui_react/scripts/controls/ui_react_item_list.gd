@@ -1,5 +1,4 @@
 extends ItemList
-var _scope := UiReactSubscriptionScope.new()
 class_name UiReactItemList
 
 const _UiReactHostWireTree := preload("res://addons/ui_react/scripts/internal/react/ui_react_host_wire_tree.gd")
@@ -55,13 +54,12 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
-	_scope.dispose()
 	_UiReactHostWireTree.on_exit(self)
 
 
 func _ready() -> void:
-	_scope.connect_signal(item_selected, _on_item_selected)
-	_scope.connect_signal(item_activated, _on_item_activated)
+	item_selected.connect(_on_item_selected)
+	item_activated.connect(_on_item_activated)
 	_disconnect_all_states()
 	_connect_all_states()
 	_validate_animation_targets()

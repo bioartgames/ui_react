@@ -1,5 +1,4 @@
 extends OptionButton
-var _scope := UiReactSubscriptionScope.new()
 class_name UiReactOptionButton
 
 const _UiReactHostWireTree := preload("res://addons/ui_react/scripts/internal/react/ui_react_host_wire_tree.gd")
@@ -49,12 +48,11 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
-	_scope.dispose()
 	_UiReactHostWireTree.on_exit(self)
 
 
 func _ready() -> void:
-	_scope.connect_signal(item_selected, _on_item_selected)
+	item_selected.connect(_on_item_selected)
 	_disconnect_all_states()
 	_connect_all_states()
 	_validate_animation_targets()

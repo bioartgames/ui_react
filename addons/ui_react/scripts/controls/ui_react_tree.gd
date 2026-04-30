@@ -1,5 +1,4 @@
 extends Tree
-var _scope := UiReactSubscriptionScope.new()
 class_name UiReactTree
 
 const _TREE_NODE_SCRIPT: Script = preload("res://addons/ui_react/scripts/api/models/ui_react_tree_node.gd")
@@ -51,14 +50,13 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
-	_scope.dispose()
 	_UiReactHostWireTree.on_exit(self)
 
 
 func _ready() -> void:
 	select_mode = SELECT_SINGLE
-	_scope.connect_signal(item_selected, _on_tree_item_selected)
-	_scope.connect_signal(nothing_selected, _on_tree_nothing_selected)
+	item_selected.connect(_on_tree_item_selected)
+	nothing_selected.connect(_on_tree_nothing_selected)
 	_disconnect_all_states()
 	_connect_all_states()
 	_validate_animation_targets()

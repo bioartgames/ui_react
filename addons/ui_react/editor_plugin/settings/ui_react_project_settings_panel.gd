@@ -1,6 +1,5 @@
 @tool
 extends VBoxContainer
-var _scope := UiReactSubscriptionScope.new()
 
 signal settings_applied
 
@@ -43,12 +42,12 @@ func _build_ui() -> void:
 	var remove_selected_button := Button.new()
 	remove_selected_button.text = "Remove Selected"
 	remove_selected_button.tooltip_text = "Remove selected paths from the ignored list."
-	_scope.connect_signal(remove_selected_button.pressed, _on_remove_selected_ignored_pressed)
+	remove_selected_button.pressed.connect(_on_remove_selected_ignored_pressed)
 	ignored_actions.add_child(remove_selected_button)
 	var clear_all_button := Button.new()
 	clear_all_button.text = "Clear All"
 	clear_all_button.tooltip_text = "Clear all ignored paths."
-	_scope.connect_signal(clear_all_button.pressed, _on_clear_all_ignored_pressed)
+	clear_all_button.pressed.connect(_on_clear_all_ignored_pressed)
 	ignored_actions.add_child(clear_all_button)
 	ignored.add_child(ignored_actions)
 
@@ -57,17 +56,17 @@ func _build_ui() -> void:
 	var apply_btn := Button.new()
 	apply_btn.text = "Apply"
 	apply_btn.tooltip_text = "Save these Ui React settings."
-	_scope.connect_signal(apply_btn.pressed, apply_to_project_settings)
+	apply_btn.pressed.connect(apply_to_project_settings)
 	actions.add_child(apply_btn)
 	var revert_btn := Button.new()
 	revert_btn.text = "Revert"
 	revert_btn.tooltip_text = "Discard unsaved edits in this tab."
-	_scope.connect_signal(revert_btn.pressed, reload_from_project_settings)
+	revert_btn.pressed.connect(reload_from_project_settings)
 	actions.add_child(revert_btn)
 	var reset_btn := Button.new()
 	reset_btn.text = "Reset defaults"
 	reset_btn.tooltip_text = "Clear all ignored paths. Open-tab shortcuts use internal Project Settings keys (defaults Alt+1 / Alt+2); edit JSON there if needed."
-	_scope.connect_signal(reset_btn.pressed, _on_reset_defaults_pressed)
+	reset_btn.pressed.connect(_on_reset_defaults_pressed)
 	actions.add_child(reset_btn)
 	add_child(actions)
 
@@ -127,7 +126,3 @@ func _rebuild_ignored_paths_list() -> void:
 	keys.sort_custom(func(a: Variant, b: Variant) -> bool: return String(a) < String(b))
 	for k in keys:
 		_ignored_list.add_item(String(k))
-
-
-func _exit_tree() -> void:
-	_scope.dispose()

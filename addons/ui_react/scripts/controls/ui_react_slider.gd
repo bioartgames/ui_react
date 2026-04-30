@@ -1,6 +1,5 @@
 extends HSlider
 class_name UiReactSlider
-var _scope := UiReactSubscriptionScope.new()
 
 var _bind := UiReactTwoWayBindingDriver.new()
 var _value_state: UiState
@@ -25,8 +24,8 @@ var _last_value: float = 0.0
 var _is_dragging: bool = false
 
 func _ready() -> void:
-	_scope.connect_signal(value_changed, _on_value_changed)
-	_scope.connect_signal(gui_input, _on_gui_input)
+	value_changed.connect(_on_value_changed)
+	gui_input.connect(_on_gui_input)
 	_disconnect_all_states()
 	_connect_all_states()
 	if _value_state == null:
@@ -134,7 +133,3 @@ func _on_value_state_changed(new_value: Variant, _old_value: Variant) -> void:
 	_bind.updating = true
 	value = target_value
 	_bind.updating = false
-
-
-func _exit_tree() -> void:
-	_scope.dispose()
