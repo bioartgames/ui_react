@@ -1,6 +1,9 @@
 ## Owns [code]sources[/code] → [method UiComputedStringState.recompute] / [method UiComputedBoolState.recompute] wiring for [UiComputed*] resources bound to [UiReact*] controls.
 ## One dependency listener set per computed instance; refcount per [code](computed, consumer, binding)[/code] site. Editor: [method ensure_wired] / [method release_wired] are no-ops.
 ## [method supports_computed_wiring] is the predicate used with [member UiReactControlStateWire] so computed resources always get dependency wiring even when [code]use_computed_hook[/code] is [code]false[/code].
+##
+## Static tables ([code]_site_keys[/code], [code]_wired[/code], etc.) are **session-scoped**: teardown is refcount-driven per bound site. They are **not** cleared when exiting play mode or closing a scene.
+## Call [method reset_internal_state_for_tests] between GUT cases and tooling runs only; do not use that reset in production.
 class_name UiReactComputedService
 extends RefCounted
 
@@ -35,6 +38,22 @@ static func hook_unbind(state: UiState, consumer: Node, binding: StringName) -> 
 ## Returns whether [param state] participates in [UiReactComputedService] dependency wiring ([UiComputed*] with [method recompute]).
 static func supports_computed_wiring(state: UiState) -> bool:
 	return _is_supported_computed(state)
+
+
+## DFS on [code]sources[/code] edges ([code]UiState[/code] entries only): [code]true[/code] if the graph reachable from [param root] contains a directed cycle.
+## Used at runtime (refuse wiring) and in editor validation. Does not apply [code]_MAX_SOURCES[/code]; the full [code]sources[/code] array is walked.
+static func sources_dependency_graph_has_cycle(root: UiState) -> bool:
+	if root == null or not _is_supported_computed(root):
+		return false
+	var stack: Dictionary = {}
+	return _sources_cycle_dfs(root, stack)
+
+
+## Test-only: whether [param computed] currently has dependency listeners registered in [code]_wired[/code].
+static func debug_is_wired_for_tests(computed: UiState) -> bool:
+	if computed == null:
+		return false
+	return _wired.has(computed.get_instance_id())
 
 
 ## Test-only: tears down all static wiring tables and listeners. Call between GUT cases or tooling runs; **not** for production scenes.
@@ -75,6 +94,14 @@ static func ensure_wired(computed: UiState, consumer: Node, binding: StringName)
 		return
 	var key := _site_key(computed, consumer, binding)
 	if _site_keys.has(key):
+		return
+	if sources_dependency_graph_has_cycle(computed):
+		var rp: String = computed.resource_path
+		var path_hint := (" '%s'" % rp) if rp != "" else ""
+		push_error(
+			"UiReactComputedService: cyclic sources graph for computed%s (id %d); wiring aborted. Break the cycle in [code]sources[/code]."
+			% [path_hint, computed.get_instance_id()]
+		)
 		return
 	_site_keys[key] = true
 	var cid := computed.get_instance_id()
@@ -120,6 +147,20 @@ static func _read_sources(state: UiState) -> Array[UiState]:
 		if it is UiState:
 			out.append(it)
 	return out
+
+
+static func _sources_cycle_dfs(node: UiState, stack: Dictionary) -> bool:
+	var nid: int = node.get_instance_id()
+	if stack.get(nid, false):
+		return true
+	stack[nid] = true
+	for dep in _read_sources(node):
+		if dep == null or not is_instance_valid(dep):
+			continue
+		if _sources_cycle_dfs(dep, stack):
+			return true
+	stack.erase(nid)
+	return false
 
 
 static func _chain_binding(parent: UiState, dep_computed: UiState) -> StringName:

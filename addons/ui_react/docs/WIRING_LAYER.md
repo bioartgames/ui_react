@@ -45,7 +45,7 @@ flowchart TB
 - **Kind:** `RefCounted` helper (`class_name UiReactWireRuleHelper`), **not** a scene node.
 - **Registration:** Each **`UiReact*`** host that exports **`wire_rules`** calls **`UiReactHostWireTree.on_enter(self)`** from **`_enter_tree`** and **`UiReactHostWireTree.on_exit(self)`** from **`_exit_tree`** ([`ui_react_host_wire_tree.gd`](../scripts/internal/react/ui_react_host_wire_tree.gd) — thin wrappers over **`UiReactWireRuleHelper.schedule_attach`** / **`detach`**). **`schedule_attach`** no-ops when there are no enabled rules; otherwise it defers **`attach`** to the next **`SceneTree.process_frame`** (same “after frame” intent as the prior deferred registration path).
 - **Per-host scope:** **`attach`** runs only the **`wire_rules`** array on **that** node. It **does not** walk the scene or merge other nodes’ rules.
-- **Ordering:** Within one host, rules run in **array index order**: **bind all** enabled rules, then **apply all** enabled rules. **Cross-host** synchronous order is **undefined**; correctness must follow **state / dataflow** (each rule reads canonical `UiState`), not reliance on which control’s rules run first.
+- **Ordering:** Within one host, rules run in **array index order**: **bind all** enabled rules, then **apply** enabled rules that have **`run_apply_on_attach`** set (see **§4**). **Cross-host** synchronous order is **undefined**; correctness must follow **state / dataflow** (each rule reads canonical `UiState`), not reliance on which control’s rules run first.
 - **Subresource policy:** **One `UiReactWireRule` instance per host**—do not assign the **same** rule object to **`wire_rules`** on two different nodes (dock **warning** when the same instance appears on two hosts).
 - **Teardown:** **`detach`** disconnects every signal / callback recorded for that host; **no** leaks.
 - **Logging:** Warnings use the prefix **`UiReactWireRuleHelper:`** (e.g. rule skipped, trigger mismatch).
@@ -56,7 +56,7 @@ flowchart TB
 
 - **Base type:** `Resource`, abstract **`UiReactWireRule`** (name fixed for public API; **CB-039** SemVer).
 - **Serializable:** All fields must round-trip in `.tscn` / `.tres`.
-- **Minimum fields (normative intent):** `rule_id: String` (diagnostics), `enabled: bool` default `true`. Concrete sources/targets (node paths, state refs) are defined on **subclasses**.
+- **Minimum fields (normative intent):** `rule_id: String` (diagnostics), `enabled: bool` default `true`, **`run_apply_on_attach: bool` default `true`** (when **`false`**, **`UiReactWireRuleHelper.attach`** skips the one-shot **`apply`** after bind—see **§3** ordering). Concrete sources/targets (node paths, state refs) are defined on **subclasses**.
 - **No mega-struct:** **No** single “kitchen sink” reaction type. **Many narrow** subclasses (**CB-033**).
 
 ---
@@ -134,11 +134,17 @@ Official **`inventory_screen_demo`** uses only **`wire_rules`** on **`UiReact*`*
 - Several **`UiReact*`** **`@export var …: UiState`** slots are intentionally **typed as `UiState` in the Inspector** rather than narrow concrete subclasses, because **`UiTransactionalState`** and some computed wrappers remain **valid at runtime** even when **`UiReactBindingValidator`** narrows wording for ergonomics (see **`matches_expected_binding_class`** for payload matching).
 - **Authoritative mismatch text** for any given scene remains **dock Diagnostics binding errors**, not `@export` type hints alone. When the validator accepts a transactional slot, widening the **`@export`** for that slot alone without the rest of the surface is **not** a compatible SemVer tightening.
 
+### 7.3 Signal channels at a glance
+
+- **Channel A — controls / two-way binding:** **[`UiReactControlStateWire`](../scripts/internal/react/ui_react_control_state_wire.gd)** and widget-native paths use **`UiState.value_changed`** (and related control signals) for **`UiReact*`** exports. Which properties participate is defined per control in **[`UiReactComponentRegistry`](../editor_plugin/ui_react_component_registry.gd)** bindings; hosts with **`wire_rules`** are listed above in **§5**.
+- **Channel B — computeds & most wire rules:** **[`UiReactComputedService`](../scripts/internal/react/ui_react_computed_service.gd)** and **`UiReactWireRuleHelper`** listen to **`Resource.changed`** on **`UiState`** dependencies (see **§7.1**).
+- **Consumers:** do not assume both channels fire for every logical edit; attach to the channel the relevant helper uses.
+
 ---
 
 ## 8. Diagnostics (P5.1) and dock authoring (P5.2)
 
-**`wire_rules` row validation** (MVP rule types §6): missing / wrong-type **`@export`** state or **`catalog`** refs → **warning** (`UiReactValidatorService`).
+**`wire_rules` row validation** (MVP rule types §6): missing / wrong-type **`@export`** state or **`catalog`** refs → **warning** (`UiReactValidatorService`). Two **enabled** rules on the **same** host that **write** the same **`UiState`** (**`out`** slot from **`UiReactWireRuleIntrospection`**) → **warning** (fragile ordering). **`UiComputed*`** **`sources`** that form a directed cycle → **ERROR** in Diagnostics (**`UiReactComputedValidator`**) and **`push_error`** at runtime (**`UiReactComputedService.ensure_wired`** refuses wiring).
 
 **Dependency Graph — Selected wire rule:** wire-rule details are descriptive only (intent/runtime/inputs/outputs). Validator issues and fix hints are surfaced in the **Diagnostics** tab; no inline wire-details **Checks** row is shown. **Cross-node duplicate instance** checks (`validate_wiring_under_root`) are also Diagnostics-only.
 

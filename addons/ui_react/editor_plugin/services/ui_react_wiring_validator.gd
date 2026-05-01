@@ -88,7 +88,51 @@ static func validate_wire_rules(
 					"Use a built-in wire rule type from the docs, or ask a maintainer to add validation for custom rules.",
 				)
 			)
+	_append_duplicate_wire_outputs(out, wr, component, owner, node_path)
 	return out
+
+
+static func _append_duplicate_wire_outputs(
+	issues: Array[UiReactDiagnosticModel.DiagnosticIssue],
+	wr: Array,
+	component: String,
+	owner: Control,
+	node_path: NodePath,
+) -> void:
+	var first_writer_by_state_id: Dictionary = {} # int -> int rule index
+	for i in range(wr.size()):
+		var item: Variant = wr[i]
+		if not (item is UiReactWireRule):
+			continue
+		var rule := item as UiReactWireRule
+		if not rule.enabled:
+			continue
+		for ent in UiReactWireRuleIntrospection.list_io(rule):
+			if ent.get(&"role", &"") != &"out":
+				continue
+			var st: Variant = ent.get(&"state", null)
+			if st == null or not (st is UiState):
+				continue
+			var sid: int = (st as UiState).get_instance_id()
+			if first_writer_by_state_id.has(sid):
+				var first_i: int = int(first_writer_by_state_id[sid])
+				if first_i == i:
+					continue
+				issues.append(
+					_wire_rules_issue(
+						component,
+						owner,
+						node_path,
+						i,
+						(
+							"wire rule row %d and row %d both write the same UiState output; last writer wins at runtime and order is fragile."
+							% [first_i, i]
+						),
+						"Merge into one rule, assign distinct state resources, or disable one rule.",
+					)
+				)
+			else:
+				first_writer_by_state_id[sid] = i
 
 
 static func validate_wiring_under_root(root: Node) -> Array[UiReactDiagnosticModel.DiagnosticIssue]:

@@ -37,13 +37,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Documentation
 
-- **`WIRING_LAYER.md`:** **`§7.1`** — reactive channels (**`value_changed`** vs **`Resource.changed`**) plus **`UiReactControlStateWire`** effective computed hook (**`UiReactComputedService.supports_computed_wiring`**); **`§7.2`** **`@export` typing vs Diagnostics** (**`UiState`** slots including **`UiTransactionalState`**).
+- **`WIRING_LAYER.md`:** **`§7.1`** — reactive channels (**`value_changed`** vs **`Resource.changed`**) plus **`UiReactControlStateWire`** effective computed hook (**`UiReactComputedService.supports_computed_wiring`**); **`§7.2`** **`@export` typing vs Diagnostics** (**`UiState`** slots including **`UiTransactionalState`**); **`§7.3`** signal-channel summary; **`§3–§4`** **`run_apply_on_attach`** and attach/apply ordering.
 - **`docs/README.md`** task routing cites **`§7.1`** / **`§7.2`**; **`AGENTS.md`** maintainer cue for **`§7.1`**.
 - **`UiReactBindingValidator`:** binding mismatch text links **`§7.1`**; **`value_state`** expected-type phrasing mentions **`UiTransactionalState`** **`matches_expected_binding_class`**; **`UiReactLabel`** / **`UiReactRichTextLabel`** script **`##`** recap allowed **`text_state`** resources.
 
 ### Added
 
-- **Testing:** **`test_ui_react_computed_service`** — **`supports_computed_wiring`**, **`bind_value_changed`** with **`use_computed_hook: false`** still wires **`UiComputed*`** dependencies.
+- **`UiReactWireRule.run_apply_on_attach`:** default **`true`**; when **`false`**, **`UiReactWireRuleHelper.attach`** binds triggers but skips the initial **`apply`** pass (**`WIRING_LAYER.md`** §3–§4).
+- **Runtime + dock:** **`UiReactComputedService.sources_dependency_graph_has_cycle`**; **`ensure_wired`** **`push_error`** and skips registration when **`UiComputed*`** **`sources`** form a cycle; **`UiReactComputedValidator`** emits **ERROR** for the same (deduped by resource id).
+- **Dock:** **`UiReactWiringValidator`** warns when two **enabled** rules on the same host both list the same **`out`** **`UiState`** (**`UiReactWireRuleIntrospection`**).
+- **`UiReactProjectSettingsPanel`:** disconnects **`Button.pressed`** in **`_exit_tree`** for locally connected handlers.
+- **`UiReactTree`:** structure signature matches **`tree_items_state`** payloads to skip **`clear()`** + rebuild when unchanged (selection sync / clamp / validation still run).
+- **Testing:** **`test_ui_react_computed_service`** — **`supports_computed_wiring`**, **`bind_value_changed`** with **`use_computed_hook: false`** still wires **`UiComputed*`** dependencies; cycle detection, **`ensure_wired`** refusal, acyclic chain wiring; **`test_ui_react_dock_wire_details_validation.test_duplicate_wire_outputs_warns_when_two_rules_write_same_state`**.
+- **Testing:** **`UiReactComputedService.debug_is_wired_for_tests`** (GUT-only aid).
 - **Testing:** **`test_ui_react_action_target_helper.test_teardown_clears_state_watch_connections`** — **`teardown_for_control_exit`** drops **`state_watch`** **`value_changed`** subscriptions.
 - **Testing:** **`test_ui_react_item_list_hot_path`** — icon path cache reuse and signature short-circuit (dict **`label`** vs **`text`** equivalent rows).
 - **Testing:** **`UiReactComputedService.debug_static_tables_empty_for_tests`** + **`test_ui_react_computed_service.test_debug_tables_empty_after_reset`**.

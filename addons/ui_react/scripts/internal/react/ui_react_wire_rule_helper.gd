@@ -1,4 +1,4 @@
-## Binds [member wire_rules] on a single [UiReact*] host: signals, [Resource.changed], initial [method UiReactWireRule.apply].
+## Binds [member wire_rules] on a single [UiReact*] host: signals, [Resource.changed], and optionally an initial [method UiReactWireRule.apply] when [member UiReactWireRule.run_apply_on_attach] is [code]true[/code].
 ## See [code]docs/WIRING_LAYER.md[/code].
 ## Prefer [method schedule_attach] during [method Node._enter_tree] after [UiState] binding is wired in [method Node._ready], and detach during [method Node._exit_tree] **after** unbinding reactive [UiState] connections (typically [method UiReactControlStateWire.unbind_value_changed]), then call [method detach] so wiring rules never run against half-torn controls.
 class_name UiReactWireRuleHelper
@@ -57,7 +57,7 @@ static func attach(host: Node) -> void:
 		if r_variant2 == null or not (r_variant2 is UiReactWireRule):
 			continue
 		var rule2 := r_variant2 as UiReactWireRule
-		if not rule2.enabled:
+		if not rule2.enabled or not rule2.run_apply_on_attach:
 			continue
 		_apply_rule(host, rule2)
 

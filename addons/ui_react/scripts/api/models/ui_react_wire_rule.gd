@@ -13,6 +13,8 @@ enum TriggerKind { TEXT_CHANGED = 5, SELECTION_CHANGED = 6, TEXT_ENTERED = 13 }
 
 @export var rule_id: String = ""
 @export var enabled: bool = true
+## When [code]false[/code], [method UiReactWireRuleHelper.attach] skips the one-shot [method apply] after signal binding (avoids duplicate work if state already matches the UI).
+@export var run_apply_on_attach: bool = true
 ## When this rule’s source widget fires; see [code]docs/WIRING_LAYER.md[/code] §5.
 @export var trigger: TriggerKind = TriggerKind.SELECTION_CHANGED
 

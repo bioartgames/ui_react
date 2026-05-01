@@ -8,6 +8,8 @@ const _UiReactExitTeardown := preload("res://addons/ui_react/scripts/internal/re
 var _bind := UiReactTwoWayBindingDriver.new()
 var _selected_state: UiIntState
 var _tree_items_state: UiArrayState
+var _last_tree_items_signature: String = ""
+var _have_tree_items_structure_sig: bool = false
 
 ## Hierarchical row data. Assign a [UiArrayState] whose [member UiArrayState.value] is an [Array] of [UiReactTreeNode].
 ## Top-level nodes are created as children of the tree root (with [member hide_root] [code]true[/code], the root row is hidden; visible index [code]0[/code] is the first top-level row).
@@ -122,18 +124,73 @@ func _on_tree_items_state_changed(new_value: Variant, _old_value: Variant) -> vo
 			"Set tree_items_state to an Array payload via UiArrayState.",
 		)
 		return
+	var arr: Array = new_value as Array
+	var new_sig := _compute_tree_items_signature(arr)
+	if _have_tree_items_structure_sig and new_sig == _last_tree_items_signature:
+		_bind.updating = true
+		_sync_selection_ui_to_state()
+		_bind.updating = false
+		_clamp_selected_state_to_visible_rows()
+		_validate_row_slots_vs_visible_count()
+		return
 	_bind.updating = true
 	clear()
 	# After [method Tree.clear], [method Tree.get_root] can be null. Top-level rows use [method Tree.create_item] with a null parent (attached under the tree root).
-	for entry in new_value as Array:
+	for entry in arr:
 		if is_instance_of(entry, _TREE_NODE_SCRIPT):
 			_build_subtree(null, entry as Resource)
 		else:
 			push_warning("UiReactTree: skipping non-UiReactTreeNode entry in tree_items_state.")
+	_last_tree_items_signature = new_sig
+	_have_tree_items_structure_sig = true
 	_sync_selection_ui_to_state()
 	_bind.updating = false
 	_clamp_selected_state_to_visible_rows()
 	_validate_row_slots_vs_visible_count()
+
+
+func _compute_tree_items_signature(entries: Array) -> String:
+	var parts: PackedStringArray = PackedStringArray()
+	parts.resize(entries.size())
+	for i in range(entries.size()):
+		var entry: Variant = entries[i]
+		if is_instance_of(entry, _TREE_NODE_SCRIPT):
+			parts[i] = _tree_node_structure_signature(entry as Resource)
+		else:
+			parts[i] = "x\u001finvalid\u001fx"
+	return "\u001d".join(parts)
+
+
+func _tree_icon_signature_part(ic: Variant) -> String:
+	if ic is Texture2D:
+		var tpath := (ic as Texture2D).resource_path
+		if not tpath.is_empty():
+			return "texpath:" + tpath
+		return "texid:" + str((ic as Texture2D).get_instance_id())
+	if typeof(ic) == TYPE_STRING:
+		var ps := str(ic).strip_edges()
+		return "path:" + ps if not ps.is_empty() else "icon:null"
+	return "icon:null"
+
+
+func _tree_node_structure_signature(node: Resource) -> String:
+	if not is_instance_of(node, _TREE_NODE_SCRIPT):
+		return "x\u001finvalid\u001fx"
+	var label: String = str(node.get(&"text"))
+	var icon_part := _tree_icon_signature_part(node.get(&"icon"))
+	var ch: Variant = node.get(&"children")
+	var child_blob := ""
+	if typeof(ch) == TYPE_ARRAY:
+		var subs: PackedStringArray = PackedStringArray()
+		for child in ch as Array:
+			if child != null and is_instance_of(child, _TREE_NODE_SCRIPT):
+				subs.append(_tree_node_structure_signature(child as Resource))
+			elif child == null:
+				subs.append("x\u001fnullchild\u001fx")
+			else:
+				subs.append("x\u001finvalidchild\u001fx")
+		child_blob = "\u001e".join(subs)
+	return label + "\u001f" + icon_part + "\u001f" + child_blob
 
 
 func _build_subtree(parent_item: Variant, node: Resource) -> void:

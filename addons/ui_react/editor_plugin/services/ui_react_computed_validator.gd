@@ -36,6 +36,30 @@ static func validate_under_root(root: Node) -> Array[UiReactDiagnosticModel.Diag
 		)
 		_collect_from_react_node(node, np, seen_computed, nested_source_ids)
 
+	var computed_by_id: Dictionary = {} # int -> UiState (first occurrence)
+	for node2 in nodes:
+		_collect_computed_states_from_node(node2, computed_by_id)
+	for cid2 in computed_by_id.keys():
+		var cst: UiState = computed_by_id[cid2] as UiState
+		if cst != null and UiReactComputedService.sources_dependency_graph_has_cycle(cst):
+			var np_cycle: NodePath = seen_computed.get(cid2, NodePath("")) as NodePath
+			issues.append(
+				UiReactDiagnosticModel.DiagnosticIssue.make_structured(
+					UiReactDiagnosticModel.Severity.ERROR,
+					"UiComputed",
+					"",
+					(
+						"This computed resource has a cyclic [code]sources[/code] graph (dependency cycle). Runtime wiring will be refused."
+					),
+					"Remove or reorder [code]sources[/code] so no computed depends—directly or indirectly—on itself.",
+					np_cycle,
+					&"",
+					&"",
+					UiReactDiagnosticModel.IssueKind.GENERIC,
+					"",
+				)
+			)
+
 	for cid in seen_computed.keys():
 		if bound_registry_ids.has(cid):
 			continue
@@ -57,6 +81,41 @@ static func validate_under_root(root: Node) -> Array[UiReactDiagnosticModel.Diag
 			)
 		)
 	return issues
+
+
+static func _collect_computed_states_from_node(node: Node, computed_by_id: Dictionary) -> void:
+	var component := UiReactScannerService.get_component_name_from_script(node.get_script() as Script)
+	if component.is_empty():
+		return
+	var bindings: Array = UiReactComponentRegistry.BINDINGS_BY_COMPONENT.get(component, [])
+	for b in bindings:
+		var prop: StringName = b.get("property", &"")
+		if prop == &"":
+			continue
+		if prop in node:
+			_walk_variant_collect_computeds(node.get(prop), computed_by_id)
+	for extra in [&"wire_rules", &"animation_targets", &"action_targets"]:
+		if extra in node:
+			_walk_variant_collect_computeds(node.get(extra), computed_by_id)
+
+
+static func _walk_variant_collect_computeds(v: Variant, computed_by_id: Dictionary) -> void:
+	if v == null:
+		return
+	if v is UiComputedStringState or v is UiComputedBoolState:
+		var c := v as UiState
+		var id := c.get_instance_id()
+		if not computed_by_id.has(id):
+			computed_by_id[id] = c
+		return
+	if v is Array:
+		for el in v:
+			_walk_variant_collect_computeds(el, computed_by_id)
+		return
+	if v is Dictionary:
+		for k in v:
+			_walk_variant_collect_computeds(v[k], computed_by_id)
+		return
 
 
 static func _collect_from_react_node(

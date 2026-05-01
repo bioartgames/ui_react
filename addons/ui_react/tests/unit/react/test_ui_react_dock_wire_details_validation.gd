@@ -57,3 +57,28 @@ func test_sync_bool_debug_line_warns_when_line_prefix_too_long() -> void:
 			found = true
 			break
 	assert_true(found)
+
+
+func test_duplicate_wire_outputs_warns_when_two_rules_write_same_state() -> void:
+	var root := Control.new()
+	var host := UiReactItemList.new()
+	add_child_autofree(root)
+	root.add_child(host)
+	host.name = "ItemList"
+	var shared_out := UiStringState.new("")
+	var r0 := UiReactWireMapIntToString.new()
+	r0.enabled = true
+	r0.source_int_state = UiIntState.new(0)
+	r0.target_string_state = shared_out
+	var r1 := UiReactWireMapIntToString.new()
+	r1.enabled = true
+	r1.source_int_state = UiIntState.new(1)
+	r1.target_string_state = shared_out
+	host.wire_rules = [r0, r1]
+	var issues := UiReactWiringValidator.validate_wire_rules("UiReactItemList", host, NodePath("ItemList"))
+	var found_dup := false
+	for it in issues:
+		if String(it.issue_text).contains("both write the same UiState output"):
+			found_dup = true
+			break
+	assert_true(found_dup)
