@@ -1,5 +1,6 @@
 ## Owns [code]sources[/code] → [method UiComputedStringState.recompute] / [method UiComputedBoolState.recompute] wiring for [UiComputed*] resources bound to [UiReact*] controls.
 ## One dependency listener set per computed instance; refcount per [code](computed, consumer, binding)[/code] site. Editor: [method ensure_wired] / [method release_wired] are no-ops.
+## [method supports_computed_wiring] is the predicate used with [member UiReactControlStateWire] so computed resources always get dependency wiring even when [code]use_computed_hook[/code] is [code]false[/code].
 class_name UiReactComputedService
 extends RefCounted
 
@@ -29,6 +30,11 @@ static func hook_bind(state: UiState, consumer: Node, binding: StringName) -> vo
 
 static func hook_unbind(state: UiState, consumer: Node, binding: StringName) -> void:
 	release_wired(state, consumer, binding)
+
+
+## Returns whether [param state] participates in [UiReactComputedService] dependency wiring ([UiComputed*] with [method recompute]).
+static func supports_computed_wiring(state: UiState) -> bool:
+	return _is_supported_computed(state)
 
 
 ## Test-only: tears down all static wiring tables and listeners. Call between GUT cases or tooling runs; **not** for production scenes.
@@ -186,7 +192,7 @@ static func _schedule_flush() -> void:
 	_flush_scheduled = true
 	var st := Engine.get_main_loop() as SceneTree
 	if st == null:
-		_flush_scheduled = false
+		_flush_dirty_deferred()
 		return
 	st.process_frame.connect(func() -> void: _flush_dirty_deferred(), CONNECT_ONE_SHOT)
 

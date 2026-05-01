@@ -1,5 +1,6 @@
 ## Runtime helpers for [member Control.action_targets] rows: validation, state-watch wiring, and trigger dispatch.
 ## Reentry guards use per-owner meta dictionaries; see [method _with_reentry_guard].
+## Call [method teardown_for_control_exit] from [method Node._exit_tree] / [constant NOTIFICATION_PREDELETE] before unbinding [UiState] so [code]state_watch[/code] subscriptions drop first.
 class_name UiReactActionTargetHelper
 extends RefCounted
 
@@ -59,6 +60,15 @@ static func _with_reentry_guard(owner: Node, key: String, fn: Callable) -> void:
 	locks[key] = true
 	fn.call()
 	locks[key] = false
+
+
+## Call before [method UiReactControlStateWire.unbind_value_changed] on the same control. Clears [code]state_watch[/code] connections and action reentry-lock meta.
+static func teardown_for_control_exit(owner: Control) -> void:
+	if owner == null:
+		return
+	_clear_state_watch_bindings(owner)
+	if owner.has_meta(_META_LOCKS):
+		owner.remove_meta(_META_LOCKS)
 
 
 static func validate_action_targets(

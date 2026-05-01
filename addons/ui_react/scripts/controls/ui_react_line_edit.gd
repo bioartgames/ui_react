@@ -35,10 +35,27 @@ func _enter_tree() -> void:
 
 
 func _reactive_teardown() -> void:
+	UiReactActionTargetHelper.teardown_for_control_exit(self)
+	_disconnect_local_control_signals()
 	_UiReactExitTeardown.teardown_wire_host(
 		Callable(self, "_disconnect_all_states"),
 		func() -> void: _UiReactHostWireTree.on_exit(self)
 	)
+
+
+func _disconnect_local_control_signals() -> void:
+	if text_changed.is_connected(_on_text_changed):
+		text_changed.disconnect(_on_text_changed)
+	if focus_entered.is_connected(_on_focus_entered):
+		focus_entered.disconnect(_on_focus_entered)
+	if focus_exited.is_connected(_on_focus_exited):
+		focus_exited.disconnect(_on_focus_exited)
+	if text_submitted.is_connected(_on_trigger_text_entered):
+		text_submitted.disconnect(_on_trigger_text_entered)
+	if mouse_entered.is_connected(_on_trigger_hover_enter):
+		mouse_entered.disconnect(_on_trigger_hover_enter)
+	if mouse_exited.is_connected(_on_trigger_hover_exit):
+		mouse_exited.disconnect(_on_trigger_hover_exit)
 
 
 func _exit_tree() -> void:

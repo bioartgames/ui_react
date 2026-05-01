@@ -51,10 +51,23 @@ func _enter_tree() -> void:
 
 
 func _reactive_teardown() -> void:
+	UiReactActionTargetHelper.teardown_for_control_exit(self)
+	_disconnect_local_control_signals()
 	_UiReactExitTeardown.teardown_wire_host(
 		Callable(self, "_disconnect_all_states"),
 		func() -> void: _UiReactHostWireTree.on_exit(self)
 	)
+
+
+func _disconnect_local_control_signals() -> void:
+	if tab_selected.is_connected(_on_tab_selected):
+		tab_selected.disconnect(_on_tab_selected)
+	if tab_selected.is_connected(_on_trigger_selection_changed):
+		tab_selected.disconnect(_on_trigger_selection_changed)
+	if mouse_entered.is_connected(_on_trigger_hover_enter):
+		mouse_entered.disconnect(_on_trigger_hover_enter)
+	if mouse_exited.is_connected(_on_trigger_hover_exit):
+		mouse_exited.disconnect(_on_trigger_hover_exit)
 
 
 func _exit_tree() -> void:

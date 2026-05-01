@@ -229,3 +229,20 @@ func test_collect_duplicate_trigger_single_key() -> void:
 	var trigger_map := UiReactActionTargetHelper.collect_control_trigger_map(action_targets)
 	assert_eq(trigger_map.size(), 1)
 	assert_eq(trigger_map[UiAnimTarget.Trigger.SELECTION_CHANGED], true)
+
+
+func test_teardown_clears_state_watch_connections() -> void:
+	var host: UiReactCheckBox = autoqfree(UiReactCheckBox.new())
+	add_child_autofree(host)
+	var watch := UiBoolState.new()
+	var target_flag := UiBoolState.new()
+	var row := _row_bool_flag(target_flag, watch)
+	row.trigger = UiAnimTarget.Trigger.PRESSED
+	host.action_targets = [row]
+	var trigger_map := {}
+	UiReactActionTargetHelper.apply_validated_actions_and_merge_triggers(host, "UiReactCheckBox", trigger_map)
+	var conns_before := watch.value_changed.get_connections().size()
+	assert_true(conns_before > 0)
+	UiReactActionTargetHelper.teardown_for_control_exit(host)
+	assert_eq(watch.value_changed.get_connections().size(), 0, "state_watch value_changed should be disconnected")
+	assert_false(host.has_meta(&"_ui_react_action_sw_bindings"))

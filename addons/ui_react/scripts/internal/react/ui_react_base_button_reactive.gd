@@ -24,12 +24,32 @@ func on_enter_tree() -> void:
 
 
 func on_exit_tree() -> void:
+	UiReactActionTargetHelper.teardown_for_control_exit(_host)
+	disconnect_local_signals()
 	disconnect_all_states()
 	_TxnSession.unregister_host(_host)
 
 
 func on_predelete() -> void:
 	on_exit_tree()
+
+
+func disconnect_local_signals() -> void:
+	if _host == null or not is_instance_valid(_host):
+		return
+	if _host.pressed.is_connected(_on_pressed):
+		_host.pressed.disconnect(_on_pressed)
+	if _host.pressed.is_connected(_on_trigger_pressed):
+		_host.pressed.disconnect(_on_trigger_pressed)
+	if _host.has_signal(&"toggled"):
+		if _host.toggled.is_connected(_on_toggled):
+			_host.toggled.disconnect(_on_toggled)
+		if _host.toggled.is_connected(_on_trigger_toggled):
+			_host.toggled.disconnect(_on_trigger_toggled)
+	if _host.mouse_entered.is_connected(_on_trigger_hover_enter):
+		_host.mouse_entered.disconnect(_on_trigger_hover_enter)
+	if _host.mouse_exited.is_connected(_on_trigger_hover_exit):
+		_host.mouse_exited.disconnect(_on_trigger_hover_exit)
 
 
 func disconnect_all_states() -> void:

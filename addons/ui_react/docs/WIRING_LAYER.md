@@ -69,7 +69,7 @@ Each `UiReact*` that can **source** wires exposes **at most one** additional exp
 
 (Exact typed array when Godot permits; until then: documented as array of `UiReactWireRule`.)
 
-**P5.1 control set** (controls **without** `wire_rules` stay **Appendix-promoted**; see matrix in [`ROADMAP.md`](ROADMAP.md) Part I **Inspector surface matrix (CB-052)**):
+**P5.1 control set** (controls **without** `wire_rules` stay **Appendix-promoted**; see matrix in [`ROADMAP.md`](ROADMAP.md) Part I **Inspector surface matrix (CB-052)**): **§5 hosts** with **`wire_rules`** at runtime: **`UiReactCheckBox`**, **`UiReactLineEdit`**, **`UiReactOptionButton`**, **`UiReactItemList`**, **`UiReactTree`**, **`UiReactTabContainer`**. **No** `wire_rules` export on **`UiReactButton`**, **`UiReactTextureButton`**, **`UiReactSlider`**, **`UiReactSpinBox`**, **`UiReactProgressBar`**, **`UiReactLabel`**, **`UiReactRichTextLabel`** (animation/action-only surfaces there).
 
 ### Wire rule trigger storage
 
@@ -122,14 +122,15 @@ Official **`inventory_screen_demo`** uses only **`wire_rules`** on **`UiReact*`*
 ### 7.1 Reactive state channels: `value_changed` vs `Resource.changed`
 
 - **`UiState` contract:** concrete `Ui*`State mutators emit **`signal value_changed`** for control/runtime sync and also call **`emit_changed()`** (inherited `Resource.changed`) so the Inspector, serialization, and **dependency listeners** stay consistent (same pattern as `UiBoolState.set_value` / `set_silent`).
-- **Control bindings:** **`UiReactControlStateWire`** listens to **`value_changed`** for **`UiReact*`** two-way sync.
-- **Computed service:** **`UiReactComputedService`** listens to **`changed`** on each dependency **`UiState`** in `sources` (not **`value_changed` alone`).
+- **Control bindings:** **`UiReactControlStateWire`** listens to **`value_changed`** for **`UiReact*`** two-way sync. Parameter **`use_computed_hook: false`** skips **`UiReactComputedService`** only for bindings whose state is **not** a supported **`UiComputed*`** (see **`UiReactComputedService.supports_computed_wiring`**); computeds **always** get dependency wiring so sole-consumer controls are not stranded.
+- **Computed service:** **`UiReactComputedService`** listens to **`changed`** on each dependency **`UiState`** in `sources` (not **`value_changed` alone**).
 - **Wiring runtime:** **`UiReactWireRuleHelper`** binds **`changed`** on referenced **`UiState`** / array states for rule refresh (e.g. `_bind_sort_array_by_key`, refresh-driven rules).
 - **Rule for implementers:** when adding **new** dependency wiring outside these helpers, prefer **`Resource.changed`** on **`UiState`** resources for parity with computed/wiring; use **`value_changed`** only when integrating with the **control binding** layer or when you need the custom signal’s semantics (including any old/new payload).
 - **Anti-pattern:** subscribing **only** to **`value_changed`** on a dependency **`UiState`** and expecting computed/wiring to update is incorrect; subscribing **only** to **`changed`** for **two-way control** bindings may miss custom **`value_changed`** semantics — **use the helpers** above instead of rolling ad-hoc listeners.
 
 ### 7.2 Export typing vs validation (`UiState` slots)
 
+- **`UiReactCheckBox.checked_state`** is typed **`UiBoolState`** (computed-bool subclasses included); other **`UiReact*`** **`@export`** slots may still use **`UiState`** where transactional or widening is intentional (below).
 - Several **`UiReact*`** **`@export var …: UiState`** slots are intentionally **typed as `UiState` in the Inspector** rather than narrow concrete subclasses, because **`UiTransactionalState`** and some computed wrappers remain **valid at runtime** even when **`UiReactBindingValidator`** narrows wording for ergonomics (see **`matches_expected_binding_class`** for payload matching).
 - **Authoritative mismatch text** for any given scene remains **dock Diagnostics binding errors**, not `@export` type hints alone. When the validator accepts a transactional slot, widening the **`@export`** for that slot alone without the rest of the surface is **not** a compatible SemVer tightening.
 

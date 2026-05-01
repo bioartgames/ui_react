@@ -35,6 +35,7 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
+	set_process_input(false)
 	if ProjectSettings.settings_changed.is_connected(_on_project_settings_changed):
 		ProjectSettings.settings_changed.disconnect(_on_project_settings_changed)
 	if scene_changed.is_connected(_on_editor_scene_changed):

@@ -51,7 +51,21 @@ func _ready() -> void:
 
 
 func _reactive_teardown() -> void:
+	_disconnect_local_control_signals()
 	_UiReactExitTeardown.teardown_no_wire(Callable(self, "_disconnect_all_states"))
+
+
+func _disconnect_local_control_signals() -> void:
+	if value_changed.is_connected(_on_value_changed):
+		value_changed.disconnect(_on_value_changed)
+	if focus_entered.is_connected(_on_focus_entered):
+		focus_entered.disconnect(_on_focus_entered)
+	if focus_exited.is_connected(_on_focus_exited):
+		focus_exited.disconnect(_on_focus_exited)
+	if mouse_entered.is_connected(_on_trigger_hover_enter):
+		mouse_entered.disconnect(_on_trigger_hover_enter)
+	if mouse_exited.is_connected(_on_trigger_hover_exit):
+		mouse_exited.disconnect(_on_trigger_hover_exit)
 
 
 func _exit_tree() -> void:

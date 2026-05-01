@@ -26,7 +26,7 @@ Quick index for **solo maintenance** and **AI agents**. Authoring narrative and 
 
 | Task | Read first |
 |------|------------|
-| Change or debug **wiring** rules / helper behavior | [WIRING_LAYER.md](WIRING_LAYER.md) — **`§7.1`** is the normative **`value_changed` vs `Resource.changed`** contract for reactive state listeners; **`§7.2`** documents **`@export` typing vs Diagnostics**; additionally `scripts/internal/react/ui_react_wire_rule_helper.gd`, `scripts/api/models/ui_react_wire_*.gd` |
+| Change or debug **wiring** rules / helper behavior | [WIRING_LAYER.md](WIRING_LAYER.md) — **`§7.1`** (**`value_changed` vs `Resource.changed`**, **`UiReactControlStateWire`** effective computed hook); **`§7.2`** **`@export` typing vs Diagnostics**; additionally `scripts/internal/react/ui_react_wire_rule_helper.gd`, `scripts/api/models/ui_react_wire_*.gd` |
 | Change or debug **action** presets / transactional action constraints | [ACTION_LAYER.md](ACTION_LAYER.md); `scripts/api/models/ui_react_action_target.gd`, `editor_plugin/services/ui_react_action_validator.gd` |
 | Add a **new `UiReact*`** control or **export** | [ROADMAP.md](ROADMAP.md) Charter; `editor_plugin/ui_react_component_registry.gd` (**BINDINGS_BY_COMPONENT**, **ANIM_TRIGGERS_BY_COMPONENT**); `editor_plugin/services/ui_react_binding_validator.gd` |
 | **Dock diagnostics** (anim, actions, wiring, tree, computed) | `editor_plugin/services/ui_react_validator_service.gd` façade → `ui_react_*_validator.gd` |

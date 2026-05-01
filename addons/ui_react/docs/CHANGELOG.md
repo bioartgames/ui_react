@@ -8,11 +8,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Breaking
 
+- **`UiReactCheckBox.checked_state`** is now typed **`UiBoolState`** (was **`UiState`**). **`UiComputedBoolState`** and other **`UiBoolState`** subclasses remain valid; assign **`UiStringState`** / unrelated **`UiState`** types to this slot only via broken scenes (fix in Inspector).
 - **`UiReactTransactionalActions` removed:** the path-based Apply/Cancel coordinator control is deleted. Use **`UiReactButton`** / **`UiReactTextureButton`** **`transactional_host`** + **`UiReactTransactionalSession`** only. Scenes that still instantiated the coordinator must switch to button-hosted transactional wiring.
 - **Editor plugin — tab shortcuts only (`ui_react/settings/schema_version` 3):** the Ui React bottom dock tab no longer registers a global toggle shortcut (no **Alt+U** / no `ui_react/settings/shortcuts/bottom_panel_json`). **Alt+1** (main row **`KEY_1`**, not numpad) and **Alt+2** are the defaults for **Open Diagnostics** / **Open Wiring** (`open_diagnostics_json`, `open_wiring_json`). Migrating from schema versions before **3** clears `bottom_panel_json` and resets both `open_*` keys to those defaults once (prior custom **Alt+D** / **Alt+G** bindings are overwritten).
 
 ### Changed
 
+- **`UiReactControlStateWire`:** `use_computed_hook: false` still runs **`UiReactComputedService`** for **`UiComputed*`** resources (effective hook via **`UiReactComputedService.supports_computed_wiring`**), so list/tree/tab bindings that passed **`false`** no longer strand sole-consumer computeds.
+- **`UiReactComputedService`:** public **`supports_computed_wiring(state)`**; when **`Engine.get_main_loop()`** is unavailable, dirty computeds flush **synchronously** instead of leaving **`_dirty_computed_ids`** stranded.
+- **`UiReactActionTargetHelper`:** **`teardown_for_control_exit(owner)`** clears **`state_watch`** connections and action reentry-lock meta; **`UiReact*`** / **`UiReactBaseButtonReactive`** call it before unbinding states / wire detach.
+- **`UiReactEditorPlugin`:** **`set_process_input(false)`** in **`_exit_tree`** (symmetry with **`_enter_tree`**).
+- **`UiReact*`** controls (and shared **`UiReactBaseButtonReactive`**): **`_disconnect_local_control_signals`** / **`disconnect_local_signals`** on teardown — disconnect **`pressed`**, **`toggled`**, selection, text, range, focus, hover, and GUI-input handlers connected in **`_ready`**.
 - **`UiReactItemList`:** string icon **`res://`** paths use a capped **FIFO texture cache**; identical row **signatures** skip **`clear()`** rebuilds while still syncing selection and validation (ItemList hot path).
 - **`UiReactWireRuleHelper`**, **`UiReactWireRuleIntrospection`**, **`UiReactWiringValidator`:** detect **`UiReactWireSortArrayByKey`** via **`rule is UiReactWireSortArrayByKey`** (no script-path string equality).
 - **`UiAnimLoopRunner`:** inner loop helpers use **`signal`** declarations instead of **`var … = Signal()`**; **`_helper_stack`** is **`Array[Node]`**.
@@ -24,18 +30,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **`action_targets` / `state_watch`:** **`UiReactActionTargetHelper.teardown_for_control_exit`** runs before control state unbind on **`_exit_tree`** / **`NOTIFICATION_PREDELETE`**, so shared **`UiBoolState`** instances do not retain dangling **`value_changed`** connections to freed **`UiReact*`** hosts.
 - **`NOTIFICATION_PREDELETE`:** **`UiReact*`** controls and **`UiReactButton`** / **`UiReactTextureButton`** mirror the same reactive teardown as **`_exit_tree`** (shared **`ui_react_control_exit_teardown.gd`**; buttons via **`UiReactBaseButtonReactive.on_predelete`**) so static coordinators unload reliably when **`_exit_tree`** ordering is surprising.
 - **Reactive lifecycle:** **`UiReact*`** controls and **`UiReactBaseButtonReactive`** **`on_exit_tree`** now call **`UiReactControlStateWire.unbind_value_changed`** (and computed hooks) on **`Node._exit_tree`** before transactional / wiring teardown, so **`UiReactComputedService`** static registration cannot leak across **`queue_free`**, scene swaps, or GUT teardown.
 - **`UiReactTransactionalValidator`:** duplicate **Apply** / **Cancel** per-group errors now label **`UiReactButton`** vs **`UiReactTextureButton`** from the offending node type (Pass **14** integration polish).
 
 ### Documentation
 
-- **`WIRING_LAYER.md`:** **`§7.1`** reactive signal channels (**`value_changed`** vs **`Resource.changed`**) and **`§7.2`** **`@export` typing vs Diagnostics** (**`UiState`** slots including **`UiTransactionalState`**).
+- **`WIRING_LAYER.md`:** **`§7.1`** — reactive channels (**`value_changed`** vs **`Resource.changed`**) plus **`UiReactControlStateWire`** effective computed hook (**`UiReactComputedService.supports_computed_wiring`**); **`§7.2`** **`@export` typing vs Diagnostics** (**`UiState`** slots including **`UiTransactionalState`**).
 - **`docs/README.md`** task routing cites **`§7.1`** / **`§7.2`**; **`AGENTS.md`** maintainer cue for **`§7.1`**.
 - **`UiReactBindingValidator`:** binding mismatch text links **`§7.1`**; **`value_state`** expected-type phrasing mentions **`UiTransactionalState`** **`matches_expected_binding_class`**; **`UiReactLabel`** / **`UiReactRichTextLabel`** script **`##`** recap allowed **`text_state`** resources.
 
 ### Added
 
+- **Testing:** **`test_ui_react_computed_service`** — **`supports_computed_wiring`**, **`bind_value_changed`** with **`use_computed_hook: false`** still wires **`UiComputed*`** dependencies.
+- **Testing:** **`test_ui_react_action_target_helper.test_teardown_clears_state_watch_connections`** — **`teardown_for_control_exit`** drops **`state_watch`** **`value_changed`** subscriptions.
 - **Testing:** **`test_ui_react_item_list_hot_path`** — icon path cache reuse and signature short-circuit (dict **`label`** vs **`text`** equivalent rows).
 - **Testing:** **`UiReactComputedService.debug_static_tables_empty_for_tests`** + **`test_ui_react_computed_service.test_debug_tables_empty_after_reset`**.
 - **Testing:** **`test_ui_react_control_lifecycle_computed`** — **`UiComputedBoolInvert`** rebound to a replacement **`UiReactCheckBox`** after the first instance is **`queue_free`**, guarding **`UiReactComputedService`** teardown on **`_exit_tree`**.

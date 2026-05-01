@@ -5,11 +5,11 @@ const _UiReactHostWireTree := preload("res://addons/ui_react/scripts/internal/re
 const _UiReactExitTeardown := preload("res://addons/ui_react/scripts/internal/react/ui_react_control_exit_teardown.gd")
 
 var _bind := UiReactTwoWayBindingDriver.new()
-var _checked_state: UiState
+var _checked_state: UiBoolState
 var _disabled_state: UiBoolState
 
 ## Two-way binding for checked state ([bool]). **Optional** — omit for a plain CheckBox.
-@export var checked_state: UiState:
+@export var checked_state: UiBoolState:
 	get:
 		return _checked_state
 	set(value):
@@ -49,10 +49,23 @@ func _enter_tree() -> void:
 
 
 func _reactive_teardown() -> void:
+	UiReactActionTargetHelper.teardown_for_control_exit(self)
+	_disconnect_local_control_signals()
 	_UiReactExitTeardown.teardown_wire_host(
 		Callable(self, "_disconnect_all_states"),
 		func() -> void: _UiReactHostWireTree.on_exit(self)
 	)
+
+
+func _disconnect_local_control_signals() -> void:
+	if toggled.is_connected(_on_toggled):
+		toggled.disconnect(_on_toggled)
+	if toggled.is_connected(_on_trigger_toggled):
+		toggled.disconnect(_on_trigger_toggled)
+	if mouse_entered.is_connected(_on_trigger_hover_enter):
+		mouse_entered.disconnect(_on_trigger_hover_enter)
+	if mouse_exited.is_connected(_on_trigger_hover_exit):
+		mouse_exited.disconnect(_on_trigger_hover_exit)
 
 
 func _exit_tree() -> void:
