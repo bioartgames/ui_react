@@ -20,9 +20,9 @@ const _GraphFactoryScript := preload("res://addons/ui_react/editor_plugin/servic
 const _DockThemeScript := preload("res://addons/ui_react/editor_plugin/dock/ui_react_dock_theme.gd")
 
 const _DETAILS_GRAPH_HELP_BB := (
-	"[b]Move around[/b]\n"
+	"[b]Move Around[/b]\n"
 	+ "[b]Pan[/b] with middle mouse drag, [b]zoom[/b] with the mouse wheel, and open menus with [b]right-click[/b].\n\n"
-	+ "[b]Edit links[/b]\n"
+	+ "[b]Edit Links[/b]\n"
 	+ "To [b]move an existing link[/b], select its edge, then [b]Shift+drag[/b] from the state at the arrow tail to another [b]State[/b] or [b]Computed[/b] chip.\n"
 	+ "To [b]start a new link[/b], leave edges unselected and [b]Ctrl+Shift+drag[/b] between two chips.\n"
 	+ "To [b]remove[/b] a selected edge, press [b]Delete[/b] when the dock allows it.\n\n"
@@ -30,9 +30,9 @@ const _DETAILS_GRAPH_HELP_BB := (
 	+ "Chip outline shows whether the node is a [b]control[/b], a [b]state[/b] resource, or a [b]computed[/b] resource."
 )
 const _DETAILS_GRAPH_HELP_PLAIN := (
-	"Move around\n"
+	"Move Around\n"
 	+ "Pan with middle mouse drag, zoom with the wheel, and use right-click for menus.\n\n"
-	+ "Edit links\n"
+	+ "Edit Links\n"
 	+ "Move an existing link: select the edge, then Shift+drag from the state at the arrow tail to another State or Computed chip.\n"
 	+ "Start a new link: leave edges unselected, then Ctrl+Shift+drag between two chips.\n"
 	+ "Remove a selected edge: press Delete when the dock allows it.\n\n"
@@ -2521,8 +2521,8 @@ func _set_details_placeholder() -> void:
 
 func _set_details_empty() -> void:
 	_set_details_both(
-		"[i]No graph yet for this scope—click Refresh after you change bindings or filters.[/i]\n\n" + _DETAILS_GRAPH_HELP_BB,
-		"No graph yet for this scope—click Refresh after you change bindings or filters.\n\n" + _DETAILS_GRAPH_HELP_PLAIN,
+		"[i]No graph yet for this scope — click Refresh after you change bindings or filters.[/i]\n\n" + _DETAILS_GRAPH_HELP_BB,
+		"No graph yet for this scope — click Refresh after you change bindings or filters.\n\n" + _DETAILS_GRAPH_HELP_PLAIN,
 	)
 
 
@@ -2626,31 +2626,29 @@ func _narrative_anchor_kind(anchor_id: String) -> int:
 
 
 func _narrative_upstream_heading_bb_plain(anchor_kind: int) -> PackedStringArray:
+	var h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Upstream")
+	var body_bb := ""
+	var body_plain := ""
 	if anchor_kind == _SnapScript.NodeKind.CONTROL:
-		return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
-			"Upstream",
-			"State/Computed Feeding This Control's Bindings",
-			"State/Computed Feeding This Control's Bindings",
-		)
-	return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
-		"Upstream",
-		"Declarative Reach Toward This Resource",
-		"Declarative Reach Toward This Resource",
-	)
+		body_bb = "States and computed resources that feed this control's bindings.\n"
+		body_plain = "States and computed resources that feed this control's bindings.\n"
+	else:
+		body_bb = "Declarative reach toward this resource.\n"
+		body_plain = "Declarative reach toward this resource.\n"
+	return PackedStringArray([h[0] + body_bb, h[1] + body_plain])
 
 
 func _narrative_downstream_heading_bb_plain(anchor_kind: int) -> PackedStringArray:
+	var h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Downstream")
+	var body_bb := ""
+	var body_plain := ""
 	if anchor_kind == _SnapScript.NodeKind.CONTROL:
-		return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
-			"Downstream",
-			"States/Computed or Controls Reached via This Control's Bindings",
-			"States/Computed or Controls Reached via This Control's Bindings",
-		)
-	return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
-		"Downstream",
-		"States/Computed or Controls This Resource Feeds",
-		"States/Computed or Controls This Resource Feeds",
-	)
+		body_bb = "States, computed resources, or controls reached through this control's bindings.\n"
+		body_plain = "States, computed resources, or controls reached through this control's bindings.\n"
+	else:
+		body_bb = "States, computed resources, or controls this resource feeds.\n"
+		body_plain = "States, computed resources, or controls this resource feeds.\n"
+	return PackedStringArray([h[0] + body_bb, h[1] + body_plain])
 
 
 func _append_reachability_from_narrative(narr: Object) -> PackedStringArray:
@@ -2667,15 +2665,15 @@ func _append_reachability_from_narrative(narr: Object) -> PackedStringArray:
 	plain += up_h[1]
 	if n_narr.upstream_display_lines.is_empty():
 		if ak == _SnapScript.NodeKind.CONTROL:
-			var msg := "[i]No Upstream — Only Direct Bindings Feed This Control.[/i]\n"
+			var msg := "[i]No upstream — only direct bindings feed this control.[/i]\n"
 			bb += msg
 			plain += UiReactDockExplainDetailsPresenter.plain_from_bbcode_line(msg)
 		elif ak == _SnapScript.NodeKind.UI_STATE or ak == _SnapScript.NodeKind.UI_COMPUTED:
-			var msg_r := "[i]No Upstream — No Declarative Sources Reach This Resource.[/i]\n"
+			var msg_r := "[i]No upstream — no declarative sources reach this resource.[/i]\n"
 			bb += msg_r
 			plain += UiReactDockExplainDetailsPresenter.plain_from_bbcode_line(msg_r)
 		else:
-			var msg2 := "[i]No Upstream.[/i]\n"
+			var msg2 := "[i]No upstream.[/i]\n"
 			bb += msg2
 			plain += UiReactDockExplainDetailsPresenter.plain_from_bbcode_line(msg2)
 	else:
@@ -2727,13 +2725,11 @@ func _append_cycle_section_bb_plain(anchor_id: String) -> PackedStringArray:
 				matching.append(cd)
 	if matching.is_empty():
 		return PackedStringArray(["", ""])
-	var cyc_h := UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
-		"Cycle candidates",
-		"static, state/computed edges only",
-		"static, state/computed edges only",
-	)
+	var cyc_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Cycle Candidates")
 	var bb := cyc_h[0]
 	var plain := cyc_h[1]
+	bb += "[i]Static analysis using state and computed edges only.[/i]\n"
+	plain += "Static analysis using state and computed edges only.\n"
 	var n_show := mini(matching.size(), cap)
 	for i in n_show:
 		var sm := str(matching[i].get(&"summary", "?"))
@@ -2844,8 +2840,8 @@ func _connections_section_bb_plain(node_id: String, d: Dictionary, edges: Array)
 			bb += pair0[0] + "\n"
 			plain += pair0[1] + "\n"
 		if not any_bind:
-			bb += "[i]No Registry Bindings Listed for This Component.[/i]\n"
-			plain += "No Registry Bindings Listed for This Component.\n"
+			bb += "[i]No registry bindings are listed for this component.[/i]\n"
+			plain += "No registry bindings are listed for this component.\n"
 	else:
 		for row: Dictionary in rows:
 			var prop_sn: StringName = row.get(&"property", &"") as StringName
@@ -2898,7 +2894,7 @@ func _wire_rules_summary_bb_plain(host: Control) -> PackedStringArray:
 	var wr_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Wire Rules")
 	var bb := wr_h[0]
 	var plain := wr_h[1]
-	for i in arr.size():
+	for i in range(arr.size()):
 		var rule_var: Variant = arr[i]
 		if rule_var == null or not (rule_var is UiReactWireRule):
 			bb += "• (invalid row %d)\n" % i
@@ -2927,8 +2923,12 @@ func _wire_rules_summary_bb_plain(host: Control) -> PackedStringArray:
 				outs.append(frag)
 		var in_str := ", ".join(ins)
 		var out_str := ", ".join(outs)
-		bb += "• rule %d: %s — in: %s → out: %s\n" % [i, trig_label, in_str, out_str]
-		plain += "• rule %d: %s — in: %s → out: %s\n" % [i, trig_label, in_str, out_str]
+		if in_str.is_empty():
+			in_str = "—"
+		if out_str.is_empty():
+			out_str = "—"
+		bb += "• Rule %d (%s). In: %s. Out: %s.\n" % [i, trig_label, in_str, out_str]
+		plain += "• Rule %d (%s). In: %s. Out: %s.\n" % [i, trig_label, in_str, out_str]
 	return PackedStringArray([bb, plain])
 
 
@@ -3015,39 +3015,6 @@ func _focus_relation_blurb_bb_plain(node_id: String, layout_focus_id: String, no
 				bb += "Same layout tier as the focus column — neighbors in this horizontal band.\n"
 				plain += "Same layout tier as the focus column — neighbors in this horizontal band.\n"
 	return PackedStringArray([bb, plain])
-
-
-func _node_headline_bb_plain(node_id: String, d: Dictionary, focus_id: String) -> PackedStringArray:
-	if node_id == focus_id:
-		return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
-			"Focus control",
-			"This is the [code]UiReact*[/code] control you selected when refreshing this graph.",
-			"This is the UiReact* control you selected when refreshing this graph.",
-		)
-	var nk := int(d.get(&"kind", -1))
-	var short_l := str(d.get(&"short_label", ""))
-	var label_disp := short_l if not short_l.is_empty() else node_id
-	match nk:
-		_SnapScript.NodeKind.CONTROL:
-			return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
-				label_disp,
-				"[code]UiReact*[/code] control in this scoped graph.",
-				"UiReact* control in this scoped graph.",
-			)
-		_SnapScript.NodeKind.UI_STATE:
-			return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
-				label_disp,
-				"[code]UiState[/code] resource node (bindings, wires, or computed inputs).",
-				"UiState resource node (bindings, wires, or computed inputs).",
-			)
-		_SnapScript.NodeKind.UI_COMPUTED:
-			return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
-				label_disp,
-				"[code]UiComputed*[/code] resource node (aggregates [code]sources[/code]).",
-				"UiComputed* resource node (aggregates sources).",
-			)
-		_:
-			return UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(label_disp, "Node in this scoped graph.", "Node in this scoped graph.")
 
 
 func _fill_node_details(node_id: String) -> void:
@@ -3167,7 +3134,7 @@ func _edge_details_summary_bb_plain(
 		_SnapScript.EdgeKind.BINDING:
 			var bp0 := str(ed.get(&"binding_property", label))
 			var bind_ri := UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
-				"Property binding",
+				"Property Binding",
 				"[code]%s[/code] → [code]%s[/code], export [code]%s[/code]" % [from_short, to_short, bp0],
 				"%s → %s, export %s" % [from_short, to_short, bp0],
 			)
@@ -3188,14 +3155,16 @@ func _edge_details_summary_bb_plain(
 			plain = wf_h[1]
 			bb += "[code]%s[/code] → [code]%s[/code]\n" % [from_short, to_short]
 			plain += "%s → %s\n" % [from_short, to_short]
-			bb += "A [code]wire_rules[/code] Row Connects Input [code]%s[/code] to Output [code]%s[/code] (Each Endpoint Is a State or Computed Resource).\n" % [
+			bb += "This row under Wire rules connects input [code]%s[/code] to output [code]%s[/code] on the [code]wire_rules[/code] property.\n" % [
 				from_short,
 				to_short,
 			]
-			plain += "A wire_rules Row Connects Input %s to Output %s (Each Endpoint Is a State or Computed Resource).\n" % [
+			plain += "This row under Wire rules connects input %s to output %s on the wire_rules property.\n" % [
 				from_short,
 				to_short,
 			]
+			bb += "Each endpoint is a state or computed resource.\n"
+			plain += "Each endpoint is a state or computed resource.\n"
 		_:
 			var edge_ri := UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
 				"Edge",
@@ -3214,8 +3183,8 @@ func _edge_details_summary_bb_plain(
 		var ep_h := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Endpoints")
 		bb += ep_h[0]
 		plain += ep_h[1]
-		bb += "From: [code]%s[/code]  →  To: [code]%s[/code]\n" % [from_short, to_short]
-		plain += "From: %s  →  To: %s\n" % [from_short, to_short]
+		bb += "From: [code]%s[/code] → To: [code]%s[/code]\n" % [from_short, to_short]
+		plain += "From: %s → To: %s\n" % [from_short, to_short]
 		if not label.is_empty():
 			bb += "Detail: [code]%s[/code]\n" % label
 			plain += "Detail: %s\n" % label
@@ -3229,7 +3198,7 @@ func _edge_details_summary_bb_plain(
 		var cc := str(ed.get(&"computed_context", ""))
 		if not to_id.is_empty():
 			var own_ri := UiReactDockExplainDetailsPresenter.details_run_in_bb_plain(
-				"Computed owner",
+				"Computed Owner",
 				(
 					"%s, %s — target for [b]Rebind computed source…[/b] or [b]Remove computed dependency[/b]."
 					% [ep[2], slot_sp[0]]
@@ -3479,7 +3448,7 @@ func _focus_node_in_editor(node_id: String, ei: EditorInterface, root: Node) -> 
 		if fp.is_empty():
 			_set_details_both(
 				"[i]Embedded state has no resource file — select the owning [code]UiReact*[/code] control in the Scene tree, then open its state in the Inspector.[/i]",
-				"Embedded state has no resource file — select the owning UiReact* control in the Scene tree."
+				"Embedded state has no resource file — select the owning UiReact* control in the Scene tree, then open its state in the Inspector."
 			)
 			return
 		if ResourceLoader.exists(fp):

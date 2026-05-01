@@ -663,7 +663,7 @@ static func compute_narrative(
 						type_disp = ctl.get_class()
 					out.bound_state_lines.append(
 						(
-							"[b]Focus control[/b]\n"
+							"[b]Focus Control[/b]\n"
 							+ "Name: [code]%s[/code]\n"
 							+ "Type: [code]%s[/code]\n"
 						)
@@ -672,7 +672,7 @@ static func compute_narrative(
 				else:
 					out.bound_state_lines.append("[i]Control anchor is not a UiReact* host in this scene.[/i]\n")
 			else:
-				out.bound_state_lines.append("[i]Control path not found under edited scene root.[/i]\n")
+				out.bound_state_lines.append("[i]Control path not found under the edited scene root.[/i]\n")
 		else:
 			out.bound_state_lines.append("[i]Invalid control id.[/i]\n")
 
@@ -707,10 +707,10 @@ static func compute_narrative(
 				q3.append(ns3)
 
 		out.bound_state_lines.append(
-			"[i]Anchor is not a UiReact* host — no binding export list. Upstream/downstream follow all declarative edges in this snapshot.[/i]\n"
+			"[i]This anchor is not a UiReact* host — there is no binding export list. Upstream and downstream lists follow every declarative edge in this snapshot.[/i]\n"
 		)
 	else:
-		out.bound_state_lines.append("[i]Unknown node kind for narrative.[/i]\n")
+		out.bound_state_lines.append("[i]Unknown node kind for this narrative.[/i]\n")
 
 	var narr_cast := out as UiReactExplainGraphNarrative
 	if nk == _SnapshotScript.NodeKind.CONTROL:

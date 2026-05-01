@@ -26,6 +26,26 @@ Use this guide for **any user-visible string** in the Ui React **editor plugin**
 
 ---
 
+## Wiring details pane (Wiring tab)
+
+The Wiring tab **details** column uses BBCode in the dock and a **plain-text** twin for clipboard copy. Structural helpers live in **`UiReactDockExplainDetailsPresenter`** (`details_run_in_bb_plain`, `details_block_head_bb_plain`, `details_append_major`).
+
+**Section titles** (run-in titles and block headings): **Title Case**. Keep proper nouns and API tokens as written (`UiState`, `UiReact*`, `UiComputed*`). Copy **menu item titles verbatim** when you quote a context-menu action (e.g. `Rebind computed source…`).
+
+**Body prose** (paragraphs, italic notes, placeholder help): **Sentence case**. Prefer **Inspector** vocabulary—for example **Wire rules** as the row users open. Use `[code]wire_rules[/code]` in BBCode when you mean the **exported property name**.
+
+**Run-in vs block:** Use **`details_run_in_bb_plain`** only for **single-line** summaries (one title + one short clause). Use **`details_block_head_bb_plain`** plus following lines when the section has **multiple sentences**, **bullets**, or **label/value rows**.
+
+**Bullets:** Each item starts with **`• `** (bullet, space).
+
+**Separators:** **`→`** marks a directed pair (flow). **` — `** (spaced em dash) is a clause break or qualifier (e.g. `— unbound`). **`:`** separates a **label** from its **value** in wire-rule report rows (`Label: value`). For scannable **Wire rules** summaries in the graph details, use a line readers can parse at a glance—for example: **`• Rule %d (%s). In: %s. Out: %s.`** (use **`—`** for an empty in/out side).
+
+**Spacing:** Single spaces around **`→`**. Prefer spaced em dashes in prose (**`scope — click`**).
+
+**BBCode ↔ plain:** Every `_set_details_both(bb, plain)` path must carry the **same meaning** in plain as in BBCode; strip tags for plain where you hand-write both strands.
+
+---
+
 ## Before / after examples
 
 ### Wiring (Diagnostics-only issues)

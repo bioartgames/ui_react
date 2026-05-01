@@ -8,7 +8,7 @@ static func escape_bbcode_literal(s: String) -> String:
 
 
 static func idle_placeholder_text() -> String:
-	return "Pick a wire rule row above to see what it does, which states it uses, and how it runs on this control."
+	return "Pick a row under Wire rules above to see what it does, which states it uses, and how it runs on this control."
 
 
 static func build_details_bbcode(
