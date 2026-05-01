@@ -94,12 +94,16 @@ static func validate_bindings(
 				continue
 		if not _binding_type_ok(ui_state, expected, component, prop):
 			var phrase: String = _expected_type_phrase(component, prop, expected)
+			const _BINDING_CHANNELS_DOC := (
+				" See docs/WIRING_LAYER.md §7.1 for why UiState uses both value_changed and Resource.changed."
+			)
 			var issue_bt := UiReactDiagnosticModel.DiagnosticIssue.make_structured(
 				UiReactDiagnosticModel.Severity.ERROR,
 				component,
 				str(owner.name),
-				"%s expects %s (this resource is %s)." % [prop, phrase, ui_state.get_class()],
-				"In the Inspector, replace the resource on this property with one of the expected types.",
+				"%s expects %s (this resource is %s).%s" % [prop, phrase, ui_state.get_class(), _BINDING_CHANNELS_DOC],
+				"In the Inspector, replace the resource on this property with one of the expected types."
+				+ " See docs/WIRING_LAYER.md §7.1 for reactive signal/channel context.",
 				node_path,
 				prop,
 				suggested,
@@ -157,6 +161,14 @@ static func _append_binding_issue_with_preview(
 static func _expected_type_phrase(component: String, prop: StringName, expected: StringName) -> String:
 	if (component == "UiReactLabel" or component == "UiReactRichTextLabel") and prop == &"text_state":
 		return "UiStringState, UiComputedStringState, UiArrayState, or UiTransactionalState (string/array payload)"
+	if (
+		component == "UiReactSlider"
+		or component == "UiReactSpinBox"
+		or component == "UiReactProgressBar"
+	) and prop == &"value_state":
+		return (
+			"UiFloatState, or UiTransactionalState whose committed/draft payload matches the slot (`matches_expected_binding_class` vs UiFloatState)"
+		)
 	if expected.is_empty():
 		return "a concrete UiState subclass"
 	return str(expected)

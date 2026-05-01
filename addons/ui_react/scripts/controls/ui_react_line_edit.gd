@@ -2,6 +2,7 @@ extends LineEdit
 class_name UiReactLineEdit
 
 const _UiReactHostWireTree := preload("res://addons/ui_react/scripts/internal/react/ui_react_host_wire_tree.gd")
+const _UiReactExitTeardown := preload("res://addons/ui_react/scripts/internal/react/ui_react_control_exit_teardown.gd")
 
 var _bind := UiReactTwoWayBindingDriver.new()
 var _text_state: UiStringState
@@ -33,9 +34,20 @@ func _enter_tree() -> void:
 	_UiReactHostWireTree.on_enter(self)
 
 
+func _reactive_teardown() -> void:
+	_UiReactExitTeardown.teardown_wire_host(
+		Callable(self, "_disconnect_all_states"),
+		func() -> void: _UiReactHostWireTree.on_exit(self)
+	)
+
+
 func _exit_tree() -> void:
-	_disconnect_all_states()
-	_UiReactHostWireTree.on_exit(self)
+	_reactive_teardown()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		_reactive_teardown()
 
 
 func _ready() -> void:

@@ -28,6 +28,10 @@ func on_exit_tree() -> void:
 	_TxnSession.unregister_host(_host)
 
 
+func on_predelete() -> void:
+	on_exit_tree()
+
+
 func disconnect_all_states() -> void:
 	var ps: UiBoolState = _host.get(&"pressed_state") as UiBoolState
 	var ds: UiBoolState = _host.get(&"disabled_state") as UiBoolState

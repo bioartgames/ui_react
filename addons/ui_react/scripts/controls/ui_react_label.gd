@@ -1,10 +1,13 @@
 extends Label
 class_name UiReactLabel
 
+const _UiReactExitTeardown := preload("res://addons/ui_react/scripts/internal/react/ui_react_control_exit_teardown.gd")
+
 var _bind := UiReactTwoWayBindingDriver.new()
 var _text_state: UiState
 
-## Two-way binding for displayed text ([String] or nested structures — see [method _as_text]). **Assign** [UiStringState] or [UiArrayState] (composite / nested [UiState] in arrays).
+## Two-way binding for displayed text ([String] or nested structures — see [method _as_text]).
+## [member text_state] accepts [UiStringState], [UiComputedStringState], [UiArrayState], or [UiTransactionalState] whose committed/draft payload matches string or array via [member UiTransactionalState.matches_expected_binding_class]; [code]@export[/code] is typed [UiState] so transactional scenes stay valid ([code]docs/WIRING_LAYER.md[/code] §7.2).
 @export var text_state: UiState:
 	get:
 		return _text_state
@@ -29,8 +32,17 @@ func _ready() -> void:
 	UiReactStateBindingHelper.deferred_finish_initialization(self)
 
 
+func _reactive_teardown() -> void:
+	_UiReactExitTeardown.teardown_no_wire(Callable(self, "_disconnect_all_states"))
+
+
 func _exit_tree() -> void:
-	_disconnect_all_states()
+	_reactive_teardown()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		_reactive_teardown()
 
 
 func _disconnect_all_states() -> void:

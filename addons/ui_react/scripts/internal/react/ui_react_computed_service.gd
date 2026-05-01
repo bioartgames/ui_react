@@ -48,6 +48,18 @@ static func reset_internal_state_for_tests() -> void:
 	_reenter_depth.clear()
 
 
+## Test-only: asserts static tables are empty after reset and normal teardown paths.
+static func debug_static_tables_empty_for_tests() -> bool:
+	return (
+		_site_keys.is_empty()
+		and _refcount_by_computed.is_empty()
+		and _wired.is_empty()
+		and _dirty_computed_ids.is_empty()
+		and not _flush_scheduled
+		and _reenter_depth.is_empty()
+	)
+
+
 static func ensure_wired(computed: UiState, consumer: Node, binding: StringName) -> void:
 	if Engine.is_editor_hint():
 		return

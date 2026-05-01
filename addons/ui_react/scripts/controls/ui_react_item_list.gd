@@ -2,10 +2,20 @@ extends ItemList
 class_name UiReactItemList
 
 const _UiReactHostWireTree := preload("res://addons/ui_react/scripts/internal/react/ui_react_host_wire_tree.gd")
+const _UiReactExitTeardown := preload("res://addons/ui_react/scripts/internal/react/ui_react_control_exit_teardown.gd")
+
+const _ICON_PATH_CACHE_MAX: int = 64
 
 var _bind := UiReactTwoWayBindingDriver.new()
 var _selected_state: UiState
 var _items_state: UiArrayState
+
+## `String` (normalized res path) -> [Texture2D]; FIFO-capped when paths rotate.
+var _icon_path_cache: Dictionary = {}
+var _icon_path_cache_order: Array[String] = []
+
+## Per-row stable signatures for cheap rebuild skip (see [method _entry_signature]).
+var _last_items_signatures: PackedStringArray = PackedStringArray()
 
 ## Two-way binding for selection (see script for value shape). **Assign** [UiIntState] (single-select) or [UiArrayState] (multi-select).
 @export var selected_state: UiState:
@@ -28,6 +38,8 @@ var _items_state: UiArrayState
 	set(v):
 		if _items_state == v:
 			return
+		_clear_icon_path_cache()
+		_last_items_signatures = PackedStringArray()
 		if is_node_ready():
 			_disconnect_all_states()
 		_items_state = v
@@ -53,9 +65,20 @@ func _enter_tree() -> void:
 	_UiReactHostWireTree.on_enter(self)
 
 
+func _reactive_teardown() -> void:
+	_UiReactExitTeardown.teardown_wire_host(
+		Callable(self, "_disconnect_all_states"),
+		func() -> void: _UiReactHostWireTree.on_exit(self)
+	)
+
+
 func _exit_tree() -> void:
-	_disconnect_all_states()
-	_UiReactHostWireTree.on_exit(self)
+	_reactive_teardown()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		_reactive_teardown()
 
 
 func _ready() -> void:
@@ -230,10 +253,77 @@ func _coerce_entry_icon(v: Variant) -> Texture2D:
 		var p := str(v).strip_edges()
 		if p.is_empty():
 			return null
+		if _icon_path_cache.has(p):
+			return _icon_path_cache[p] as Texture2D
 		var res: Resource = ResourceLoader.load(p)
 		if res is Texture2D:
-			return res as Texture2D
+			var tex := res as Texture2D
+			_icon_path_cache_store(p, tex)
+			return tex
 	return null
+
+
+func _icon_path_cache_store(path_key: String, tex: Texture2D) -> void:
+	if _icon_path_cache.has(path_key):
+		return
+	while _icon_path_cache_order.size() >= _ICON_PATH_CACHE_MAX:
+		var oldest: String = _icon_path_cache_order.pop_front()
+		_icon_path_cache.erase(oldest)
+	_icon_path_cache_order.append(path_key)
+	_icon_path_cache[path_key] = tex
+
+
+func _clear_icon_path_cache() -> void:
+	_icon_path_cache.clear()
+	_icon_path_cache_order.clear()
+
+
+## Test-only: distinct normalized icon path keys cached (FIFO-capped).
+func debug_icon_path_cache_entry_count_for_tests() -> int:
+	return _icon_path_cache.size()
+
+
+func _entry_signature(entry: Variant) -> String:
+	if entry is Dictionary:
+		var d: Dictionary = entry as Dictionary
+		var label_text := ""
+		if d.has("label"):
+			label_text = str(d["label"])
+		elif d.has("text"):
+			label_text = str(d["text"])
+		else:
+			label_text = str(entry)
+		var icon_part := "icon:null"
+		if d.has("icon"):
+			var ic: Variant = d["icon"]
+			if ic is Texture2D:
+				var tpath := (ic as Texture2D).resource_path
+				if not tpath.is_empty():
+					icon_part = "texpath:" + tpath
+				else:
+					icon_part = "texid:" + str((ic as Texture2D).get_instance_id())
+			elif typeof(ic) == TYPE_STRING:
+				var ps := str(ic).strip_edges()
+				icon_part = "path:" + ps if not ps.is_empty() else "icon:null"
+		return "d\u001f" + label_text + "\u001f" + icon_part
+	return "s\u001f" + str(entry)
+
+
+func _signatures_for_items_array(arr: Array) -> PackedStringArray:
+	var sigs: PackedStringArray = PackedStringArray()
+	sigs.resize(arr.size())
+	for i in range(arr.size()):
+		sigs[i] = _entry_signature(arr[i])
+	return sigs
+
+
+func _signatures_equal(a: PackedStringArray, b: PackedStringArray) -> bool:
+	if a.size() != b.size():
+		return false
+	for i in range(a.size()):
+		if a[i] != b[i]:
+			return false
+	return true
 
 
 func _on_items_state_changed(new_value: Variant, _old_value: Variant) -> void:
@@ -251,10 +341,25 @@ func _on_items_state_changed(new_value: Variant, _old_value: Variant) -> void:
 			"Set items_state to an Array payload (e.g. [\"A\", \"B\"]) via UiArrayState.",
 		)
 		return
+	var arr: Array = new_value as Array
+	var new_sigs := _signatures_for_items_array(arr)
+	if (
+		new_sigs.size() == _last_items_signatures.size()
+		and new_sigs.size() == item_count
+		and _signatures_equal(new_sigs, _last_items_signatures)
+	):
+		_last_items_signatures = new_sigs
+		_bind.updating = true
+		_sync_selection_ui_to_state()
+		_bind.updating = false
+		_clamp_selection_state_if_needed()
+		_validate_row_slots_vs_item_count()
+		return
 	_bind.updating = true
 	clear()
-	for entry in new_value as Array:
+	for entry in arr:
 		_add_item_from_entry(entry)
+	_last_items_signatures = new_sigs
 	_sync_selection_ui_to_state()
 	_bind.updating = false
 	_clamp_selection_state_if_needed()

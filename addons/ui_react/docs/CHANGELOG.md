@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **`UiReactItemList`:** string icon **`res://`** paths use a capped **FIFO texture cache**; identical row **signatures** skip **`clear()`** rebuilds while still syncing selection and validation (ItemList hot path).
 - **`UiReactWireRuleHelper`**, **`UiReactWireRuleIntrospection`**, **`UiReactWiringValidator`:** detect **`UiReactWireSortArrayByKey`** via **`rule is UiReactWireSortArrayByKey`** (no script-path string equality).
 - **`UiAnimLoopRunner`:** inner loop helpers use **`signal`** declarations instead of **`var … = Signal()`**; **`_helper_stack`** is **`Array[Node]`**.
 - **Editor diagnostics dock:** **`UiReactDockFilter.visible_issues`** (**pure**) centralizes severity, search, and ignore-key narrowing; Diagnostics refresh **coalescing** and manual unused-cache clearing live in **`UiReactDockRefreshCoalescer`** (`editor_plugin/dock/ui_react_dock_refresh_coalescer.gd`).
@@ -23,11 +24,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **`NOTIFICATION_PREDELETE`:** **`UiReact*`** controls and **`UiReactButton`** / **`UiReactTextureButton`** mirror the same reactive teardown as **`_exit_tree`** (shared **`ui_react_control_exit_teardown.gd`**; buttons via **`UiReactBaseButtonReactive.on_predelete`**) so static coordinators unload reliably when **`_exit_tree`** ordering is surprising.
 - **Reactive lifecycle:** **`UiReact*`** controls and **`UiReactBaseButtonReactive`** **`on_exit_tree`** now call **`UiReactControlStateWire.unbind_value_changed`** (and computed hooks) on **`Node._exit_tree`** before transactional / wiring teardown, so **`UiReactComputedService`** static registration cannot leak across **`queue_free`**, scene swaps, or GUT teardown.
 - **`UiReactTransactionalValidator`:** duplicate **Apply** / **Cancel** per-group errors now label **`UiReactButton`** vs **`UiReactTextureButton`** from the offending node type (Pass **14** integration polish).
 
+### Documentation
+
+- **`WIRING_LAYER.md`:** **`§7.1`** reactive signal channels (**`value_changed`** vs **`Resource.changed`**) and **`§7.2`** **`@export` typing vs Diagnostics** (**`UiState`** slots including **`UiTransactionalState`**).
+- **`docs/README.md`** task routing cites **`§7.1`** / **`§7.2`**; **`AGENTS.md`** maintainer cue for **`§7.1`**.
+- **`UiReactBindingValidator`:** binding mismatch text links **`§7.1`**; **`value_state`** expected-type phrasing mentions **`UiTransactionalState`** **`matches_expected_binding_class`**; **`UiReactLabel`** / **`UiReactRichTextLabel`** script **`##`** recap allowed **`text_state`** resources.
+
 ### Added
 
+- **Testing:** **`test_ui_react_item_list_hot_path`** — icon path cache reuse and signature short-circuit (dict **`label`** vs **`text`** equivalent rows).
+- **Testing:** **`UiReactComputedService.debug_static_tables_empty_for_tests`** + **`test_ui_react_computed_service.test_debug_tables_empty_after_reset`**.
 - **Testing:** **`test_ui_react_control_lifecycle_computed`** — **`UiComputedBoolInvert`** rebound to a replacement **`UiReactCheckBox`** after the first instance is **`queue_free`**, guarding **`UiReactComputedService`** teardown on **`_exit_tree`**.
 - **Editor dock — Selection RMB** **Wire → Stacks** submenu inserts curated multi-rule recipes (**Inventory detail**, **Filter, sort, detail**, **Catalog list**) as a **single undo** step ([`UiReactWireRuleStackCatalog`](../editor_plugin/services/ui_react_wire_rule_stack_catalog.gd), [`append_stack_from_catalog_index`](../editor_plugin/dock/ui_react_dock_wire_rules_section.gd) on `UiReactDockWireRulesSection`). **No** new exports; rules ship with empty state slots so existing **§8** diagnostics guide completion (**`CB-063`**).
 - **Editor plugin — plugin-only settings surface:** removed user-facing Ui React Project Settings tab exposure (dock shortcut capture UI was added later and **removed** — see **Changed** in **[Unreleased]**).

@@ -1,6 +1,8 @@
 extends SpinBox
 class_name UiReactSpinBox
 
+const _UiReactExitTeardown := preload("res://addons/ui_react/scripts/internal/react/ui_react_control_exit_teardown.gd")
+
 var _bind := UiReactTwoWayBindingDriver.new()
 var _value_state: UiState
 var _disabled_state: UiBoolState
@@ -48,8 +50,17 @@ func _ready() -> void:
 	UiReactStateBindingHelper.deferred_finish_initialization(self)
 
 
+func _reactive_teardown() -> void:
+	_UiReactExitTeardown.teardown_no_wire(Callable(self, "_disconnect_all_states"))
+
+
 func _exit_tree() -> void:
-	_disconnect_all_states()
+	_reactive_teardown()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		_reactive_teardown()
 
 
 func _disconnect_all_states() -> void:

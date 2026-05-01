@@ -57,6 +57,11 @@ func _exit_tree() -> void:
 	_lazy_rx().on_exit_tree()
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		_lazy_rx().on_predelete()
+
+
 func _ready() -> void:
 	_lazy_rx().on_ready()
 

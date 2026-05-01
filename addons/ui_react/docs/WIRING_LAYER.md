@@ -119,6 +119,20 @@ Official **`inventory_screen_demo`** uses only **`wire_rules`** on **`UiReact*`*
 - Wires **must not** replace **`UiTransactionalGroup`** / **Apply** / **Cancel** semantics.
 - Wires **may** listen to `UiBoolState` (e.g. lock toggles) for **UI-only** side effects.
 
+### 7.1 Reactive state channels: `value_changed` vs `Resource.changed`
+
+- **`UiState` contract:** concrete `Ui*`State mutators emit **`signal value_changed`** for control/runtime sync and also call **`emit_changed()`** (inherited `Resource.changed`) so the Inspector, serialization, and **dependency listeners** stay consistent (same pattern as `UiBoolState.set_value` / `set_silent`).
+- **Control bindings:** **`UiReactControlStateWire`** listens to **`value_changed`** for **`UiReact*`** two-way sync.
+- **Computed service:** **`UiReactComputedService`** listens to **`changed`** on each dependency **`UiState`** in `sources` (not **`value_changed` alone`).
+- **Wiring runtime:** **`UiReactWireRuleHelper`** binds **`changed`** on referenced **`UiState`** / array states for rule refresh (e.g. `_bind_sort_array_by_key`, refresh-driven rules).
+- **Rule for implementers:** when adding **new** dependency wiring outside these helpers, prefer **`Resource.changed`** on **`UiState`** resources for parity with computed/wiring; use **`value_changed`** only when integrating with the **control binding** layer or when you need the custom signal’s semantics (including any old/new payload).
+- **Anti-pattern:** subscribing **only** to **`value_changed`** on a dependency **`UiState`** and expecting computed/wiring to update is incorrect; subscribing **only** to **`changed`** for **two-way control** bindings may miss custom **`value_changed`** semantics — **use the helpers** above instead of rolling ad-hoc listeners.
+
+### 7.2 Export typing vs validation (`UiState` slots)
+
+- Several **`UiReact*`** **`@export var …: UiState`** slots are intentionally **typed as `UiState` in the Inspector** rather than narrow concrete subclasses, because **`UiTransactionalState`** and some computed wrappers remain **valid at runtime** even when **`UiReactBindingValidator`** narrows wording for ergonomics (see **`matches_expected_binding_class`** for payload matching).
+- **Authoritative mismatch text** for any given scene remains **dock Diagnostics binding errors**, not `@export` type hints alone. When the validator accepts a transactional slot, widening the **`@export`** for that slot alone without the rest of the surface is **not** a compatible SemVer tightening.
+
 ---
 
 ## 8. Diagnostics (P5.1) and dock authoring (P5.2)

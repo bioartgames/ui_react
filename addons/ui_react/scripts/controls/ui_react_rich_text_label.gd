@@ -1,10 +1,13 @@
 extends RichTextLabel
 class_name UiReactRichTextLabel
 
+const _UiReactExitTeardown := preload("res://addons/ui_react/scripts/internal/react/ui_react_control_exit_teardown.gd")
+
 var _bind := UiReactTwoWayBindingDriver.new()
 var _text_state: UiState
 
-## Display-only binding for BBCode text ([String] or nested structures — see [method _as_text]). **Assign** [UiStringState] or [UiArrayState] (composite / nested [UiState] in arrays). The wrapper sets [member bbcode_enabled] to [code]true[/code] in [method _ready]; do not rely on edit-back from the control.
+## Display-only BBCode binding ([String] or nested structures — see [method _as_text]). The wrapper sets [member bbcode_enabled] to [code]true[/code] in [method _ready]; do not rely on edit-back from the control.
+## [member text_state] accepts [UiStringState], [UiComputedStringState], [UiArrayState], or [UiTransactionalState] whose committed/draft payload matches string or array via [member UiTransactionalState.matches_expected_binding_class]; [code]@export[/code] is typed [UiState] so transactional scenes stay valid ([code]docs/WIRING_LAYER.md[/code] §7.2).
 @export var text_state: UiState:
 	get:
 		return _text_state
@@ -30,8 +33,17 @@ func _ready() -> void:
 	UiReactStateBindingHelper.deferred_finish_initialization(self)
 
 
+func _reactive_teardown() -> void:
+	_UiReactExitTeardown.teardown_no_wire(Callable(self, "_disconnect_all_states"))
+
+
 func _exit_tree() -> void:
-	_disconnect_all_states()
+	_reactive_teardown()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		_reactive_teardown()
 
 
 func _disconnect_all_states() -> void:
