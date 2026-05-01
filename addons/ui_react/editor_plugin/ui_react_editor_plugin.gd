@@ -10,6 +10,7 @@ var _dock: Control
 var _bottom_panel_tab_button: Button = null
 var _open_diagnostics_shortcut: Variant = null
 var _open_wiring_shortcut: Variant = null
+var _plugin_signals: UiReactSubscriptionScope
 static var _shortcut_property_info_registered_global: bool = false
 
 
@@ -28,18 +29,19 @@ func _enter_tree() -> void:
 	_register_project_settings_property_info_v2()
 	_register_bottom_panel_tab()
 	_reload_action_shortcuts()
-	if not ProjectSettings.settings_changed.is_connected(_on_project_settings_changed):
-		ProjectSettings.settings_changed.connect(_on_project_settings_changed)
+	if _plugin_signals != null:
+		_plugin_signals.dispose()
+	_plugin_signals = UiReactSubscriptionScope.new()
+	_plugin_signals.connect_bound(ProjectSettings.settings_changed, _on_project_settings_changed)
 	set_process_input(true)
-	scene_changed.connect(_on_editor_scene_changed)
+	_plugin_signals.connect_bound(scene_changed, _on_editor_scene_changed)
 
 
 func _exit_tree() -> void:
 	set_process_input(false)
-	if ProjectSettings.settings_changed.is_connected(_on_project_settings_changed):
-		ProjectSettings.settings_changed.disconnect(_on_project_settings_changed)
-	if scene_changed.is_connected(_on_editor_scene_changed):
-		scene_changed.disconnect(_on_editor_scene_changed)
+	if _plugin_signals != null:
+		_plugin_signals.dispose()
+		_plugin_signals = null
 	if _dock:
 		remove_control_from_bottom_panel(_dock)
 		_dock.queue_free()

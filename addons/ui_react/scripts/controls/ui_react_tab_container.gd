@@ -5,6 +5,7 @@ const _UiReactHostWireTree := preload("res://addons/ui_react/scripts/internal/re
 const _UiReactExitTeardown := preload("res://addons/ui_react/scripts/internal/react/ui_react_control_exit_teardown.gd")
 
 var _bind := UiReactTwoWayBindingDriver.new()
+var _local_signal_scope: UiReactSubscriptionScope
 var _selected_state: UiIntState
 var _tab_config: UiTabContainerCfg
 
@@ -60,14 +61,9 @@ func _reactive_teardown() -> void:
 
 
 func _disconnect_local_control_signals() -> void:
-	if tab_selected.is_connected(_on_tab_selected):
-		tab_selected.disconnect(_on_tab_selected)
-	if tab_selected.is_connected(_on_trigger_selection_changed):
-		tab_selected.disconnect(_on_trigger_selection_changed)
-	if mouse_entered.is_connected(_on_trigger_hover_enter):
-		mouse_entered.disconnect(_on_trigger_hover_enter)
-	if mouse_exited.is_connected(_on_trigger_hover_exit):
-		mouse_exited.disconnect(_on_trigger_hover_exit)
+	if _local_signal_scope != null:
+		_local_signal_scope.dispose()
+		_local_signal_scope = null
 
 
 func _exit_tree() -> void:
@@ -80,7 +76,10 @@ func _notification(what: int) -> void:
 
 
 func _ready() -> void:
-	tab_selected.connect(_on_tab_selected)
+	if _local_signal_scope != null:
+		_local_signal_scope.dispose()
+	_local_signal_scope = UiReactSubscriptionScope.new()
+	_local_signal_scope.connect_bound(tab_selected, _on_tab_selected)
 	_previous_tab_index = current_tab
 	_disconnect_all_states()
 	_connect_all_states()
@@ -134,11 +133,11 @@ func _validate_animation_targets() -> void:
 	UiReactActionTargetHelper.apply_validated_actions_and_merge_triggers(self, "UiReactTabContainer", trigger_map)
 
 	if trigger_map.has(UiAnimTarget.Trigger.SELECTION_CHANGED):
-		UiReactAnimTargetHelper.connect_if_absent(tab_selected, _on_trigger_selection_changed)
+		_local_signal_scope.connect_bound(tab_selected, _on_trigger_selection_changed)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER):
-		UiReactAnimTargetHelper.connect_if_absent(mouse_entered, _on_trigger_hover_enter)
+		_local_signal_scope.connect_bound(mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
-		UiReactAnimTargetHelper.connect_if_absent(mouse_exited, _on_trigger_hover_exit)
+		_local_signal_scope.connect_bound(mouse_exited, _on_trigger_hover_exit)
 
 	UiReactActionTargetHelper.sync_initial_state(self, "UiReactTabContainer", action_targets)
 

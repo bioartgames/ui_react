@@ -103,6 +103,7 @@ static func collect_animation_targets_for_row_slot(animation_targets: Array[UiAn
 
 
 ## Connects [param callable] to [param sig] only if not already connected (shared trigger wiring).
+## **Deprecated:** Prefer [method UiReactSubscriptionScope.connect_bound] on a per-owner [UiReactSubscriptionScope] so teardown is centralized; this helper remains for third-party / legacy call sites.
 static func connect_if_absent(sig: Signal, callable: Callable) -> void:
 	if not sig.is_connected(callable):
 		sig.connect(callable)

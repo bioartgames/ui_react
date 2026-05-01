@@ -124,7 +124,7 @@ func rebuild() -> void:
 		toggle.flat = true
 		toggle.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		var gk_cap: String = gk
-		toggle.pressed.connect(func(): toggle_group(gk_cap))
+		_dock._editor_signal_lifecycle.scope.connect_bound(toggle.pressed, func(): toggle_group(gk_cap))
 		toggle.tooltip_text = "Expand or collapse this group."
 		header.add_child(toggle)
 		_dock._issues_container.add_child(header)
@@ -144,11 +144,14 @@ func _make_issue_row(issue: UiReactDiagnosticModel.DiagnosticIssue, flat_index: 
 	var sel_btn := Button.new()
 	sel_btn.text = "%s %s" % [severity_prefix(issue.severity), summary]
 	sel_btn.flat = false
+	sel_btn.clip_text = true
+	sel_btn.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	sel_btn.custom_minimum_size.x = 0
 	sel_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	sel_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sel_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	var fi := flat_index
-	sel_btn.pressed.connect(func(): _dock._select_issue_at_index(fi))
+	_dock._editor_signal_lifecycle.scope.connect_bound(sel_btn.pressed, func(): _dock._select_issue_at_index(fi))
 	sel_btn.tooltip_text = (
 		"Show details below. If this issue references a scene node, also focus that node in the editor (Inspector)."
 	)
@@ -173,26 +176,26 @@ func _make_issue_row(issue: UiReactDiagnosticModel.DiagnosticIssue, flat_index: 
 	if issue.issue_kind == UiReactDiagnosticModel.IssueKind.UNUSED_STATE_FILE:
 		var btn_reveal := Button.new()
 		btn_reveal.text = "Reveal"
-		btn_reveal.pressed.connect(func(): _dock._on_row_reveal(fi))
+		_dock._editor_signal_lifecycle.scope.connect_bound(btn_reveal.pressed, func(): _dock._on_row_reveal(fi))
 		btn_reveal.tooltip_text = "Open this file in the FileSystem dock (unused-state scope: current scene)."
 		row.add_child(btn_reveal)
 
 		var btn_ignore_u := Button.new()
 		btn_ignore_u.text = "Ignore"
-		btn_ignore_u.pressed.connect(func(): _dock._on_row_ignore(fi))
+		_dock._editor_signal_lifecycle.scope.connect_bound(btn_ignore_u.pressed, func(): _dock._on_row_ignore(fi))
 		btn_ignore_u.tooltip_text = "Hide this hint for the project (Project Settings)."
 		row.add_child(btn_ignore_u)
 	else:
 		var btn_fix := Button.new()
 		btn_fix.text = "Fix"
 		btn_fix.disabled = not _dock._can_create_state_for_issue(issue)
-		btn_fix.pressed.connect(func(): _dock._on_row_fix(fi))
+		_dock._editor_signal_lifecycle.scope.connect_bound(btn_fix.pressed, func(): _dock._on_row_fix(fi))
 		btn_fix.tooltip_text = "Create or assign suggested state; may confirm when replacing on errors."
 		row.add_child(btn_fix)
 
 		var btn_ignore := Button.new()
 		btn_ignore.text = "Ignore"
-		btn_ignore.pressed.connect(func(): _dock._on_row_ignore(fi))
+		_dock._editor_signal_lifecycle.scope.connect_bound(btn_ignore.pressed, func(): _dock._on_row_ignore(fi))
 		btn_ignore.tooltip_text = "Hide this issue until the next Rescan."
 		row.add_child(btn_ignore)
 

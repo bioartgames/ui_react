@@ -64,8 +64,8 @@ func maybe_confirm_replace_binding(node: Node, issue: UiReactDiagnosticModel.Dia
 	var on_cancel := func() -> void:
 		accepted = false
 		finished = true
-	_dock._replace_confirm_dialog.confirmed.connect(on_ok, CONNECT_ONE_SHOT)
-	_dock._replace_confirm_dialog.canceled.connect(on_cancel, CONNECT_ONE_SHOT)
+	_dock._editor_signal_lifecycle.scope.connect_bound(_dock._replace_confirm_dialog.confirmed, on_ok, CONNECT_ONE_SHOT)
+	_dock._editor_signal_lifecycle.scope.connect_bound(_dock._replace_confirm_dialog.canceled, on_cancel, CONNECT_ONE_SHOT)
 	while not finished:
 		await _dock.get_tree().process_frame
 	return accepted

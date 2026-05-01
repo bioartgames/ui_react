@@ -48,6 +48,20 @@ This file is the **checklist** before large refactors. The **documentation map**
 
 ---
 
+## Inspector export order (`UiReact*` controls)
+
+When adding or reordering **`@export`** blocks on a **`UiReact*`** script, follow this **canonical order** so the Inspector stays predictable and aligned with [`editor_plugin/ui_react_component_registry.gd`](editor_plugin/ui_react_component_registry.gd):
+
+1. **Primary / secondary bindings** — in the same order as **`BINDINGS_BY_COMPONENT`** for that component (e.g. **`UiReactItemList`**: **`items_state`**, then **`selected_state`**).
+2. **Extra control-specific resources** — only **`UiReactTabContainer.tab_config`** today; place immediately after the registry binding exports for that control.
+3. **`animation_targets`**
+4. **`action_targets`**
+5. **`wire_rules`** **or** **`transactional_host`** (only one of these surfaces per control; exclusive).
+
+Update **both** the registry row and the script when introducing a new binding export.
+
+---
+
 ## Maintainer hygiene
 
 - **User-facing copy** (Diagnostics strings, graph / Wiring dock text, menus, tooltips, `push_warning`): follow [`docs/EDITOR_COPY.md`](docs/EDITOR_COPY.md) (solo-designer tone; `issue_text` / `fix_hint` rules).

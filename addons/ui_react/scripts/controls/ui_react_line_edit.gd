@@ -5,6 +5,7 @@ const _UiReactHostWireTree := preload("res://addons/ui_react/scripts/internal/re
 const _UiReactExitTeardown := preload("res://addons/ui_react/scripts/internal/react/ui_react_control_exit_teardown.gd")
 
 var _bind := UiReactTwoWayBindingDriver.new()
+var _local_signal_scope: UiReactSubscriptionScope
 var _text_state: UiStringState
 
 ## Two-way binding for text ([String]). **Assign** for reactive sync.
@@ -44,18 +45,9 @@ func _reactive_teardown() -> void:
 
 
 func _disconnect_local_control_signals() -> void:
-	if text_changed.is_connected(_on_text_changed):
-		text_changed.disconnect(_on_text_changed)
-	if focus_entered.is_connected(_on_focus_entered):
-		focus_entered.disconnect(_on_focus_entered)
-	if focus_exited.is_connected(_on_focus_exited):
-		focus_exited.disconnect(_on_focus_exited)
-	if text_submitted.is_connected(_on_trigger_text_entered):
-		text_submitted.disconnect(_on_trigger_text_entered)
-	if mouse_entered.is_connected(_on_trigger_hover_enter):
-		mouse_entered.disconnect(_on_trigger_hover_enter)
-	if mouse_exited.is_connected(_on_trigger_hover_exit):
-		mouse_exited.disconnect(_on_trigger_hover_exit)
+	if _local_signal_scope != null:
+		_local_signal_scope.dispose()
+		_local_signal_scope = null
 
 
 func _exit_tree() -> void:
@@ -68,9 +60,12 @@ func _notification(what: int) -> void:
 
 
 func _ready() -> void:
-	text_changed.connect(_on_text_changed)
-	focus_entered.connect(_on_focus_entered)
-	focus_exited.connect(_on_focus_exited)
+	if _local_signal_scope != null:
+		_local_signal_scope.dispose()
+	_local_signal_scope = UiReactSubscriptionScope.new()
+	_local_signal_scope.connect_bound(text_changed, _on_text_changed)
+	_local_signal_scope.connect_bound(focus_entered, _on_focus_entered)
+	_local_signal_scope.connect_bound(focus_exited, _on_focus_exited)
 	_disconnect_all_states()
 	_connect_all_states()
 	_validate_animation_targets()
@@ -95,11 +90,11 @@ func _validate_animation_targets() -> void:
 
 	# Connect signals based on which triggers are used
 	if trigger_map.has(UiAnimTarget.Trigger.TEXT_ENTERED):
-		UiReactAnimTargetHelper.connect_if_absent(text_submitted, _on_trigger_text_entered)
+		_local_signal_scope.connect_bound(text_submitted, _on_trigger_text_entered)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER):
-		UiReactAnimTargetHelper.connect_if_absent(mouse_entered, _on_trigger_hover_enter)
+		_local_signal_scope.connect_bound(mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
-		UiReactAnimTargetHelper.connect_if_absent(mouse_exited, _on_trigger_hover_exit)
+		_local_signal_scope.connect_bound(mouse_exited, _on_trigger_hover_exit)
 
 
 ## Finishes initialization, allowing animations to trigger on text changes.

@@ -20,6 +20,9 @@ var _field_string_edits: Dictionary = {}
 var _field_bool_checks: Dictionary = {}
 var _syncing := false
 
+var _panel_signal_lifecycle: UiReactEditorSignalLifecycle
+var _descriptor_rows_scope: UiReactSubscriptionScope
+
 
 func setup(
 	actions: UiReactActionController,
@@ -27,10 +30,15 @@ func setup(
 ) -> void:
 	_actions = actions
 	_after_wire_mutated = after_wire_mutated
-	_build_ui()
+	if _panel_signal_lifecycle == null:
+		_panel_signal_lifecycle = UiReactEditorSignalLifecycle.new(self)
+		_build_ui()
 
 
 func clear() -> void:
+	if _descriptor_rows_scope != null:
+		_descriptor_rows_scope.dispose()
+		_descriptor_rows_scope = null
 	_host = null
 	_rule_index = -1
 	_rule_class_name = &""
@@ -72,6 +80,8 @@ func set_context(host: Control, _root: Node, rule_index: int) -> void:
 
 
 func _build_ui() -> void:
+	if _rule_id_edit != null:
+		return
 	add_theme_constant_override(&"separation", 6)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	visible = false
@@ -91,8 +101,11 @@ func _build_ui() -> void:
 	_rule_id_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_rule_id_edit.placeholder_text = "Rule id"
 	_rule_id_edit.tooltip_text = rid_lbl.tooltip_text
-	_rule_id_edit.focus_exited.connect(_commit_rule_id_if_needed)
-	_rule_id_edit.text_submitted.connect(func(_s: String) -> void: _commit_rule_id_if_needed())
+	_panel_signal_lifecycle.scope.connect_bound(_rule_id_edit.focus_exited, _commit_rule_id_if_needed)
+	_panel_signal_lifecycle.scope.connect_bound(
+		_rule_id_edit.text_submitted,
+		func(_s: String) -> void: _commit_rule_id_if_needed()
+	)
 	rid_row.add_child(_rule_id_edit)
 	add_child(rid_row)
 
@@ -114,11 +127,17 @@ func _build_ui() -> void:
 func _rebuild_descriptor_rows(descriptors: Array) -> void:
 	if _fields_host == null:
 		return
+	if _descriptor_rows_scope != null:
+		_descriptor_rows_scope.dispose()
+	_descriptor_rows_scope = UiReactSubscriptionScope.new()
 	for i: int in range(_fields_host.get_child_count() - 1, -1, -1):
 		_fields_host.get_child(i).queue_free()
 	_field_string_edits.clear()
 	_field_bool_checks.clear()
 	if descriptors.is_empty():
+		if _descriptor_rows_scope != null:
+			_descriptor_rows_scope.dispose()
+			_descriptor_rows_scope = null
 		_empty_hint_lbl = Label.new()
 		_empty_hint_lbl.text = "Edit in Inspector for this rule type."
 		_empty_hint_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -178,8 +197,14 @@ func _add_string_field_row(desc: Dictionary, prop: StringName) -> void:
 		if short.length() > 96:
 			short = short.substr(0, 93) + "…"
 		edit.placeholder_text = short
-	edit.focus_exited.connect(func() -> void: _commit_shallow_string_if_needed(prop, edit))
-	edit.text_submitted.connect(func(_s: String) -> void: _commit_shallow_string_if_needed(prop, edit))
+	_descriptor_rows_scope.connect_bound(
+		edit.focus_exited,
+		func() -> void: _commit_shallow_string_if_needed(prop, edit)
+	)
+	_descriptor_rows_scope.connect_bound(
+		edit.text_submitted,
+		func(_s: String) -> void: _commit_shallow_string_if_needed(prop, edit)
+	)
 	row.add_child(edit)
 	_fields_host.add_child(row)
 	_field_string_edits[prop] = edit
@@ -191,7 +216,10 @@ func _add_bool_field_row(desc: Dictionary, prop: StringName) -> void:
 	var help := _desc_designer_help(desc)
 	if not help.is_empty():
 		cb.tooltip_text = help
-	cb.toggled.connect(func(on: bool) -> void: _on_descriptor_bool_toggled(prop, on, cb))
+	_descriptor_rows_scope.connect_bound(
+		cb.toggled,
+		func(on: bool) -> void: _on_descriptor_bool_toggled(prop, on, cb)
+	)
 	_fields_host.add_child(cb)
 	_field_bool_checks[prop] = cb
 

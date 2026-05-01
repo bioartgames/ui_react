@@ -71,6 +71,8 @@ Each `UiReact*` that can **source** wires exposes **at most one** additional exp
 
 **P5.1 control set** (controls **without** `wire_rules` stay **Appendix-promoted**; see matrix in [`ROADMAP.md`](ROADMAP.md) Part I **Inspector surface matrix (CB-052)**): **§5 hosts** with **`wire_rules`** at runtime: **`UiReactCheckBox`**, **`UiReactLineEdit`**, **`UiReactOptionButton`**, **`UiReactItemList`**, **`UiReactTree`**, **`UiReactTabContainer`**. **No** `wire_rules` export on **`UiReactButton`**, **`UiReactTextureButton`**, **`UiReactSlider`**, **`UiReactSpinBox`**, **`UiReactProgressBar`**, **`UiReactLabel`**, **`UiReactRichTextLabel`** (animation/action-only surfaces there).
 
+Inspector **§5 host** and other **`UiReact*`** scripts should keep **`@export`** order consistent with **`BINDINGS_BY_COMPONENT`** and the template in **[`AGENTS.md`](../AGENTS.md)** (“Inspector export order”).
+
 ### Wire rule trigger storage
 
 [`UiReactWireRule`](../scripts/api/models/ui_react_wire_rule.gd) stores [member UiReactWireRule.trigger] as an integer matching [enum UiReactWireRule.TriggerKind]. The numeric values (`WIRE_TRIGGER_*` constants in that file) are **stable on disk** for existing scenes and resources. They **overlap** with some [enum UiAnimTarget.Trigger] values for historical authoring convenience, but **`trigger` on other resource types** (for example [member UiReactActionTarget.trigger]) is **not** guaranteed to use the same numbering—treat wire triggers as **wire-layer storage**, not a universal trigger enum.

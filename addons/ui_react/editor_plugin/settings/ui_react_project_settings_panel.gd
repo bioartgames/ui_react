@@ -12,23 +12,20 @@ var _apply_btn: Button
 var _revert_btn: Button
 var _reset_btn: Button
 
+var _panel_signal_lifecycle: UiReactEditorSignalLifecycle
+
 
 func _ready() -> void:
-	_build_ui()
+	if _panel_signal_lifecycle == null:
+		_panel_signal_lifecycle = UiReactEditorSignalLifecycle.new(self)
+		_build_ui()
 	reload_from_project_settings()
 
 
 func _exit_tree() -> void:
-	if is_instance_valid(_remove_selected_button) and _remove_selected_button.pressed.is_connected(_on_remove_selected_ignored_pressed):
-		_remove_selected_button.pressed.disconnect(_on_remove_selected_ignored_pressed)
-	if is_instance_valid(_clear_all_button) and _clear_all_button.pressed.is_connected(_on_clear_all_ignored_pressed):
-		_clear_all_button.pressed.disconnect(_on_clear_all_ignored_pressed)
-	if is_instance_valid(_apply_btn) and _apply_btn.pressed.is_connected(apply_to_project_settings):
-		_apply_btn.pressed.disconnect(apply_to_project_settings)
-	if is_instance_valid(_revert_btn) and _revert_btn.pressed.is_connected(reload_from_project_settings):
-		_revert_btn.pressed.disconnect(reload_from_project_settings)
-	if is_instance_valid(_reset_btn) and _reset_btn.pressed.is_connected(_on_reset_defaults_pressed):
-		_reset_btn.pressed.disconnect(_on_reset_defaults_pressed)
+	if _panel_signal_lifecycle != null:
+		_panel_signal_lifecycle.dispose()
+		_panel_signal_lifecycle = null
 
 
 func _build_ui() -> void:
@@ -61,12 +58,12 @@ func _build_ui() -> void:
 	_remove_selected_button = Button.new()
 	_remove_selected_button.text = "Remove Selected"
 	_remove_selected_button.tooltip_text = "Remove selected paths from the ignored list."
-	_remove_selected_button.pressed.connect(_on_remove_selected_ignored_pressed)
+	_panel_signal_lifecycle.scope.connect_bound(_remove_selected_button.pressed, _on_remove_selected_ignored_pressed)
 	ignored_actions.add_child(_remove_selected_button)
 	_clear_all_button = Button.new()
 	_clear_all_button.text = "Clear All"
 	_clear_all_button.tooltip_text = "Clear all ignored paths."
-	_clear_all_button.pressed.connect(_on_clear_all_ignored_pressed)
+	_panel_signal_lifecycle.scope.connect_bound(_clear_all_button.pressed, _on_clear_all_ignored_pressed)
 	ignored_actions.add_child(_clear_all_button)
 	ignored.add_child(ignored_actions)
 
@@ -75,17 +72,17 @@ func _build_ui() -> void:
 	_apply_btn = Button.new()
 	_apply_btn.text = "Apply"
 	_apply_btn.tooltip_text = "Save these Ui React settings."
-	_apply_btn.pressed.connect(apply_to_project_settings)
+	_panel_signal_lifecycle.scope.connect_bound(_apply_btn.pressed, apply_to_project_settings)
 	actions.add_child(_apply_btn)
 	_revert_btn = Button.new()
 	_revert_btn.text = "Revert"
 	_revert_btn.tooltip_text = "Discard unsaved edits in this tab."
-	_revert_btn.pressed.connect(reload_from_project_settings)
+	_panel_signal_lifecycle.scope.connect_bound(_revert_btn.pressed, reload_from_project_settings)
 	actions.add_child(_revert_btn)
 	_reset_btn = Button.new()
 	_reset_btn.text = "Reset defaults"
 	_reset_btn.tooltip_text = "Clear all ignored paths. Open-tab shortcuts use internal Project Settings keys (defaults Alt+1 / Alt+2); edit JSON there if needed."
-	_reset_btn.pressed.connect(_on_reset_defaults_pressed)
+	_panel_signal_lifecycle.scope.connect_bound(_reset_btn.pressed, _on_reset_defaults_pressed)
 	actions.add_child(_reset_btn)
 	add_child(actions)
 

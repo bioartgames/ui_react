@@ -8,6 +8,7 @@ var _host: BaseButton
 var _component_name: String
 var _bind: UiReactTwoWayBindingDriver
 var _guard_toggled_connect: bool
+var _signal_scope: UiReactSubscriptionScope
 
 
 func _init(host: BaseButton, component_name: String, bind_driver: UiReactTwoWayBindingDriver, guard_toggled_connect: bool) -> void:
@@ -37,19 +38,9 @@ func on_predelete() -> void:
 func disconnect_local_signals() -> void:
 	if _host == null or not is_instance_valid(_host):
 		return
-	if _host.pressed.is_connected(_on_pressed):
-		_host.pressed.disconnect(_on_pressed)
-	if _host.pressed.is_connected(_on_trigger_pressed):
-		_host.pressed.disconnect(_on_trigger_pressed)
-	if _host.has_signal(&"toggled"):
-		if _host.toggled.is_connected(_on_toggled):
-			_host.toggled.disconnect(_on_toggled)
-		if _host.toggled.is_connected(_on_trigger_toggled):
-			_host.toggled.disconnect(_on_trigger_toggled)
-	if _host.mouse_entered.is_connected(_on_trigger_hover_enter):
-		_host.mouse_entered.disconnect(_on_trigger_hover_enter)
-	if _host.mouse_exited.is_connected(_on_trigger_hover_exit):
-		_host.mouse_exited.disconnect(_on_trigger_hover_exit)
+	if _signal_scope != null:
+		_signal_scope.dispose()
+		_signal_scope = null
 
 
 func disconnect_all_states() -> void:
@@ -71,10 +62,12 @@ func connect_all_states() -> void:
 
 
 func on_ready() -> void:
-	if not _host.pressed.is_connected(_on_pressed):
-		_host.pressed.connect(_on_pressed)
-	if _host.has_signal(&"toggled") and not _host.toggled.is_connected(_on_toggled):
-		_host.toggled.connect(_on_toggled)
+	if _signal_scope != null:
+		_signal_scope.dispose()
+	_signal_scope = UiReactSubscriptionScope.new()
+	_signal_scope.connect_bound(_host.pressed, _on_pressed)
+	if _host.has_signal(&"toggled"):
+		_signal_scope.connect_bound(_host.toggled, _on_toggled)
 	disconnect_all_states()
 	connect_all_states()
 	_validate_animation_targets()
@@ -99,14 +92,14 @@ func _validate_animation_targets() -> void:
 	UiReactActionTargetHelper.apply_validated_actions_and_merge_triggers(_host, _component_name, trigger_map)
 
 	if trigger_map.has(UiAnimTarget.Trigger.PRESSED):
-		UiReactAnimTargetHelper.connect_if_absent(_host.pressed, _on_trigger_pressed)
+		_signal_scope.connect_bound(_host.pressed, _on_trigger_pressed)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER):
-		UiReactAnimTargetHelper.connect_if_absent(_host.mouse_entered, _on_trigger_hover_enter)
+		_signal_scope.connect_bound(_host.mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
-		UiReactAnimTargetHelper.connect_if_absent(_host.mouse_exited, _on_trigger_hover_exit)
+		_signal_scope.connect_bound(_host.mouse_exited, _on_trigger_hover_exit)
 	var want_toggle := trigger_map.has(UiAnimTarget.Trigger.TOGGLED_ON) or trigger_map.has(UiAnimTarget.Trigger.TOGGLED_OFF)
 	if want_toggle and (not _guard_toggled_connect or _host.has_signal(&"toggled")):
-		UiReactAnimTargetHelper.connect_if_absent(_host.toggled, _on_trigger_toggled)
+		_signal_scope.connect_bound(_host.toggled, _on_trigger_toggled)
 
 	UiReactActionTargetHelper.sync_initial_state(_host, _component_name, acts)
 

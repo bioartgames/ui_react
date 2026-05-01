@@ -4,6 +4,7 @@ class_name UiReactSlider
 const _UiReactExitTeardown := preload("res://addons/ui_react/scripts/internal/react/ui_react_control_exit_teardown.gd")
 
 var _bind := UiReactTwoWayBindingDriver.new()
+var _local_signal_scope: UiReactSubscriptionScope
 var _value_state: UiState
 
 ## Two-way binding for the slider value ([float]). **Assign** for reactive sync; omit for a local-only slider.
@@ -26,8 +27,11 @@ var _last_value: float = 0.0
 var _is_dragging: bool = false
 
 func _ready() -> void:
-	value_changed.connect(_on_value_changed)
-	gui_input.connect(_on_gui_input)
+	if _local_signal_scope != null:
+		_local_signal_scope.dispose()
+	_local_signal_scope = UiReactSubscriptionScope.new()
+	_local_signal_scope.connect_bound(value_changed, _on_value_changed)
+	_local_signal_scope.connect_bound(gui_input, _on_gui_input)
 	_disconnect_all_states()
 	_connect_all_states()
 	if _value_state == null:
@@ -42,14 +46,9 @@ func _reactive_teardown() -> void:
 
 
 func _disconnect_local_control_signals() -> void:
-	if value_changed.is_connected(_on_value_changed):
-		value_changed.disconnect(_on_value_changed)
-	if gui_input.is_connected(_on_gui_input):
-		gui_input.disconnect(_on_gui_input)
-	if mouse_entered.is_connected(_on_trigger_hover_enter):
-		mouse_entered.disconnect(_on_trigger_hover_enter)
-	if mouse_exited.is_connected(_on_trigger_hover_exit):
-		mouse_exited.disconnect(_on_trigger_hover_exit)
+	if _local_signal_scope != null:
+		_local_signal_scope.dispose()
+		_local_signal_scope = null
 
 
 func _exit_tree() -> void:
@@ -94,9 +93,9 @@ func _validate_animation_targets() -> void:
 
 	# Connect signals based on which triggers are used
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER):
-		UiReactAnimTargetHelper.connect_if_absent(mouse_entered, _on_trigger_hover_enter)
+		_local_signal_scope.connect_bound(mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
-		UiReactAnimTargetHelper.connect_if_absent(mouse_exited, _on_trigger_hover_exit)
+		_local_signal_scope.connect_bound(mouse_exited, _on_trigger_hover_exit)
 
 
 ## Finishes initialization, allowing animations to trigger on value changes.

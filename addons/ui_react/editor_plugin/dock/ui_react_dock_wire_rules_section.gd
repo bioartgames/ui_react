@@ -26,7 +26,9 @@ var _edited_scene_root: Node = null
 var _selected_rule_index: int = -1
 var _last_emitted_rule_index: int = -2
 
-
+var _rule_rows_scope: UiReactSubscriptionScope
+ 
+ 
 func setup(
 	plugin: EditorPlugin,
 	actions: UiReactActionController,
@@ -44,6 +46,9 @@ func set_target_host(host: Control, root: Node) -> void:
 		_edited_scene_root = null
 		_selected_rule_index = -1
 		_clear_rules_container()
+		if _rule_rows_scope != null:
+			_rule_rows_scope.dispose()
+			_rule_rows_scope = null
 		if _shallow_editor != null:
 			_shallow_editor.clear()
 		visible = false
@@ -188,6 +193,12 @@ func _build_ui() -> void:
 	visible = false
 
 
+func _exit_tree() -> void:
+	if _rule_rows_scope != null:
+		_rule_rows_scope.dispose()
+		_rule_rows_scope = null
+
+
 func _clear_rules_container() -> void:
 	for i: int in range(_rules_container.get_child_count() - 1, -1, -1):
 		_rules_container.get_child(i).queue_free()
@@ -195,6 +206,9 @@ func _clear_rules_container() -> void:
 
 
 func _rebuild_rule_rows(arr: Array) -> void:
+	if _rule_rows_scope != null:
+		_rule_rows_scope.dispose()
+	_rule_rows_scope = UiReactSubscriptionScope.new()
 	_clear_rules_container()
 	for i: int in range(arr.size()):
 		var item: Variant = arr[i]
@@ -249,7 +263,7 @@ func _make_rule_row(index: int, item: Variant, arr_size: int) -> Control:
 	enabled_cb.disabled = item == null or not (item is UiReactWireRule)
 	if item is UiReactWireRule:
 		enabled_cb.button_pressed = (item as UiReactWireRule).enabled
-	enabled_cb.toggled.connect(func(on: bool) -> void: _on_row_enabled_toggled(fi, on))
+		_rule_rows_scope.connect_bound(enabled_cb.toggled, func(on: bool) -> void: _on_row_enabled_toggled(fi, on))
 	row.add_child(enabled_cb)
 
 	var sel_btn := Button.new()
@@ -258,7 +272,7 @@ func _make_rule_row(index: int, item: Variant, arr_size: int) -> Control:
 	sel_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	sel_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sel_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	sel_btn.pressed.connect(func() -> void: _select_rule(fi))
+	_rule_rows_scope.connect_bound(sel_btn.pressed, func() -> void: _select_rule(fi))
 	sel_btn.tooltip_text = (
 		"Select this rule for quick edit below and open the rule resource in the Inspector. "
 		+ "Row controls (enable, trigger, order) also move quick edit to that row without opening the Inspector."
@@ -295,7 +309,8 @@ func _make_rule_row(index: int, item: Variant, arr_size: int) -> Control:
 			if trig_opt.get_item_id(k2) == trig_ord:
 				trig_opt.select(k2)
 				break
-	trig_opt.item_selected.connect(
+	_rule_rows_scope.connect_bound(
+		trig_opt.item_selected,
 		func(sel_idx: int) -> void: _on_row_trigger_selected(fi, trig_opt.get_item_id(sel_idx))
 	)
 	row.add_child(trig_opt)
@@ -310,27 +325,27 @@ func _make_rule_row(index: int, item: Variant, arr_size: int) -> Control:
 	order.allow_lesser = false
 	order.value = float(fi + 1)
 	order.custom_minimum_size = Vector2(56, 0)
-	order.value_changed.connect(func(v: float) -> void: _on_row_order_changed(fi, int(round(v))))
+	_rule_rows_scope.connect_bound(order.value_changed, func(v: float) -> void: _on_row_order_changed(fi, int(round(v))))
 	row.add_child(order)
 
 	var dup_btn := Button.new()
 	dup_btn.text = "Duplicate"
 	dup_btn.tooltip_text = "Duplicate this rule."
 	dup_btn.disabled = item == null or not (item is Resource)
-	dup_btn.pressed.connect(func() -> void: _duplicate_at(fi))
+	_rule_rows_scope.connect_bound(dup_btn.pressed, func() -> void: _duplicate_at(fi))
 	row.add_child(dup_btn)
 
 	var del_btn := Button.new()
 	del_btn.text = "Delete"
 	del_btn.tooltip_text = "Delete this rule."
-	del_btn.pressed.connect(func() -> void: _remove_at(fi))
+	_rule_rows_scope.connect_bound(del_btn.pressed, func() -> void: _remove_at(fi))
 	row.add_child(del_btn)
 
 	var copy_btn := Button.new()
 	copy_btn.text = "Copy details"
 	copy_btn.tooltip_text = "Copy this rule's details."
 	copy_btn.disabled = item == null or not (item is UiReactWireRule)
-	copy_btn.pressed.connect(func() -> void: _copy_details_at(fi))
+	_rule_rows_scope.connect_bound(copy_btn.pressed, func() -> void: _copy_details_at(fi))
 	row.add_child(copy_btn)
 
 	return row

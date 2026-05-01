@@ -7,8 +7,9 @@ const _UiReactExitTeardown := preload("res://addons/ui_react/scripts/internal/re
 const _ICON_PATH_CACHE_MAX: int = 64
 
 var _bind := UiReactTwoWayBindingDriver.new()
-var _selected_state: UiState
+var _local_signal_scope: UiReactSubscriptionScope
 var _items_state: UiArrayState
+var _selected_state: UiState
 
 ## `String` (normalized res path) -> [Texture2D]; FIFO-capped when paths rotate.
 var _icon_path_cache: Dictionary = {}
@@ -16,19 +17,6 @@ var _icon_path_cache_order: Array[String] = []
 
 ## Per-row stable signatures for cheap rebuild skip (see [method _entry_signature]).
 var _last_items_signatures: PackedStringArray = PackedStringArray()
-
-## Two-way binding for selection (see script for value shape). **Assign** [UiIntState] (single-select) or [UiArrayState] (multi-select).
-@export var selected_state: UiState:
-	get:
-		return _selected_state
-	set(v):
-		if _selected_state == v:
-			return
-		if is_node_ready():
-			_disconnect_all_states()
-		_selected_state = v
-		if is_node_ready():
-			_connect_all_states()
 
 ## **Optional** — list row contents from a [UiArrayState] (or assign an [Array] payload).
 ## Each element is either stringified with [method @GlobalScope.str], or a [Dictionary] with **label** or **text**, and optional **icon** ([Texture2D] or [code]res://[/code] path string).
@@ -43,6 +31,19 @@ var _last_items_signatures: PackedStringArray = PackedStringArray()
 		if is_node_ready():
 			_disconnect_all_states()
 		_items_state = v
+		if is_node_ready():
+			_connect_all_states()
+
+## Two-way binding for selection (see script for value shape). **Assign** [UiIntState] (single-select) or [UiArrayState] (multi-select).
+@export var selected_state: UiState:
+	get:
+		return _selected_state
+	set(v):
+		if _selected_state == v:
+			return
+		if is_node_ready():
+			_disconnect_all_states()
+		_selected_state = v
 		if is_node_ready():
 			_connect_all_states()
 
@@ -75,16 +76,9 @@ func _reactive_teardown() -> void:
 
 
 func _disconnect_local_control_signals() -> void:
-	if item_selected.is_connected(_on_item_selected):
-		item_selected.disconnect(_on_item_selected)
-	if item_selected.is_connected(_on_trigger_selection_changed):
-		item_selected.disconnect(_on_trigger_selection_changed)
-	if item_activated.is_connected(_on_item_activated):
-		item_activated.disconnect(_on_item_activated)
-	if mouse_entered.is_connected(_on_trigger_hover_enter):
-		mouse_entered.disconnect(_on_trigger_hover_enter)
-	if mouse_exited.is_connected(_on_trigger_hover_exit):
-		mouse_exited.disconnect(_on_trigger_hover_exit)
+	if _local_signal_scope != null:
+		_local_signal_scope.dispose()
+		_local_signal_scope = null
 
 
 func _exit_tree() -> void:
@@ -97,8 +91,11 @@ func _notification(what: int) -> void:
 
 
 func _ready() -> void:
-	item_selected.connect(_on_item_selected)
-	item_activated.connect(_on_item_activated)
+	if _local_signal_scope != null:
+		_local_signal_scope.dispose()
+	_local_signal_scope = UiReactSubscriptionScope.new()
+	_local_signal_scope.connect_bound(item_selected, _on_item_selected)
+	_local_signal_scope.connect_bound(item_activated, _on_item_activated)
 	_disconnect_all_states()
 	_connect_all_states()
 	_validate_animation_targets()
@@ -128,11 +125,11 @@ func _validate_animation_targets() -> void:
 
 	# Connect signals based on which triggers are used
 	if trigger_map.has(UiAnimTarget.Trigger.SELECTION_CHANGED):
-		UiReactAnimTargetHelper.connect_if_absent(item_selected, _on_trigger_selection_changed)
+		_local_signal_scope.connect_bound(item_selected, _on_trigger_selection_changed)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER):
-		UiReactAnimTargetHelper.connect_if_absent(mouse_entered, _on_trigger_hover_enter)
+		_local_signal_scope.connect_bound(mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
-		UiReactAnimTargetHelper.connect_if_absent(mouse_exited, _on_trigger_hover_exit)
+		_local_signal_scope.connect_bound(mouse_exited, _on_trigger_hover_exit)
 
 	UiReactActionTargetHelper.sync_initial_state(self, "UiReactItemList", action_targets)
 

@@ -5,6 +5,7 @@ const _UiReactHostWireTree := preload("res://addons/ui_react/scripts/internal/re
 const _UiReactExitTeardown := preload("res://addons/ui_react/scripts/internal/react/ui_react_control_exit_teardown.gd")
 
 var _bind := UiReactTwoWayBindingDriver.new()
+var _local_signal_scope: UiReactSubscriptionScope
 var _checked_state: UiBoolState
 var _disabled_state: UiBoolState
 
@@ -58,14 +59,9 @@ func _reactive_teardown() -> void:
 
 
 func _disconnect_local_control_signals() -> void:
-	if toggled.is_connected(_on_toggled):
-		toggled.disconnect(_on_toggled)
-	if toggled.is_connected(_on_trigger_toggled):
-		toggled.disconnect(_on_trigger_toggled)
-	if mouse_entered.is_connected(_on_trigger_hover_enter):
-		mouse_entered.disconnect(_on_trigger_hover_enter)
-	if mouse_exited.is_connected(_on_trigger_hover_exit):
-		mouse_exited.disconnect(_on_trigger_hover_exit)
+	if _local_signal_scope != null:
+		_local_signal_scope.dispose()
+		_local_signal_scope = null
 
 
 func _exit_tree() -> void:
@@ -78,7 +74,10 @@ func _notification(what: int) -> void:
 
 
 func _ready() -> void:
-	toggled.connect(_on_toggled)
+	if _local_signal_scope != null:
+		_local_signal_scope.dispose()
+	_local_signal_scope = UiReactSubscriptionScope.new()
+	_local_signal_scope.connect_bound(toggled, _on_toggled)
 	_disconnect_all_states()
 	_connect_all_states()
 	_validate_animation_targets()
@@ -107,11 +106,11 @@ func _validate_animation_targets() -> void:
 
 	# Connect signals based on which triggers are used
 	if trigger_map.has(UiAnimTarget.Trigger.TOGGLED_ON) or trigger_map.has(UiAnimTarget.Trigger.TOGGLED_OFF):
-		UiReactAnimTargetHelper.connect_if_absent(toggled, _on_trigger_toggled)
+		_local_signal_scope.connect_bound(toggled, _on_trigger_toggled)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER):
-		UiReactAnimTargetHelper.connect_if_absent(mouse_entered, _on_trigger_hover_enter)
+		_local_signal_scope.connect_bound(mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
-		UiReactAnimTargetHelper.connect_if_absent(mouse_exited, _on_trigger_hover_exit)
+		_local_signal_scope.connect_bound(mouse_exited, _on_trigger_hover_exit)
 
 	UiReactActionTargetHelper.sync_initial_state(self, "UiReactCheckBox", action_targets)
 
