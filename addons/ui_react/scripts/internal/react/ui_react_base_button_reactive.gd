@@ -75,15 +75,22 @@ func on_ready() -> void:
 	UiReactStateBindingHelper.deferred_finish_initialization(_host)
 
 
+func _matching_export_rows(raw: Variant, item_predicate: Callable) -> Array:
+	var out: Array = []
+	if raw is Array:
+		for it in raw as Array:
+			if item_predicate.call(it):
+				out.append(it)
+	return out
+
+
 func _action_targets_from_host() -> Array[UiReactActionTarget]:
 	var raw: Variant = _host.get(&"action_targets")
 	if raw is Array[UiReactActionTarget]:
 		return raw as Array[UiReactActionTarget]
 	var out: Array[UiReactActionTarget] = []
-	if raw is Array:
-		for it in raw as Array:
-			if it is UiReactActionTarget:
-				out.append(it as UiReactActionTarget)
+	for it in _matching_export_rows(raw, func(elem: Variant) -> bool: return elem is UiReactActionTarget):
+		out.append(it as UiReactActionTarget)
 	return out
 
 
@@ -92,10 +99,8 @@ func _audio_targets_from_host() -> Array[UiReactAudioFeedbackTarget]:
 	if raw is Array[UiReactAudioFeedbackTarget]:
 		return raw as Array[UiReactAudioFeedbackTarget]
 	var out_a: Array[UiReactAudioFeedbackTarget] = []
-	if raw is Array:
-		for it in raw as Array:
-			if it is UiReactAudioFeedbackTarget:
-				out_a.append(it as UiReactAudioFeedbackTarget)
+	for it in _matching_export_rows(raw, func(elem: Variant) -> bool: return elem is UiReactAudioFeedbackTarget):
+		out_a.append(it as UiReactAudioFeedbackTarget)
 	return out_a
 
 
@@ -104,15 +109,12 @@ func _haptic_targets_from_host() -> Array[UiReactHapticFeedbackTarget]:
 	if raw_h is Array[UiReactHapticFeedbackTarget]:
 		return raw_h as Array[UiReactHapticFeedbackTarget]
 	var out_h: Array[UiReactHapticFeedbackTarget] = []
-	if raw_h is Array:
-		for it_h in raw_h as Array:
-			if it_h is UiReactHapticFeedbackTarget:
-				out_h.append(it_h as UiReactHapticFeedbackTarget)
+	for it_h in _matching_export_rows(raw_h, func(elem: Variant) -> bool: return elem is UiReactHapticFeedbackTarget):
+		out_h.append(it_h as UiReactHapticFeedbackTarget)
 	return out_h
 
 
 func _validate_animation_targets() -> void:
-	var acts: Array[UiReactActionTarget] = _action_targets_from_host()
 	var trigger_map: Dictionary = UiReactAnimTargetHelper.apply_validated_targets(_host, _component_name)
 	UiReactActionTargetHelper.apply_validated_actions_and_merge_triggers(_host, _component_name, trigger_map)
 	UiReactFeedbackTargetHelper.apply_validated_audio_and_haptic_and_merge_triggers(
@@ -129,7 +131,7 @@ func _validate_animation_targets() -> void:
 	if want_toggle and (not _guard_toggled_connect or _host.has_signal(&"toggled")):
 		_signal_scope.connect_bound(_host.toggled, _on_trigger_toggled)
 
-	UiReactActionTargetHelper.sync_initial_state(_host, _component_name, acts)
+	UiReactActionTargetHelper.sync_initial_state(_host, _component_name, _action_targets_from_host())
 	UiReactFeedbackTargetHelper.sync_initial_state(
 		_host, _component_name, _audio_targets_from_host(), _haptic_targets_from_host()
 	)
@@ -161,10 +163,8 @@ func _animation_targets_from_host() -> Array[UiAnimTarget]:
 	if raw is Array[UiAnimTarget]:
 		return raw as Array[UiAnimTarget]
 	var out: Array[UiAnimTarget] = []
-	if raw is Array:
-		for it in raw as Array:
-			if it is UiAnimTarget:
-				out.append(it as UiAnimTarget)
+	for it in _matching_export_rows(raw, func(elem: Variant) -> bool: return elem is UiAnimTarget):
+		out.append(it as UiAnimTarget)
 	return out
 
 

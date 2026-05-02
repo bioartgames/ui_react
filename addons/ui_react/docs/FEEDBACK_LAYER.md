@@ -34,7 +34,7 @@ Cross-reference: [`ACTION_LAYER.md`](ACTION_LAYER.md) §2 — **`UiReactActionKi
 ### 3.1 `UiReactAudioFeedbackTarget`
 
 - **`enabled`**: `bool`, default `true`.
-- **`state_watch`**: nullable **`UiBoolState`**. If non-null, row runs from **`value_changed`** + initial sync only; **`trigger` ignored** at runtime (same contract as [`ACTION_LAYER.md`](ACTION_LAYER.md) **§3.1** state-driven actions).
+- **`state_watch`**: nullable **`UiBoolState`**. If non-null, row runs from **`value_changed`** + initial sync only; **`trigger` ignored** at runtime (**[`FEEDBACK_LAYER.md`](FEEDBACK_LAYER.md) §9** dispatch semantics; shape aligns with [`ACTION_LAYER.md`](ACTION_LAYER.md) **§3.1**).
 - **`trigger`**: **`UiAnimTarget.Trigger`** — used only when **`state_watch`** is null (control-signal-driven).
 - **`player`**: **`NodePath`** to an **`AudioStreamPlayer`** node **reachable from the host control** (relative path). Runtime: **`play()`** only (v1).
 
@@ -80,7 +80,24 @@ Within each array, **control-triggered** rows matching the same **`trigger`** ru
 
 ---
 
-## 8. Related implementation
+## 9. Execution semantics (normative)
+
+Bool coercion uses **[`UiReactStateBindingHelper.coerce_bool`](../scripts/internal/react/ui_react_state_binding_helper.gd)** on **`get_value()`** / **`value_changed`** arguments so subclasses and **`Variant`** payloads behave consistently with the Action layer.
+
+### 9.1 Control-triggered (`state_watch == null`)
+
+Unchanged from §7: **`run_audio_feedback`** / **`run_haptic_feedback`** filter enabled rows with **`trigger == T`**, **`state_watch == null`**, and optional disabled gating (`respects_disabled`, `is_disabled`).
+
+### 9.2 State-driven (`state_watch != null`)
+
+- **Initial sync:** **[`UiReactFeedbackTargetHelper.sync_initial_state`](../scripts/internal/react/ui_react_feedback_target_helper.gd)** runs once per control setup after **`owner.is_inside_tree()`**. For each eligible audio/haptic row with **`state_watch` set, **`play()`** / **`start_joy_vibration`** run **only if** **`coerce_bool(state_watch.get_value())`** is **true**. If the watched bool is **false**, no sensory output on load (avoids startup noise).
+- **Updates:** On **`signal UiBoolState.value_changed(new, old)`**, sensory output runs **only on rising edge**: **`coerce_bool(new)`** is **true** and **`coerce_bool(old)`** is **false**. Toggles from true → false do **not** fire feedback via this path (one-shot “activation” cues). **`bind_value_changed`**’s synthetic first call uses **`(same, same)`**, so the rising-edge filter does **not** spuriously fire before real transitions.
+
+This differs from [`ACTION_LAYER.md`](ACTION_LAYER.md) §5.1 for **presentation** presets that **reapply** on every **`value_changed`** (e.g. visibility): sensory hooks are intentionally **edge-triggered** for **`state_watch`** rows.
+
+---
+
+## 10. Related implementation
 
 - Runtime: [`scripts/internal/react/ui_react_feedback_target_helper.gd`](../scripts/internal/react/ui_react_feedback_target_helper.gd)
 - Models: [`scripts/api/models/ui_react_audio_feedback_target.gd`](../scripts/api/models/ui_react_audio_feedback_target.gd), [`scripts/api/models/ui_react_haptic_feedback_target.gd`](../scripts/api/models/ui_react_haptic_feedback_target.gd)

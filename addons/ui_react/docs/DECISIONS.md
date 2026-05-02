@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-05-01 — State-driven feedback: gated initial sync + rising edge
+
+**Context:** Post-CB-061 audits noted ambiguity vs [`ACTION_LAYER.md`](ACTION_LAYER.md) “reflect state” semantics and poor UX if one-shot audio/haptics ran on **every** **`UiBoolState`** edge and unconditionally on **`sync_initial_state`**.
+
+**Decision:** For **`state_watch` non-null** rows only: **`sync_initial_state`** runs **`play()`** / **`start_joy_vibration`** **only when** [`UiReactStateBindingHelper.coerce_bool`](../scripts/internal/react/ui_react_state_binding_helper.gd) applied to **`state_watch.get_value()`** is **true**. On **`value_changed(new, old)`**, run those rows **only on rising edge** (**`new`** coerces true and **`old`** coerces false). Control-triggered rows (**`state_watch` null**) unchanged. Migrating **`UiBoolState.value_changed`** wiring for feedback onto **`UiReactSubscriptionScope`** remains **future work** (same as action **`state_watch`** today).
+
+**Consequences:** **[`FEEDBACK_LAYER.md`](FEEDBACK_LAYER.md)** §9 normative; **`CHANGELOG`** **Changed**; GUT updates. Authors needing cues on **falling** edge use **control-triggered** rows or game code.
+
+**Links:** [`FEEDBACK_LAYER.md`](FEEDBACK_LAYER.md) §9, `scripts/internal/react/ui_react_feedback_target_helper.gd`
+
+---
+
 ## 2026-05-01 — CB-061: separate `audio_targets` / `haptic_targets` (not `UiReactActionKind`); joy vibration v1
 
 **Context:** Designers want click/UI confirmation audio and light controller rumble on the same triggers as animations/actions without scripting **`AudioStreamPlayer.play()`** or **`Input.start_joy_vibration`** by hand.

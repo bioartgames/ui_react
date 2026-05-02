@@ -1,10 +1,16 @@
 ## Binds [member wire_rules] on a single [UiReact*] host: signals, [Resource.changed], and optionally an initial [method UiReactWireRule.apply] when [member UiReactWireRule.run_apply_on_attach] is [code]true[/code].
 ## See [code]docs/WIRING_LAYER.md[/code].
 ## Prefer [method schedule_attach] during [method Node._enter_tree] after [UiState] binding is wired in [method Node._ready], and detach during [method Node._exit_tree] **after** unbinding reactive [UiState] connections (typically [method UiReactControlStateWire.unbind_value_changed]), then call [method detach] so wiring rules never run against half-torn controls.
+## [method attach] preserves two-phase semantics: bind connections for **all** enabled rules first, then [method UiReactWireRule.apply] for rows with [member UiReactWireRule.run_apply_on_attach] in array index order.
 class_name UiReactWireRuleHelper
 extends RefCounted
 
 const _META_CONNS := &"_ui_react_wire_helper_conns"
+
+
+static var _WIRE_BIND_DISPATCH_READY: bool = false
+## [member Resource.get_script] key -> [Callable] taking [code](host, rule, conns)[/code].
+static var _WIRE_BIND_DISPATCH_TABLE: Dictionary = {}
 
 
 static func schedule_attach(host: Node) -> void:
@@ -44,6 +50,7 @@ static func attach(host: Node) -> void:
 	var wr: Array = wr_variant
 	var conns: Array[Dictionary] = []
 	host.set_meta(_META_CONNS, conns)
+	var staged_apply_on_attach: Array[UiReactWireRule] = []
 	for idx in range(wr.size()):
 		var r_variant: Variant = wr[idx]
 		if r_variant == null or not (r_variant is UiReactWireRule):
@@ -51,15 +58,11 @@ static func attach(host: Node) -> void:
 		var rule := r_variant as UiReactWireRule
 		if not rule.enabled:
 			continue
-		_bind_entry(host, rule, conns)
-	for idx in range(wr.size()):
-		var r_variant2: Variant = wr[idx]
-		if r_variant2 == null or not (r_variant2 is UiReactWireRule):
-			continue
-		var rule2 := r_variant2 as UiReactWireRule
-		if not rule2.enabled or not rule2.run_apply_on_attach:
-			continue
-		_apply_rule(host, rule2)
+		_dispatch_bind_registered(host, rule, conns)
+		if rule.run_apply_on_attach:
+			staged_apply_on_attach.append(rule)
+	for r_apply in staged_apply_on_attach:
+		_apply_rule(host, r_apply)
 
 
 static func _has_bindable_rules(host: Node) -> bool:
@@ -70,25 +73,101 @@ static func _has_bindable_rules(host: Node) -> bool:
 		return false
 	for item in wr_variant as Array:
 		if item is UiReactWireRule:
-			var r := item as UiReactWireRule
-			if r.enabled:
+			var rr := item as UiReactWireRule
+			if rr.enabled:
 				return true
 	return false
 
 
-static func _bind_entry(host: Node, rule: UiReactWireRule, conns: Array[Dictionary]) -> void:
-	if rule is UiReactWireMapIntToString:
-		_bind_map_int_to_string(host, rule as UiReactWireMapIntToString, conns)
-	elif rule is UiReactWireRefreshItemsFromCatalog:
-		_bind_refresh_items(host, rule as UiReactWireRefreshItemsFromCatalog, conns)
-	elif rule is UiReactWireSortArrayByKey:
-		_bind_sort_array_by_key(host, rule, conns)
-	elif rule is UiReactWireCopySelectionDetail:
-		_bind_copy_detail(host, rule as UiReactWireCopySelectionDetail, conns)
-	elif rule is UiReactWireSetStringOnBoolPulse:
-		_bind_set_string_on_bool_pulse(host, rule as UiReactWireSetStringOnBoolPulse, conns)
-	elif rule is UiReactWireSyncBoolStateDebugLine:
-		_bind_sync_bool_debug_line(host, rule as UiReactWireSyncBoolStateDebugLine, conns)
+static func _ensure_wire_dispatch_table() -> void:
+	if _WIRE_BIND_DISPATCH_READY:
+		return
+	_WIRE_BIND_DISPATCH_TABLE = {
+		preload(
+			"res://addons/ui_react/scripts/api/models/ui_react_wire_map_int_to_string.gd"
+		): Callable(UiReactWireRuleHelper, "_binder_entry_map_int_to_string"),
+		preload(
+			"res://addons/ui_react/scripts/api/models/ui_react_wire_refresh_items_from_catalog.gd"
+		): Callable(UiReactWireRuleHelper, "_binder_entry_refresh_items"),
+		preload(
+			"res://addons/ui_react/scripts/api/models/ui_react_wire_sort_array_by_key.gd"
+		): Callable(UiReactWireRuleHelper, "_binder_entry_sort_array_by_key"),
+		preload(
+			"res://addons/ui_react/scripts/api/models/ui_react_wire_copy_selection_detail.gd"
+		): Callable(UiReactWireRuleHelper, "_binder_entry_copy_detail"),
+		preload(
+			"res://addons/ui_react/scripts/api/models/ui_react_wire_set_string_on_bool_pulse.gd"
+		): Callable(UiReactWireRuleHelper, "_binder_entry_set_string_on_bool_pulse"),
+		preload(
+			"res://addons/ui_react/scripts/api/models/ui_react_wire_sync_bool_state_debug_line.gd"
+		): Callable(UiReactWireRuleHelper, "_binder_entry_sync_bool_debug_line"),
+	}
+	_WIRE_BIND_DISPATCH_READY = true
+
+
+static func _binder_entry_map_int_to_string(
+	host: Node, rule: UiReactWireRule, conns: Array[Dictionary]
+) -> void:
+	_bind_impl_map_int_to_string(host, rule as UiReactWireMapIntToString, conns)
+
+
+static func _binder_entry_refresh_items(
+	host: Node, rule: UiReactWireRule, conns: Array[Dictionary]
+) -> void:
+	_bind_impl_refresh_items(host, rule as UiReactWireRefreshItemsFromCatalog, conns)
+
+
+static func _binder_entry_sort_array_by_key(
+	host: Node, rule: UiReactWireRule, conns: Array[Dictionary]
+) -> void:
+	_bind_impl_sort_array_by_key(host, rule, conns)
+
+
+static func _binder_entry_copy_detail(
+	host: Node, rule: UiReactWireRule, conns: Array[Dictionary]
+) -> void:
+	_bind_impl_copy_detail(host, rule as UiReactWireCopySelectionDetail, conns)
+
+
+static func _binder_entry_set_string_on_bool_pulse(
+	host: Node, rule: UiReactWireRule, conns: Array[Dictionary]
+) -> void:
+	_bind_impl_set_string_on_bool_pulse(host, rule as UiReactWireSetStringOnBoolPulse, conns)
+
+
+static func _binder_entry_sync_bool_debug_line(
+	host: Node, rule: UiReactWireRule, conns: Array[Dictionary]
+) -> void:
+	_bind_impl_sync_bool_debug_line(host, rule as UiReactWireSyncBoolStateDebugLine, conns)
+
+
+static func _dispatch_bind_registered(host: Node, rule: UiReactWireRule, conns: Array[Dictionary]) -> void:
+	_ensure_wire_dispatch_table()
+	var scr: Script = rule.get_script()
+	if scr == null:
+		var host_where := ""
+		if is_instance_valid(host) and host.is_inside_tree():
+			host_where = str(host.get_path())
+		push_warning(
+			"UiReactWireRuleHelper: rule '%s' has no script (resource='%s'; host='%s')"
+			% [rule.rule_id, rule.resource_path, host_where]
+		)
+		return
+	var cb: Callable = _WIRE_BIND_DISPATCH_TABLE.get(scr, Callable())
+	if not cb.is_valid():
+		var script_path := scr.resource_path
+		push_warning(
+			"UiReactWireRuleHelper: no binder registered for rule script '%s' on '%s'"
+			% [script_path, host.name]
+		)
+		return
+	cb.call(host, rule, conns)
+
+
+## Test-only: number of [code]preload[/code] keys in the binder table ([code]_ensure_wire_dispatch_table[/code] populates six shipped rules).
+static func debug_wire_bind_dispatch_count_for_tests() -> int:
+	_ensure_wire_dispatch_table()
+	return _WIRE_BIND_DISPATCH_TABLE.size()
 
 
 ## Godot passes **signal arguments first**, then bound args — so do not use [method Callable.bind] with
@@ -121,7 +200,7 @@ static func _safe_connect(conns: Array[Dictionary], sig: Signal, cb: Callable) -
 	conns.append({"signal": sig, "callable": cb})
 
 
-static func _bind_map_int_to_string(
+static func _bind_impl_map_int_to_string(
 	host: Node, rule: UiReactWireMapIntToString, conns: Array[Dictionary]
 ) -> void:
 	var cb := _make_rule_cb(host, rule)
@@ -142,7 +221,7 @@ static func _bind_map_int_to_string(
 		_safe_connect(conns, rule.source_int_state.changed, cb)
 
 
-static func _bind_refresh_items(
+static func _bind_impl_refresh_items(
 	host: Node, rule: UiReactWireRefreshItemsFromCatalog, conns: Array[Dictionary]
 ) -> void:
 	var cb := _make_rule_cb(host, rule)
@@ -175,7 +254,7 @@ static func _bind_refresh_items(
 		_safe_connect(conns, rule.category_kind_state.changed, cb)
 
 
-static func _bind_sort_array_by_key(host: Node, rule: UiReactWireRule, conns: Array[Dictionary]) -> void:
+static func _bind_impl_sort_array_by_key(host: Node, rule: UiReactWireRule, conns: Array[Dictionary]) -> void:
 	var cb := _make_rule_cb(host, rule)
 	var items_st: Variant = rule.get(&"items_state")
 	if items_st is UiState:
@@ -188,7 +267,7 @@ static func _bind_sort_array_by_key(host: Node, rule: UiReactWireRule, conns: Ar
 		_safe_connect(conns, (desc_st as UiState).changed, cb)
 
 
-static func _bind_copy_detail(
+static func _bind_impl_copy_detail(
 	host: Node, rule: UiReactWireCopySelectionDetail, conns: Array[Dictionary]
 ) -> void:
 	var apply_cb := _make_rule_cb(host, rule)
@@ -215,7 +294,7 @@ static func _bind_copy_detail(
 		_safe_connect(conns, rule.selected_state.changed, sel_cb)
 
 
-static func _bind_set_string_on_bool_pulse(
+static func _bind_impl_set_string_on_bool_pulse(
 	host: Node, rule: UiReactWireSetStringOnBoolPulse, conns: Array[Dictionary]
 ) -> void:
 	if rule.pulse_bool == null:
@@ -229,7 +308,7 @@ static func _bind_set_string_on_bool_pulse(
 	_safe_connect(conns, rule.pulse_bool.value_changed, cb)
 
 
-static func _bind_sync_bool_debug_line(
+static func _bind_impl_sync_bool_debug_line(
 	host: Node, rule: UiReactWireSyncBoolStateDebugLine, conns: Array[Dictionary]
 ) -> void:
 	var cb := _make_rule_cb(host, rule)

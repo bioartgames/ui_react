@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3 uid="uid://bhrsm6wi0v4s"]
+[gd_scene load_steps=27 format=3 uid="uid://bhrsm6wi0v4s"]
 
 [ext_resource type="Script" uid="uid://cy1vsor6ek3xr" path="res://addons/ui_react/scripts/api/models/ui_float_state.gd" id="1_fl"]
 [ext_resource type="Script" uid="uid://st55qiias3cb" path="res://addons/ui_react/scripts/api/models/ui_state.gd" id="2_st"]
@@ -13,6 +13,9 @@
 [ext_resource type="Script" path="res://addons/ui_react/scripts/controls/ui_react_spin_box.gd" id="12_sp"]
 [ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_action_target.gd" id="13_at"]
 [ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_int_state.gd" id="14_int"]
+[ext_resource type="Script" uid="uid://df8pyy2f07y1r" path="res://addons/ui_react/scripts/api/models/ui_react_audio_feedback_target.gd" id="15_aud"]
+[ext_resource type="Script" uid="uid://c81pboejnn7lj" path="res://addons/ui_react/scripts/api/models/ui_react_haptic_feedback_target.gd" id="16_hap"]
+[ext_resource type="AudioStream" uid="uid://bg1y8ag806hy2" path="res://addons/ui_react/ui cursor move 2.wav" id="17_sfx"]
 
 [sub_resource type="Resource" id="gold"]
 script = ExtResource("1_fl")
@@ -118,6 +121,13 @@ int_to = SubResource("gift")
 int_factor_a = SubResource("int_fa")
 int_factor_b = SubResource("int_fb")
 
+[sub_resource type="Resource" id="buy_fb_audio"]
+script = ExtResource("15_aud")
+player = NodePath("UISfxBuy")
+
+[sub_resource type="Resource" id="buy_fb_hap"]
+script = ExtResource("16_hap")
+
 [node name="ShopComputedDemo" type="Control"]
 layout_mode = 3
 anchors_preset = 15
@@ -146,7 +156,7 @@ text = "Shop (computed state demo)"
 [node name="Help" type="Label" parent="VBox"]
 custom_minimum_size = Vector2(1, 1)
 layout_mode = 2
-text = "Adjust gold, price, and quantity. Gold meter + quantity spin box are showcase bindings (shared gold/qty state). Status line is UiReactRichTextLabel + BBCode from UiComputedOrderSummaryThreeFloatString; afford/disabled use UiComputedFloatGeProductBool + UiComputedBoolInvert. Action layer (UiReactStateOpService): Buy = SUBTRACT_PRODUCT_FROM_FLOAT; Sell = ADD_PRODUCT_TO_FLOAT (refund price×qty); Deposit = TRANSFER_FLOAT_PRODUCT_CLAMPED (gold→bank, clamped by price×qty); Add tickets = ADD_PRODUCT_TO_INT (tickets += 2×3); Tip = TRANSFER_INT_PRODUCT_CLAMPED (tickets→gift, clamped by 2×3)."
+text = "Adjust gold, price, and quantity. Gold meter + quantity spin box are showcase bindings (shared gold/qty state). Status line is UiReactRichTextLabel + BBCode from UiComputedOrderSummaryThreeFloatString; afford/disabled use UiComputedFloatGeProductBool + UiComputedBoolInvert. Action layer (UiReactStateOpService): Buy = SUBTRACT_PRODUCT_FROM_FLOAT; Sell = ADD_PRODUCT_TO_FLOAT (refund price×qty); Deposit = TRANSFER_FLOAT_PRODUCT_CLAMPED (gold→bank, clamped by price×qty); Add tickets = ADD_PRODUCT_TO_INT (tickets += 2×3); Tip = TRANSFER_INT_PRODUCT_CLAMPED (tickets→gift, clamped by 2×3). Buy: audio + haptic on press (CB-061)."
 autowrap_mode = 3
 
 [node name="ScrollShop" type="ScrollContainer" parent="VBox"]
@@ -277,6 +287,11 @@ text = "Buy"
 script = ExtResource("5_btn")
 disabled_state = SubResource("buy_dis")
 action_targets = [SubResource("buy_action")]
+audio_targets = Array[ExtResource("15_aud")]([SubResource("buy_fb_audio")])
+haptic_targets = Array[ExtResource("16_hap")]([SubResource("buy_fb_hap")])
+
+[node name="UISfxBuy" type="AudioStreamPlayer" parent="VBox/BuyButton"]
+stream = ExtResource("17_sfx")
 
 [node name="ShopMathRow" type="HBoxContainer" parent="VBox"]
 layout_mode = 2

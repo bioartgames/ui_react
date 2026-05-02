@@ -660,3 +660,7 @@ func test_sort_descending_null_when_present() -> void:
 	var a: Array = items.get_array_value()
 	assert_eq(int(a[0].get("k", -1)), 1)
 	assert_eq(a[1].get("k", "missing"), null)
+
+
+func test_wire_dispatch_table_registered_for_all_shipped_rules() -> void:
+	assert_eq(UiReactWireRuleHelper.debug_wire_bind_dispatch_count_for_tests(), 6)

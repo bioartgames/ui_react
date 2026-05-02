@@ -39,6 +39,7 @@ This file is the **checklist** before large refactors. The **documentation map**
 | Shared validator helpers | `editor_plugin/services/ui_react_validator_common.gd` |
 | Scene scan / component name from script | `editor_plugin/services/ui_react_scanner_service.gd` |
 | Dock scope preset record helpers (pure) | `editor_plugin/services/ui_react_dock_explain_scope_presets.gd` |
+| Wiring rule binder registry (`Script` → binder) | `scripts/internal/react/ui_react_wire_rule_helper.gd` (**`_ensure_wire_dispatch_table`**). New **`UiReactWireRule`** subclasses must register their script plus **`_bind_impl_*`** there or runtime skips binding with a warning. |
 | Shared `UiState` ↔ control hook + `value_changed` wiring | `scripts/internal/react/ui_react_control_state_wire.gd` |
 | `UiReactButton` / `UiReactTextureButton` shared reactive core | `scripts/internal/react/ui_react_base_button_reactive.gd` |
 | Animation dispatch (triggers, `selection_slot`) | `scripts/internal/react/ui_react_anim_target_helper.gd` |

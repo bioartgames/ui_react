@@ -144,7 +144,7 @@ Internal **`value_changed`** dispatch may be private. **Do not** merge into **`U
 - **`state_watch` non-null:** **`trigger` ignored** for dispatch; **`value_changed`** runs the row; **`sync_initial_state`** runs **once** on load **after** `is_inside_tree()`, **before** input handling.
 - A row **never** fires from **both** paths.
 
-### 5.2 Trigger dispatch and cross-layer order (control-triggered only)
+**Feedback (`audio_targets` / `haptic_targets`):** State-driven rows share the same **`state_watch` / `trigger`** vocabulary as Action §3.1, but **sensory** hooks use **gated initial sync** and **rising-edge** **`value_changed`** only — see [`FEEDBACK_LAYER.md`](FEEDBACK_LAYER.md) **§9** (intentional deviation from reapplying on **every** bool change).
 
 When a control emits **`UiAnimTarget.Trigger.T`**:
 

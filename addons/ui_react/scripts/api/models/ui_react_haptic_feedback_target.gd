@@ -6,7 +6,7 @@ extends Resource
 
 @export var enabled: bool = true
 
-## When set, this row runs from [signal UiBoolState.value_changed] and [method UiReactFeedbackTargetHelper.sync_initial_state] only — [member trigger] is ignored at runtime.
+## When set, this row runs from [signal UiBoolState.value_changed] and [method UiReactFeedbackTargetHelper.sync_initial_state] only — [member trigger] is ignored at runtime. Dispatch semantics: [code]docs/FEEDBACK_LAYER.md[/code] §9.
 @export var state_watch: UiBoolState
 
 ## Used only when [member state_watch] is [code]null[/code]. Reuses [enum UiAnimTarget.Trigger] ([code]docs/FEEDBACK_LAYER.md[/code]).

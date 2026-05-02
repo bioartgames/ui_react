@@ -1,5 +1,5 @@
 ## Runtime helpers for [member Control.action_targets] rows: validation, state-watch wiring, and trigger dispatch.
-## Reentry guards use per-owner meta dictionaries; see [method _with_reentry_guard].
+## Reentry guards use [UiReactReentryGuardByMeta] against [member _META_LOCKS].
 ## Call [method teardown_for_control_exit] from [method Node._exit_tree] / [constant NOTIFICATION_PREDELETE] before unbinding [UiState] so [code]state_watch[/code] subscriptions drop first.
 class_name UiReactActionTargetHelper
 extends RefCounted
@@ -32,34 +32,6 @@ class _StateWatchBinding extends RefCounted:
 		if o == null:
 			return
 		UiReactActionTargetHelper._dispatch_state_indices(o, _component, _rows, _indices)
-
-
-static func _locks_for(owner: Node) -> Dictionary:
-	if owner.has_meta(_META_LOCKS):
-		var d: Variant = owner.get_meta(_META_LOCKS)
-		if d is Dictionary:
-			return d as Dictionary
-	var created: Dictionary = {}
-	owner.set_meta(_META_LOCKS, created)
-	return created
-
-
-## Runs [param fn] under a per-[param owner] / per-[param key] lock to avoid recursive dispatch loops.
-## On the normal path the lock is cleared immediately after [method Callable.call]. GDScript in Godot 4.5.x
-## does not provide a [code]finally[/code]-style construct here, so if [param fn] aborts the script in an
-## exceptional way the lock could remain set until the node is freed—acceptable for typical UI callbacks;
-## revisit if the language gains reliable [code]try/finally[/code] or an equivalent.
-static func _with_reentry_guard(owner: Node, key: String, fn: Callable) -> void:
-	var locks := _locks_for(owner)
-	if locks.get(key, false):
-		push_warning(
-			"UiReactActionTargetHelper: reentrant action dispatch ignored (%s on %s)"
-			% [key, owner.name]
-		)
-		return
-	locks[key] = true
-	fn.call()
-	locks[key] = false
 
 
 ## Call before [method UiReactControlStateWire.unbind_value_changed] on the same control. Clears [code]state_watch[/code] connections and action reentry-lock meta.
@@ -218,7 +190,7 @@ static func _dispatch_state_indices(
 	if row0 == null or row0.state_watch == null:
 		return
 	var key := "sw:%d" % row0.state_watch.get_instance_id()
-	_with_reentry_guard(owner, key, func() -> void:
+	var fn_sw := func() -> void:
 		var sorted: Array = []
 		for j in range(indices.size()):
 			sorted.append(int(indices[j]))
@@ -228,7 +200,11 @@ static func _dispatch_state_indices(
 				continue
 			var row: UiReactActionTarget = rows[idx]
 			_apply_row(owner, row, idx, component_name)
-	)
+	var warn_sw := func() -> void:
+		push_warning(
+			"UiReactActionTargetHelper: reentrant action dispatch ignored (%s on %s)" % [key, owner.name]
+		)
+	UiReactReentryGuardByMeta.with_guard(owner, _META_LOCKS, key, fn_sw, warn_sw)
 
 
 static func sync_initial_state(owner: Control, component_name: String, action_targets: Array[UiReactActionTarget]) -> void:
@@ -252,7 +228,7 @@ static func run_actions(
 	if action_targets.is_empty():
 		return
 	var key := "tr:%d" % int(trigger_type)
-	_with_reentry_guard(owner, key, func() -> void:
+	var fn_run := func() -> void:
 		for i in range(action_targets.size()):
 			var row: UiReactActionTarget = action_targets[i]
 			if row == null or not row.enabled:
@@ -264,7 +240,11 @@ static func run_actions(
 			if respects_disabled and is_disabled:
 				continue
 			_apply_row(owner, row, i, component_name)
-	)
+	var warn_run := func() -> void:
+		push_warning(
+			"UiReactActionTargetHelper: reentrant action dispatch ignored (%s on %s)" % [key, owner.name]
+		)
+	UiReactReentryGuardByMeta.with_guard(owner, _META_LOCKS, key, fn_run, warn_run)
 
 
 static func _apply_row(owner: Control, row: UiReactActionTarget, row_index: int, component_name: String) -> void:

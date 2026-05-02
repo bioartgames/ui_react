@@ -7,6 +7,12 @@ func _host_label() -> UiReactLabel:
 	return autoqfree(UiReactLabel.new())
 
 
+func _attach_min_stream(player: AudioStreamPlayer) -> void:
+	var gen := AudioStreamGenerator.new()
+	gen.mix_rate = 44100
+	player.stream = gen
+
+
 func _audio_row_player(path: NodePath, trig: UiAnimTarget.Trigger = UiAnimTarget.Trigger.PRESSED) -> UiReactAudioFeedbackTarget:
 	var r := UiReactAudioFeedbackTarget.new()
 	r.player = path
@@ -95,6 +101,74 @@ func test_merge_expands_trigger_map_for_both_arrays() -> void:
 	var trigger_map: Dictionary = {}
 	UiReactFeedbackTargetHelper.apply_validated_audio_and_haptic_and_merge_triggers(host, CMP, trigger_map)
 	assert_true(trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER))
+
+
+func test_sync_initial_state_skips_audio_when_state_watch_false() -> void:
+	var host := _host_label()
+	add_child_autofree(host)
+	var sfx := AudioStreamPlayer.new()
+	host.add_child(sfx)
+	sfx.name = "Sfx"
+	_attach_min_stream(sfx)
+	var watch := UiBoolState.new(false)
+	var row := UiReactAudioFeedbackTarget.new()
+	row.state_watch = watch
+	row.trigger = UiAnimTarget.Trigger.PRESSED
+	row.player = NodePath("Sfx")
+	host.audio_targets = [row]
+	host.haptic_targets = []
+	var trigger_map: Dictionary = {}
+	UiReactFeedbackTargetHelper.apply_validated_audio_and_haptic_and_merge_triggers(host, CMP, trigger_map)
+	UiReactFeedbackTargetHelper.sync_initial_state(host, CMP, host.audio_targets, host.haptic_targets)
+	assert_false(sfx.playing)
+
+
+func test_sync_initial_state_plays_audio_when_state_watch_true() -> void:
+	var host := _host_label()
+	add_child_autofree(host)
+	var sfx := AudioStreamPlayer.new()
+	host.add_child(sfx)
+	sfx.name = "Sfx"
+	_attach_min_stream(sfx)
+	var watch := UiBoolState.new(true)
+	var row := UiReactAudioFeedbackTarget.new()
+	row.state_watch = watch
+	row.trigger = UiAnimTarget.Trigger.PRESSED
+	row.player = NodePath("Sfx")
+	host.audio_targets = [row]
+	host.haptic_targets = []
+	var trigger_map: Dictionary = {}
+	UiReactFeedbackTargetHelper.apply_validated_audio_and_haptic_and_merge_triggers(host, CMP, trigger_map)
+	UiReactFeedbackTargetHelper.sync_initial_state(host, CMP, host.audio_targets, host.haptic_targets)
+	assert_true(sfx.playing)
+
+
+func test_state_watch_rising_edge_dispatches_audio_only_on_false_to_true() -> void:
+	var host := _host_label()
+	add_child_autofree(host)
+	var sfx := AudioStreamPlayer.new()
+	host.add_child(sfx)
+	sfx.name = "Sfx"
+	_attach_min_stream(sfx)
+	var watch := UiBoolState.new(false)
+	var row := UiReactAudioFeedbackTarget.new()
+	row.state_watch = watch
+	row.trigger = UiAnimTarget.Trigger.PRESSED
+	row.player = NodePath("Sfx")
+	host.audio_targets = [row]
+	host.haptic_targets = []
+	var trigger_map: Dictionary = {}
+	UiReactFeedbackTargetHelper.apply_validated_audio_and_haptic_and_merge_triggers(host, CMP, trigger_map)
+	UiReactFeedbackTargetHelper.sync_initial_state(host, CMP, host.audio_targets, host.haptic_targets)
+	assert_false(sfx.playing)
+	watch.set_value(true)
+	assert_true(sfx.playing)
+	sfx.stop()
+	assert_false(sfx.playing)
+	watch.set_value(false)
+	assert_false(sfx.playing)
+	watch.set_value(true)
+	assert_true(sfx.playing)
 
 
 func test_teardown_clears_feedback_state_watch_bindings() -> void:

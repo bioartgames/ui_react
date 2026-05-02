@@ -57,23 +57,21 @@ Copy `addons/ui_react/` into your Godot project at **`addons/ui_react/`**. Open 
 
 ### 2) Run the example
 
-The addon ships **five** runnable examples under **`res://addons/ui_react/examples/`** (game-screen style + one animation catalog + feedback hooks). Open any of these and press **Play** (default **Main Scene** is **`inventory_screen_demo.tscn`**):
+The addon ships **four** runnable examples under **`res://addons/ui_react/examples/`** (game-screen style + one animation catalog). **`audio_targets`** / **`haptic_targets`** (**CB-061** / **[`docs/FEEDBACK_LAYER.md`](docs/FEEDBACK_LAYER.md)**) are demonstrated on **Use** (**`UiReactTextureButton`**) in **`inventory_screen_demo.tscn`** and **Buy** (**`UiReactButton`**) in **`shop_computed_demo.tscn`** (each with a child **`AudioStreamPlayer`**). Open any of these and press **Play** (default **Main Scene** is **`inventory_screen_demo.tscn`**):
 
-- **`res://addons/ui_react/examples/feedback_demo.tscn`** — **`audio_targets`** + **`haptic_targets`** on **`UiReactButton`** (**CB-061** / **[`docs/FEEDBACK_LAYER.md`](docs/FEEDBACK_LAYER.md)**); child **`AudioStreamPlayer`**; no root script.
-- **`res://addons/ui_react/examples/inventory_screen_demo.tscn`** — **`wire_rules`** on controls (map / refresh / copy-detail / sort via **`UiReactWireSortArrayByKey`** / bool-pulse suffix / debug lines per **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)** §6); **no** root script; **`UiReactTree`** + filtered **`UiReactItemList`** + actions; list lock via overlay + **`action_targets`** (**CB-015** / **P6.1**); sample **`UiAnimTarget`** fades/POP.
+- **`res://addons/ui_react/examples/inventory_screen_demo.tscn`** — **`wire_rules`** on controls (map / refresh / copy-detail / sort via **`UiReactWireSortArrayByKey`** / bool-pulse suffix / debug lines per **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)** §6); **no** root script; **`UiReactTree`** + filtered **`UiReactItemList`** + actions; list lock via overlay + **`action_targets`** (**CB-015** / **P6.1**); sample **`UiAnimTarget`** fades/POP; **Use** texture button: **`audio_targets`** + **`haptic_targets`** (**CB-061**).
 - **`res://addons/ui_react/examples/options_transactional_demo.tscn`** — transactional **Apply / Cancel** + **`UiReactTabContainer`** / **`UiReactOptionButton`** with **`wire_rules`** + **`action_targets`** (**CB-052** / **CB-054** / **CB-055**); **`UiReactCheckBox`** **`state_watch`** **`SET_VISIBLE`** (**CB-056**).
-- **`res://addons/ui_react/examples/shop_computed_demo.tscn`** — **`UiComputedFloatGeProductBool`** / **`UiComputedBoolInvert`** / **`UiComputedOrderSummaryThreeFloatString`** + **`UiReactRichTextLabel`**; **`UiReactProgressBar`** / **`UiReactSpinBox`**; **Buy** + **Sell / Deposit / Add tickets / Tip** via **`action_targets`** (**`SUBTRACT_PRODUCT_FROM_FLOAT`**, **`ADD_PRODUCT_TO_FLOAT`**, **`TRANSFER_FLOAT_PRODUCT_CLAMPED`**, **`ADD_PRODUCT_TO_INT`**, **`TRANSFER_INT_PRODUCT_CLAMPED`**); no root script, no **`examples/*.gd`** for shop computeds.
+- **`res://addons/ui_react/examples/shop_computed_demo.tscn`** — **`UiComputedFloatGeProductBool`** / **`UiComputedBoolInvert`** / **`UiComputedOrderSummaryThreeFloatString`** + **`UiReactRichTextLabel`**; **`UiReactProgressBar`** / **`UiReactSpinBox`**; **Buy** + **Sell / Deposit / Add tickets / Tip** via **`action_targets`** (**`SUBTRACT_PRODUCT_FROM_FLOAT`**, **`ADD_PRODUCT_TO_FLOAT`**, **`TRANSFER_FLOAT_PRODUCT_CLAMPED`**, **`ADD_PRODUCT_TO_INT`**, **`TRANSFER_INT_PRODUCT_CLAMPED`**); **Buy** button: **`audio_targets`** + **`haptic_targets`** (**CB-061**); no root script, no **`examples/*.gd`** for shop computeds.
 - **`res://addons/ui_react/examples/anim_targets_catalog_demo.tscn`** — catalog of **`UiAnimTarget.AnimationAction`** ( **`animation_targets`** with **`selection_slot`** per row + **`play_selected_row_animation`**) + trigger playground; no root script.
 
 **Examples at a glance** (which layers each scene stresses):
 
 | Scene | Wiring | Computed | Transactional | Actions | Feedback |
 |-------|:------:|:--------:|:-------------:|:-------:|:--------:|
-| **`inventory_screen_demo.tscn`** | yes | — | — | yes | — |
+| **`inventory_screen_demo.tscn`** | yes | — | — | yes | yes (**Use** — **`UiReactTextureButton`**, **CB-061**) |
 | **`options_transactional_demo.tscn`** | yes | yes (status line) | yes | yes | — |
-| **`shop_computed_demo.tscn`** | — | yes | — | yes (Buy + CB-051 math row) | — |
+| **`shop_computed_demo.tscn`** | — | yes | — | yes (Buy + CB-051 math row) | yes (**Buy** — **`UiReactButton`**, **CB-061**) |
 | **`anim_targets_catalog_demo.tscn`** | — | — | — | yes (single **`action_targets`** row, e.g. **`SET_FLOAT_LITERAL`** on **`FireCompletedButton`**) | — |
-| **`feedback_demo.tscn`** | — | — | — | — | yes (**CB-061**) |
 
 Use the scene tree to see how states and targets are wired.
 
@@ -269,6 +267,10 @@ Use a **`UiComputedStringState`** or **`UiComputedBoolState`** **subclass** when
 | **`UiReactComputedService`** | Runtime wiring when a computed resource is assigned to a **`UiReact*`** binding (e.g. **`text_state`**, **`checked_state`**): subscribes to **`Resource.changed`** on each non-null **`sources`** entry (and nested computeds), coalesces **`recompute()`** to once per frame. Editor: no runtime wiring. |
 | **Dependency cap** | At most **32** **`sources`** entries are subscribed; extras are ignored with a warning. |
 
+### Computed wiring lifetime
+
+**[`UiReactComputedService`](scripts/internal/react/ui_react_computed_service.gd)** keeps **session-scoped** static tables across editor play/domain reloads: wiring is refcount-driven until consumers unbind normally. Tools that reuse the addon across **multiple scripted runs** in one editor session should call **`UiReactComputedService.reset_internal_state_for_tests`** only from a **test harness** — **not** from shipping scenes — and read the **`UiReactComputedService`** file header before doing so.
+
 **Transactional + computed:** inside **`compute_*`**, read **`UiTransactionalState`** with **`get_draft_value()`**, **`get_committed_value()`**, and **`has_pending_changes()`** as needed—use **one** transactional resource per field in **`sources`**, not separate “draft” vs “committed” nodes.
 
 **Examples:** **`res://addons/ui_react/examples/shop_computed_demo.tscn`** (Buy via **`action_targets`** **`SUBTRACT_PRODUCT_FROM_FLOAT`**; status **`UiReactRichTextLabel`** + **`UiComputedOrderSummaryThreeFloatString`**); **`res://addons/ui_react/examples/options_transactional_demo.tscn`** (**`UiComputedTransactionalStatusString`**).
@@ -409,8 +411,8 @@ These may change between template versions; **do not rely on them from game code
 | `scripts/controls/` | Attachable **UiReact\*** scripts. |
 | `scripts/internal/anim/` | Animation implementation (unstable for direct use). |
 | `scripts/internal/react/` | Reactive helpers (unstable for direct use). |
-| `examples/` | **`inventory_screen_demo.tscn`** (**`wire_rules`**, **`UiReactWireCatalogData.rows`**, **`action_targets`**, **`UiAnimTarget`**); no root script. **`options_transactional_demo.tscn`** (**`UiComputedTransactionalStatusString`**, transactional **Apply / Cancel**, **`UiReactTabContainer`** / **`UiReactOptionButton`** **`wire_rules`** + **`action_targets`**). **`shop_computed_demo.tscn`** (**`UiComputedFloatGeProductBool`** / **`UiComputedBoolInvert`** / **`UiComputedOrderSummaryThreeFloatString`**; **`action_targets`** buy; no root script). **`anim_targets_catalog_demo.tscn`** (animation catalog + trigger playground). |
-| `docs/` | **[`README.md`](docs/README.md)** (map), **CHANGELOG**, **[`DECISIONS.md`](docs/DECISIONS.md)**, **[`ROADMAP.md`](docs/ROADMAP.md)**, **[`WIRING_LAYER.md`](docs/WIRING_LAYER.md)** (normative **P5** wiring), **[`ACTION_LAYER.md`](docs/ACTION_LAYER.md)** (normative **P6.1** actions). **[`AGENTS.md`](AGENTS.md)** (addon root — agent/solo checklist). |
+| `examples/` | **`inventory_screen_demo.tscn`** (**`wire_rules`**, **`UiReactWireCatalogData.rows`**, **`action_targets`**, **`UiAnimTarget`**, **`audio_targets`** / **`haptic_targets`** on **Use**); no root script. **`options_transactional_demo.tscn`** (**`UiComputedTransactionalStatusString`**, transactional **Apply / Cancel**, **`UiReactTabContainer`** / **`UiReactOptionButton`** **`wire_rules`** + **`action_targets`**). **`shop_computed_demo.tscn`** (**`UiComputedFloatGeProductBool`** / **`UiComputedBoolInvert`** / **`UiComputedOrderSummaryThreeFloatString`**; **`action_targets`** buy; **`audio_targets`** / **`haptic_targets`** on **Buy**; no root script). **`anim_targets_catalog_demo.tscn`** (animation catalog + trigger playground). **[`FEEDBACK_LAYER.md`](docs/FEEDBACK_LAYER.md)** (**CB-061**). |
+| `docs/` | **[`README.md`](docs/README.md)** (map), **CHANGELOG**, **[`DECISIONS.md`](docs/DECISIONS.md)**, **[`ROADMAP.md`](docs/ROADMAP.md)**, **[`WIRING_LAYER.md`](docs/WIRING_LAYER.md)** (normative **P5** wiring), **[`ACTION_LAYER.md`](docs/ACTION_LAYER.md)** (normative **P6.1** actions), **[`FEEDBACK_LAYER.md`](docs/FEEDBACK_LAYER.md)** (normative **P6.3** feedback). **[`AGENTS.md`](AGENTS.md)** (addon root — agent/solo checklist). |
 | `editor_plugin/ui_react_component_registry.gd` | Single source of truth for script-stem → **`UiReact*`** name and per-control **`BINDINGS_BY_COMPONENT`** (edit here when adding a control; **`UiReactScannerService`** and validators consume it). |
 | `editor_plugin/` | Optional Godot editor plugin: bottom dock, split **`ui_react_*_validator.gd`** modules + **`ui_react_validator_service`** façade, quick state creation. |
 | `ui_resources/` | Sample `.tres` for the example scene; `plugin_generated/` holds plugin-created states (optional). |

@@ -1,4 +1,4 @@
-[gd_scene load_steps=61 format=3 uid="uid://ca8gfny15h7yc"]
+[gd_scene load_steps=66 format=3 uid="uid://ca8gfny15h7yc"]
 
 [ext_resource type="Script" uid="uid://dd4kr4kdd6cnc" path="res://addons/ui_react/scripts/controls/ui_react_tree.gd" id="2_tree"]
 [ext_resource type="Script" uid="uid://cgoqls6mehlqv" path="res://addons/ui_react/scripts/controls/ui_react_line_edit.gd" id="3_le"]
@@ -23,6 +23,16 @@
 [ext_resource type="Script" uid="uid://bb8t2qrgil0ob" path="res://addons/ui_react/scripts/api/models/ui_react_wire_set_string_on_bool_pulse.gd" id="22_wpulse"]
 [ext_resource type="Script" uid="uid://ckxya8dq4gqug" path="res://addons/ui_react/scripts/api/models/ui_react_wire_sync_bool_state_debug_line.gd" id="23_wdbg"]
 [ext_resource type="Script" path="res://addons/ui_react/scripts/api/models/ui_react_wire_sort_array_by_key.gd" id="24_wsort"]
+[ext_resource type="Script" uid="uid://df8pyy2f07y1r" path="res://addons/ui_react/scripts/api/models/ui_react_audio_feedback_target.gd" id="25_aud"]
+[ext_resource type="Script" uid="uid://c81pboejnn7lj" path="res://addons/ui_react/scripts/api/models/ui_react_haptic_feedback_target.gd" id="26_hap"]
+[ext_resource type="AudioStream" uid="uid://bg1y8ag806hy2" path="res://addons/ui_react/ui cursor move 2.wav" id="27_sfx"]
+
+[sub_resource type="Resource" id="use_fb_audio"]
+script = ExtResource("25_aud")
+player = NodePath("UISfxUse")
+
+[sub_resource type="Resource" id="use_fb_hap"]
+script = ExtResource("26_hap")
 
 [sub_resource type="Resource" id="tn_all"]
 script = ExtResource("21_tnode")
@@ -397,7 +407,7 @@ text = "Actions"
 
 [node name="Help" type="Label" parent="MainHBox/RightColumn"]
 layout_mode = 2
-text = "Sort preset: option text matches row dict keys (name/kind/qty). Map friendly labels in game data if needed. Use/Sort texture buttons: POP on press."
+text = "Sort preset: option text matches row dict keys (name/kind/qty). Map friendly labels in game data if needed. Use/Sort texture buttons: POP on press. Use: audio + haptic on press (CB-061 — see FEEDBACK_LAYER.md)."
 autowrap_mode = 3
 
 [node name="SortPresetLabel" type="Label" parent="MainHBox/RightColumn"]
@@ -429,6 +439,11 @@ script = ExtResource("11_tex")
 pressed_state = SubResource("use_pressed")
 disabled_state = SubResource("actions_disabled")
 animation_targets = Array[ExtResource("13_anim")]([SubResource("anim_pop_use")])
+audio_targets = Array[ExtResource("25_aud")]([SubResource("use_fb_audio")])
+haptic_targets = Array[ExtResource("26_hap")]([SubResource("use_fb_hap")])
+
+[node name="UISfxUse" type="AudioStreamPlayer" parent="MainHBox/RightColumn/ActionButtons/UseButton"]
+stream = ExtResource("27_sfx")
 
 [node name="SortButton" type="TextureButton" parent="MainHBox/RightColumn/ActionButtons"]
 custom_minimum_size = Vector2(64, 64)

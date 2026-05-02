@@ -18,8 +18,9 @@ static func _cohort_key(tree: SceneTree, group: UiTransactionalGroup) -> String:
 	return "%d_%d" % [tree.get_instance_id(), group.get_instance_id()]
 
 
+## Registers [param host] for transactional Apply/Cancel. [param screen] may be [code]null[/code]; when absent or when [member UiTransactionalScreenConfig.begin_on_ready] is [code]true[/code], cohort begin is scheduled as today.
 static func register_host(
-	host: BaseButton, group: UiTransactionalGroup, role: int, screen: Resource
+	host: BaseButton, group: UiTransactionalGroup, role: int, screen: UiTransactionalScreenConfig
 ) -> void:
 	if host == null or group == null or role == int(Role.NONE):
 		return
@@ -38,9 +39,7 @@ static func register_host(
 	if cohort_new:
 		var do_begin := true
 		if screen != null:
-			var br: Variant = screen.get("begin_on_ready")
-			if br != null:
-				do_begin = bool(br)
+			do_begin = screen.begin_on_ready
 		if do_begin:
 			tree.process_frame.connect(func () -> void: _deferred_begin_edit(key), CONNECT_ONE_SHOT)
 	var cb: Callable

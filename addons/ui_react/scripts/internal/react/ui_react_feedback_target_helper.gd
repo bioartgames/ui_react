@@ -1,5 +1,5 @@
 ## Runtime helpers for [member Control.audio_targets] and [member Control.haptic_targets]: validation, [code]state_watch[/code] wiring, trigger dispatch.
-## Reentry guards use per-owner meta distinct from [UiReactActionTargetHelper]. Call [method teardown_for_control_exit] with [UiReactActionTargetHelper.teardown_for_control_exit] ordering per control docs.
+## Reentry guards use [UiReactReentryGuardByMeta] distinct from [UiReactActionTargetHelper]. Call [method teardown_for_control_exit] with [method UiReactActionTargetHelper.teardown_for_control_exit] ordering per control docs.
 class_name UiReactFeedbackTargetHelper
 extends RefCounted
 
@@ -37,6 +37,10 @@ class _FeedbackStateWatchBinding extends RefCounted:
 		var o: Control = _owner.get_ref() as Control
 		if o == null:
 			return
+		var nu := UiReactStateBindingHelper.coerce_bool(_new_value)
+		var ou := UiReactStateBindingHelper.coerce_bool(_old_value)
+		if not nu or ou:
+			return
 		UiReactFeedbackTargetHelper._dispatch_state_watch(
 			o,
 			_component_name,
@@ -45,29 +49,6 @@ class _FeedbackStateWatchBinding extends RefCounted:
 			_haptic_rows,
 			_haptic_indices
 		)
-
-
-static func _locks_for(owner: Node) -> Dictionary:
-	if owner.has_meta(_META_LOCKS):
-		var d: Variant = owner.get_meta(_META_LOCKS)
-		if d is Dictionary:
-			return d as Dictionary
-	var created: Dictionary = {}
-	owner.set_meta(_META_LOCKS, created)
-	return created
-
-
-static func _with_reentry_guard(owner: Node, key: String, fn: Callable) -> void:
-	var locks := _locks_for(owner)
-	if locks.get(key, false):
-		push_warning(
-			"UiReactFeedbackTargetHelper: reentrant feedback dispatch ignored (%s on %s)"
-			% [key, owner.name]
-		)
-		return
-	locks[key] = true
-	fn.call()
-	locks[key] = false
 
 
 static func teardown_for_control_exit(owner: Control) -> void:
@@ -293,7 +274,11 @@ static func _dispatch_state_watch(
 	if watch_state == null:
 		return
 	var key := "fb-sw:%d" % watch_state.get_instance_id()
-	_with_reentry_guard(owner, key, func() -> void:
+	var warn_fb := func() -> void:
+		push_warning(
+			"UiReactFeedbackTargetHelper: reentrant feedback dispatch ignored (%s on %s)" % [key, owner.name]
+		)
+	var fn_dispatch := func() -> void:
 		var sa: Array = []
 		for j in range(audio_indices.size()):
 			sa.append(int(audio_indices[j]))
@@ -312,7 +297,7 @@ static func _dispatch_state_watch(
 				continue
 			var row_h: UiReactHapticFeedbackTarget = haptic_rows[idx2]
 			_apply_haptic_row(owner, row_h, idx2, component_name)
-	)
+	UiReactReentryGuardByMeta.with_guard(owner, _META_LOCKS, key, fn_dispatch, warn_fb)
 
 
 static func sync_initial_state(
@@ -327,10 +312,14 @@ static func sync_initial_state(
 		var row: UiReactAudioFeedbackTarget = audio_rows[i]
 		if row == null or not row.enabled or row.state_watch == null:
 			continue
+		if not UiReactStateBindingHelper.coerce_bool(row.state_watch.get_value()):
+			continue
 		_apply_audio_row(owner, row, i, component_name)
 	for j in range(haptic_rows.size()):
 		var row2: UiReactHapticFeedbackTarget = haptic_rows[j]
 		if row2 == null or not row2.enabled or row2.state_watch == null:
+			continue
+		if not UiReactStateBindingHelper.coerce_bool(row2.state_watch.get_value()):
 			continue
 		_apply_haptic_row(owner, row2, j, component_name)
 
@@ -346,7 +335,11 @@ static func run_audio_feedback(
 	if audio_rows.is_empty():
 		return
 	var key := "fb-audio:tr:%d" % int(trigger_type)
-	_with_reentry_guard(owner, key, func() -> void:
+	var warn_a := func() -> void:
+		push_warning(
+			"UiReactFeedbackTargetHelper: reentrant feedback dispatch ignored (%s on %s)" % [key, owner.name]
+		)
+	var fn_a := func() -> void:
 		for i in range(audio_rows.size()):
 			var row: UiReactAudioFeedbackTarget = audio_rows[i]
 			if row == null or not row.enabled:
@@ -358,7 +351,7 @@ static func run_audio_feedback(
 			if respects_disabled and is_disabled:
 				continue
 			_apply_audio_row(owner, row, i, component_name)
-	)
+	UiReactReentryGuardByMeta.with_guard(owner, _META_LOCKS, key, fn_a, warn_a)
 
 
 static func run_haptic_feedback(
@@ -372,7 +365,11 @@ static func run_haptic_feedback(
 	if haptic_rows.is_empty():
 		return
 	var key := "fb-haptic:tr:%d" % int(trigger_type)
-	_with_reentry_guard(owner, key, func() -> void:
+	var warn_h := func() -> void:
+		push_warning(
+			"UiReactFeedbackTargetHelper: reentrant feedback dispatch ignored (%s on %s)" % [key, owner.name]
+		)
+	var fn_h := func() -> void:
 		for i in range(haptic_rows.size()):
 			var row: UiReactHapticFeedbackTarget = haptic_rows[i]
 			if row == null or not row.enabled:
@@ -384,7 +381,7 @@ static func run_haptic_feedback(
 			if respects_disabled and is_disabled:
 				continue
 			_apply_haptic_row(owner, row, i, component_name)
-	)
+	UiReactReentryGuardByMeta.with_guard(owner, _META_LOCKS, key, fn_h, warn_h)
 
 
 static func _resolve_joy_device(device_id: int) -> int:
