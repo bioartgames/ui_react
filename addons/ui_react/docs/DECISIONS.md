@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-05-01 — CB-061: separate `audio_targets` / `haptic_targets` (not `UiReactActionKind`); joy vibration v1
+
+**Context:** Designers want click/UI confirmation audio and light controller rumble on the same triggers as animations/actions without scripting **`AudioStreamPlayer.play()`** or **`Input.start_joy_vibration`** by hand.
+
+**Decision:** Add parallel **`Array[UiReactAudioFeedbackTarget]`** / **`Array[UiReactHapticFeedbackTarget]`** exports (**Feedback layer**), validated like animations/actions (paths, duplicates, trigger enums). **Do not** extend **`UiReactActionKind`** for audio/haptics—feedback stays **side-effect hooks**, not state mutations. Haptics v1: weak/medium presets mapped to **`Input.start_joy_vibration`** on connected joypads only (**PackedInt64Array** from **`Input.get_connected_joypads()`**); no SDL/OpenXR routing.
+
+**Consequences:** **`FEEDBACK_LAYER.md`** normative spec; **`UiReactFeedbackTargetHelper`** mirrors subscription/teardown patterns from **`UiReactActionTargetHelper`**; editor **`UiReactFeedbackValidator`**; ROADMAP matrix columns; SemVer **minor** (**3.1.0**).
+
+**Links:** [`FEEDBACK_LAYER.md`](FEEDBACK_LAYER.md), [`ACTION_LAYER.md`](ACTION_LAYER.md), `ui_react_feedback_target_helper.gd`, `ui_react_feedback_validator.gd`, **CB-061**
+
+---
+
 ## 2026-04-29 — Deferred: trim global `class_name` surface + Tree pooling (audit follow-up)
 
 **Context:** Review noted a broad **`class_name`** registration list (editor + runtime) and **full Tree rebuild** behavior when **`tree_items_state`** / list payloads churn (fine for modest data; costly at scale).

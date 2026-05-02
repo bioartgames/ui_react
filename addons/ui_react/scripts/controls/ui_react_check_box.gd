@@ -41,6 +41,12 @@ var _disabled_state: UiBoolState
 ## **Optional** — Action layer presets ([code]docs/ACTION_LAYER.md[/code]).
 @export var action_targets: Array[UiReactActionTarget] = []
 
+## **Optional** — Feedback ([code]docs/FEEDBACK_LAYER.md[/code]): one-shot audio / controller rumble on triggers.
+@export var audio_targets: Array[UiReactAudioFeedbackTarget] = []
+
+## **Optional** — Feedback ([code]docs/FEEDBACK_LAYER.md[/code]): [method Input.start_joy_vibration] on triggers.
+@export var haptic_targets: Array[UiReactHapticFeedbackTarget] = []
+
 ## **Optional** — Wiring rules ([code]docs/WIRING_LAYER.md[/code] §5). Applied by [UiReactWireRuleHelper] via [UiReactHostWireTree].
 @export var wire_rules: Array[UiReactWireRule] = []
 
@@ -51,6 +57,7 @@ func _enter_tree() -> void:
 
 func _reactive_teardown() -> void:
 	UiReactActionTargetHelper.teardown_for_control_exit(self)
+	UiReactFeedbackTargetHelper.teardown_for_control_exit(self)
 	_disconnect_local_control_signals()
 	_UiReactExitTeardown.teardown_wire_host(
 		Callable(self, "_disconnect_all_states"),
@@ -103,6 +110,9 @@ func _connect_all_states() -> void:
 func _validate_animation_targets() -> void:
 	var trigger_map: Dictionary = UiReactAnimTargetHelper.apply_validated_targets(self, "UiReactCheckBox")
 	UiReactActionTargetHelper.apply_validated_actions_and_merge_triggers(self, "UiReactCheckBox", trigger_map)
+	UiReactFeedbackTargetHelper.apply_validated_audio_and_haptic_and_merge_triggers(
+		self, "UiReactCheckBox", trigger_map
+	)
 
 	# Connect signals based on which triggers are used
 	if trigger_map.has(UiAnimTarget.Trigger.TOGGLED_ON) or trigger_map.has(UiAnimTarget.Trigger.TOGGLED_OFF):
@@ -113,6 +123,7 @@ func _validate_animation_targets() -> void:
 		_local_signal_scope.connect_bound(mouse_exited, _on_trigger_hover_exit)
 
 	UiReactActionTargetHelper.sync_initial_state(self, "UiReactCheckBox", action_targets)
+	UiReactFeedbackTargetHelper.sync_initial_state(self, "UiReactCheckBox", audio_targets, haptic_targets)
 
 
 ## Finishes initialization, allowing animations to trigger on toggle changes.
@@ -147,6 +158,12 @@ func _on_trigger_hover_exit() -> void:
 func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 	UiReactAnimTargetHelper.trigger_animations(self, animation_targets, trigger_type, true, disabled)
 	UiReactActionTargetHelper.run_actions(self, "UiReactCheckBox", action_targets, trigger_type, true, disabled)
+	UiReactFeedbackTargetHelper.run_audio_feedback(
+		self, "UiReactCheckBox", audio_targets, trigger_type, true, disabled
+	)
+	UiReactFeedbackTargetHelper.run_haptic_feedback(
+		self, "UiReactCheckBox", haptic_targets, trigger_type, true, disabled
+	)
 
 
 func _on_toggled(active: bool) -> void:

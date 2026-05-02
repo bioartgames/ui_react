@@ -1,0 +1,49 @@
+[gd_scene load_steps=7 format=3 uid="uid://bvvduhcj2py2v"]
+
+[ext_resource type="Script" uid="uid://lv5ixpw5hlvp" path="res://addons/ui_react/scripts/controls/ui_react_button.gd" id="1_btn"]
+[ext_resource type="Script" uid="uid://df8pyy2f07y1r" path="res://addons/ui_react/scripts/api/models/ui_react_audio_feedback_target.gd" id="2_aud"]
+[ext_resource type="Script" uid="uid://c81pboejnn7lj" path="res://addons/ui_react/scripts/api/models/ui_react_haptic_feedback_target.gd" id="3_hap"]
+[ext_resource type="AudioStream" uid="uid://bg1y8ag806hy2" path="res://addons/ui_react/ui cursor move 2.wav" id="4_v8vtf"]
+
+[sub_resource type="Resource" id="audio_row"]
+script = ExtResource("2_aud")
+player = NodePath("UISfx")
+
+[sub_resource type="Resource" id="hap_row"]
+script = ExtResource("3_hap")
+
+[node name="FeedbackDemo" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -40.0
+offset_right = 160.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Hint" type="Label" parent="VBox"]
+layout_mode = 2
+text = "CB-061 — audio_targets + haptic_targets on UiReactButton (PRESSED). UISfx stream optional."
+
+[node name="SampleButton" type="Button" parent="VBox"]
+layout_mode = 2
+text = "Press — audio + rumble (if joypad)"
+script = ExtResource("1_btn")
+audio_targets = Array[ExtResource("2_aud")]([SubResource("audio_row")])
+haptic_targets = Array[ExtResource("3_hap")]([SubResource("hap_row")])
+
+[node name="UISfx" type="AudioStreamPlayer" parent="VBox/SampleButton"]
+stream = ExtResource("4_v8vtf")

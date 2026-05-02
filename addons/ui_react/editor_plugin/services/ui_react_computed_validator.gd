@@ -94,7 +94,7 @@ static func _collect_computed_states_from_node(node: Node, computed_by_id: Dicti
 			continue
 		if prop in node:
 			_walk_variant_collect_computeds(node.get(prop), computed_by_id)
-	for extra in [&"wire_rules", &"animation_targets", &"action_targets"]:
+	for extra in [&"wire_rules", &"animation_targets", &"action_targets", &"audio_targets", &"haptic_targets"]:
 		if extra in node:
 			_walk_variant_collect_computeds(node.get(extra), computed_by_id)
 
@@ -131,7 +131,7 @@ static func _collect_from_react_node(
 			continue
 		if prop in node:
 			_walk_variant(node.get(prop), node_path, seen_computed, nested_source_ids)
-	for extra in [&"wire_rules", &"animation_targets", &"action_targets"]:
+	for extra in [&"wire_rules", &"animation_targets", &"action_targets", &"audio_targets", &"haptic_targets"]:
 		if extra in node:
 			_walk_variant(node.get(extra), node_path, seen_computed, nested_source_ids)
 

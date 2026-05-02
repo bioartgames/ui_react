@@ -18,6 +18,7 @@ static func validate_nodes(
 		issues.append_array(UiReactBindingValidator.validate_bindings(component, node as Control, node_path))
 		issues.append_array(UiReactAnimValidator.validate_anim_targets(component, node as Control, node_path))
 		issues.append_array(UiReactActionValidator.validate_action_targets(component, node as Control, node_path))
+		issues.append_array(UiReactFeedbackValidator.validate_feedback_targets(component, node as Control, node_path))
 		issues.append_array(UiReactWiringValidator.validate_wire_rules(component, node as Control, node_path))
 		issues.append_array(UiReactTreeValidator.validate_tree_items(component, node as Control, node_path))
 	return issues

@@ -38,6 +38,8 @@ flowchart TB
 
 **Actions (P6.1):** Inspector **`action_targets`** on the **§5** control set—including **`UiReactOptionButton`** and **`UiReactTabContainer`**—(and **`UiReactButton`** / **`UiReactTextureButton`** per [`ACTION_LAYER.md`](ACTION_LAYER.md) §4) drives **non-motion** UI behavior: **presentation** (focus, visibility, **`Control.mouse_filter`**, narrow UI **`UiBoolState`** flags) **and bounded** **`UiFloatState`** mutations (e.g. **`SUBTRACT_PRODUCT_FROM_FLOAT`** — see [`ACTION_LAYER.md`](ACTION_LAYER.md)). Normative contract: [`ACTION_LAYER.md`](ACTION_LAYER.md). **Wiring** still owns **`UiStringState`** catalog/filter/detail data transforms (**§2**); **Actions** must not duplicate those jobs.
 
+**Feedback (CB-061):** **`audio_targets`** / **`haptic_targets`** are **control-local sensory hooks** ([`FEEDBACK_LAYER.md`](FEEDBACK_LAYER.md)); **Wiring** still owns cross-control data orchestration and string/catalog transforms — feedback rows **must not** replace **`wire_rules`** for those jobs.
+
 ---
 
 ## 3. `UiReactWireRuleHelper` contract

@@ -24,6 +24,12 @@ var _text_state: UiState
 ## **Optional** — Inspector-driven tweens (text, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
+## **Optional** — Feedback ([code]docs/FEEDBACK_LAYER.md[/code]): one-shot audio / controller rumble on triggers.
+@export var audio_targets: Array[UiReactAudioFeedbackTarget] = []
+
+## **Optional** — Feedback ([code]docs/FEEDBACK_LAYER.md[/code]): [method Input.start_joy_vibration] on triggers.
+@export var haptic_targets: Array[UiReactHapticFeedbackTarget] = []
+
 var _nested_states: Array[UiState] = []
 
 func _ready() -> void:
@@ -37,6 +43,7 @@ func _ready() -> void:
 
 
 func _reactive_teardown() -> void:
+	UiReactFeedbackTargetHelper.teardown_for_control_exit(self)
 	_disconnect_local_control_signals()
 	_UiReactExitTeardown.teardown_no_wire(Callable(self, "_disconnect_all_states"))
 
@@ -71,12 +78,15 @@ func _connect_all_states() -> void:
 ## Called automatically in [method _ready].
 func _validate_animation_targets() -> void:
 	var trigger_map: Dictionary = UiReactAnimTargetHelper.apply_validated_targets(self, "UiReactLabel")
+	UiReactFeedbackTargetHelper.apply_validated_audio_and_haptic_and_merge_triggers(self, "UiReactLabel", trigger_map)
 
 	# Connect signals based on which triggers are used
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER):
 		_local_signal_scope.connect_bound(mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
 		_local_signal_scope.connect_bound(mouse_exited, _on_trigger_hover_exit)
+
+	UiReactFeedbackTargetHelper.sync_initial_state(self, "UiReactLabel", audio_targets, haptic_targets)
 
 
 ## Finishes initialization, allowing animations to trigger on text changes.
@@ -107,6 +117,8 @@ func _on_trigger_hover_exit() -> void:
 ## [param trigger_type]: The trigger type to match.
 func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 	UiReactAnimTargetHelper.trigger_animations(self, animation_targets, trigger_type)
+	UiReactFeedbackTargetHelper.run_audio_feedback(self, "UiReactLabel", audio_targets, trigger_type)
+	UiReactFeedbackTargetHelper.run_haptic_feedback(self, "UiReactLabel", haptic_targets, trigger_type)
 
 
 func _on_text_state_changed(new_value: Variant, old_value: Variant) -> void:
@@ -121,7 +133,7 @@ func _on_text_state_changed(new_value: Variant, old_value: Variant) -> void:
 	text = new_text
 
 	# Trigger animations if configured
-	if animation_targets.size() > 0:
+	if animation_targets.size() > 0 or audio_targets.size() > 0 or haptic_targets.size() > 0:
 		_on_trigger_text_changed(new_value, old_value)
 
 	_bind.updating = false

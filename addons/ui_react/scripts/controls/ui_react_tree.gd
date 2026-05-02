@@ -45,6 +45,12 @@ var _have_tree_items_structure_sig: bool = false
 ## **Optional** — Action layer presets ([code]docs/ACTION_LAYER.md[/code]).
 @export var action_targets: Array[UiReactActionTarget] = []
 
+## **Optional** — Feedback ([code]docs/FEEDBACK_LAYER.md[/code]): one-shot audio / controller rumble on triggers.
+@export var audio_targets: Array[UiReactAudioFeedbackTarget] = []
+
+## **Optional** — Feedback ([code]docs/FEEDBACK_LAYER.md[/code]): [method Input.start_joy_vibration] on triggers.
+@export var haptic_targets: Array[UiReactHapticFeedbackTarget] = []
+
 ## **Optional** — Wiring rules ([code]docs/WIRING_LAYER.md[/code] §5). Applied by [UiReactWireRuleHelper] via [UiReactHostWireTree].
 @export var wire_rules: Array[UiReactWireRule] = []
 
@@ -55,6 +61,7 @@ func _enter_tree() -> void:
 
 func _reactive_teardown() -> void:
 	UiReactActionTargetHelper.teardown_for_control_exit(self)
+	UiReactFeedbackTargetHelper.teardown_for_control_exit(self)
 	_disconnect_local_control_signals()
 	_UiReactExitTeardown.teardown_wire_host(
 		Callable(self, "_disconnect_all_states"),
@@ -265,6 +272,7 @@ func _validate_animation_targets() -> void:
 	var trigger_map: Dictionary = UiReactAnimTargetHelper.apply_validated_targets(self, "UiReactTree")
 	_validate_row_slots_vs_visible_count()
 	UiReactActionTargetHelper.apply_validated_actions_and_merge_triggers(self, "UiReactTree", trigger_map)
+	UiReactFeedbackTargetHelper.apply_validated_audio_and_haptic_and_merge_triggers(self, "UiReactTree", trigger_map)
 
 	if trigger_map.has(UiAnimTarget.Trigger.SELECTION_CHANGED):
 		_local_signal_scope.connect_bound(item_selected, _on_trigger_selection_changed)
@@ -275,6 +283,7 @@ func _validate_animation_targets() -> void:
 		_local_signal_scope.connect_bound(mouse_exited, _on_trigger_hover_exit)
 
 	UiReactActionTargetHelper.sync_initial_state(self, "UiReactTree", action_targets)
+	UiReactFeedbackTargetHelper.sync_initial_state(self, "UiReactTree", audio_targets, haptic_targets)
 
 
 func _finish_initialization() -> void:
@@ -304,6 +313,8 @@ func _on_trigger_hover_exit() -> void:
 func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 	UiReactAnimTargetHelper.trigger_animations(self, animation_targets, trigger_type)
 	UiReactActionTargetHelper.run_actions(self, "UiReactTree", action_targets, trigger_type)
+	UiReactFeedbackTargetHelper.run_audio_feedback(self, "UiReactTree", audio_targets, trigger_type)
+	UiReactFeedbackTargetHelper.run_haptic_feedback(self, "UiReactTree", haptic_targets, trigger_type)
 
 
 ## Visible pre-order: depth-first using [method TreeItem.get_next_visible]. If [member hide_root] is [code]true[/code], the engine root is omitted; counting starts at its first child.

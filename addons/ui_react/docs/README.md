@@ -15,6 +15,7 @@ Quick index for **solo maintenance** and **AI agents**. Authoring narrative and 
 | [**ROADMAP.md**](ROADMAP.md) | Charter, phases, **Inspector surface matrix (CB-052)**, Appendix backlog (**CB-***), glossary | author, maintainer |
 | [**WIRING_LAYER.md**](WIRING_LAYER.md) | Normative **P5** wiring contract (`UiReactWireRuleHelper`, `wire_rules`, …) | maintainer, agent |
 | [**ACTION_LAYER.md**](ACTION_LAYER.md) | Normative **P6.1** action contract (`action_targets`, `UiReactActionKind`, …) | maintainer, agent |
+| [**FEEDBACK_LAYER.md**](FEEDBACK_LAYER.md) | Normative **P6.3** feedback contract (`audio_targets`, `haptic_targets`, **CB-061**) | maintainer, agent |
 | [**MENU_GUIDELINES.md**](MENU_GUIDELINES.md) | Normative menu IA rules for context menus, chooser popups, and selectors | maintainer, agent |
 | [**P5_CURRENT_STATE_AUDIT.md**](P5_CURRENT_STATE_AUDIT.md) | Stock-take checklist for wiring readiness (**P5.1.b** / **CB-041**) | maintainer |
 | [**DECISIONS.md**](DECISIONS.md) | Lightweight ADR log (context → decision → consequences) | author, agent |
@@ -28,6 +29,7 @@ Quick index for **solo maintenance** and **AI agents**. Authoring narrative and 
 |------|------------|
 | Change or debug **wiring** rules / helper behavior | [WIRING_LAYER.md](WIRING_LAYER.md) — **`§7.1`** (**`value_changed` vs `Resource.changed`**, **`UiReactControlStateWire`** effective computed hook); **`§7.2`** **`@export` typing vs Diagnostics**; additionally `scripts/internal/react/ui_react_wire_rule_helper.gd`, `scripts/api/models/ui_react_wire_*.gd` |
 | Change or debug **action** presets / transactional action constraints | [ACTION_LAYER.md](ACTION_LAYER.md); `scripts/api/models/ui_react_action_target.gd`, `editor_plugin/services/ui_react_action_validator.gd` |
+| Change or debug **feedback** (audio / haptics rows) | [FEEDBACK_LAYER.md](FEEDBACK_LAYER.md); `scripts/internal/react/ui_react_feedback_target_helper.gd`, `editor_plugin/services/ui_react_feedback_validator.gd` |
 | Add a **new `UiReact*`** control or **export** | [ROADMAP.md](ROADMAP.md) Charter; `editor_plugin/ui_react_component_registry.gd` (**BINDINGS_BY_COMPONENT**, **ANIM_TRIGGERS_BY_COMPONENT**); `editor_plugin/services/ui_react_binding_validator.gd` |
 | **Dock diagnostics** (anim, actions, wiring, tree, computed) | `editor_plugin/services/ui_react_validator_service.gd` façade → `ui_react_*_validator.gd` |
 | **Dock Wiring** tab — graph + embedded **`wire_rules`** UI (**CB-035** / **CB-058**) | `editor_plugin/dock/ui_react_dock_wiring_panel.gd` ( **`ui_react_dock_explain_panel.gd`**, **`ui_react_dock_wire_rules_section.gd`**, layout/view services) |
@@ -44,8 +46,8 @@ Quick index for **solo maintenance** and **AI agents**. Authoring narrative and 
 
 ## Rules of engagement
 
-1. **Normative specs win.** If [WIRING_LAYER.md](WIRING_LAYER.md) or [ACTION_LAYER.md](ACTION_LAYER.md) disagrees with the addon README, treat the **spec** as authoritative for behavior; fix README or [CHANGELOG.md](CHANGELOG.md) unless the spec is wrong.
-2. **No duplication of contracts.** README explains *usage* and points here; WIRING/ACTION define *must/must not* for implementations.
+1. **Normative specs win.** If [WIRING_LAYER.md](WIRING_LAYER.md), [ACTION_LAYER.md](ACTION_LAYER.md), or [FEEDBACK_LAYER.md](FEEDBACK_LAYER.md) disagrees with the addon README, treat the **spec** as authoritative for behavior; fix README or [CHANGELOG.md](CHANGELOG.md) unless the spec is wrong.
+2. **No duplication of contracts.** README explains *usage* and points here; WIRING/ACTION/FEEDBACK define *must/must not* for implementations.
 3. **Appendix and SemVer.** Public API changes (`class_name`, `@export` shapes, documented resources) follow [ROADMAP.md](ROADMAP.md) Charter and [CHANGELOG.md](CHANGELOG.md) discipline.
 
 ---

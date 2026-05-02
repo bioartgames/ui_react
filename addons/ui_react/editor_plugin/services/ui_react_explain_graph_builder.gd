@@ -179,7 +179,7 @@ class _BuildContext extends RefCounted:
 								)
 					idx += 1
 
-		for extra in [&"animation_targets", &"action_targets"]:
+		for extra in [&"animation_targets", &"action_targets", &"audio_targets", &"haptic_targets"]:
 			if extra in ctl:
 				_walk_for_computed(host_path, str(extra), ctl.get(extra))
 

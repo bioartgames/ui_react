@@ -26,6 +26,7 @@ func on_enter_tree() -> void:
 
 func on_exit_tree() -> void:
 	UiReactActionTargetHelper.teardown_for_control_exit(_host)
+	UiReactFeedbackTargetHelper.teardown_for_control_exit(_host)
 	disconnect_local_signals()
 	disconnect_all_states()
 	_TxnSession.unregister_host(_host)
@@ -86,10 +87,37 @@ func _action_targets_from_host() -> Array[UiReactActionTarget]:
 	return out
 
 
+func _audio_targets_from_host() -> Array[UiReactAudioFeedbackTarget]:
+	var raw: Variant = _host.get(&"audio_targets")
+	if raw is Array[UiReactAudioFeedbackTarget]:
+		return raw as Array[UiReactAudioFeedbackTarget]
+	var out_a: Array[UiReactAudioFeedbackTarget] = []
+	if raw is Array:
+		for it in raw as Array:
+			if it is UiReactAudioFeedbackTarget:
+				out_a.append(it as UiReactAudioFeedbackTarget)
+	return out_a
+
+
+func _haptic_targets_from_host() -> Array[UiReactHapticFeedbackTarget]:
+	var raw_h: Variant = _host.get(&"haptic_targets")
+	if raw_h is Array[UiReactHapticFeedbackTarget]:
+		return raw_h as Array[UiReactHapticFeedbackTarget]
+	var out_h: Array[UiReactHapticFeedbackTarget] = []
+	if raw_h is Array:
+		for it_h in raw_h as Array:
+			if it_h is UiReactHapticFeedbackTarget:
+				out_h.append(it_h as UiReactHapticFeedbackTarget)
+	return out_h
+
+
 func _validate_animation_targets() -> void:
 	var acts: Array[UiReactActionTarget] = _action_targets_from_host()
 	var trigger_map: Dictionary = UiReactAnimTargetHelper.apply_validated_targets(_host, _component_name)
 	UiReactActionTargetHelper.apply_validated_actions_and_merge_triggers(_host, _component_name, trigger_map)
+	UiReactFeedbackTargetHelper.apply_validated_audio_and_haptic_and_merge_triggers(
+		_host, _component_name, trigger_map
+	)
 
 	if trigger_map.has(UiAnimTarget.Trigger.PRESSED):
 		_signal_scope.connect_bound(_host.pressed, _on_trigger_pressed)
@@ -102,6 +130,9 @@ func _validate_animation_targets() -> void:
 		_signal_scope.connect_bound(_host.toggled, _on_trigger_toggled)
 
 	UiReactActionTargetHelper.sync_initial_state(_host, _component_name, acts)
+	UiReactFeedbackTargetHelper.sync_initial_state(
+		_host, _component_name, _audio_targets_from_host(), _haptic_targets_from_host()
+	)
 
 
 func _on_trigger_pressed() -> void:
@@ -140,8 +171,16 @@ func _animation_targets_from_host() -> Array[UiAnimTarget]:
 func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:
 	var anim: Array[UiAnimTarget] = _animation_targets_from_host()
 	var acts: Array[UiReactActionTarget] = _action_targets_from_host()
+	var aus: Array[UiReactAudioFeedbackTarget] = _audio_targets_from_host()
+	var hus: Array[UiReactHapticFeedbackTarget] = _haptic_targets_from_host()
 	UiReactAnimTargetHelper.trigger_animations(_host, anim, trigger_type, true, _host.disabled)
 	UiReactActionTargetHelper.run_actions(_host, _component_name, acts, trigger_type, true, _host.disabled)
+	UiReactFeedbackTargetHelper.run_audio_feedback(
+		_host, _component_name, aus, trigger_type, true, _host.disabled
+	)
+	UiReactFeedbackTargetHelper.run_haptic_feedback(
+		_host, _component_name, hus, trigger_type, true, _host.disabled
+	)
 
 
 func _on_pressed() -> void:

@@ -192,30 +192,30 @@ Not every row is a v1.0 promise; this maps **Megaman-style** UI goals to **phase
 
 ### Inspector surface matrix (CB-052)
 
-Normative **parity** reference for **`animation_targets`**, **`action_targets`**, and **`wire_rules`** on each shipped **`UiReact*`** control. **Closing CB-052** means this table stays **true in code and docs**: promoted hosts (**OptionButton**, **TabContainer**) ship **●** with **Charter** **evidence bar**; remaining **—** cells have rationale; future **†** rows follow **Appendix** + spec updates.
+Normative **parity** reference for **`animation_targets`**, **`action_targets`**, **`audio_targets`**, **`haptic_targets`**, and **`wire_rules`** on each shipped **`UiReact*`** control. **Closing CB-052** means this table stays **true in code and docs**: promoted hosts (**OptionButton**, **TabContainer**) ship **●** with **Charter** **evidence bar**; remaining **—** cells have rationale; future **†** rows follow **Appendix** + spec updates.
 
 | Symbol | Meaning |
 |--------|--------|
-| **●** | **Shipped:** export exists; behavior covered by [`ACTION_LAYER.md`](ACTION_LAYER.md) / [`WIRING_LAYER.md`](WIRING_LAYER.md) / registry (**`ANIM_TRIGGERS_BY_COMPONENT`**) as applicable. |
+| **●** | **Shipped:** export exists; behavior covered by [`ACTION_LAYER.md`](ACTION_LAYER.md) / [`FEEDBACK_LAYER.md`](FEEDBACK_LAYER.md) / [`WIRING_LAYER.md`](WIRING_LAYER.md) / registry (**`ANIM_TRIGGERS_BY_COMPONENT`**) as applicable. |
 | **—** | **Out of scope** for this host today (not an error—often intentional). |
 | **†** | **Promotion needed:** new Appendix row + update **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** and/or **[`ACTION_LAYER.md`](ACTION_LAYER.md) §4** before treating the cell as **●**. |
 | **○** | **Optional parity** — decide under roadmap; **Label** / **RichText** **`action_targets`** closed as **—** (**CB-052**). |
 
-| Control | `animation_targets` | `action_targets` | `wire_rules` | Notes |
-|---------|:-------------------:|:----------------:|:------------:|-------|
-| `UiReactButton` | ● | ● | — | Wiring concentrates on **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** pickers; **also** **`transactional_host`** for Apply/Cancel (**`UiReactTransactionalSession`**). |
-| `UiReactTextureButton` | ● | ● | — | Same as **Button**. |
-| `UiReactCheckBox` | ● | ● | ● | §5 host. |
-| `UiReactLineEdit` | ● | ● | ● | §5 host. |
-| `UiReactItemList` | ● | ● | ● | §5 host. |
-| `UiReactTree` | ● | ● | ● | §5 host. |
-| `UiReactSlider` | ● | † | † | Value-centric control; promotion planned under **CB-060** (P6.2) with strict validator constraints and example evidence before closure. |
-| `UiReactSpinBox` | ● | † | † | Same as **Slider** (P6.2 planned via **CB-060**). |
-| `UiReactProgressBar` | ● | † | † | Same; **`COMPLETED`** trigger for anims. Declarative breadth promotion planned via **CB-060**. |
-| `UiReactLabel` | ● | — | — | **Display sink** (**`text_state`**); not a **`UiReactWireRule`** trigger host. **`action_targets`** out of scope (use parent **`Control`** / §5 hosts). |
-| `UiReactRichTextLabel` | ● | — | — | Same as **Label**. |
-| `UiReactOptionButton` | ● | ● | ● | §5 + **ACTION** §4; **`options_transactional_demo.tscn`** (**CB-054**). |
-| `UiReactTabContainer` | ● | ● | ● | §5 + **ACTION** §4; **`options_transactional_demo.tscn`** (**CB-055**). |
+| Control | `animation_targets` | `action_targets` | `audio_targets` | `haptic_targets` | `wire_rules` | Notes |
+|---------|:-------------------:|:----------------:|:---------------:|:----------------:|:------------:|-------|
+| `UiReactButton` | ● | ● | ● | ● | — | Wiring concentrates on **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** pickers; **also** **`transactional_host`** for Apply/Cancel (**`UiReactTransactionalSession`**). |
+| `UiReactTextureButton` | ● | ● | ● | ● | — | Same as **Button**. |
+| `UiReactCheckBox` | ● | ● | ● | ● | ● | §5 host. |
+| `UiReactLineEdit` | ● | ● | ● | ● | ● | §5 host. |
+| `UiReactItemList` | ● | ● | ● | ● | ● | §5 host. |
+| `UiReactTree` | ● | ● | ● | ● | ● | §5 host. |
+| `UiReactSlider` | ● | † | ● | ● | † | Value-centric control; promotion planned under **CB-060** (P6.2) with strict validator constraints and example evidence before closure. |
+| `UiReactSpinBox` | ● | † | ● | ● | † | Same as **Slider** (P6.2 planned via **CB-060**). |
+| `UiReactProgressBar` | ● | † | ● | ● | † | Same; **`COMPLETED`** trigger for anims. Declarative breadth promotion planned via **CB-060**. |
+| `UiReactLabel` | ● | — | ● | ● | — | **Display sink** (**`text_state`**); not a **`UiReactWireRule`** trigger host. **`action_targets`** out of scope (use parent **`Control`** / §5 hosts). |
+| `UiReactRichTextLabel` | ● | — | ● | ● | — | Same as **Label**. |
+| `UiReactOptionButton` | ● | ● | ● | ● | ● | §5 + **ACTION** §4; **`options_transactional_demo.tscn`** (**CB-054**). |
+| `UiReactTabContainer` | ● | ● | ● | ● | ● | §5 + **ACTION** §4; **`options_transactional_demo.tscn`** (**CB-055**). |
 
 Trigger vocabulary per host: **`editor_plugin/ui_react_component_registry.gd`** (**`ANIM_TRIGGERS_BY_COMPONENT`**). **Wiring** allowed triggers per §5 host: **[`WIRING_LAYER.md`](WIRING_LAYER.md) §5** table.
 
@@ -293,7 +293,7 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 | CB-058 | **Wiring** workbench (visual orchestration; **no** parallel format) | Editor | P6+ | Planned | **CB-018A** snapshot + canvas authoring (reconnect, new link, rebinds, undo refresh). **Shipped:** **Wiring** tab (**Dependency Graph** + **`wire_rules`** list), in-tab **rule_id** / **enabled** / **trigger** on wire edges, **Quick edit** strip under the list (**`rule_id`** + descriptor-allowlisted fields). **Milestone 2 tranche shipped:** descriptor-driven quick-edit fields for **CopySelectionDetail**, **SetStringOnBoolPulse**, **SyncBoolStateDebugLine** (`line_prefix`), and **RefreshItemsFromCatalog** (`first_row_icon_path`), plus deterministic create-state path suggestions and sorted scope-preset picker surfaces. **Target:** additional in-tab payload depth where high-value. **Runtime** graph: **CB-018**. Normative narrative: Part I **North star** + **Visual wiring graph**. |
 | CB-059 | Rich grid/slot framework baseline | Equipment, inventory slots, hotbar-like layouts | P6.3 | Planned | Promoted **2026-04-17**. Phase-1 scope: documented slot-grid primitives + one canonical official example; virtualization and massive datasets stay under **CB-010**. |
 | CB-060 | Declarative breadth on `UiReactSlider` / `UiReactSpinBox` / `UiReactProgressBar` | Options, HUD meters, shop quantity/value panels | P6.2 | Planned | Promoted **2026-04-17**. Planned widening to **`wire_rules`** and selective **`action_targets`** with strict trigger/validator constraints and official-example evidence before matrix cells move from **†** to **●**. |
-| CB-061 | Reactive feedback hooks (`audio_targets` / `haptic_targets`) | Menus, confirmation flows, accessibility cues | P6.3 | Planned | Add narrow, validator-backed reactive exports that map bool/string pulses to **`AudioStreamPlayer`** and optional controller rumble. Follow Action/Wiring split: declarative triggers + no game-domain orchestration in core. |
+| CB-061 | Reactive feedback hooks (`audio_targets` / `haptic_targets`) | Menus, confirmation flows, accessibility cues | P6.3 | Done | **`FEEDBACK_LAYER.md`**; **`UiReactFeedbackTargetHelper`**; **`UiReactFeedbackValidator`**; **`feedback_demo.tscn`**; hosts per **`ANIM_TRIGGERS_BY_COMPONENT`**. **SemVer minor** additive (**3.1.0** plugin metadata). |
 | CB-062 | Design tokens as data resources (theme/state-driven) | Global UI polish, branding, readability | P6.3 | Planned | Token resources for spacing/typography/color-name indirection and lightweight binding helpers so authors tune one source instead of many nodes. Keep additive and Inspector-first; require at least one official example before widening baseline surface claims. |
 | CB-063 | Wire-rule stack presets (authoring accelerators) | Inventory/detail, list-heavy screens | P6.2 | Done | Shipped: **Selection RMB** **Wire → Stacks** uses [`UiReactWireRuleStackCatalog`](../editor_plugin/services/ui_react_wire_rule_stack_catalog.gd) + one-step append via [`append_stack_from_catalog_index`](../editor_plugin/dock/ui_react_dock_wire_rules_section.gd). Normal subresources; diagnostics parity. |
 | CB-064 | Transactional A/B preview (committed vs draft) in editor | Options/settings with Apply/Cancel | P6.3 | Planned | Editor-side comparison/readout for transactional cohorts to reduce “what changed?” friction. Read-only preview surface; runtime behavior remains driven by existing transactional APIs. |
@@ -303,4 +303,4 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 
 ---
 
-*Last updated: 2026-04-24 — **North star:** **Wiring** tab (**Dependency Graph** + **`wire_rules`** list) as **blessed designer workbench** (Inspector remains full parity). **CB-058:** shipped reconnect, **2b** new link, rebinds, disconnects, **version_changed** refresh, **Wiring** tab merge, **enabled**/**trigger** on wire edges. **Promotion slate:** **CB-053**, **CB-007**, **CB-018** runtime slice, **CB-059**, **CB-060** plus newly tracked solo-designer accelerators (**CB-061**–**CB-067**) as planned direction (non-release-committal). Quarterly review: **Review process** → **Last quarterly review**. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Examples remain **four** scenes.*
+*Last updated: 2026-05-01 — **North star:** **Wiring** tab (**Dependency Graph** + **`wire_rules`** list) as **blessed designer workbench** (Inspector remains full parity). **CB-058:** shipped reconnect, **2b** new link, rebinds, disconnects, **version_changed** refresh, **Wiring** tab merge, **enabled**/**trigger** on wire edges. **CB-061:** feedback layer (**`audio_targets`** / **`haptic_targets`**) + **`feedback_demo.tscn`**. **Promotion slate:** **CB-053**, **CB-007**, **CB-018** runtime slice, **CB-059**, **CB-060** plus solo-designer accelerators (**CB-062**–**CB-067**) as planned direction (non-release-committal). Quarterly review: **Review process** → **Last quarterly review**. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Official examples: **five** scenes.*

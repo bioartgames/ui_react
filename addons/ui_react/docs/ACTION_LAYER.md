@@ -24,14 +24,17 @@ Normative split (mirror style of [`WIRING_LAYER.md`](WIRING_LAYER.md) §2):
 
 | Layer | Declares | May read | May write | Must not |
 |-------|----------|----------|-----------|----------|
-| **Controls** | `*_state`, `animation_targets`, **`action_targets`** | user input | via bindings to state | — |
+| **Controls** | `*_state`, `animation_targets`, **`action_targets`**, **`audio_targets`**, **`haptic_targets`** | user input | via bindings to state | — |
 | **State** | payload | — | committed / draft / computed | — |
 | **Wiring (P5)** | `wire_rules` / runner | controls + state | **`UiState`** per narrow wire rules | grab_focus, visibility orchestration, `UiAnimUtils` |
 | **Actions (P6.1)** | **`action_targets`** | host control subtree | **presentation**: focus, visibility, **`Control.mouse_filter`**, **narrow** `UiBoolState` UI flags; **bounded** numeric writes **only** via named **`UiReactActionKind`** presets that delegate to [`UiReactStateOpService`](../scripts/internal/react/ui_react_state_op_service.gd) (float add/subtract/transfer, int add/transfer, literal float—see §3.2) | **Any** animation or tween (`UiAnimTarget`, `UiAnimUtils`), **unbounded** / arbitrary scripts, network, replacing **transactional** Apply/Cancel, **or** duplicating **Wiring** MVP string rules |
+| **Feedback (CB-061)** | **`audio_targets`**, **`haptic_targets`** | host control subtree | **sensory hooks**: one-shot **`AudioStreamPlayer.play()`**, **`Input.start_joy_vibration`** (see [`FEEDBACK_LAYER.md`](FEEDBACK_LAYER.md)) | **`UiReactActionKind`** presets, **`UiAnimTarget`** motion, **`wire_rules`**, or game-domain orchestration inside core |
 
 **Wiring** answers: “**what data should this screen reflect?**”  
 **Actions** answer: “**what should the UI chrome do right now (non-motion)?**”  
 **Animations** answer: “**what motion should play?**” — **only** via **`animation_targets`**.
+
+**Feedback presets** (audio / haptics) live **only** in [`FEEDBACK_LAYER.md`](FEEDBACK_LAYER.md) exports — **do not** extend **`UiReactActionKind`** for audio or haptics.
 
 If both Wiring and Actions could touch the same `UiStringState`, **Wiring wins** for that state: Actions **must not** duplicate wiring’s three MVP wire-rule jobs (map int→string for filter keys, refresh list from catalog, copy selection detail).
 

@@ -1,6 +1,6 @@
 # Ui React
 
-**Primary story:** Build **reactive UI** in the Godot **editor**—attach **UiReact\*** controls, **bind** **`UiState`**, **animate** with **`animation_targets`**, **wire** data with **`wire_rules`** (**`UiReactWireRuleHelper`** on each control that **exports** **`wire_rules`** — **[`WIRING_LAYER.md`](docs/WIRING_LAYER.md)** §3), **derive** labels and flags with **`UiComputed*`**, **draft/commit** with **transactional** state, and run **bounded** **imperative** steps (focus, visibility, shop-style float ops) via **`action_targets`**—**without scene scripts** for those “obvious” layers, wherever the addon covers the pattern. Domain rules, networking, and one-off glue still belong in **game code** when needed ([**Non-goals**](docs/ROADMAP.md#non-goals-explicit) in **ROADMAP**).
+**Primary story:** Build **reactive UI** in the Godot **editor**—attach **UiReact\*** controls, **bind** **`UiState`**, **animate** with **`animation_targets`**, **wire** data with **`wire_rules`** (**`UiReactWireRuleHelper`** on each control that **exports** **`wire_rules`** — **[`WIRING_LAYER.md`](docs/WIRING_LAYER.md)** §3), **derive** labels and flags with **`UiComputed*`**, **draft/commit** with **transactional** state, run **bounded** **imperative** steps (focus, visibility, shop-style float ops) via **`action_targets`**, and optionally hook **one-shot audio / controller rumble** via **`audio_targets`** / **`haptic_targets`** (**[`docs/FEEDBACK_LAYER.md`](docs/FEEDBACK_LAYER.md)**)—**without scene scripts** for those “obvious” layers, wherever the addon covers the pattern. Domain rules, networking, and one-off glue still belong in **game code** when needed ([**Non-goals**](docs/ROADMAP.md#non-goals-explicit) in **ROADMAP**).
 
 Self-contained building blocks for Godot 4.x: two-way **UiState** binding, optional **inspector-driven** **`UiAnimTarget`** tweens, and **`UiAnimUtils`** for code-driven motion when you want it.
 
@@ -21,7 +21,7 @@ Self-contained building blocks for Godot 4.x: two-way **UiState** binding, optio
 
 ### Roadmap and phases
 
-Public direction, phased delivery, and the full **Appendix backlog** (**CB-001–CB-047**) live in **[`docs/ROADMAP.md`](docs/ROADMAP.md)**—including the **Charter** **evidence bar** (**official examples** here in **`examples/`** + **symmetry** / matrix tracking for new or widened exports) and the **Inspector surface matrix (CB-052)** (**`animation_targets`** / **`action_targets`** / **`wire_rules`** per control). **P5** wiring, **P6.1** actions, exit criteria, and **stock-take** (**[`docs/P5_CURRENT_STATE_AUDIT.md`](docs/P5_CURRENT_STATE_AUDIT.md)**) are linked from there.
+Public direction, phased delivery, and the full **Appendix backlog** (**CB-001–CB-047**) live in **[`docs/ROADMAP.md`](docs/ROADMAP.md)**—including the **Charter** **evidence bar** (**official examples** here in **`examples/`** + **symmetry** / matrix tracking for new or widened exports) and the **Inspector surface matrix (CB-052)** (**`animation_targets`** / **`action_targets`** / **`audio_targets`** / **`haptic_targets`** / **`wire_rules`** per control). **P5** wiring, **P6.1** actions, exit criteria, and **stock-take** (**[`docs/P5_CURRENT_STATE_AUDIT.md`](docs/P5_CURRENT_STATE_AUDIT.md)**) are linked from there.
 
 ### Designer path, blessed defaults, common gaps
 
@@ -57,8 +57,9 @@ Copy `addons/ui_react/` into your Godot project at **`addons/ui_react/`**. Open 
 
 ### 2) Run the example
 
-The addon ships **four** runnable examples under **`res://addons/ui_react/examples/`** (game-screen style + one animation catalog). Open any of these and press **Play** (default **Main Scene** is **`inventory_screen_demo.tscn`**):
+The addon ships **five** runnable examples under **`res://addons/ui_react/examples/`** (game-screen style + one animation catalog + feedback hooks). Open any of these and press **Play** (default **Main Scene** is **`inventory_screen_demo.tscn`**):
 
+- **`res://addons/ui_react/examples/feedback_demo.tscn`** — **`audio_targets`** + **`haptic_targets`** on **`UiReactButton`** (**CB-061** / **[`docs/FEEDBACK_LAYER.md`](docs/FEEDBACK_LAYER.md)**); child **`AudioStreamPlayer`**; no root script.
 - **`res://addons/ui_react/examples/inventory_screen_demo.tscn`** — **`wire_rules`** on controls (map / refresh / copy-detail / sort via **`UiReactWireSortArrayByKey`** / bool-pulse suffix / debug lines per **[`docs/WIRING_LAYER.md`](docs/WIRING_LAYER.md)** §6); **no** root script; **`UiReactTree`** + filtered **`UiReactItemList`** + actions; list lock via overlay + **`action_targets`** (**CB-015** / **P6.1**); sample **`UiAnimTarget`** fades/POP.
 - **`res://addons/ui_react/examples/options_transactional_demo.tscn`** — transactional **Apply / Cancel** + **`UiReactTabContainer`** / **`UiReactOptionButton`** with **`wire_rules`** + **`action_targets`** (**CB-052** / **CB-054** / **CB-055**); **`UiReactCheckBox`** **`state_watch`** **`SET_VISIBLE`** (**CB-056**).
 - **`res://addons/ui_react/examples/shop_computed_demo.tscn`** — **`UiComputedFloatGeProductBool`** / **`UiComputedBoolInvert`** / **`UiComputedOrderSummaryThreeFloatString`** + **`UiReactRichTextLabel`**; **`UiReactProgressBar`** / **`UiReactSpinBox`**; **Buy** + **Sell / Deposit / Add tickets / Tip** via **`action_targets`** (**`SUBTRACT_PRODUCT_FROM_FLOAT`**, **`ADD_PRODUCT_TO_FLOAT`**, **`TRANSFER_FLOAT_PRODUCT_CLAMPED`**, **`ADD_PRODUCT_TO_INT`**, **`TRANSFER_INT_PRODUCT_CLAMPED`**); no root script, no **`examples/*.gd`** for shop computeds.
@@ -66,12 +67,13 @@ The addon ships **four** runnable examples under **`res://addons/ui_react/exampl
 
 **Examples at a glance** (which layers each scene stresses):
 
-| Scene | Wiring | Computed | Transactional | Actions |
-|-------|:------:|:--------:|:-------------:|:-------:|
-| **`inventory_screen_demo.tscn`** | yes | — | — | yes |
-| **`options_transactional_demo.tscn`** | yes | yes (status line) | yes | yes |
-| **`shop_computed_demo.tscn`** | — | yes | — | yes (Buy + CB-051 math row) |
-| **`anim_targets_catalog_demo.tscn`** | — | — | — | yes (single **`action_targets`** row, e.g. **`SET_FLOAT_LITERAL`** on **`FireCompletedButton`**) |
+| Scene | Wiring | Computed | Transactional | Actions | Feedback |
+|-------|:------:|:--------:|:-------------:|:-------:|:--------:|
+| **`inventory_screen_demo.tscn`** | yes | — | — | yes | — |
+| **`options_transactional_demo.tscn`** | yes | yes (status line) | yes | yes | — |
+| **`shop_computed_demo.tscn`** | — | yes | — | yes (Buy + CB-051 math row) | — |
+| **`anim_targets_catalog_demo.tscn`** | — | — | — | yes (single **`action_targets`** row, e.g. **`SET_FLOAT_LITERAL`** on **`FireCompletedButton`**) | — |
+| **`feedback_demo.tscn`** | — | — | — | — | yes (**CB-061**) |
 
 Use the scene tree to see how states and targets are wired.
 
