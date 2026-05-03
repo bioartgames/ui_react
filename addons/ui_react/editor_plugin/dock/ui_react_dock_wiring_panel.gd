@@ -26,9 +26,16 @@ func setup(plugin: EditorPlugin, actions: UiReactActionController, request_dock_
 	root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
-	var toolbar := HBoxContainer.new()
-	toolbar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	root.add_child(toolbar)
+	var ex := _ExplainPanelScript.new()
+	ex.callv(&"setup", [_plugin, _actions, request_dock_refresh])
+	_explain = ex
+	ex.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ex.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_child(ex)
+
+	var footer := HBoxContainer.new()
+	footer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	footer.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
 	var cb_trace := CheckBox.new()
 	cb_trace.text = "Print runtime trace to Output (debug builds only)"
@@ -37,15 +44,9 @@ func setup(plugin: EditorPlugin, actions: UiReactActionController, request_dock_
 		ProjectSettings.get_setting(UiReactDockConfig.KEY_RUNTIME_CONSOLE_DEBUG_ENABLED, false)
 	)
 	cb_trace.toggled.connect(_on_runtime_console_trace_toggled)
-	toolbar.add_child(cb_trace)
+	footer.add_child(cb_trace)
 	_cb_runtime_trace = cb_trace
-
-	var ex := _ExplainPanelScript.new()
-	ex.callv(&"setup", [_plugin, _actions, request_dock_refresh])
-	_explain = ex
-	ex.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	ex.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root.add_child(ex)
+	root.add_child(footer)
 
 	add_child(root)
 

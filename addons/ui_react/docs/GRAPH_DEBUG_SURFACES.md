@@ -15,7 +15,7 @@ This addon exposes three related but **non-overlapping** tools. Keep their contr
 
 ## Runtime console trace (**CB-018C** v1 — Output)
 
-- **Purpose:** Optional **running-game** **`print`** traces in **Godot Output** (**debug builds** + **`UiReactDockConfig`** / **`ui_react/settings/runtime/console_debug_enabled`**, persisted **only** via the dock **Wiring** tab **`CheckBox`**). Events: **`WIRE`**, **`CMP`**, **`ACT`** (**`UiReactWireRuleHelper`**, **`UiReactComputedService`**, **`UiReactActionTargetHelper`**) — not exhaustive **`UiState.set_value`**.
+- **Purpose:** Optional **running-game** **`print`** traces in **Godot Output** (**debug builds** + **`UiReactDockConfig`** / **`ui_react/settings/runtime/console_debug_enabled`**, persisted **only** via the dock **Wiring** tab **footer** **`CheckBox`**). Events: **`WIRE`**, **`CMP`**, **`ACT`** (**`UiReactWireRuleHelper`**, **`UiReactComputedService`**, **`UiReactActionTargetHelper`**) — not exhaustive **`UiState.set_value`**.
 - **Does not** replace Diagnostics or Dependency Graph; **Defer:** live Dependency Graph pulses during play, ring buffer overlay.
 
 ## Invariants (snapshot)

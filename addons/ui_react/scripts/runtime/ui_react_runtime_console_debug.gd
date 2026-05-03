@@ -1,5 +1,5 @@
 ## Runtime (**CB-018C**) — one-line [code]print[/code] trace to editor **Output** for wire/computed/action orchestration (**debug builds**).
-## Toggle from **Ui React** dock **Wiring** tab only; persists [code]console_debug_enabled[/code] ([member UiReactDockConfig.KEY_RUNTIME_CONSOLE_DEBUG_ENABLED]). No autoload buffer.
+## Toggle from **Ui React** dock **Wiring** tab **footer** (below the Dependency Graph) only; persists [code]console_debug_enabled[/code] ([member UiReactDockConfig.KEY_RUNTIME_CONSOLE_DEBUG_ENABLED]). No autoload buffer.
 extends RefCounted
 class_name UiReactRuntimeConsoleDebug
 

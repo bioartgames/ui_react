@@ -31,6 +31,8 @@ const NODE_W := 140.0
 const NODE_H := 32.0
 const NODE_FS := 12
 const VIEW_PAD := 10.0
+const _FIT_BOUNDS_SPAN_EPS := 1.0
+const _FIT_MIN_SPAN_GRAPH := 32.0
 
 ## Shared with Dependency Graph legend ([code]UiReactDockExplainPanel[/code]); keep in sync for DRY.
 const GRAPH_NODE_FILL_CONTROL := Color(0.22, 0.24, 0.3, 1.0)
@@ -159,7 +161,7 @@ func set_layout(layout: Dictionary) -> void:
 	_hover_edge_index = -1
 	_clear_reconnect_drag_state()
 	_clear_newlink_drag_state()
-	reset_view()
+	fit_content_to_view()
 
 
 ## Programmatic node selection (e.g. auto-select graph center after layout). Emits [signal node_selected].
@@ -213,11 +215,98 @@ func select_edge_by_index(edge_index: int) -> bool:
 	return true
 
 
+## Centers [member _pan] at [member _inner_rect] with zoom 1. Fallback when bounds are invalid or for legacy callers.
 func reset_view() -> void:
 	var ir := _inner_rect()
 	_pan = ir.position + ir.size * 0.5
 	_zoom = 1.0
 	queue_redraw()
+
+
+## Scales and pans so the graph layout bbox fits inside the inner drawable area after [member VIEW_PAD] inset.
+func fit_content_to_view() -> void:
+	if _layout.is_empty():
+		return
+	var ir := _inner_rect()
+	var target := Rect2(
+		ir.position.x + VIEW_PAD,
+		ir.position.y + VIEW_PAD,
+		maxf(1.0, ir.size.x - 2.0 * VIEW_PAD),
+		maxf(1.0, ir.size.y - 2.0 * VIEW_PAD)
+	)
+	var bounds := _compute_layout_bounds()
+	if bounds.size.x < _FIT_BOUNDS_SPAN_EPS or bounds.size.y < _FIT_BOUNDS_SPAN_EPS:
+		reset_view()
+		return
+
+	var zx := target.size.x / bounds.size.x
+	var zy := target.size.y / bounds.size.y
+	var z_fit := minf(zx, zy)
+	_zoom = clampf(z_fit, MIN_ZOOM, MAX_ZOOM)
+
+	var center_g := bounds.get_center()
+	var target_center := target.position + target.size * 0.5
+	_pan = target_center - center_g * _zoom
+	queue_redraw()
+
+
+func _compute_layout_bounds() -> Rect2:
+	var centers: Dictionary = _layout.get(&"node_centers", {}) as Dictionary
+	if centers.is_empty():
+		return Rect2()
+
+	var vmin := Vector2(INF, INF)
+	var vmax := Vector2(-INF, -INF)
+	var hw := NODE_W * 0.5
+	var hh := NODE_H * 0.5
+
+	for nid: Variant in centers:
+		var c: Variant = centers[nid]
+		if c is not Vector2:
+			continue
+		var cv := c as Vector2
+		vmin.x = minf(vmin.x, cv.x - hw)
+		vmin.y = minf(vmin.y, cv.y - hh)
+		vmax.x = maxf(vmax.x, cv.x + hw)
+		vmax.y = maxf(vmax.y, cv.y + hh)
+
+	var edges: Array = _layout.get(&"draw_edges", []) as Array
+	for ev: Variant in edges:
+		if ev is not Dictionary:
+			continue
+		var ed: Dictionary = ev as Dictionary
+		var pts: Variant = ed.get(&"route_points", null)
+		if pts is PackedVector2Array and (pts as PackedVector2Array).size() >= 2:
+			for p in (pts as PackedVector2Array):
+				vmin.x = minf(vmin.x, p.x)
+				vmin.y = minf(vmin.y, p.y)
+				vmax.x = maxf(vmax.x, p.x)
+				vmax.y = maxf(vmax.y, p.y)
+		else:
+			var fa := str(ed.get(&"from_id", ""))
+			var ta := str(ed.get(&"to_id", ""))
+			if centers.has(fa) and centers.has(ta):
+				var pa: Vector2 = centers[fa] as Vector2
+				var pb: Vector2 = centers[ta] as Vector2
+				vmin.x = minf(vmin.x, minf(pa.x, pb.x))
+				vmin.y = minf(vmin.y, minf(pa.y, pb.y))
+				vmax.x = maxf(vmax.x, maxf(pa.x, pb.x))
+				vmax.y = maxf(vmax.y, maxf(pa.y, pb.y))
+
+	if vmin.x == INF:
+		return Rect2()
+
+	var span := vmax - vmin
+	if span.x < _FIT_MIN_SPAN_GRAPH:
+		var cx := vmin.x + span.x * 0.5
+		vmin.x = cx - _FIT_MIN_SPAN_GRAPH * 0.5
+		vmax.x = cx + _FIT_MIN_SPAN_GRAPH * 0.5
+	if span.y < _FIT_MIN_SPAN_GRAPH:
+		var cy := vmin.y + span.y * 0.5
+		vmin.y = cy - _FIT_MIN_SPAN_GRAPH * 0.5
+		vmax.y = cy + _FIT_MIN_SPAN_GRAPH * 0.5
+
+	return Rect2(vmin, vmax - vmin)
 
 
 func _inner_rect() -> Rect2:
@@ -773,6 +862,8 @@ func _gui_input(event: InputEvent) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		queue_redraw()
+		if not _layout.is_empty():
+			call_deferred(&"fit_content_to_view")
 	elif what == NOTIFICATION_MOUSE_EXIT:
 		_clear_hover()
 

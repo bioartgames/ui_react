@@ -40,12 +40,14 @@ const _DETAILS_GRAPH_HELP_PLAIN := (
 	+ "Chip outline shows control vs state resource vs computed resource."
 )
 
+## Minimum height used by [member _details] and VSplit clamp math so the lower pane stays usable.
+const _DETAILS_PANE_MIN_HEIGHT := 120
+
 const _SCOPE_MIN_NODES := 20
 const _SCOPE_MAX_NODES := 2000
 const _SCOPE_MIN_EDGES := 40
 const _SCOPE_MAX_EDGES := 4000
 
-const _LEGEND_WRAP_THRESHOLD_PX := 520
 const _LEGEND_GROUP_FONT_COLOR := Color(0.72, 0.74, 0.8, 0.92)
 const _LEGEND_STATUS_FONT_COLOR := Color(0.68, 0.7, 0.76, 0.9)
 ## Subtle outline so non-focus node swatches separate from the dock bar (focus chip keeps [member UiReactExplainGraphView.GRAPH_LEGEND_FOCUS_BORDER] at 2px).
@@ -69,7 +71,6 @@ var _graph_split_restore_attempts: int = 0
 var _legend_host: VBoxContainer
 var _legend_nodes_row: HBoxContainer
 var _legend_edges_row: HBoxContainer
-var _legend_mid_spacer: Control
 var _legend_group_nodes_label: Label
 var _legend_group_edges_label: Label
 var _legend_scope_spacer: Control
@@ -79,7 +80,6 @@ var _cb_computed: CheckBox
 var _cb_wire: CheckBox
 var _cb_edge_labels: CheckBox
 var _graph_view: Control
-var _details_scroll: ScrollContainer
 var _details: RichTextLabel
 var _wire_rules_section: UiReactDockWireRulesSection = null
 var _selection_actions_context_popup: PopupMenu
@@ -359,8 +359,8 @@ func _push_visual_filters() -> void:
 
 
 func _on_fit_pressed() -> void:
-	if _graph_view and _graph_view.has_method(&"reset_view"):
-		_graph_view.call(&"reset_view")
+	if _graph_view and _graph_view.has_method(&"fit_content_to_view"):
+		_graph_view.call(&"fit_content_to_view")
 
 
 func _on_graph_node(id: String) -> void:
@@ -3627,7 +3627,7 @@ func _apply_graph_body_split_offset_clamped(off: int) -> void:
 			_graph_split_restored = true
 		return
 	var graph_min := int(_graph_view.custom_minimum_size.y) if _graph_view else 120
-	var col_min := int(_details_scroll.custom_minimum_size.y) if _details_scroll else 120
+	var col_min := _DETAILS_PANE_MIN_HEIGHT
 	var max_off := maxi(graph_min, h - col_min)
 	var clamped := clampi(off, graph_min, max_off)
 	_graph_body_split.split_offset = clamped
@@ -3697,31 +3697,6 @@ func _add_legend_node_chip(
 	lab.text = text
 	lab.tooltip_text = tooltip_text
 	row.add_child(lab)
-
-
-func _on_legend_host_resized() -> void:
-	if _legend_host == null or _legend_nodes_row == null or _legend_edges_row == null:
-		return
-	var wide := _legend_host.size.x >= float(_LEGEND_WRAP_THRESHOLD_PX)
-	if wide:
-		_legend_host.add_theme_constant_override(&"separation", 0)
-		if _legend_edges_row.get_parent() != _legend_nodes_row:
-			if _legend_edges_row.get_parent() == _legend_host:
-				_legend_host.remove_child(_legend_edges_row)
-			if _legend_mid_spacer.get_parent() != _legend_nodes_row:
-				_legend_nodes_row.add_child(_legend_mid_spacer)
-			_legend_mid_spacer.visible = true
-			_legend_nodes_row.add_child(_legend_edges_row)
-	else:
-		_legend_host.add_theme_constant_override(&"separation", 6)
-		if _legend_edges_row.get_parent() != _legend_host:
-			if _legend_edges_row.get_parent() == _legend_nodes_row:
-				_legend_nodes_row.remove_child(_legend_edges_row)
-			if _legend_mid_spacer.get_parent() == _legend_nodes_row:
-				_legend_nodes_row.remove_child(_legend_mid_spacer)
-			_legend_mid_spacer.visible = false
-			_legend_host.add_child(_legend_edges_row)
-			_legend_host.move_child(_legend_nodes_row, 0)
 
 
 func _clamp_layout_caps() -> void:
@@ -4328,7 +4303,6 @@ func _build_ui() -> void:
 	_legend_host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_legend_host.add_theme_constant_override(&"separation", 6)
 	_legend_host.visible = true
-	_explain_signal_scope.connect_bound(_legend_host.resized, _on_legend_host_resized)
 	_visual_host.add_child(_legend_host)
 
 	_legend_nodes_row = HBoxContainer.new()
@@ -4371,11 +4345,6 @@ func _build_ui() -> void:
 		"Computed resources that combine other states (shown as their own chips)."
 	)
 
-	_legend_mid_spacer = Control.new()
-	_legend_mid_spacer.custom_minimum_size = Vector2(24, 0)
-	_legend_mid_spacer.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_legend_mid_spacer.visible = false
-
 	_legend_edges_row = HBoxContainer.new()
 	_legend_edges_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_legend_edges_row.add_theme_constant_override(&"separation", 8)
@@ -4415,12 +4384,11 @@ func _build_ui() -> void:
 
 	_legend_host.add_child(_legend_nodes_row)
 	_legend_host.add_child(_legend_edges_row)
-	call_deferred(&"_on_legend_host_resized")
 
 	_graph_view = _ExplainGraphViewScript.new()
 	_graph_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_graph_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_graph_view.custom_minimum_size = Vector2(280, 200)
+	_graph_view.custom_minimum_size = Vector2(160, 140)
 	_explain_signal_scope.connect_bound(_graph_view.node_selected, _on_graph_node)
 	_explain_signal_scope.connect_bound(_graph_view.edge_selected, _on_graph_edge)
 	_explain_signal_scope.connect_bound(_graph_view.inspector_focus_selection_requested, _on_graph_inspector_focus_selection_requested)
@@ -4464,22 +4432,17 @@ func _build_ui() -> void:
 		_explain_signal_scope.connect_bound(_wire_rules_section.rule_selection_changed, _on_wire_rule_list_selection_changed)
 	_below_graph_column.add_child(_wire_rules_section)
 
-	_details_scroll = ScrollContainer.new()
-	_details_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_details_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_details_scroll.custom_minimum_size = Vector2(0, 120)
-	_details_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_details_scroll.tooltip_text = "Details for the selected graph item."
-	_below_graph_column.add_child(_details_scroll)
-
 	_details = RichTextLabel.new()
 	_details.bbcode_enabled = true
-	_details.scroll_active = false
-	_details.fit_content = true
+	_details.scroll_active = true
+	_details.fit_content = false
 	_details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_details.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	_details_scroll.add_child(_details)
+	_details.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_details.custom_minimum_size = Vector2(0, _DETAILS_PANE_MIN_HEIGHT)
+	_details.tooltip_text = "Details for the selected graph item."
+	_details.clip_contents = true
+	_below_graph_column.add_child(_details)
 	_set_details_placeholder()
 
 	var base_ctl := _plugin.get_editor_interface().get_base_control()
