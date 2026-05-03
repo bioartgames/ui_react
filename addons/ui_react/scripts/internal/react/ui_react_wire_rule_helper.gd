@@ -8,6 +8,10 @@ extends RefCounted
 const _META_CONNS := &"_ui_react_wire_helper_conns"
 
 
+const _RuntimeConsole := preload(
+	"res://addons/ui_react/scripts/runtime/ui_react_runtime_console_debug.gd"
+)
+
 static var _WIRE_BIND_DISPATCH_READY: bool = false
 ## [member Resource.get_script] key -> [Callable] taking [code](host, rule, conns)[/code].
 static var _WIRE_BIND_DISPATCH_TABLE: Dictionary = {}
@@ -189,6 +193,7 @@ static func _apply_rule(host: Node, rule: UiReactWireRule) -> void:
 		push_warning("UiReactWireRuleHelper: rule '%s' skipped; source node freed." % rid)
 		return
 	rule.apply(host)
+	_RuntimeConsole.maybe_wire_apply(host, rule)
 
 
 static func _safe_connect(conns: Array[Dictionary], sig: Signal, cb: Callable) -> void:

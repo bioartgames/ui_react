@@ -7,6 +7,10 @@
 class_name UiReactComputedService
 extends RefCounted
 
+const _RuntimeConsole := preload(
+	"res://addons/ui_react/scripts/runtime/ui_react_runtime_console_debug.gd"
+)
+
 const _MAX_SOURCES: int = 32
 
 static var _site_keys: Dictionary = {} # String -> true
@@ -264,6 +268,7 @@ static func _trigger_recompute_safe(computed: UiState) -> void:
 		return
 	_reenter_depth[cid] = d + 1
 	computed.call(&"recompute")
+	_RuntimeConsole.maybe_computed_recompute(computed)
 	var after := int(_reenter_depth.get(cid, 1)) - 1
 	if after <= 0:
 		_reenter_depth.erase(cid)

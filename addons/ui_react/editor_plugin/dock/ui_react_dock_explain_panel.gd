@@ -236,9 +236,9 @@ func refresh() -> void:
 		_clear_stale_snapshot()
 		return
 	if not UiReactScannerService.is_react_node(n):
-		_set_hint_visible(true)
-		_set_hint("That node is not a Ui React control—its script name should start with ui_react_.")
+		_set_hint_visible(false)
 		_clear_stale_snapshot()
+		_set_details_not_ui_react_idle()
 		return
 	if not (n == root or root.is_ancestor_of(n)):
 		_set_hint_visible(true)
@@ -2513,10 +2513,40 @@ func _on_rebind_file_selected(path: String) -> void:
 
 
 func _set_details_placeholder() -> void:
-	_set_details_both(
-		"[i]Click a chip or line in the graph to read details here.[/i]\n\n" + _DETAILS_GRAPH_HELP_BB,
-		"Click a chip or line in the graph to read details here.\n\n" + _DETAILS_GRAPH_HELP_PLAIN,
+	_set_details_both(_details_idle_placeholder_bb(), _details_idle_placeholder_plain())
+
+
+func _details_idle_placeholder_bb() -> String:
+	return (
+		"[i]Click a chip or line in the graph to read details here.[/i]\n\n" + _DETAILS_GRAPH_HELP_BB
 	)
+
+
+func _details_idle_placeholder_plain() -> String:
+	return "Click a chip or line in the graph to read details here.\n\n" + _DETAILS_GRAPH_HELP_PLAIN
+
+
+func _set_details_not_ui_react_idle() -> void:
+	var head := UiReactDockExplainDetailsPresenter.details_block_head_bb_plain("Selection")
+	var body_bb := (
+		"That node is not a Ui React control — its script name should start with [code]ui_react_[/code].\n"
+	)
+	var body_plain := "That node is not a Ui React control — its script name should start with ui_react_.\n"
+	var notice_bb := head[0] + body_bb
+	var notice_plain := head[1] + body_plain
+	var merged := UiReactDockExplainDetailsPresenter.details_append_major(
+		"",
+		"",
+		notice_bb,
+		notice_plain,
+	)
+	merged = UiReactDockExplainDetailsPresenter.details_append_major(
+		merged[0],
+		merged[1],
+		_details_idle_placeholder_bb(),
+		_details_idle_placeholder_plain(),
+	)
+	_set_details_both(merged[0], merged[1])
 
 
 func _set_details_empty() -> void:

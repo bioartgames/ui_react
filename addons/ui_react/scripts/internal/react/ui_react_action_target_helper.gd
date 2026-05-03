@@ -7,6 +7,10 @@ extends RefCounted
 const _META_LOCKS := &"_ui_react_action_locks"
 const _META_SW_BINDINGS := &"_ui_react_action_sw_bindings"
 
+const _RuntimeConsole := preload(
+	"res://addons/ui_react/scripts/runtime/ui_react_runtime_console_debug.gd"
+)
+
 class _StateWatchBinding extends RefCounted:
 	var _owner: WeakRef
 	var _component: String
@@ -250,6 +254,7 @@ static func run_actions(
 static func _apply_row(owner: Control, row: UiReactActionTarget, row_index: int, component_name: String) -> void:
 	if row == null or not row.enabled:
 		return
+	_RuntimeConsole.maybe_action_apply(owner, component_name, row_index, row.action)
 	match row.action:
 		UiReactActionTarget.UiReactActionKind.GRAB_FOCUS:
 			var n: Node = owner.get_node_or_null(row.target)

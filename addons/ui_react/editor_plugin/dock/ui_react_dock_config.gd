@@ -30,6 +30,9 @@ const KEY_EDITOR_BOTTOM_PANEL_SHORTCUT_JSON := "ui_react/settings/shortcuts/bott
 const KEY_OPEN_DIAGNOSTICS_SHORTCUT_JSON := "ui_react/settings/shortcuts/open_diagnostics_json"
 const KEY_OPEN_WIRING_SHORTCUT_JSON := "ui_react/settings/shortcuts/open_wiring_json"
 
+## Runtime (**CB-018C**): console trace toggle; persisted from **Wiring** tab only (`save_ui_preference`).
+const KEY_RUNTIME_CONSOLE_DEBUG_ENABLED := "ui_react/settings/runtime/console_debug_enabled"
+
 # Internal/session state (stored in editor layout metadata, not ProjectSettings).
 const SESSION_LAST_TAB := "last_tab"
 const SESSION_WIRING_LAST_SCENE_PATH := "wiring_last_scene_path"
@@ -64,6 +67,7 @@ const DEF_SHOW_ERRORS := true
 const DEF_SHOW_WARNINGS := true
 const DEF_SHOW_INFO := true
 const DEF_AUTO_REFRESH := true
+const DEF_RUNTIME_CONSOLE_DEBUG_ENABLED := false
 
 static var _session_state: Dictionary = {
 	SESSION_LAST_TAB: DEF_DOCK_LAST_TAB,
@@ -210,6 +214,9 @@ static func register_default_project_settings() -> void:
 			KEY_OPEN_WIRING_SHORTCUT_JSON,
 			_EditorBottomPanelShortcut.spec_to_json(_EditorBottomPanelShortcut.default_open_wiring_spec())
 		)
+		added_defaults = true
+	if not ProjectSettings.has_setting(KEY_RUNTIME_CONSOLE_DEBUG_ENABLED):
+		ProjectSettings.set_setting(KEY_RUNTIME_CONSOLE_DEBUG_ENABLED, DEF_RUNTIME_CONSOLE_DEBUG_ENABLED)
 		added_defaults = true
 	if not ProjectSettings.has_setting(KEY_SETTINGS_SCHEMA_VERSION):
 		ProjectSettings.set_setting(KEY_SETTINGS_SCHEMA_VERSION, SETTINGS_SCHEMA_VERSION)
