@@ -49,7 +49,7 @@ Implement in this sequence so early layers need **no scene tree** (or only thin 
 
 ## Layer 0 — Typed `UiState` primitives
 
-**Implemented:** GUT scripts under `addons/ui_react/tests/unit/state/` (see `test_ui_*_state.gd`, `test_gut_environment_smoke.gd`). **CLI** loads [`res://.gutconfig.json`](../.gutconfig.json) by default. The **GUT dock** may use its own saved config under `user://`; if Run All finds no tests, set the test directory to `res://addons/ui_react/tests` (include subfolders) or load the project `.gutconfig.json` from the GUT panel if available.
+**Implemented:** GUT scripts under `addons/ui_react/tests/unit/state/` (see `test_ui_*_state.gd`, `test_gut_environment_smoke.gd`). **CLI** loads [`res://.gutconfig.json`](../../../.gutconfig.json) by default. The **GUT dock** may use its own saved config under `user://`; if Run All finds no tests, set the test directory to `res://addons/ui_react/tests` (include subfolders) or load the project `.gutconfig.json` from the GUT panel if available.
 
 | Status | Test focus | Why |
 |--------|------------|-----|
@@ -63,7 +63,7 @@ Implement in this sequence so early layers need **no scene tree** (or only thin 
 
 ## Layer 1 — `UiReactStateOpService`
 
-**Implemented:** [`addons/ui_react/tests/unit/react/test_ui_react_state_op_service.gd`](addons/ui_react/tests/unit/react/test_ui_react_state_op_service.gd) — full public static API on [`ui_react_state_op_service.gd`](../addons/ui_react/scripts/internal/react/ui_react_state_op_service.gd).
+**Implemented:** [`../tests/unit/react/test_ui_react_state_op_service.gd`](../tests/unit/react/test_ui_react_state_op_service.gd) — full public static API on [`ui_react_state_op_service.gd`](../scripts/internal/react/ui_react_state_op_service.gd).
 
 | Status | Test focus | Why |
 |--------|------------|-----|
@@ -81,7 +81,7 @@ Implement in this sequence so early layers need **no scene tree** (or only thin 
 
 ## Layer 2 — `UiReactWireTemplate`
 
-**Implemented:** [`addons/ui_react/tests/unit/react/test_ui_react_wire_template.gd`](addons/ui_react/tests/unit/react/test_ui_react_wire_template.gd) — full public static API on [`ui_react_wire_template.gd`](../addons/ui_react/scripts/internal/react/ui_react_wire_template.gd).
+**Implemented:** [`../tests/unit/react/test_ui_react_wire_template.gd`](../tests/unit/react/test_ui_react_wire_template.gd) — full public static API on [`ui_react_wire_template.gd`](../scripts/internal/react/ui_react_wire_template.gd).
 
 | Status | Test focus | Why |
 |--------|------------|-----|
@@ -94,7 +94,7 @@ Implement in this sequence so early layers need **no scene tree** (or only thin 
 
 ## Layer 3 — `UiComputed*`
 
-**Implemented:** [`addons/ui_react/tests/unit/computed/test_ui_computed.gd`](addons/ui_react/tests/unit/computed/test_ui_computed.gd) — concrete `UiComputed*` subclasses (`ui_computed_*.gd`) under [`addons/ui_react/scripts/api/models/`](../addons/ui_react/scripts/api/models/).
+**Implemented:** [`../tests/unit/computed/test_ui_computed.gd`](../tests/unit/computed/test_ui_computed.gd) — concrete `UiComputed*` subclasses (`ui_computed_*.gd`) under [`../scripts/api/models/`](../scripts/api/models/).
 
 | Status | Test focus | Why |
 |--------|------------|-----|
@@ -108,7 +108,7 @@ Implement in this sequence so early layers need **no scene tree** (or only thin 
 
 ## Layer 4 — `UiTransactionalState`
 
-**Implemented:** [`addons/ui_react/tests/unit/state/test_ui_transactional_state.gd`](addons/ui_react/tests/unit/state/test_ui_transactional_state.gd) — public API on [`ui_transactional_state.gd`](../addons/ui_react/scripts/api/models/ui_transactional_state.gd).
+**Implemented:** [`../tests/unit/state/test_ui_transactional_state.gd`](../tests/unit/state/test_ui_transactional_state.gd) — public API on [`ui_transactional_state.gd`](../scripts/api/models/ui_transactional_state.gd).
 
 | Status | Test focus | Why |
 |--------|------------|-----|
@@ -123,7 +123,7 @@ Implement in this sequence so early layers need **no scene tree** (or only thin 
 
 Use real `Ui*State` + rule resources; `_source` may be `null` where unused.
 
-**Implemented:** [`addons/ui_react/tests/unit/wire/test_ui_react_wire_rules.gd`](addons/ui_react/tests/unit/wire/test_ui_react_wire_rules.gd) — concrete `UiReactWire*` rules (`ui_react_wire_*.gd`) under [`addons/ui_react/scripts/api/models/`](../addons/ui_react/scripts/api/models/).
+**Implemented:** [`../tests/unit/wire/test_ui_react_wire_rules.gd`](../tests/unit/wire/test_ui_react_wire_rules.gd) — concrete `UiReactWire*` rules (`ui_react_wire_*.gd`) under [`../scripts/api/models/`](../scripts/api/models/).
 
 | Status | Test focus | Why |
 |--------|------------|-----|
@@ -138,7 +138,7 @@ Use real `Ui*State` + rule resources; `_source` may be `null` where unused.
 
 ## Layer 6 — `UiReactActionTargetHelper`
 
-**Implemented:** [`addons/ui_react/tests/unit/react/test_ui_react_action_target_helper.gd`](addons/ui_react/tests/unit/react/test_ui_react_action_target_helper.gd) — `validate_action_targets` and `collect_control_trigger_map` on [`ui_react_action_target_helper.gd`](../addons/ui_react/scripts/internal/react/ui_react_action_target_helper.gd).
+**Implemented:** [`../tests/unit/react/test_ui_react_action_target_helper.gd`](../tests/unit/react/test_ui_react_action_target_helper.gd) — `validate_action_targets` and `collect_control_trigger_map` on [`ui_react_action_target_helper.gd`](../scripts/internal/react/ui_react_action_target_helper.gd).
 
 | Status | Test focus | Why |
 |--------|------------|-----|
@@ -155,7 +155,7 @@ Use real `Ui*State` + rule resources; `_source` may be `null` where unused.
 
 ## Layer 7 — `UiReactStateBindingHelper`
 
-**Implemented:** [`addons/ui_react/tests/unit/react/test_ui_react_state_binding_helper.gd`](addons/ui_react/tests/unit/react/test_ui_react_state_binding_helper.gd) — public static API on [`ui_react_state_binding_helper.gd`](../addons/ui_react/scripts/internal/react/ui_react_state_binding_helper.gd).
+**Implemented:** [`../tests/unit/react/test_ui_react_state_binding_helper.gd`](../tests/unit/react/test_ui_react_state_binding_helper.gd) — public static API on [`ui_react_state_binding_helper.gd`](../scripts/internal/react/ui_react_state_binding_helper.gd).
 
 | Status | Test focus | Why |
 |--------|------------|-----|
@@ -171,7 +171,7 @@ Use real `Ui*State` + rule resources; `_source` may be `null` where unused.
 
 ## Layer 8 — `UiReactValidatorCommon`
 
-**Implemented:** [`addons/ui_react/tests/unit/validator/test_ui_react_validator_common.gd`](addons/ui_react/tests/unit/validator/test_ui_react_validator_common.gd) — public static API on [`ui_react_validator_common.gd`](../addons/ui_react/editor_plugin/services/ui_react_validator_common.gd) (registry via [`ui_react_component_registry.gd`](../addons/ui_react/editor_plugin/ui_react_component_registry.gd) `ANIM_TRIGGERS_BY_COMPONENT`).
+**Implemented:** [`../tests/unit/validator/test_ui_react_validator_common.gd`](../tests/unit/validator/test_ui_react_validator_common.gd) — public static API on [`ui_react_validator_common.gd`](../editor_plugin/services/ui_react_validator_common.gd) (registry via [`ui_react_component_registry.gd`](../editor_plugin/ui_react_component_registry.gd) `ANIM_TRIGGERS_BY_COMPONENT`).
 
 | Status | Test focus | Why |
 |--------|------------|-----|
@@ -183,7 +183,7 @@ Use real `Ui*State` + rule resources; `_source` may be `null` where unused.
 
 ## Layer 9 — Tab helpers **(thin UI)**
 
-**Implemented:** [`addons/ui_react/tests/unit/tab/test_ui_tab_helpers.gd`](addons/ui_react/tests/unit/tab/test_ui_tab_helpers.gd) — [`UiTabSelectionBinding`](../addons/ui_react/scripts/internal/react/ui_tab_selection_binding.gd) and [`UiTabCollectionSync`](../addons/ui_react/scripts/internal/react/ui_tab_collection_sync.gd) (programmatic `TabContainer` under `GutTest`).
+**Implemented:** [`../tests/unit/tab/test_ui_tab_helpers.gd`](../tests/unit/tab/test_ui_tab_helpers.gd) — [`UiTabSelectionBinding`](../scripts/internal/react/ui_tab_selection_binding.gd) and [`UiTabCollectionSync`](../scripts/internal/react/ui_tab_collection_sync.gd) (programmatic `TabContainer` under `GutTest`).
 
 Requires a `TabContainer` in the scene tree (minimal test scene or programmatic add to `SceneTree`).
 
@@ -196,7 +196,7 @@ Requires a `TabContainer` in the scene tree (minimal test scene or programmatic 
 
 ## Foundation harness notes
 
-**`UiReactComputedService`:** GUT isolation uses `UiReactComputedService.reset_internal_state_for_tests()` (see [`addons/ui_react/tests/unit/react/test_ui_react_computed_service.gd`](../addons/ui_react/tests/unit/react/test_ui_react_computed_service.gd) and [`addons/ui_react/docs/CHANGELOG.md`](../addons/ui_react/docs/CHANGELOG.md)). Broader editor integration around the service remains out of scope for the unit suite.
+**`UiReactComputedService`:** GUT isolation uses `UiReactComputedService.reset_internal_state_for_tests()` (see [`../tests/unit/react/test_ui_react_computed_service.gd`](../tests/unit/react/test_ui_react_computed_service.gd) and [`CHANGELOG.md`](CHANGELOG.md)). Broader editor integration around the service remains out of scope for the unit suite.
 
 ---
 
@@ -214,6 +214,6 @@ Requires a `TabContainer` in the scene tree (minimal test scene or programmatic 
 
 | Topic | Location |
 |-------|----------|
-| Addon contracts | `addons/ui_react/docs/WIRING_LAYER.md`, `addons/ui_react/docs/ACTION_LAYER.md` |
-| Maintainer map | `addons/ui_react/docs/README.md`, `addons/ui_react/AGENTS.md` |
+| Addon contracts | [`WIRING_LAYER.md`](WIRING_LAYER.md), [`ACTION_LAYER.md`](ACTION_LAYER.md) |
+| Maintainer entrypoint | [`AGENTS.md`](../AGENTS.md) |
 | GUT addon | `addons/gut/` |

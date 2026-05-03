@@ -303,4 +303,117 @@ Single source of truth for **every** discussed capability. **Target phase** refe
 
 ---
 
-*Last updated: 2026-05-01 — **North star:** **Wiring** tab (**Dependency Graph** + **`wire_rules`** list) as **blessed designer workbench** (Inspector remains full parity). **CB-058:** shipped reconnect, **2b** new link, rebinds, disconnects, **version_changed** refresh, **Wiring** tab merge, **enabled**/**trigger** on wire edges. **CB-061:** feedback layer (**`audio_targets`** / **`haptic_targets`**) — demonstrated on **Use** (**`inventory_screen_demo.tscn`**) and **Buy** (**`shop_computed_demo.tscn`**). **Promotion slate:** **CB-053**, **CB-007**, **CB-018** runtime slice, **CB-059**, **CB-060** plus solo-designer accelerators (**CB-062**–**CB-067**) as planned direction (non-release-committal). Quarterly review: **Review process** → **Last quarterly review**. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Official examples: **four** scenes.*
+## Release readiness
+
+**Goal:** Bring the **Ui React** addon (`addons/ui_react/`) to a clean, lean **public release**. Review in **dependency-ordered passes** so each session has just enough context to judge real quality without hallucinating APIs.
+
+**Scope:** Everything that ships or affects **plugin authors** (maintainer) or **plugin consumers** (game developers using the addon): runtime API, editor UX, user-facing docs, examples, plugin config.
+
+**Out of scope (deep review):** `addons/gut/**`, GUT-specific patterns, internal process-only markdown, and the addon's own `tests/` line-by-line. A thin **test gate** still applies — see [Release gates](#release-gates) below.
+
+**Authoritative docs:** [`AGENTS.md`](../AGENTS.md), [`TESTING.md`](TESTING.md), and normative specs in this folder (`WIRING_LAYER.md`, `ACTION_LAYER.md`, `FEEDBACK_LAYER.md`, …).
+
+### How to use this runbook
+
+1. **One pass per session.** Do not mix passes; context bloat is the main source of confabulated findings.
+2. **Always start with the [Pass preamble](#pass-preamble-required-for-every-session).** Paste it into the agent's first message.
+3. **Cite evidence.** Every finding must include `path:line` or a symbol reference, and (where relevant) a spec section from `WIRING_LAYER.md` / `ACTION_LAYER.md` / `EDITOR_COPY.md`.
+4. **Score against [the rubric](#shared-rubric).** A finding without a rubric tag is a stylistic note, not a release blocker.
+5. **Close each pass** with a **carry-forward note** (5–10 bullets): invariants, open questions, and pointers for the next session (project board, CHANGELOG, or maintainer log—pick one source of truth).
+6. **No drive-by edits.** Reviews produce findings; edits go through normal change policy ([`AGENTS.md` § Change policy](../AGENTS.md)). Findings tagged **P0 / P1** must land before tagging the release.
+
+### Pass preamble (required for every session)
+
+> You are conducting **Pass `<id>`** of the Ui React release readiness review.
+>
+> **Authoritative docs:** [`AGENTS.md`](../AGENTS.md), [`TESTING.md`](TESTING.md), and the normative spec files in `addons/ui_react/docs/` that `AGENTS.md` points to.
+>
+> **In scope (this pass only):** `<paths from pass row>`.
+> **Out of scope:** everything else, especially `addons/gut/**`.
+>
+> **Carry-forward from prior passes:** `<paste bullets from your session log>`.
+>
+> **Deliverables:**
+>
+> 1. Findings list — each item: `severity (P0/P1/P2/P3) | rubric tag(s) | path:line or symbol | one-line description | suggested action or "defer with reason"`.
+> 2. Rubric coverage table — for each rubric row: `applied / N/A` + one-sentence justification.
+> 3. Carry-forward bullets (≤10) for the next pass: invariants, public types observed, open questions.
+>
+> **Hallucination guard:** Do not assert a symbol exists, a signal fires, or a script is `static` without opening the defining file in this session. If unsure, mark **needs verification** and stop.
+
+### Shared rubric
+
+Every pass scores against the relevant rows. Mark non-applicable rows **N/A** with a one-line reason rather than skipping silently.
+
+| Tag | Dimension | What "good" means for v1 | Typical evidence |
+|-----|-----------|---------------------------|------------------|
+| **R-SOLID** | Single responsibility, open/closed | Files have one job; new wrappers extend without editing core god-files; wiring vs actions vs computed boundaries hold | Spec refs + file role table |
+| **R-KISS** | Simplicity | Blessed paths are shallow; no speculative indirection; no abstract base nobody else extends | Trace the README quickstart through the code |
+| **R-DRY** | No duplicated logic | String/catalog transforms not duplicated across wiring and actions; helpers used instead of copy-paste | Grep for the same pattern across layers |
+| **R-YAGNI** | No unused capability | No dead exports, orphan menu IDs, unused resources, "future-proof" hooks without callers | Symbol search, scene/resource scan |
+| **R-GODOT-API** | Correct Godot type usage | `Node` vs `Resource` vs `RefCounted` vs `Object` chosen for the right reasons; `Resource` only when persisting; `@tool` only when needed | File-by-file notes |
+| **R-GODOT-LIFECYCLE** | Lifecycle hygiene | `_ready` / `_exit_tree` symmetry; signals disconnected; tweens cleaned up; no leaks of `Object`-derived data | Inspect callbacks, frees, signal teardown |
+| **R-GODOT-LOAD** | Load model | `preload` for hot/fixed deps; `load` only where dynamic; no circular preloads; no `class_name` cycles | Trace top-of-file `preload` and `class_name` |
+| **R-GODOT-STATIC** | Static vs instance | `static` only for stateless utilities; no instance state on `static`; classes vs services chosen sensibly | Audit `static func` and module-level state |
+| **R-GDSCRIPT-STYLE** | GDScript idioms | `snake_case` funcs/vars, `PascalCase` classes, `SCREAMING_SNAKE` consts; explanatory names; type hints on public funcs; no abbreviations that hurt search | Spot audit |
+| **R-EXPORT-SURFACE** | Inspector hygiene | `@export` names readable, grouped, tooltipped where ambiguous; `@export_group` / `@export_subgroup` consistent; no leaked debug exports | Inspector pass on each `UiReact*` |
+| **R-POLISH** | Tooltips, diagnostics, copy | Strings actionable; tooltips match current behavior; empty / null / disabled states feel intentional | Compare strings to runtime + spec |
+| **R-VOICE** | Editor copy | Matches [`EDITOR_COPY.md`](EDITOR_COPY.md) tone; same term for same concept everywhere (control names, action kinds, wire rule names) | Side-by-side terminology audit |
+| **R-ONBOARDING** | README + blessed path | A new user can install the plugin and reach a working example following only README; examples match inspector reality | Walk the steps mentally; verify scenes load |
+| **R-CLEAN-BREAK** | Lean v1 | No "temp until v1" shims, deprecated paths, or commented-out blocks; legacy compatibility layers either deleted or explicitly noted as known debt in CHANGELOG | Search `TODO`, `FIXME`, `DEPRECATED`, `legacy` |
+| **R-SEMVER** | Stable surface | All `class_name`, public `@export` shapes, and documented resources are intentional; CHANGELOG reflects them | Diff against [CHANGELOG.md](CHANGELOG.md) |
+
+**Severity convention** (used in findings):
+
+- **P0 — release blocker.** Crashes, broken README path, public API mismatch with docs, misleading tooltip on a primary control, dead `class_name` exposed.
+- **P1 — must fix before tag.** Confusing diagnostics, inconsistent naming on public surface, dead code in a public file, missing `@export` group on a primary control.
+- **P2 — should fix or schedule.** Internal duplication, non-blocking polish, smaller copy issues.
+- **P3 — nice-to-have / track.** Stylistic, refactor candidates with no user impact.
+
+### Pass list
+
+The order minimizes hallucination: contracts and small types first, then internals, then editor surface, then docs and examples that depend on everything before them.
+
+| # | Name | Scope (in) | Scope (out) | Primary docs | Depends on |
+|---|------|------------|-------------|--------------|------------|
+| **0** | Map & contracts | `addons/ui_react/docs/**` (excluding history-only files), `addons/ui_react/AGENTS.md`, addon `README.md` | History (`CHANGELOG`, `DECISIONS`, `P5_CURRENT_STATE_AUDIT`) — read for *context only*, do not audit | `AGENTS.md`, `WIRING_LAYER.md`, `ACTION_LAYER.md`, `MENU_GUIDELINES.md`, `EDITOR_COPY.md`, `ROADMAP.md` (Charter + glossary) | — |
+| **1** | Public API surface — models | `addons/ui_react/scripts/api/models/**`, `addons/ui_react/scripts/api/ui_anim_utils.gd` | Internals, controls | `WIRING_LAYER.md`, `ACTION_LAYER.md` | 0 |
+| **2** | Public API surface — controls | `addons/ui_react/scripts/controls/**` | Internal helpers | `README` (Quickstart), Inspector surface matrix in `ROADMAP.md` | 0, 1 |
+| **3** | Runtime internals — react / state | `addons/ui_react/scripts/internal/react/**` (excluding tab + anim helpers split below) | Anim runtime, tab transition, controls | `WIRING_LAYER.md` | 1, 2 |
+| **4** | Runtime internals — animation | `addons/ui_react/scripts/internal/anim/**`, `addons/ui_react/scripts/internal/react/ui_react_anim_target_helper.gd`, `addons/ui_react/scripts/internal/react/ui_tab_transition_animator.gd` | Wire / action runtime | `ACTION_LAYER.md` (motion vs actions boundary), `ui_react_component_registry.gd` `ANIM_TRIGGERS_BY_COMPONENT` | 1 |
+| **5** | Runtime internals — wiring | `addons/ui_react/scripts/internal/react/ui_react_wire_*.gd`, `addons/ui_react/scripts/api/models/ui_react_wire_*.gd`, `addons/ui_react/scripts/api/models/ui_react_action_target.gd` | Editor validators | `WIRING_LAYER.md`, `ACTION_LAYER.md` | 1, 3 |
+| **6** | Runtime internals — tab subsystem | `addons/ui_react/scripts/internal/react/ui_tab_*.gd`, `addons/ui_react/scripts/api/models/ui_tab_container_cfg.gd` | Editor surface | `README` tab section | 1, 2 |
+| **7** | Editor plugin spine | `addons/ui_react/editor_plugin/ui_react_editor_plugin.gd`, `ui_react_component_registry.gd`, `editor_plugin/services/ui_react_scanner_service.gd`, `ui_react_state_factory_service.gd`, `ui_react_graph_resource_factory.gd`, `ui_react_scene_file_resource_paths.gd` | Dock UI, validators (separate passes) | `WIRING_LAYER.md`, `ACTION_LAYER.md`, registry constants | 1–6 |
+| **8** | Editor plugin — validators | `editor_plugin/services/ui_react_validator_service.gd` + every `ui_react_*_validator.gd`, `ui_react_validator_common.gd`, `ui_react_*_introspection.gd`, `ui_react_*_catalog.gd` | Dock rendering | All specs | 7 |
+| **9** | Editor plugin — dock & graph UI | `editor_plugin/dock/**`, `editor_plugin/controllers/**`, `editor_plugin/models/**`, dock-only services (`ui_react_explain_graph_*`, `ui_react_wire_graph_edit_service.gd`, `ui_react_dock_explain_scope_presets.gd`, `ui_react_value_preview_helper.gd`, `ui_react_unused_state_service.gd`, `ui_react_computed_*`) | Validators, runtime | `MENU_GUIDELINES.md`, `EDITOR_COPY.md`, `GRAPH_DEBUG_SURFACES.md` | 7, 8 |
+| **10** | Editor plugin — settings & shortcuts | `editor_plugin/settings/**`, `editor_plugin/services/ui_react_editor_bottom_panel_shortcut.gd` | Dock, validators | `EDITOR_COPY.md` | 7 |
+| **11** | Examples & blessed path | `addons/ui_react/examples/**`, demo scripts they reference, `addons/ui_react/ui_resources/**` if cited by examples | Game projects consuming the addon | Addon `README.md` Quickstart, ROADMAP `Official example` glossary | 1, 2, 5 |
+| **12** | User-facing docs sweep | Addon `README.md`, `WIRING_LAYER.md`, `ACTION_LAYER.md`, `MENU_GUIDELINES.md`, `EDITOR_COPY.md` for **public-facing accuracy** | History-only docs | All earlier passes' findings | 1–11 |
+| **13** | Repo & plugin shell | Repo `project.godot`, root `icon.*`, `addons/ui_react/editor_plugin/plugin.cfg`, `addons/ui_react/editor_plugin/ui_react_editor_plugin.gd` (plugin entrypoint), `.cursorignore`, `.vscode/settings.json` (only release-relevant entries) | `.godot/**` cache, `addons/gut/**` | — | — |
+| **14** | Integration sweep | Cross-cutting: registry ↔ validators ↔ runtime wiring ↔ examples ↔ README | — | All | 0–13 |
+
+**v1 closeout:** Passes **0–14** completed **2026-04-29** — see [CHANGELOG.md](CHANGELOG.md) entries from that period. Re-run or extend this runbook before the next major release tag.
+
+### Release gates
+
+A release tag may be cut when:
+
+1. **All passes** in [Pass list](#pass-list) for the target release are **`done`** (or explicitly **`deferred`** with a written reason approved by the maintainer).
+2. **Zero P0 findings open.** P1 findings either fixed or moved to CHANGELOG **Known limitations** with sign-off.
+3. **GUT smoke gate:** `godot --path . -s addons/gut/gut_cmdln.gd -gexit` (using the executable resolution rule in [root `REPO_AGENTS.md`](../../../REPO_AGENTS.md)) passes locally. Test bodies themselves are not deep-reviewed; the gate is "the suite still runs green."
+4. **CHANGELOG updated.** Pass 0 and Pass 13 changes recorded under the release section.
+
+### Anti-hallucination rules (for reviewing agents)
+
+1. **No claim without an open file.** If you say "`X` is `static`" or "`Y` emits signal `Z`", you must have read the defining file in this session.
+2. **No proposed breaking change without `R-SEMVER` evidence.** Cite the `class_name` / `@export` / spec impact and call for a CHANGELOG entry.
+3. **No "feels heavy" findings.** Either name a concrete refactor (with file paths) or downgrade to **P3 / track**.
+4. **Do not audit `addons/gut/**`.** If a finding requires it, write `out of scope (GUT vendor)` and stop.
+5. **Mark uncertainty.** If you cannot confirm something within the pass scope, write **needs verification** and move on; do not guess.
+6. **One pass at a time.** If a finding belongs to a later pass, file it as a carry-forward bullet rather than expanding scope.
+
+**Runbook maintenance:** Renaming a pass, adding a pass, or moving files between passes requires an entry in [CHANGELOG.md](CHANGELOG.md) under **Documentation**.
+
+---
+
+*Last updated: 2026-05-02 — **Release readiness** runbook folded here from repo `docs/RELEASE_READINESS_PASSES.md`. **North star:** **Wiring** tab (**Dependency Graph** + **`wire_rules`** list) as **blessed designer workbench** (Inspector remains full parity). **CB-058:** shipped reconnect, **2b** new link, rebinds, disconnects, **version_changed** refresh, **Wiring** tab merge, **enabled**/**trigger** on wire edges. **CB-061:** feedback layer (**`audio_targets`** / **`haptic_targets`**) — demonstrated on **Use** (**`inventory_screen_demo.tscn`**) and **Buy** (**`shop_computed_demo.tscn`**). **Promotion slate:** **CB-053**, **CB-007**, **CB-018** runtime slice, **CB-059**, **CB-060** plus solo-designer accelerators (**CB-062**–**CB-067**) as planned direction (non-release-committal). Quarterly review: **Review process** → **Last quarterly review**. Stock-take: [`P5_CURRENT_STATE_AUDIT.md`](P5_CURRENT_STATE_AUDIT.md). Official examples: **four** scenes.*

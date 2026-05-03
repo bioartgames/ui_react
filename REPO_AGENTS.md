@@ -1,6 +1,8 @@
-# Ui-system-new — agent notes
+# Ui-system-new — repo agent notes
 
-Godot project root: `project.godot` lives here. Addon-specific maintainer notes: [`addons/ui_react/AGENTS.md`](addons/ui_react/AGENTS.md).
+**Scope:** This file is **workspace-level** only (Godot binary resolution, running GUT from the project root). **Ui React** maintainer map, specs routing, and change policy: [`addons/ui_react/AGENTS.md`](addons/ui_react/AGENTS.md).
+
+*(Renamed from `AGENTS.md` at repo root to avoid confusion with the addon’s `AGENTS.md`.)*
 
 ---
 
@@ -20,4 +22,4 @@ Set-Location "<path-to-this-repo>"
 & "<path-to-godot.exe>" --path . -s addons/gut/gut_cmdln.gd -gexit
 ```
 
-Test dirs and conventions: [`docs/TESTING.md`](docs/TESTING.md). GUT config: [`.gutconfig.json`](.gutconfig.json).
+Test dirs and conventions: [`addons/ui_react/docs/TESTING.md`](addons/ui_react/docs/TESTING.md). GUT config: [`.gutconfig.json`](.gutconfig.json).

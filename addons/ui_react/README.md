@@ -4,7 +4,7 @@
 
 Self-contained building blocks for Godot 4.x: two-way **UiState** binding, optional **inspector-driven** **`UiAnimTarget`** tweens, and **`UiAnimUtils`** for code-driven motion when you want it.
 
-**Documentation map and agent notes:** **[`docs/README.md`](docs/README.md)** (index of `docs/`), **[`AGENTS.md`](AGENTS.md)** (scope, paths, boundaries for this addon).
+**Maintainer / agent entrypoint:** **[`AGENTS.md`](AGENTS.md)** (documentation map, scope, paths, boundaries, change policy for this addon).
 
 ### Four pillars (resources-first; examples stay Inspector-authored)
 
@@ -412,7 +412,7 @@ These may change between template versions; **do not rely on them from game code
 | `scripts/internal/anim/` | Animation implementation (unstable for direct use). |
 | `scripts/internal/react/` | Reactive helpers (unstable for direct use). |
 | `examples/` | **`inventory_screen_demo.tscn`** (**`wire_rules`**, **`UiReactWireCatalogData.rows`**, **`action_targets`**, **`UiAnimTarget`**, **`audio_targets`** / **`haptic_targets`** on **Use**); no root script. **`options_transactional_demo.tscn`** (**`UiComputedTransactionalStatusString`**, transactional **Apply / Cancel**, **`UiReactTabContainer`** / **`UiReactOptionButton`** **`wire_rules`** + **`action_targets`**). **`shop_computed_demo.tscn`** (**`UiComputedFloatGeProductBool`** / **`UiComputedBoolInvert`** / **`UiComputedOrderSummaryThreeFloatString`**; **`action_targets`** buy; **`audio_targets`** / **`haptic_targets`** on **Buy**; no root script). **`anim_targets_catalog_demo.tscn`** (animation catalog + trigger playground). **[`FEEDBACK_LAYER.md`](docs/FEEDBACK_LAYER.md)** (**CB-061**). |
-| `docs/` | **[`README.md`](docs/README.md)** (map), **CHANGELOG**, **[`DECISIONS.md`](docs/DECISIONS.md)**, **[`ROADMAP.md`](docs/ROADMAP.md)**, **[`WIRING_LAYER.md`](docs/WIRING_LAYER.md)** (normative **P5** wiring), **[`ACTION_LAYER.md`](docs/ACTION_LAYER.md)** (normative **P6.1** actions), **[`FEEDBACK_LAYER.md`](docs/FEEDBACK_LAYER.md)** (normative **P6.3** feedback). **[`AGENTS.md`](AGENTS.md)** (addon root — agent/solo checklist). |
+| `docs/` | **CHANGELOG**, **[`DECISIONS.md`](docs/DECISIONS.md)**, **[`ROADMAP.md`](docs/ROADMAP.md)**, **[`TESTING.md`](docs/TESTING.md)** (GUT rollout), **[`WIRING_LAYER.md`](docs/WIRING_LAYER.md)** (normative **P5** wiring), **[`ACTION_LAYER.md`](docs/ACTION_LAYER.md)** (normative **P6.1** actions), **[`FEEDBACK_LAYER.md`](docs/FEEDBACK_LAYER.md)** (normative **P6.3** feedback). **[`AGENTS.md`](AGENTS.md)** (addon root — maintainer map + checklist). |
 | `editor_plugin/ui_react_component_registry.gd` | Single source of truth for script-stem → **`UiReact*`** name and per-control **`BINDINGS_BY_COMPONENT`** (edit here when adding a control; **`UiReactScannerService`** and validators consume it). |
 | `editor_plugin/` | Optional Godot editor plugin: bottom dock, split **`ui_react_*_validator.gd`** modules + **`ui_react_validator_service`** façade, quick state creation. |
 | `ui_resources/` | Sample `.tres` for the example scene; `plugin_generated/` holds plugin-created states (optional). |

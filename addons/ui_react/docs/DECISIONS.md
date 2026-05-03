@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-05-02 — Rename repo-root `AGENTS.md` to `REPO_AGENTS.md`
+
+**Context:** Two files named **`AGENTS.md`** (project root vs **`addons/ui_react/AGENTS.md`**) were easy to confuse.
+
+**Decision:** Workspace-level Godot/GUT notes live in repo-root **`REPO_AGENTS.md`**. **`addons/ui_react/AGENTS.md`** keeps the short name as the **Ui React** maintainer entrypoint. **[`ROADMAP.md`](ROADMAP.md)** § **Release readiness** GUT smoke gate links **`REPO_AGENTS.md`** for executable resolution.
+
+**Links:** [`REPO_AGENTS.md`](../../REPO_AGENTS.md), [`AGENTS.md`](../AGENTS.md), [`CHANGELOG.md`](CHANGELOG.md)
+
+---
+
+## 2026-05-02 — Consolidate maintainer docs into `AGENTS.md` and `ROADMAP.md`
+
+**Context:** **`AGENTS.md`** and **`addons/ui_react/docs/README.md`** duplicated maintainer routing; **`docs/RELEASE_READINESS_PASSES.md`** and **`docs/TESTING.md`** (Ui React–only) lived in the project-root **`docs/`** folder, away from other addon contract docs.
+
+**Decision:** **`AGENTS.md`** is the single addon maintainer/agent entrypoint (documentation map, scope, hard boundaries, change policy). Release-process content lives in **`ROADMAP.md`** § **Release readiness**. **`TESTING.md`** lives under **`addons/ui_react/docs/`**. The project-root **`docs/`** directory was removed after moving/deleting those files.
+
+**Consequences:** One fewer routing file to keep in sync. All Ui React docs colocate with the addon (cleaner copy-into-other-project workflow). Historical **`CHANGELOG`** prose may name deleted paths as plain text.
+
+**Supersedes (partially):** 2026-04-03 “Documentation spine” — the former **`addons/ui_react/docs/README.md`** map is now folded into **`AGENTS.md`**.
+
+**Links:** [`AGENTS.md`](../AGENTS.md), [`ROADMAP.md`](ROADMAP.md), [`TESTING.md`](TESTING.md), [`CHANGELOG.md`](CHANGELOG.md)
+
+---
+
 ## 2026-05-01 — State-driven feedback: gated initial sync + rising edge
 
 **Context:** Post-CB-061 audits noted ambiguity vs [`ACTION_LAYER.md`](ACTION_LAYER.md) “reflect state” semantics and poor UX if one-shot audio/haptics ran on **every** **`UiBoolState`** edge and unconditionally on **`sync_initial_state`**.
@@ -106,9 +130,11 @@
 
 **Decision:** Add `docs/README.md` (routing only), `AGENTS.md` (scope and paths), and this `DECISIONS.md` log. README stays the author-facing story; specs remain authoritative for contracts.
 
+*Superseded 2026-05-02:* **`addons/ui_react/docs/README.md`** merged into [`AGENTS.md`](../AGENTS.md); release runbook → [`ROADMAP.md`](ROADMAP.md) § **Release readiness**.
+
 **Consequences:** Extra files to maintain, but each stays short. Conflicts resolve: spec > README prose unless spec is wrong.
 
-**Links:** [docs/README.md](README.md), [../AGENTS.md](../AGENTS.md)
+**Links:** [`AGENTS.md`](../AGENTS.md) (documentation map); [`ROADMAP.md`](ROADMAP.md)
 
 ---
 
