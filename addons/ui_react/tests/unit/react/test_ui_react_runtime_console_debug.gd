@@ -50,6 +50,8 @@ func test_maybe_wire_capture_under_force() -> void:
 	assert_true(line.contains("[UiReact:d]"), line)
 	assert_true(line.contains("WIRE"), line)
 	assert_true(line.contains("probe_rule"), line)
+	assert_true(line.contains("ui_react_wire_sort_array_by_key.gd"), line)
+	assert_false(line.contains("script=Resource"), line)
 
 
 func test_truncation_on_long_rule_id_under_force() -> void:
@@ -65,3 +67,19 @@ func test_truncation_on_long_rule_id_under_force() -> void:
 	var cap := UiReactRuntimeConsoleDebug.get_test_capture_snapshot()
 	assert_eq(cap.size(), 1)
 	assert_true(cap[0].ends_with("…") or cap[0].contains("…"), cap[0])
+
+
+func test_action_kind_label_visible_under_force() -> void:
+	var host: Control = autoqfree(Control.new())
+	add_child_autofree(host)
+	UiReactRuntimeConsoleDebug.clear_test_capture()
+	UiReactRuntimeConsoleDebug.set_force_enabled_for_tests(true)
+	UiReactRuntimeConsoleDebug.maybe_action_apply(
+		host, "UiProbe", 0, UiReactActionTarget.UiReactActionKind.SET_VISIBLE
+	)
+	var cap := UiReactRuntimeConsoleDebug.get_test_capture_snapshot()
+	assert_eq(cap.size(), 1)
+	var line := cap[0]
+	assert_true(line.contains("kind=SET_VISIBLE"), line)
+	assert_false(line.contains("kind=1"), line)
+

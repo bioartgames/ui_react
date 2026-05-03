@@ -46,6 +46,43 @@ static func _truncate(s: String, max_chars: int) -> String:
 	return s.substr(0, max_chars) + "…"
 
 
+static func _resource_gd_basename(res: Resource) -> String:
+	if res == null:
+		return "<null>"
+	var scr: Variant = res.get_script()
+	if scr != null and scr is Script:
+		var p := (scr as Script).resource_path
+		if p != "":
+			return p.get_file()
+	return "<embedded>"
+
+
+static func _action_kind_label(kind: Variant) -> String:
+	match kind:
+		UiReactActionTarget.UiReactActionKind.GRAB_FOCUS:
+			return "GRAB_FOCUS"
+		UiReactActionTarget.UiReactActionKind.SET_VISIBLE:
+			return "SET_VISIBLE"
+		UiReactActionTarget.UiReactActionKind.SET_UI_BOOL_FLAG:
+			return "SET_UI_BOOL_FLAG"
+		UiReactActionTarget.UiReactActionKind.SET_MOUSE_FILTER:
+			return "SET_MOUSE_FILTER"
+		UiReactActionTarget.UiReactActionKind.SUBTRACT_PRODUCT_FROM_FLOAT:
+			return "SUBTRACT_PRODUCT_FROM_FLOAT"
+		UiReactActionTarget.UiReactActionKind.ADD_PRODUCT_TO_FLOAT:
+			return "ADD_PRODUCT_TO_FLOAT"
+		UiReactActionTarget.UiReactActionKind.TRANSFER_FLOAT_PRODUCT_CLAMPED:
+			return "TRANSFER_FLOAT_PRODUCT_CLAMPED"
+		UiReactActionTarget.UiReactActionKind.ADD_PRODUCT_TO_INT:
+			return "ADD_PRODUCT_TO_INT"
+		UiReactActionTarget.UiReactActionKind.TRANSFER_INT_PRODUCT_CLAMPED:
+			return "TRANSFER_INT_PRODUCT_CLAMPED"
+		UiReactActionTarget.UiReactActionKind.SET_FLOAT_LITERAL:
+			return "SET_FLOAT_LITERAL"
+		_:
+			return "UNKNOWN(%d)" % int(kind)
+
+
 static func _emit(kind: StringName, fields: Dictionary) -> void:
 	if not effective_enabled():
 		return
@@ -74,14 +111,21 @@ static func maybe_wire_apply(host: Node, rule: UiReactWireRule) -> void:
 		host_str = "<freed?>"
 	_emit(
 		&"WIRE",
-		{"host": host_str, "rule": rid, "script": rule.get_class()}
+		{"host": host_str, "rule": rid, "script": _resource_gd_basename(rule)}
 	)
 
 
 static func maybe_computed_recompute(computed: UiState) -> void:
 	if computed == null:
 		return
-	_emit(&"CMP", {"id": str(computed.get_instance_id()), "path": computed.resource_path})
+	_emit(
+		&"CMP",
+		{
+			"gd": _resource_gd_basename(computed),
+			"id": str(computed.get_instance_id()),
+			"path": computed.resource_path,
+		}
+	)
 
 
 static func maybe_action_apply(
@@ -94,5 +138,10 @@ static func maybe_action_apply(
 		owner_str = "<invalid>"
 	_emit(
 		&"ACT",
-		{"component": component_name, "idx": str(row_index), "kind": str(action_kind), "owner": owner_str}
+		{
+			"component": component_name,
+			"idx": str(row_index),
+			"kind": _action_kind_label(action_kind),
+			"owner": owner_str,
+		}
 	)
