@@ -50,8 +50,6 @@ func _ready() -> void:
 		_local_signal_scope.dispose()
 	_local_signal_scope = UiReactSubscriptionScope.new()
 	_local_signal_scope.connect_bound(value_changed, _on_value_changed)
-	_local_signal_scope.connect_bound(focus_entered, _on_focus_entered)
-	_local_signal_scope.connect_bound(focus_exited, _on_focus_exited)
 	_disconnect_all_states()
 	_connect_all_states()
 	if _value_state == null:
@@ -104,11 +102,15 @@ func _validate_animation_targets() -> void:
 	var trigger_map: Dictionary = UiReactAnimTargetHelper.apply_validated_targets(self, "UiReactSpinBox")
 	UiReactFeedbackTargetHelper.apply_validated_audio_and_haptic_and_merge_triggers(self, "UiReactSpinBox", trigger_map)
 
-	# Note: value_changed, focus_entered, and focus_exited are always connected
+	# Connect signals based on which triggers are used (merged trigger_map includes feedback-only rows).
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_ENTER):
 		_local_signal_scope.connect_bound(mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
 		_local_signal_scope.connect_bound(mouse_exited, _on_trigger_hover_exit)
+	if trigger_map.has(UiAnimTarget.Trigger.FOCUS_ENTERED):
+		_local_signal_scope.connect_bound(focus_entered, _on_trigger_focus_entered)
+	if trigger_map.has(UiAnimTarget.Trigger.FOCUS_EXITED):
+		_local_signal_scope.connect_bound(focus_exited, _on_trigger_focus_exited)
 
 	UiReactFeedbackTargetHelper.sync_initial_state(self, "UiReactSpinBox", audio_targets, haptic_targets)
 
@@ -175,18 +177,6 @@ func _on_value_changed(new_value: float) -> void:
 	_bind.updating = true
 	_value_state.set_value(new_value)
 	_bind.updating = false
-
-
-func _on_focus_entered() -> void:
-	# Trigger animations if configured
-	if animation_targets.size() > 0 or audio_targets.size() > 0 or haptic_targets.size() > 0:
-		_on_trigger_focus_entered()
-
-
-func _on_focus_exited() -> void:
-	# Trigger animations if configured
-	if animation_targets.size() > 0 or audio_targets.size() > 0 or haptic_targets.size() > 0:
-		_on_trigger_focus_exited()
 
 
 func _on_value_state_changed(new_value: Variant, _old_value: Variant) -> void:

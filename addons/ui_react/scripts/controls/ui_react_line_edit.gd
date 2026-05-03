@@ -70,8 +70,6 @@ func _ready() -> void:
 		_local_signal_scope.dispose()
 	_local_signal_scope = UiReactSubscriptionScope.new()
 	_local_signal_scope.connect_bound(text_changed, _on_text_changed)
-	_local_signal_scope.connect_bound(focus_entered, _on_focus_entered)
-	_local_signal_scope.connect_bound(focus_exited, _on_focus_exited)
 	_disconnect_all_states()
 	_connect_all_states()
 	_validate_animation_targets()
@@ -104,6 +102,10 @@ func _validate_animation_targets() -> void:
 		_local_signal_scope.connect_bound(mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
 		_local_signal_scope.connect_bound(mouse_exited, _on_trigger_hover_exit)
+	if trigger_map.has(UiAnimTarget.Trigger.FOCUS_ENTERED):
+		_local_signal_scope.connect_bound(focus_entered, _on_trigger_focus_entered)
+	if trigger_map.has(UiAnimTarget.Trigger.FOCUS_EXITED):
+		_local_signal_scope.connect_bound(focus_exited, _on_trigger_focus_exited)
 
 	UiReactFeedbackTargetHelper.sync_initial_state(self, "UiReactLineEdit", audio_targets, haptic_targets)
 
@@ -128,12 +130,12 @@ func _on_trigger_text_entered(_text: String) -> void:
 
 
 ## Handles FOCUS_ENTERED trigger animations.
-func _on_focus_entered() -> void:
+func _on_trigger_focus_entered() -> void:
 	_trigger_animations(UiAnimTarget.Trigger.FOCUS_ENTERED)
 
 
 ## Handles FOCUS_EXITED trigger animations.
-func _on_focus_exited() -> void:
+func _on_trigger_focus_exited() -> void:
 	_trigger_animations(UiAnimTarget.Trigger.FOCUS_EXITED)
 
 

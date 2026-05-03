@@ -127,6 +127,10 @@ func _validate_animation_targets() -> void:
 		_signal_scope.connect_bound(_host.mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
 		_signal_scope.connect_bound(_host.mouse_exited, _on_trigger_hover_exit)
+	if trigger_map.has(UiAnimTarget.Trigger.FOCUS_ENTERED):
+		_signal_scope.connect_bound(_host.focus_entered, _on_trigger_focus_entered)
+	if trigger_map.has(UiAnimTarget.Trigger.FOCUS_EXITED):
+		_signal_scope.connect_bound(_host.focus_exited, _on_trigger_focus_exited)
 	var want_toggle := trigger_map.has(UiAnimTarget.Trigger.TOGGLED_ON) or trigger_map.has(UiAnimTarget.Trigger.TOGGLED_OFF)
 	if want_toggle and (not _guard_toggled_connect or _host.has_signal(&"toggled")):
 		_signal_scope.connect_bound(_host.toggled, _on_trigger_toggled)
@@ -147,6 +151,14 @@ func _on_trigger_hover_enter() -> void:
 
 func _on_trigger_hover_exit() -> void:
 	_trigger_animations(UiAnimTarget.Trigger.HOVER_EXIT)
+
+
+func _on_trigger_focus_entered() -> void:
+	_trigger_animations(UiAnimTarget.Trigger.FOCUS_ENTERED)
+
+
+func _on_trigger_focus_exited() -> void:
+	_trigger_animations(UiAnimTarget.Trigger.FOCUS_EXITED)
 
 
 func _on_trigger_toggled(active: bool) -> void:

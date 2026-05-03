@@ -34,7 +34,7 @@ var _tab_config: UiTabContainerCfg
 		if is_node_ready():
 			_connect_tab_config_signals()
 
-## **Optional** — Inspector-driven tweens (selection changed, hover). Leave empty for no automatic animations.
+## **Optional** — Inspector-driven tweens (selection changed, focus, hover). Leave empty for no automatic animations.
 @export var animation_targets: Array[UiAnimTarget] = []
 
 ## **Optional** — Action layer ([code]docs/ACTION_LAYER.md[/code]): focus, visibility, [code]mouse_filter[/code], UI bool flags, bounded float ops.
@@ -147,6 +147,10 @@ func _validate_animation_targets() -> void:
 		_local_signal_scope.connect_bound(mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
 		_local_signal_scope.connect_bound(mouse_exited, _on_trigger_hover_exit)
+	if trigger_map.has(UiAnimTarget.Trigger.FOCUS_ENTERED):
+		_local_signal_scope.connect_bound(focus_entered, _on_trigger_focus_entered)
+	if trigger_map.has(UiAnimTarget.Trigger.FOCUS_EXITED):
+		_local_signal_scope.connect_bound(focus_exited, _on_trigger_focus_exited)
 
 	UiReactActionTargetHelper.sync_initial_state(self, "UiReactTabContainer", action_targets)
 	UiReactFeedbackTargetHelper.sync_initial_state(self, "UiReactTabContainer", audio_targets, haptic_targets)
@@ -168,6 +172,14 @@ func _on_trigger_hover_enter() -> void:
 
 func _on_trigger_hover_exit() -> void:
 	_trigger_animations(UiAnimTarget.Trigger.HOVER_EXIT)
+
+
+func _on_trigger_focus_entered() -> void:
+	_trigger_animations(UiAnimTarget.Trigger.FOCUS_ENTERED)
+
+
+func _on_trigger_focus_exited() -> void:
+	_trigger_animations(UiAnimTarget.Trigger.FOCUS_EXITED)
 
 
 func _trigger_animations(trigger_type: UiAnimTarget.Trigger) -> void:

@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **`FOCUS_ENTERED`** / **`FOCUS_EXITED`** dispatch on **`UiReactButton`**, **`UiReactTextureButton`**, **`UiReactCheckBox`**, **`UiReactSlider`**, **`UiReactOptionButton`**, **`UiReactItemList`**, **`UiReactTree`**, **`UiReactTabContainer`**, and **`UiReactProgressBar`** (same merged **`trigger_map`** as **`animation_targets`**, **`action_targets`**, **`audio_targets`**, **`haptic_targets`**). Registry: **`ANIM_TRIGGERS_BY_COMPONENT`**.
+
+### Fixed
+
+- **`UiReactSpinBox`:** **`audio_targets`** / **`haptic_targets`** rows keyed on **`FOCUS_ENTERED`** / **`FOCUS_EXITED`** dispatch even when **`animation_targets`** is empty (**merged trigger_map** drives **`focus_entered`** / **`focus_exited`** connections).
+
 ### Breaking
 
 - **`UiReactCheckBox.checked_state`** is now typed **`UiBoolState`** (was **`UiState`**). **`UiComputedBoolState`** and other **`UiBoolState`** subclasses remain valid; assign **`UiStringState`** / unrelated **`UiState`** types to this slot only via broken scenes (fix in Inspector).
@@ -14,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **`UiReactLineEdit`** / **`UiReactSpinBox`:** **`focus_entered`** / **`focus_exited`** connect only when the merged **`trigger_map`** requests **`FOCUS_ENTERED`** / **`FOCUS_EXITED`** (parity with **`HOVER_*`** on **`UiReactLineEdit`**).
 - **Runtime console trace (**`CB-018C`** v1):** **`UiReactRuntimeConsoleDebug`** (`scripts/runtime/ui_react_runtime_console_debug.gd`) prints **`WIRE`**, **`CMP`**, **`ACT`** prefixes to Godot **Output** in **`OS.is_debug_build()`** runs when **`ui_react/settings/runtime/console_debug_enabled`** is true (**`UiReactDockConfig.save_ui_preference`**, **`Wiring`** tab **`CheckBox` only** — no dedicated Project Settings page). Applies **next run** after toggling. **Taps:** **`UiReactWireRuleHelper`** post-**`rule.apply`**, **`UiReactComputedService`** post-**`recompute`**, **`UiReactActionTargetHelper`** **`_apply_row`** entry. **GUT:** **`tests/unit/react/test_ui_react_runtime_console_debug.gd`**.
 - **Runtime console trace readability (**`CB-018C`** polish):** **`UiReactRuntimeConsoleDebug`** emits **`kind=`** with **`UiReactActionKind`** enum names (e.g. **`SET_VISIBLE`**) instead of raw integers; **`WIRE`** **`script=`** and **`CMP`** **`gd=`** use the **`.gd`** basename from **`Script.resource_path`** (**`<embedded>`** when unavailable); **`CMP`** gains **`gd=`** alongside **`id=`** / **`path=`**.
 - **Editor dock — Wiring (Dependency Graph):** **`UiReactExplainGraphView`** fits node/edge bounds to the visible canvas (**`fit_content_to_view`**) after layout and when the graph control is resized; **Fit view** uses the same fitting; graph **`custom_minimum_size`** is **`160×140`** so narrow docks tolerate better. Dependency Graph legend is always **two rows** (Nodes, then Edges + scope)—wide single-row legend layout removed.

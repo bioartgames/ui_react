@@ -32,7 +32,7 @@ var _reactive: UiReactBaseButtonReactive
 		if is_node_ready():
 			_lazy_rx().connect_all_states()
 
-## **Optional** — Inspector-driven tweens (pressed, hover, toggled). Leave empty for no automatic animations.
+## **Optional** — Inspector-driven tweens (pressed, focus, hover, toggled). Leave empty for no automatic animations.
 ## Each [UiAnimTarget] sets Trigger, Target NodePath, and animation type; no extra resource files required.
 @export var animation_targets: Array[UiAnimTarget] = []
 

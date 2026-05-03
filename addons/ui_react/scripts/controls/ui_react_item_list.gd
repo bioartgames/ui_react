@@ -46,7 +46,7 @@ var _last_items_signatures: PackedStringArray = PackedStringArray()
 		if is_node_ready():
 			_connect_all_states()
 
-## **Optional** — Inspector-driven tweens (selection, hover) and row-play presets ([method play_selected_row_animation]).
+## **Optional** — Inspector-driven tweens (selection, focus, hover) and row-play presets ([method play_selected_row_animation]).
 ## Use [member UiAnimTarget.selection_slot] [code]>= 0[/code] to tie a target to a list row for [method play_selected_row_animation] / [method play_preamble_reset_only]; [code]-1[/code] for entries that are not row-scoped (e.g. hover-only).
 @export var animation_targets: Array[UiAnimTarget] = []
 
@@ -139,6 +139,10 @@ func _validate_animation_targets() -> void:
 		_local_signal_scope.connect_bound(mouse_entered, _on_trigger_hover_enter)
 	if trigger_map.has(UiAnimTarget.Trigger.HOVER_EXIT):
 		_local_signal_scope.connect_bound(mouse_exited, _on_trigger_hover_exit)
+	if trigger_map.has(UiAnimTarget.Trigger.FOCUS_ENTERED):
+		_local_signal_scope.connect_bound(focus_entered, _on_trigger_focus_entered)
+	if trigger_map.has(UiAnimTarget.Trigger.FOCUS_EXITED):
+		_local_signal_scope.connect_bound(focus_exited, _on_trigger_focus_exited)
 
 	UiReactActionTargetHelper.sync_initial_state(self, "UiReactItemList", action_targets)
 	UiReactFeedbackTargetHelper.sync_initial_state(self, "UiReactItemList", audio_targets, haptic_targets)
@@ -241,6 +245,16 @@ func _on_trigger_hover_enter() -> void:
 ## Handles HOVER_EXIT trigger animations.
 func _on_trigger_hover_exit() -> void:
 	_trigger_animations(UiAnimTarget.Trigger.HOVER_EXIT)
+
+
+## Handles FOCUS_ENTERED trigger animations.
+func _on_trigger_focus_entered() -> void:
+	_trigger_animations(UiAnimTarget.Trigger.FOCUS_ENTERED)
+
+
+## Handles FOCUS_EXITED trigger animations.
+func _on_trigger_focus_exited() -> void:
+	_trigger_animations(UiAnimTarget.Trigger.FOCUS_EXITED)
 
 
 ## Triggers animations for targets matching the specified trigger type.

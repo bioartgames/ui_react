@@ -74,6 +74,33 @@ func test_is_anim_allowed_button_text_changed_false() -> void:
 	)
 
 
+func test_is_anim_allowed_button_focus_entered_true() -> void:
+	assert_true(
+		UiReactValidatorCommon.is_anim_trigger_allowed(
+			KNOWN_COMPONENT,
+			UiAnimTarget.Trigger.FOCUS_ENTERED,
+		)
+	)
+
+
+func test_is_anim_allowed_button_focus_exited_true() -> void:
+	assert_true(
+		UiReactValidatorCommon.is_anim_trigger_allowed(
+			KNOWN_COMPONENT,
+			UiAnimTarget.Trigger.FOCUS_EXITED,
+		)
+	)
+
+
+func test_is_anim_allowed_checkbox_focus_entered_true() -> void:
+	assert_true(
+		UiReactValidatorCommon.is_anim_trigger_allowed(
+			"UiReactCheckBox",
+			UiAnimTarget.Trigger.FOCUS_ENTERED,
+		)
+	)
+
+
 # --- format_anim_trigger_name ---
 
 
@@ -109,3 +136,4 @@ func test_format_hint_option_button_contains_selection_changed() -> void:
 func test_format_hint_button_contains_pressed() -> void:
 	var hint := UiReactValidatorCommon.format_allowed_anim_triggers_hint(KNOWN_COMPONENT)
 	assert_true(hint.contains("PRESSED"))
+	assert_true(hint.contains("FOCUS_ENTERED"))

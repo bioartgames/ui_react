@@ -154,20 +154,20 @@ All plugin usage details are documented in this README.
 
 ### UiAnimTarget: supported triggers per host
 
-The Inspector lists **all** [`UiAnimTarget.Trigger`](scripts/api/models/ui_anim_target.gd) values on every row, but each **`UiReact*`** only **connects** the signals for triggers that appear in its **`animation_targets`** (see **`_validate_animation_targets`** on that control). The **editor dock** warns if a row’s **Trigger** is not supported on that host (registry: **`ANIM_TRIGGERS_BY_COMPONENT`** in [`editor_plugin/ui_react_component_registry.gd`](editor_plugin/ui_react_component_registry.gd)). The same set applies to **control-driven** **`action_targets`** rows (**`state_watch`** null). **`UiReactTabContainer`**: **`SELECTION_CHANGED`** rows may use an **empty** **Target** path for tab transition presets (runtime **`allow_empty_for`**).
+The Inspector lists **all** [`UiAnimTarget.Trigger`](scripts/api/models/ui_anim_target.gd) values on every row, but each **`UiReact*`** only **connects** **`Control`** signals for trigger keys present in the **merged trigger map** built from validated **`animation_targets`**, control-driven **`action_targets`** (**`state_watch`** null), **`audio_targets`**, and **`haptic_targets`** (see **`_validate_animation_targets`** on each control). The **editor dock** warns if a row’s **Trigger** is not supported on that host (registry: **`ANIM_TRIGGERS_BY_COMPONENT`** in [`editor_plugin/ui_react_component_registry.gd`](editor_plugin/ui_react_component_registry.gd)). **`UiReactTabContainer`**: **`SELECTION_CHANGED`** rows may use an **empty** **Target** path for tab transition presets (runtime **`allow_empty_for`**).
 
 | Host | Supported triggers |
 |------|-------------------|
-| **`UiReactButton`**, **`UiReactTextureButton`** | `PRESSED`, `HOVER_ENTER`, `HOVER_EXIT`, `TOGGLED_ON`, `TOGGLED_OFF` |
-| **`UiReactCheckBox`** | `TOGGLED_ON`, `TOGGLED_OFF`, `HOVER_ENTER`, `HOVER_EXIT` |
-| **`UiReactSlider`** | `VALUE_CHANGED`, `VALUE_INCREASED`, `VALUE_DECREASED`, `DRAG_STARTED`, `DRAG_ENDED`, `HOVER_ENTER`, `HOVER_EXIT` |
+| **`UiReactButton`**, **`UiReactTextureButton`** | `PRESSED`, `FOCUS_ENTERED`, `FOCUS_EXITED`, `HOVER_ENTER`, `HOVER_EXIT`, `TOGGLED_ON`, `TOGGLED_OFF` |
+| **`UiReactCheckBox`** | `TOGGLED_ON`, `TOGGLED_OFF`, `FOCUS_ENTERED`, `FOCUS_EXITED`, `HOVER_ENTER`, `HOVER_EXIT` |
+| **`UiReactSlider`** | `VALUE_CHANGED`, `VALUE_INCREASED`, `VALUE_DECREASED`, `DRAG_STARTED`, `DRAG_ENDED`, `FOCUS_ENTERED`, `FOCUS_EXITED`, `HOVER_ENTER`, `HOVER_EXIT` |
 | **`UiReactSpinBox`** | `VALUE_CHANGED`, `VALUE_INCREASED`, `VALUE_DECREASED`, `FOCUS_ENTERED`, `FOCUS_EXITED`, `HOVER_ENTER`, `HOVER_EXIT` |
-| **`UiReactProgressBar`** | `VALUE_CHANGED`, `VALUE_INCREASED`, `VALUE_DECREASED`, `COMPLETED`, `HOVER_ENTER`, `HOVER_EXIT` |
+| **`UiReactProgressBar`** | `VALUE_CHANGED`, `VALUE_INCREASED`, `VALUE_DECREASED`, `COMPLETED`, `FOCUS_ENTERED`, `FOCUS_EXITED`, `HOVER_ENTER`, `HOVER_EXIT` |
 | **`UiReactLineEdit`** | `TEXT_CHANGED`, `TEXT_ENTERED`, `FOCUS_ENTERED`, `FOCUS_EXITED`, `HOVER_ENTER`, `HOVER_EXIT` |
 | **`UiReactLabel`**, **`UiReactRichTextLabel`** | `TEXT_CHANGED`, `HOVER_ENTER`, `HOVER_EXIT` |
-| **`UiReactOptionButton`** | `SELECTION_CHANGED`, `HOVER_ENTER`, `HOVER_EXIT` |
-| **`UiReactItemList`**, **`UiReactTree`** | `SELECTION_CHANGED`, `HOVER_ENTER`, `HOVER_EXIT` |
-| **`UiReactTabContainer`** | `SELECTION_CHANGED`, `HOVER_ENTER`, `HOVER_EXIT` |
+| **`UiReactOptionButton`** | `SELECTION_CHANGED`, `FOCUS_ENTERED`, `FOCUS_EXITED`, `HOVER_ENTER`, `HOVER_EXIT` |
+| **`UiReactItemList`**, **`UiReactTree`** | `SELECTION_CHANGED`, `FOCUS_ENTERED`, `FOCUS_EXITED`, `HOVER_ENTER`, `HOVER_EXIT` |
+| **`UiReactTabContainer`** | `SELECTION_CHANGED`, `FOCUS_ENTERED`, `FOCUS_EXITED`, `HOVER_ENTER`, `HOVER_EXIT` |
 
 ### UiAnimTarget: unified baseline and RESET
 
@@ -392,7 +392,7 @@ These may change between template versions; **do not rely on them from game code
 
 | Symptom | Likely cause | Fix |
 |--------|----------------|-----|
-| Animation never plays | Empty `animation_targets`, **Trigger** not supported on this **`UiReact*`** (dock warns), or invalid **Target** NodePath | Use a **Trigger** from the **supported triggers** table above; drag a **Control** onto Target (except **`UiReactTabContainer`** **`SELECTION_CHANGED`** tab presets). Check the **Ui React** dock and Output. |
+| Animation never plays | No rows (**`animation_targets`**, **`action_targets`**, **`audio_targets`**, **`haptic_targets`**) reference that trigger, **Trigger** not supported on this **`UiReact*`** (dock warns), invalid **Target** NodePath (**`audio_targets`** / **`haptic_targets`** need no tween Target). | Use a **Trigger** from the **supported triggers** table above; drag a **Control** onto **Target** for tween rows (**`UiAnimTarget`**) (**`UiReactTabContainer`** **`SELECTION_CHANGED`** tab presets may use an empty **Target** path). Check the **Ui React** dock and Output. |
 | State doesn’t sync | State not assigned, or wrong concrete type | Assign the exported `*_state` field; use the **Ui React** dock to catch type mismatches. Use **int** for tab list indices; **float** only for range controls (slider / spin / progress); bool / String / Array as documented per control. |
 | “Target not found” warning | NodePath not under this node | Use a path relative to the control, or drag the node into the Target field. |
 | Tab arrays don’t apply | `tabs_state` / `disabled_tabs_state` / `visible_tabs_state` not an **Array** | Those `UiState` values must be `Array` (see Output warning). |
