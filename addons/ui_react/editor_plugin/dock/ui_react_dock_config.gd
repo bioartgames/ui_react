@@ -30,6 +30,10 @@ const KEY_EDITOR_BOTTOM_PANEL_SHORTCUT_JSON := "ui_react/settings/shortcuts/bott
 const KEY_OPEN_DIAGNOSTICS_SHORTCUT_JSON := "ui_react/settings/shortcuts/open_diagnostics_json"
 const KEY_OPEN_WIRING_SHORTCUT_JSON := "ui_react/settings/shortcuts/open_wiring_json"
 
+## Runtime (**CB-018C**): gated by [member OS.is_debug_build] + [constant KEY_RUNTIME_LIVE_DEBUG_ENABLED].
+const KEY_RUNTIME_LIVE_DEBUG_ENABLED := "ui_react/settings/runtime/live_debug_enabled"
+const KEY_RUNTIME_LIVE_DEBUG_BUFFER_CAP := "ui_react/settings/runtime/live_debug_buffer_cap"
+
 # Internal/session state (stored in editor layout metadata, not ProjectSettings).
 const SESSION_LAST_TAB := "last_tab"
 const SESSION_WIRING_LAST_SCENE_PATH := "wiring_last_scene_path"
@@ -64,6 +68,12 @@ const DEF_SHOW_ERRORS := true
 const DEF_SHOW_WARNINGS := true
 const DEF_SHOW_INFO := true
 const DEF_AUTO_REFRESH := true
+const DEF_RUNTIME_LIVE_DEBUG_ENABLED := false
+
+## Clamp [constant KEY_RUNTIME_LIVE_DEBUG_BUFFER_CAP] to [code]MIN_LIVE_DEBUG_BUFFER_CAP[/code]..[code]MAX_LIVE_DEBUG_BUFFER_CAP[/code].
+const LIVE_DEBUG_BUFFER_CAP_DEFAULT := 384
+const LIVE_DEBUG_BUFFER_CAP_MIN := 64
+const LIVE_DEBUG_BUFFER_CAP_MAX := 2048
 
 static var _session_state: Dictionary = {
 	SESSION_LAST_TAB: DEF_DOCK_LAST_TAB,
@@ -211,6 +221,12 @@ static func register_default_project_settings() -> void:
 			_EditorBottomPanelShortcut.spec_to_json(_EditorBottomPanelShortcut.default_open_wiring_spec())
 		)
 		added_defaults = true
+	if not ProjectSettings.has_setting(KEY_RUNTIME_LIVE_DEBUG_ENABLED):
+		ProjectSettings.set_setting(KEY_RUNTIME_LIVE_DEBUG_ENABLED, DEF_RUNTIME_LIVE_DEBUG_ENABLED)
+		added_defaults = true
+	if not ProjectSettings.has_setting(KEY_RUNTIME_LIVE_DEBUG_BUFFER_CAP):
+		ProjectSettings.set_setting(KEY_RUNTIME_LIVE_DEBUG_BUFFER_CAP, LIVE_DEBUG_BUFFER_CAP_DEFAULT)
+		added_defaults = true
 	if not ProjectSettings.has_setting(KEY_SETTINGS_SCHEMA_VERSION):
 		ProjectSettings.set_setting(KEY_SETTINGS_SCHEMA_VERSION, SETTINGS_SCHEMA_VERSION)
 		added_defaults = true
@@ -218,6 +234,11 @@ static func register_default_project_settings() -> void:
 		var err := ProjectSettings.save()
 		if err != OK:
 			push_warning("Ui React: could not save default project settings.")
+
+
+static func live_debug_buffer_cap_effective() -> int:
+	var raw := int(ProjectSettings.get_setting(KEY_RUNTIME_LIVE_DEBUG_BUFFER_CAP, LIVE_DEBUG_BUFFER_CAP_DEFAULT))
+	return clampi(raw, LIVE_DEBUG_BUFFER_CAP_MIN, LIVE_DEBUG_BUFFER_CAP_MAX)
 
 
 static func save_ui_preference(key: String, value: Variant) -> void:

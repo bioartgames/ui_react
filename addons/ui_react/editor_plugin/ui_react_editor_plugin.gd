@@ -50,6 +50,8 @@ func _register_project_settings_property_info_v2() -> void:
 	if _shortcut_property_info_registered_global:
 		return
 	_shortcut_property_info_registered_global = true
+	# Dock/plugin keys stay internal (advanced-only). Runtime live debug (**CB-018C**) is user-facing:
+	# visible under Project Settings → `ui_react`, searchable as “live debug”.
 	for key in [
 		UiReactDockConfig.KEY_SCAN_MODE,
 		UiReactDockConfig.KEY_GROUP_MODE,
@@ -65,6 +67,27 @@ func _register_project_settings_property_info_v2() -> void:
 		UiReactDockConfig.KEY_OPEN_WIRING_SHORTCUT_JSON,
 	]:
 		ProjectSettings.set_as_internal(key, true)
+
+	ProjectSettings.set_as_internal(UiReactDockConfig.KEY_RUNTIME_LIVE_DEBUG_ENABLED, false)
+	ProjectSettings.set_as_internal(UiReactDockConfig.KEY_RUNTIME_LIVE_DEBUG_BUFFER_CAP, false)
+	ProjectSettings.add_property_info(
+		{
+			"name": UiReactDockConfig.KEY_RUNTIME_LIVE_DEBUG_ENABLED,
+			"type": TYPE_BOOL,
+		}
+	)
+	ProjectSettings.add_property_info(
+		{
+			"name": UiReactDockConfig.KEY_RUNTIME_LIVE_DEBUG_BUFFER_CAP,
+			"type": TYPE_INT,
+			"hint": PROPERTY_HINT_RANGE,
+			"hint_string": "%d,%d,1"
+			% [
+				UiReactDockConfig.LIVE_DEBUG_BUFFER_CAP_MIN,
+				UiReactDockConfig.LIVE_DEBUG_BUFFER_CAP_MAX,
+			],
+		}
+	)
 
 
 func _register_bottom_panel_tab() -> void:

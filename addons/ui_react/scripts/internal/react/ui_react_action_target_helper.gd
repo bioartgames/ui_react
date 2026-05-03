@@ -5,6 +5,8 @@ extends RefCounted
 
 const _META_LOCKS := &"_ui_react_action_locks"
 const _META_SW_BINDINGS := &"_ui_react_action_sw_bindings"
+const LIVE_DEBUG_BR: Variant = preload("res://addons/ui_react/scripts/runtime/ui_react_live_debug_bridge.gd")
+
 
 class _StateWatchBinding extends RefCounted:
 	var _owner: WeakRef
@@ -217,8 +219,17 @@ static func _dispatch_state_indices(
 			if idx < 0 or idx >= rows.size():
 				continue
 			var row: UiReactActionTarget = rows[idx]
+<<<<<<< Updated upstream
 			_apply_row(owner, row, idx, component_name)
 	)
+=======
+			_apply_row(owner, row, idx, component_name, "state_watch")
+	var warn_sw := func() -> void:
+		push_warning(
+			"UiReactActionTargetHelper: reentrant action dispatch ignored (%s on %s)" % [key, owner.name]
+		)
+	UiReactReentryGuardByMeta.with_guard(owner, _META_LOCKS, key, fn_sw, warn_sw)
+>>>>>>> Stashed changes
 
 
 static func sync_initial_state(owner: Control, component_name: String, action_targets: Array[UiReactActionTarget]) -> void:
@@ -228,7 +239,7 @@ static func sync_initial_state(owner: Control, component_name: String, action_ta
 		var row: UiReactActionTarget = action_targets[i]
 		if row == null or not row.enabled or row.state_watch == null:
 			continue
-		_apply_row(owner, row, i, component_name)
+		_apply_row(owner, row, i, component_name, "sync_initial")
 
 
 static func run_actions(
@@ -253,13 +264,29 @@ static func run_actions(
 				continue
 			if respects_disabled and is_disabled:
 				continue
+<<<<<<< Updated upstream
 			_apply_row(owner, row, i, component_name)
 	)
+=======
+			_apply_row(owner, row, i, component_name, "control_trigger")
+	var warn_run := func() -> void:
+		push_warning(
+			"UiReactActionTargetHelper: reentrant action dispatch ignored (%s on %s)" % [key, owner.name]
+		)
+	UiReactReentryGuardByMeta.with_guard(owner, _META_LOCKS, key, fn_run, warn_run)
+>>>>>>> Stashed changes
 
 
-static func _apply_row(owner: Control, row: UiReactActionTarget, row_index: int, component_name: String) -> void:
+static func _apply_row(
+	owner: Control,
+	row: UiReactActionTarget,
+	row_index: int,
+	component_name: String,
+	via_desc: String = "control_trigger",
+) -> void:
 	if row == null or not row.enabled:
 		return
+	LIVE_DEBUG_BR.call(&"maybe_action_apply", owner, row, row_index, component_name, via_desc)
 	match row.action:
 		UiReactActionTarget.UiReactActionKind.GRAB_FOCUS:
 			var n: Node = owner.get_node_or_null(row.target)

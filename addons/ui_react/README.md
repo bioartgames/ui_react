@@ -451,7 +451,7 @@ The plugin **version** is declared in [`editor_plugin/plugin.cfg`](editor_plugin
 - **Click an issue summary** to load the **report**: full issue text, fix hint, component/node/path, **Resource** (`res://` path when the issue carries `resource_path`), property metadata when applicable, and—when present—scan-time **Value type** / **Effective value** (truncated for long strings).
 - **Toolbar:** **Rescan**, **Copy report**, **Fix All** (binding issues only; eligible filtered rows), and **Ignore All** (applies session **Ignore** to binding issues; adds **edited-scene** unused-file paths to the **persisted** ignore list). **Row actions:** binding rows—**Fix**, **Focus**, **Ignore**; unused-file rows (see step 4 scope)—**Reveal**, **Ignore**. Use **Copy report** to copy the filtered list using the same summary text as each row (and fix hints when present).
 
-**Persisted per project:** diagnostics/dock preferences (scan mode, **Group** mode, severity filters, auto-refresh, output folder), ignored unused file paths (**`ui_react/settings/diagnostics/ignored_unused_state_paths`**), graph legend default, and Ui React shortcut settings are saved in **Project Settings** as internal keys. Session/layout restore state (last dock tab, Wiring return node, graph split offset, scope preset payload) is stored in plugin layout metadata.
+**Persisted per project:** diagnostics/dock preferences (scan mode, **Group** mode, severity filters, auto-refresh, output folder), ignored unused file paths (**`ui_react/settings/diagnostics/ignored_unused_state_paths`**), graph legend default, and Ui React shortcut settings are saved in **Project Settings** as internal keys (enable **Advanced** if hidden). **Runtime live debug** toggles (**`live_debug_enabled`**, **`live_debug_buffer_cap`**) are **visible** under **`ui_react`** (search **`live debug`**). Session/layout restore state (last dock tab, Wiring return node, graph split offset, scope preset payload) is stored in plugin layout metadata.
 
 **When diagnostics update:** the list updates when you press **Rescan**, when you open or **switch the active edited scene** tab, when **EditorFileSystem** signals filesystem changes, and—if **Auto-refresh on selection** is enabled—in **Selection** mode when the editor selection changes.
 
@@ -474,6 +474,18 @@ The plugin **version** is declared in [`editor_plugin/plugin.cfg`](editor_plugin
 | **Fix All** | Same as **Fix** for **every** eligible **binding** row in the **current filtered** list. |
 | **Ignore** / **Ignore All** | Binding issues: hide until **Rescan**. Unused-file issues (edited scene file + output folder rule): append path to **`ui_react/settings/diagnostics/ignored_unused_state_paths`** (persisted). |
 
+## Runtime live debug (CB-018C)
+
+**Purpose:** Optional **running-scene** ring-buffer trace (debug exports only — **`OS.is_debug_build()`**) for **bindings** (`STATE_VALUE_CHANGED` via a passive **`UiReactLiveDebugHarvester`**), **computed recomputes**, **`wire_rules` `apply`**, and **`action_targets`** dispatch. Separate from dock **Diagnostics** / **Dependency Graph**; pair with **`docs/GRAPH_DEBUG_SURFACES.md`**.
+
+**Enable**
+
+1. **Project → Project Settings → Autoload:** add **`UiReactLiveDebug`** → `res://addons/ui_react/scripts/runtime/ui_react_live_debug.gd` (**the plugin `.cfg` cannot register gameplay autoloads**).
+2. **Project → Project Settings:** enable **`live_debug_enabled`** (**bool**, default **false**) — open **Project Settings**, search **`live debug`** or expand **`ui_react`** → **`settings`** → **`runtime`**. Optional **`live_debug_buffer_cap`** (**64**–**2048**, default **384**).
+3. Export / run under a **debug** template (**release** builds short-circuit the facade — zero events).
+
+**In play:** **`Alt+3`** (main row digit **3**, not numpad) toggles the top-left **`CanvasLayer`** overlay (newest-first **`ItemList`**). Implementation: `scripts/runtime/ui_react_live_debug*.gd`, **`ui_react_live_debug_bridge.gd`** (delegates via **`Variant.call`** to façade **`maybe_*`), taps inside **`UiReactWireRuleHelper`**, **`UiReactComputedService`**, **`UiReactActionTargetHelper`**.
+
 ## Project settings
 
 Ui React persists diagnostics/dock preferences and open-tab shortcuts under **`ui_react/settings/...`** as **internal** Project Settings keys (enable **Advanced** in the Project Settings dialog if they are hidden). There is **no** dock UI for editing shortcuts; defaults are **Alt+1** / **Alt+2**. Power users may edit the JSON values directly when needed:
@@ -482,6 +494,8 @@ Ui React persists diagnostics/dock preferences and open-tab shortcuts under **`u
 |-----|---------|---------|
 | `ui_react/settings/shortcuts/open_diagnostics_json` | `Alt+1` | Open/focus the Diagnostics tab (opens bottom panel first when needed). |
 | `ui_react/settings/shortcuts/open_wiring_json` | `Alt+2` | Open/focus the Wiring tab (opens bottom panel first when needed). |
+
+**Runtime live debug (**`CB-018C`**):** **`ui_react/settings/runtime/live_debug_enabled`** (**bool**, default **false**) and **`live_debug_buffer_cap`** (**int**, clamped **64**–**2048** when read via **`UiReactDockConfig.live_debug_buffer_cap_effective()`** — default **384**). Both appear in **Project Settings** (search **`live debug`**). Autoload **`UiReactLiveDebug`** separately (README **Runtime live debug**).
 
 ## Binding metadata & validation
 

@@ -2,9 +2,12 @@
 class_name UiReactExplainGraphBuilder
 extends RefCounted
 
+const _GraphNodeIdsLoader := preload("res://addons/ui_react/scripts/internal/react/ui_react_graph_node_ids.gd")
+
 const _SnapshotScript := preload("res://addons/ui_react/editor_plugin/models/ui_react_explain_graph_snapshot.gd")
 const _ExplainNarrativeScript := preload("res://addons/ui_react/editor_plugin/models/ui_react_explain_graph_narrative.gd")
 const _WireRuleIntrospectionScript := preload("res://addons/ui_react/editor_plugin/services/ui_react_wire_rule_introspection.gd")
+
 
 ## Set [code]true[/code] briefly to print graph metrics to the editor Output (declarative graph only).
 const EXPLAIN_GRAPH_DEBUG := false
@@ -33,14 +36,14 @@ static func build(root: Node, focus: Control):
 		var component := UiReactScannerService.get_component_name_from_script(ctl.get_script() as Script)
 		if component.is_empty():
 			continue
-		var hp := _host_path_from_root(root, ctl)
+		var hp := _GraphNodeIdsLoader.host_path_from_root(root, ctl)
 		ctx._index_host(component, ctl, hp)
 
 	ctx._finalize_wire_product_edges()
 	ctx._copy_nodes_and_edges(snap)
 	ctx._find_cycle_candidates(snap)
-	var focus_path := _host_path_from_root(root, focus)
-	var focus_id := _control_id(focus_path)
+	var focus_path := _GraphNodeIdsLoader.host_path_from_root(root, focus)
+	var focus_id := _GraphNodeIdsLoader.control_id(focus_path)
 	ctx._apply_layout_scope_for_host(snap, focus_id)
 	snap.bound_state_lines.clear()
 	snap.upstream_lines.clear()
@@ -53,19 +56,13 @@ static func build(root: Node, focus: Control):
 	return snap
 
 
-## Stable host path for [param root] + [param node]: avoids [code]is_inside_tree()[/code] split that can diverge from [method Node.get_path_to].
+## Stable host path for [param root] + [param node]. Delegates to [UiReactGraphNodeIds.host_path_from_root].
 static func _host_path_from_root(root: Node, node: Node) -> NodePath:
-	if root == null or node == null:
-		return NodePath()
-	if node == root:
-		return NodePath()
-	if root.is_ancestor_of(node):
-		return root.get_path_to(node)
-	return NodePath(String(node.get_path()))
+	return _GraphNodeIdsLoader.host_path_from_root(root, node)
 
 
 static func _control_id(path: NodePath) -> String:
-	return "ctrl:%s" % str(path)
+	return _GraphNodeIdsLoader.control_id(path)
 
 
 static func _state_id(
@@ -76,25 +73,12 @@ static func _state_id(
 ) -> String:
 	if st == null:
 		return ""
-	var rp := st.resource_path
-	var sid: String
-	var disp: String
-	if not rp.is_empty():
-		sid = "state:%s" % rp
-		disp = rp.get_file()
-	else:
-		sid = "state:emb:%s#%s#%d" % [str(host_path), context_seg, st.get_instance_id()]
-		disp = "embedded %s @ %s" % [context_seg, str(host_path)]
-
+	var sid := _GraphNodeIdsLoader.state_stable_id(host_path, context_seg, st)
+	var disp := _GraphNodeIdsLoader.state_display_label(host_path, context_seg, st)
 	var kind := _SnapshotScript.NodeKind.UI_STATE
 	if st is UiComputedStringState or st is UiComputedBoolState:
 		kind = _SnapshotScript.NodeKind.UI_COMPUTED
-	var extra: Dictionary = {}
-	if not rp.is_empty():
-		extra[&"state_file_path"] = rp
-	else:
-		extra[&"embedded_host_path"] = str(host_path)
-		extra[&"embedded_context"] = context_seg
+	var extra := _GraphNodeIdsLoader.state_snapshot_extra(host_path, context_seg, st)
 	ctx.ensure_node(sid, kind, disp, extra)
 	return sid
 

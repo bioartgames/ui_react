@@ -4,7 +4,16 @@ class_name UiReactWireRuleHelper
 extends RefCounted
 
 const _META_CONNS := &"_ui_react_wire_helper_conns"
+<<<<<<< Updated upstream
 const _SCRIPT_WIRE_SORT_ARRAY_BY_KEY := "res://addons/ui_react/scripts/api/models/ui_react_wire_sort_array_by_key.gd"
+=======
+const LIVE_DEBUG_BR: Variant = preload("res://addons/ui_react/scripts/runtime/ui_react_live_debug_bridge.gd")
+
+
+static var _WIRE_BIND_DISPATCH_READY: bool = false
+## [member Resource.get_script] key -> [Callable] taking [code](host, rule, conns)[/code].
+static var _WIRE_BIND_DISPATCH_TABLE: Dictionary = {}
+>>>>>>> Stashed changes
 
 
 static func schedule_attach(host: Node) -> void:
@@ -114,6 +123,7 @@ static func _apply_rule(host: Node, rule: UiReactWireRule) -> void:
 	if not is_instance_valid(host):
 		push_warning("UiReactWireRuleHelper: rule '%s' skipped; source node freed." % rid)
 		return
+	LIVE_DEBUG_BR.call(&"maybe_wire_apply", host, rule)
 	rule.apply(host)
 
 
@@ -240,3 +250,4 @@ static func _bind_sync_bool_debug_line(
 	var cb := _make_rule_cb(host, rule)
 	if rule.bool_state != null:
 		_safe_connect(conns, rule.bool_state.value_changed, cb)
+

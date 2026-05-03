@@ -15,9 +15,9 @@ This addon exposes three related but **non-overlapping** tools. Keep their contr
 
 ## Runtime debug overlay (CB-018C)
 
-- **Purpose:** optional **live** value / edge inspection in a **running** scene (debug builds + project setting).
-- **Does not** replace Diagnostics or Dependency Graph; **no** editor log spam by default.
-
+- **Purpose:** optional **live** value / trace in a **running** scene (**debug builds** + **`ui_react/settings/runtime/live_debug_enabled`** Project Settings master switch — default **false**; visible in **Project Settings** under **`ui_react`**, search **`live debug`**). Ring buffer capacity **`live_debug_buffer_cap`** (effective clamp **64**–**2048** via **`UiReactDockConfig`**).
+- **Surfaces:** **`UiReactLiveDebug`** autoload **`Node`**; **`ui_react_live_debug_bridge.gd`** delegates to façade **`maybe_*`** via **`Variant.call`**; **`UiReactLiveDebugHarvester`** (dedup **`value_changed`** on discovered **`UiState`**); **`Alt+3`** toggles **`ui_react_live_debug_overlay`** **`CanvasLayer`**. Stable **`state:`** / **`ctrl:`** fingerprints align with **Dependency Graph** via **`UiReactGraphNodeIds`** (shared module).
+- **Does not** replace Diagnostics or Dependency Graph; **no** editor log spam by default. **Release** exports: facade short-circuits when **`not OS.is_debug_build()`**.
 ## Invariants (snapshot)
 
 - **Control id:** `ctrl:` + host path string from edited/root-stable resolver.
